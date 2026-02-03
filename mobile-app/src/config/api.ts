@@ -11,9 +11,10 @@
 // For production: Use your deployed backend URL
 
 // Default: localhost (works for emulator/simulator)
-// For physical device, change to your computer's IP address
+// For physical device (Expo Go): use your computer's IP - run "ipconfig" to find it
+// Current WiFi IP: 10.5.40.38 (update when you change networks)
 const API_BASE_URL = __DEV__
-  ? 'http://10.23.176.237:3000' // Your computer's IP for Expo physical device
+  ? 'http://10.5.40.38:3000' // Your computer's IP for Expo physical device
   : 'https://api.yaaryatra.com'; // Production URL
 
 export const API_CONFIG = {

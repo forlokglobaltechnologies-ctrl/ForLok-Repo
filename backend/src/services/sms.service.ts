@@ -144,7 +144,11 @@ class SMSService {
         }),
       });
 
-      const data = await response.json();
+      const data = (await response.json()) as {
+        type?: string;
+        request_id?: string;
+        message?: string;
+      };
 
       if (data.type === 'success') {
         console.log('✅ [SMS SERVICE] SMS sent via MSG91');
@@ -198,7 +202,11 @@ class SMSService {
         }),
       });
 
-      const data = await response.json();
+      const data = (await response.json()) as {
+        status?: string;
+        batch_id?: string;
+        errors?: Array<{ message?: string }>;
+      };
 
       if (data.status === 'success') {
         console.log('✅ [SMS SERVICE] SMS sent via TextLocal');
