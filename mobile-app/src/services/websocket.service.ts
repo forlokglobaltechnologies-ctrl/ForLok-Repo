@@ -6,7 +6,7 @@ import { API_CONFIG } from '../config/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Token key from api.service.ts
-const TOKEN_KEY = '@yaaryatra_access_token';
+const TOKEN_KEY = '@forlok_access_token';
 
 export type WebSocketEventType =
   | 'auth:success'

@@ -10,12 +10,16 @@ const createRatingSchema = z.object({
   bookingId: z.string(),
   ratedUserId: z.string(),
   serviceType: z.enum(['pooling', 'rental']),
+  ratingType: z.enum(['passenger_to_driver', 'driver_to_passenger']),
   overallRating: z.number().min(1).max(5),
   punctuality: z.number().min(1).max(5).optional(),
   vehicleCondition: z.number().min(1).max(5).optional(),
   driving: z.number().min(1).max(5).optional(),
+  behavior: z.number().min(1).max(5).optional(),
+  communication: z.number().min(1).max(5).optional(),
   service: z.number().min(1).max(5).optional(),
   comment: z.string().max(1000).optional(),
+  tags: z.array(z.string()).optional(),
 });
 
 const updateRatingSchema = z.object({
@@ -167,6 +171,105 @@ export async function ratingRoutes(fastify: FastifyInstance) {
       const response: ApiResponse = {
         success: true,
         message: 'Rating deleted successfully',
+      };
+
+      return reply.status(200).send(response);
+    }
+  );
+
+  /**
+   * GET /api/ratings/can-rate/:bookingId
+   * Check if user can rate a booking
+   */
+  fastify.get(
+    '/can-rate/:bookingId',
+    {
+      preHandler: [authenticate],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const userId = (request as any).user.userId;
+      const { bookingId } = request.params as { bookingId: string };
+
+      const result = await ratingService.canRateBooking(bookingId, userId);
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Rating eligibility checked',
+        data: result,
+      };
+
+      return reply.status(200).send(response);
+    }
+  );
+
+  /**
+   * GET /api/ratings/breakdown/:userId
+   * Get rating breakdown for a user
+   */
+  fastify.get(
+    '/breakdown/:userId',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { userId } = request.params as { userId: string };
+
+      const breakdown = await ratingService.getUserRatingBreakdown(userId);
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Rating breakdown retrieved',
+        data: breakdown,
+      };
+
+      return reply.status(200).send(response);
+    }
+  );
+
+  /**
+   * GET /api/ratings/user/:userId/details
+   * Get ratings with user details
+   */
+  fastify.get(
+    '/user/:userId/details',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { userId } = request.params as { userId: string };
+      const { page, limit, ratingType } = request.query as {
+        page?: string;
+        limit?: string;
+        ratingType?: string;
+      };
+
+      const result = await ratingService.getUserRatingsWithDetails(userId, {
+        page: page ? parseInt(page) : 1,
+        limit: limit ? parseInt(limit) : 20,
+        ratingType,
+      });
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'User ratings retrieved',
+        data: result,
+      };
+
+      return reply.status(200).send(response);
+    }
+  );
+
+  /**
+   * GET /api/ratings/tags/:ratingType
+   * Get available rating tags
+   */
+  fastify.get(
+    '/tags/:ratingType',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { ratingType } = request.params as { ratingType: string };
+
+      const tags = ratingService.getRatingTags(
+        ratingType as 'passenger_to_driver' | 'driver_to_passenger'
+      );
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Rating tags retrieved',
+        data: tags,
       };
 
       return reply.status(200).send(response);

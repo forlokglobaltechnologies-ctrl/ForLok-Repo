@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "YAARYATRA",
-    "slug": "yaaryatra-mobile",
+    "name": "FORLOK",
+    "slug": "forlok-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "newArchEnabled": true,
@@ -17,14 +17,14 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.yaaryatra.mobile"
+      "bundleIdentifier": "com.forlok.mobile"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#071952"
       },
-      "package": "com.yaaryatra.mobile",
+      "package": "com.forlok.mobile",
       "versionCode": 1,
       "permissions": [
         "ACCESS_FINE_LOCATION",

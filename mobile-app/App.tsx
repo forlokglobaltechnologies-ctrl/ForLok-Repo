@@ -1,11 +1,70 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import * as Font from 'expo-font';
-import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import {
+  ActivityIndicator,
+  View,
+  StyleSheet,
+  Text as RNText,
+  TextInput as RNTextInput,
+  Platform,
+} from 'react-native';
 import { COLORS } from './src/constants/theme';
+
+/* ─────────────────────────────────────────────────────────────
+   GLOBAL FONT OVERRIDE  (secondary safety-net)
+   
+   The PRIMARY fix lives in theme.ts which patches StyleSheet.create
+   to inject fontFamily and strip fontWeight on Android.
+   
+   This module handles INLINE styles (ones that bypass StyleSheet.create)
+   by patching React.createElement to intercept <Text> / <TextInput>.
+   ───────────────────────────────────────────────────────────── */
+const GLOBAL_FONT = 'MomoTrustDisplay-Regular';
+const IS_ANDROID = Platform.OS === 'android';
+
+const patchInlineStyle = (incoming: any) => {
+  if (!incoming) return { fontFamily: GLOBAL_FONT };
+  if (IS_ANDROID) {
+    const flat = { ...(StyleSheet.flatten(incoming) || {}) };
+    delete flat.fontWeight;
+    flat.fontFamily = GLOBAL_FONT;
+    return flat;
+  }
+  if (Array.isArray(incoming)) return [{ fontFamily: GLOBAL_FONT }, ...incoming];
+  return [{ fontFamily: GLOBAL_FONT }, incoming];
+};
+
+const applyGlobalFont = () => {
+  // ── defaultProps: base-layer font for unstyled text ──
+  const textDefaults = (RNText as any).defaultProps || {};
+  (RNText as any).defaultProps = { ...textDefaults, style: { fontFamily: GLOBAL_FONT } };
+
+  const inputDefaults = (RNTextInput as any).defaultProps || {};
+  (RNTextInput as any).defaultProps = { ...inputDefaults, style: { fontFamily: GLOBAL_FONT } };
+
+  // ── Patch React.createElement for inline styles (RN 0.81+ / Fabric) ──
+  const _origCE = React.createElement;
+  (React as any).createElement = function (type: any, props: any, ...children: any[]) {
+    if (
+      props &&
+      (type === RNText || type === RNTextInput ||
+        (type && type.displayName === 'Text') ||
+        (type && type.displayName === 'TextInput'))
+    ) {
+      return _origCE.call(
+        this,
+        type,
+        { ...props, style: patchInlineStyle(props.style) },
+        ...children,
+      );
+    }
+    return _origCE.call(this, type, props, ...children);
+  };
+};
 
 // Import screens
 import SplashScreen from './src/screens/auth/SplashScreen';
@@ -58,12 +117,25 @@ import FilterScreen from './src/screens/main/FilterScreen';
 import ForgotPasswordScreen from './src/screens/auth/ForgotPasswordScreen';
 import HelpSupportScreen from './src/screens/main/HelpSupportScreen';
 import FeedbackScreen from './src/screens/main/FeedbackScreen';
+import FAQScreen from './src/screens/main/FAQScreen';
+import ReportBugScreen from './src/screens/main/ReportBugScreen';
 import LoadingScreen from './src/screens/main/LoadingScreen';
 import ErrorScreen from './src/screens/main/ErrorScreen';
+import PinkPoolingSplashScreen from './src/screens/main/PinkPoolingSplashScreen';
+import WithdrawalScreen from './src/screens/main/WithdrawalScreen';
+import WalletScreen from './src/screens/main/WalletScreen';
+import EarnCoinsScreen from './src/screens/main/EarnCoinsScreen';
+import ReviewsScreen from './src/screens/profile/ReviewsScreen';
+import BlockedUsersScreen from './src/screens/profile/BlockedUsersScreen';
+import AboutScreen from './src/screens/profile/AboutScreen';
+import IntellectualPropertyScreen from './src/screens/profile/IntellectualPropertyScreen';
+import TermsConditionsScreen from './src/screens/profile/TermsConditionsScreen';
+import PrivacyPolicyScreen from './src/screens/profile/PrivacyPolicyScreen';
 
 // Admin Screens
 import AdminLoginScreen from './src/screens/admin/AdminLoginScreen';
 import AdminDashboardScreen from './src/screens/admin/AdminDashboardScreen';
+import AdminPromoReviewScreen from './src/screens/admin/AdminPromoReviewScreen';
 import PoolingManagementScreen from './src/screens/admin/PoolingManagementScreen';
 import RentalManagementScreen from './src/screens/admin/RentalManagementScreen';
 import RidesHistoryScreen from './src/screens/admin/RidesHistoryScreen';
@@ -72,53 +144,56 @@ import FeedbackManagementScreen from './src/screens/admin/FeedbackManagementScre
 import FeedbackDetailsScreen from './src/screens/admin/FeedbackDetailsScreen';
 import AnalyticsScreen from './src/screens/admin/AnalyticsScreen';
 import AdminSettingsScreen from './src/screens/admin/AdminSettingsScreen';
+import AdminPendingPaymentsScreen from './src/screens/admin/AdminPendingPaymentsScreen';
+import TransactionDetailsScreen from './src/screens/admin/TransactionDetailsScreen';
 import { LanguageProvider } from './src/context/LanguageContext';
+import { ThemeProvider, useTheme } from './src/context/ThemeContext';
+import { NotificationProvider } from './src/context/NotificationContext';
+import { SOSProvider, useSOS } from './src/context/SOSContext';
+import SOSButton from './src/components/common/SOSButton';
 import { websocketService } from './src/services/websocket.service';
 
 const Stack = createNativeStackNavigator();
 
-export default function App() {
-  const [fontsLoaded, setFontsLoaded] = useState(false);
+// StatusBar component — transparent so screens span the full height
+const ThemedStatusBar = () => {
+  return <StatusBar style="light" translucent backgroundColor="transparent" />;
+};
 
-  useEffect(() => {
-    loadFonts();
-    
-    // Initialize WebSocket connection when app starts
-    websocketService.connect();
-    
-    // Cleanup on unmount
-    return () => {
-      websocketService.disconnect();
-    };
-  }, []);
+// Helper to get current route name from navigation state
+const getActiveRouteName = (state: any): string => {
+  if (!state) return '';
+  const route = state.routes[state.index];
+  if (route.state) return getActiveRouteName(route.state);
+  return route.name || '';
+};
 
-  const loadFonts = async () => {
-    try {
-      await Font.loadAsync({
-        'MomoTrustDisplay-Regular': require('./assets/fonts/MomoTrustDisplay-Regular.ttf'),
-      });
-    } catch (error) {
-      console.warn('Font loading error:', error);
-      // Fallback to system font if custom font fails
-    } finally {
-      setFontsLoaded(true);
+// Inner app that uses SOS context for route tracking
+const AppNavigator = () => {
+  const { setCurrentRoute } = useSOS();
+  const navigationRef = useRef<NavigationContainerRef<any>>(null);
+
+  const onNavigationStateChange = (state: any) => {
+    const routeName = getActiveRouteName(state);
+    setCurrentRoute(routeName);
+  };
+
+  const onNavigationReady = () => {
+    const currentRoute = navigationRef.current?.getCurrentRoute();
+    if (currentRoute?.name) {
+      setCurrentRoute(currentRoute.name);
     }
   };
 
-  if (!fontsLoaded) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
-    );
-  }
-
   return (
-    <LanguageProvider>
-      <SafeAreaProvider>
-        <NavigationContainer>
-          <StatusBar style="light" backgroundColor={COLORS.primary} />
-          <Stack.Navigator
+    <>
+      <NavigationContainer
+        ref={navigationRef}
+        onStateChange={onNavigationStateChange}
+        onReady={onNavigationReady}
+      >
+        <ThemedStatusBar />
+        <Stack.Navigator
           initialRouteName="Splash"
           screenOptions={{
             headerShown: false,
@@ -139,6 +214,7 @@ export default function App() {
           <Stack.Screen name="VerificationPending" component={VerificationPendingScreen} />
           
           {/* Main App */}
+          <Stack.Screen name="PinkPoolingSplash" component={PinkPoolingSplashScreen} />
           <Stack.Screen name="MainDashboard" component={MainDashboardScreen} />
           <Stack.Screen name="CompanyDashboard" component={CompanyDashboardScreen} />
           
@@ -196,12 +272,24 @@ export default function App() {
           <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
           <Stack.Screen name="HelpSupport" component={HelpSupportScreen} />
           <Stack.Screen name="Feedback" component={FeedbackScreen} />
+          <Stack.Screen name="FAQ" component={FAQScreen} />
+          <Stack.Screen name="ReportBug" component={ReportBugScreen} />
           <Stack.Screen name="Loading" component={LoadingScreen} />
           <Stack.Screen name="Error" component={ErrorScreen} />
+          <Stack.Screen name="Withdrawal" component={WithdrawalScreen} />
+          <Stack.Screen name="Wallet" component={WalletScreen} />
+          <Stack.Screen name="EarnCoins" component={EarnCoinsScreen} />
+          <Stack.Screen name="Reviews" component={ReviewsScreen} />
+          <Stack.Screen name="BlockedUsers" component={BlockedUsersScreen} />
+          <Stack.Screen name="About" component={AboutScreen} />
+          <Stack.Screen name="IntellectualProperty" component={IntellectualPropertyScreen} />
+          <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
+          <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
           
           {/* Admin Screens */}
           <Stack.Screen name="AdminLogin" component={AdminLoginScreen} />
           <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
+          <Stack.Screen name="AdminPromoReview" component={AdminPromoReviewScreen} />
           <Stack.Screen name="PoolingManagement" component={PoolingManagementScreen} />
           <Stack.Screen name="RentalManagement" component={RentalManagementScreen} />
           <Stack.Screen name="RidesHistory" component={RidesHistoryScreen} />
@@ -210,10 +298,65 @@ export default function App() {
           <Stack.Screen name="FeedbackDetails" component={FeedbackDetailsScreen} />
           <Stack.Screen name="Analytics" component={AnalyticsScreen} />
           <Stack.Screen name="AdminSettings" component={AdminSettingsScreen} />
-          </Stack.Navigator>
-        </NavigationContainer>
-      </SafeAreaProvider>
-    </LanguageProvider>
+          <Stack.Screen name="AdminPendingPayments" component={AdminPendingPaymentsScreen} />
+          <Stack.Screen name="TransactionDetails" component={TransactionDetailsScreen} />
+        </Stack.Navigator>
+      </NavigationContainer>
+      <SOSButton />
+    </>
+  );
+};
+
+export default function App() {
+  const [fontsLoaded, setFontsLoaded] = useState(false);
+
+  useEffect(() => {
+    loadFonts();
+    
+    // Initialize WebSocket connection when app starts
+    websocketService.connect();
+    
+    // Cleanup on unmount
+    return () => {
+      websocketService.disconnect();
+    };
+  }, []);
+
+  const loadFonts = async () => {
+    try {
+      await Font.loadAsync({
+        'MomoTrustDisplay-Regular': require('./assets/fonts/MomoTrustDisplay-Regular.ttf'),
+      });
+      // Apply the custom font globally to ALL Text & TextInput components
+      applyGlobalFont();
+    } catch (error) {
+      console.warn('Font loading error:', error);
+      // Fallback to system font if custom font fails
+    } finally {
+      setFontsLoaded(true);
+    }
+  };
+
+  if (!fontsLoaded) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    );
+  }
+
+  return (
+    <ThemeProvider>
+      <LanguageProvider>
+        <NotificationProvider>
+          <SOSProvider>
+            <SafeAreaProvider>
+              <AppNavigator />
+            </SafeAreaProvider>
+          </SOSProvider>
+        </NotificationProvider>
+      </LanguageProvider>
+    </ThemeProvider>
   );
 }
 

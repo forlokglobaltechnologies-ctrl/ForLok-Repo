@@ -8,8 +8,6 @@ import { calculatePlatformFee, timeSlotsOverlap, timeToMinutes, calculateDuratio
 import { BookingStatus, ServiceType, PaymentMethod, Route } from '../types';
 import { priceCalculationService } from './price-calculation.service';
 import { conversationService } from './conversation.service';
-import { snapToRoad } from '../utils/maps';
-import { roadMatchingService } from './road-matching.service';
 
 class BookingService {
   /**
@@ -87,110 +85,6 @@ class BookingService {
       // Use passenger route (required for dynamic pricing)
       const bookingRoute = data.passengerRoute;
 
-      // Snap passenger coordinates to roads and store segment references (NEW - road-aware)
-      interface PassengerSegment {
-        roadId: string;
-        direction: 'forward' | 'backward' | 'bidirectional';
-        lat: number;
-        lng: number;
-        estimatedTime: Date;
-      }
-      let passengerPickupSegment: PassengerSegment | undefined = undefined;
-      let passengerDropSegment: PassengerSegment | undefined = undefined;
-      let matchingConfidence: number | undefined = undefined;
-
-      try {
-        // Snap pickup and drop coordinates to roads
-        const pickupMatch = await snapToRoad(
-          data.passengerRoute.from.lat,
-          data.passengerRoute.from.lng
-        );
-        const dropMatch = await snapToRoad(
-          data.passengerRoute.to.lat,
-          data.passengerRoute.to.lng
-        );
-
-        if (pickupMatch && dropMatch && offer.route.roadSegments && offer.route.roadSegments.length > 0) {
-          // Calculate estimated times based on offer date/time
-          const offerDateTime = new Date(offer.date);
-          const timeMatch = offer.time.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
-          if (timeMatch) {
-            let hour = parseInt(timeMatch[1]);
-            const minute = parseInt(timeMatch[2]);
-            const ampm = timeMatch[3]?.toUpperCase();
-            
-            if (ampm === 'PM' && hour !== 12) {
-              hour += 12;
-            } else if (ampm === 'AM' && hour === 12) {
-              hour = 0;
-            }
-            
-            offerDateTime.setHours(hour, minute, 0, 0);
-          }
-
-          // Validate road-aware match and get confidence score
-          const roadMatch = await roadMatchingService.validateRoadAwareMatch(
-            offer.route.roadSegments,
-            data.passengerRoute.from.lat,
-            data.passengerRoute.from.lng,
-            data.passengerRoute.to.lat,
-            data.passengerRoute.to.lng,
-            false // hasRecentDeviation
-          );
-
-          matchingConfidence = roadMatch.confidence;
-
-          // Store segment references if match is valid
-          // Validate array bounds before accessing segments
-          if (
-            roadMatch.isValid &&
-            roadMatch.pickupSegmentIndex !== undefined &&
-            roadMatch.dropSegmentIndex !== undefined &&
-            roadMatch.pickupSegmentIndex >= 0 &&
-            roadMatch.dropSegmentIndex >= 0 &&
-            roadMatch.pickupSegmentIndex < offer.route.roadSegments.length &&
-            roadMatch.dropSegmentIndex < offer.route.roadSegments.length
-          ) {
-            const pickupSeg = offer.route.roadSegments[roadMatch.pickupSegmentIndex];
-            const dropSeg = offer.route.roadSegments[roadMatch.dropSegmentIndex];
-
-            passengerPickupSegment = {
-              roadId: pickupMatch.roadId,
-              direction: pickupMatch.direction,
-              lat: pickupMatch.lat,
-              lng: pickupMatch.lng,
-              estimatedTime: pickupSeg.estimatedTime,
-            };
-
-            passengerDropSegment = {
-              roadId: dropMatch.roadId,
-              direction: dropMatch.direction,
-              lat: dropMatch.lat,
-              lng: dropMatch.lng,
-              estimatedTime: dropSeg.estimatedTime,
-            };
-
-            logger.info(
-              `Stored road segments for booking: pickup=${pickupMatch.roadId}, drop=${dropMatch.roadId}, confidence=${matchingConfidence.toFixed(2)}`
-            );
-          } else {
-            logger.warn(
-              `Road match validation failed or invalid segment indices: isValid=${roadMatch.isValid}, ` +
-              `pickupIndex=${roadMatch.pickupSegmentIndex}, dropIndex=${roadMatch.dropSegmentIndex}, ` +
-              `reason=${roadMatch.reason || 'unknown'}`
-            );
-          }
-        } else {
-          logger.warn(
-            `Cannot store road segments: pickupMatch=${!!pickupMatch}, dropMatch=${!!dropMatch}, ` +
-            `roadSegmentsAvailable=${!!(offer.route.roadSegments && offer.route.roadSegments.length > 0)}`
-          );
-        }
-      } catch (error) {
-        logger.warn('Failed to snap passenger coordinates to roads, continuing without road segments:', error);
-        // Continue without road segments - booking will still be created
-      }
-
       // Create booking
       const booking = await Booking.create({
         userId: data.userId,
@@ -214,7 +108,7 @@ class BookingService {
         platformFee: platformFee,
         totalAmount: totalAmount,
         paymentMethod: data.paymentMethod,
-        paymentStatus: data.paymentMethod === 'offline_cash' ? 'pending' : 'pending', // Offline cash is pending until end of trip
+        paymentStatus: 'pending', // Payment happens at trip end for all bookings
         status: 'pending',
         passengerStatus: 'waiting', // Initial status: waiting to get in
         passengers: [
@@ -224,10 +118,6 @@ class BookingService {
             status: 'confirmed',
           },
         ],
-        // Road-aware matching fields
-        passengerPickupSegment,
-        passengerDropSegment,
-        matchingConfidence,
       });
 
       // Update offer
@@ -365,10 +255,9 @@ class BookingService {
       const totalAmount = amount + platformFee;
 
       // Determine booking status based on payment method
-      // For offline cash: booking is confirmed (payment collected at end)
-      // For online payment: booking is pending until payment is verified
-      const bookingStatus = data.paymentMethod === 'offline_cash' ? 'confirmed' : 'pending';
-      const paymentStatus = 'pending'; // Payment status is always pending initially
+      // NEW PAYMENT MODEL: All bookings are confirmed immediately (payment happens at trip end)
+      const bookingStatus = 'confirmed';
+      const paymentStatus = 'pending'; // Payment happens at trip end via Razorpay
 
       // Create booking
       const booking = await Booking.create({
@@ -771,7 +660,69 @@ class BookingService {
   }
 
   /**
-   * Cancel booking
+   * Preview cancellation fee (no changes made)
+   */
+  async previewCancellationFee(bookingId: string, userId: string): Promise<any> {
+    try {
+      const booking = await Booking.findOne({ bookingId, userId });
+      if (!booking) {
+        throw new NotFoundError('Booking not found');
+      }
+
+      if (booking.status === 'cancelled') {
+        throw new ConflictError('Booking is already cancelled');
+      }
+      if (booking.status === 'completed') {
+        throw new ConflictError('Cannot cancel completed booking');
+      }
+
+      // Count user's past cancellations
+      const pastCancellations = await Booking.countDocuments({
+        userId,
+        status: 'cancelled',
+        cancelledBy: 'user',
+      });
+
+      const isFirstCancellation = pastCancellations === 0;
+
+      // Calculate hours until trip
+      const tripDate = booking.date ? new Date(booking.date) : null;
+      const hoursUntilTrip = tripDate
+        ? (tripDate.getTime() - Date.now()) / (1000 * 60 * 60)
+        : 999; // If no date, treat as far away
+
+      const { getCancellationFeePercentage } = await import('../config/pricing.config');
+      const feePercentage = isFirstCancellation
+        ? 0
+        : getCancellationFeePercentage(hoursUntilTrip, booking.status, 'user');
+
+      const rideAmount = booking.totalAmount || booking.amount || 0;
+      const cancellationFee = Math.round((rideAmount * feePercentage) / 100);
+
+      return {
+        bookingId,
+        rideAmount,
+        isFirstCancellation,
+        pastCancellations,
+        feePercentage,
+        cancellationFee,
+        hoursUntilTrip: Math.max(0, Math.round(hoursUntilTrip * 10) / 10),
+        message: isFirstCancellation
+          ? 'First cancellation is FREE! No charges.'
+          : cancellationFee > 0
+            ? `Cancellation fee: ₹${cancellationFee} (${feePercentage}% of ₹${rideAmount})`
+            : 'No cancellation fee for this booking.',
+      };
+    } catch (error) {
+      logger.error('Error previewing cancellation fee:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Cancel booking with fee calculation
+   * 1st cancellation = FREE
+   * 2nd+ = time-based fee deducted from wallet
    */
   async cancelBooking(
     bookingId: string,
@@ -792,19 +743,63 @@ class BookingService {
         throw new ConflictError('Cannot cancel completed booking');
       }
 
+      // Count user's past cancellations (before this one)
+      const pastCancellations = await Booking.countDocuments({
+        userId,
+        status: 'cancelled',
+        cancelledBy: 'user',
+      });
+
+      const isFirstCancellation = pastCancellations === 0;
+
+      // Calculate hours until trip
+      const tripDate = booking.date ? new Date(booking.date) : null;
+      const hoursUntilTrip = tripDate
+        ? (tripDate.getTime() - Date.now()) / (1000 * 60 * 60)
+        : 999;
+
+      const { getCancellationFeePercentage } = await import('../config/pricing.config');
+      const feePercentage = isFirstCancellation
+        ? 0
+        : getCancellationFeePercentage(hoursUntilTrip, booking.status, 'user');
+
+      const rideAmount = booking.totalAmount || booking.amount || 0;
+      const cancellationFee = Math.round((rideAmount * feePercentage) / 100);
+
+      // Deduct cancellation fee from wallet (if any)
+      let walletDeducted = false;
+      if (cancellationFee > 0) {
+        try {
+          const { walletService } = await import('./wallet.service');
+          await walletService.debitWallet(
+            userId,
+            cancellationFee,
+            'cancellation_fee',
+            `Cancellation fee for booking ${bookingId} (${feePercentage}% of ₹${rideAmount})`,
+            undefined,
+            bookingId
+          );
+          walletDeducted = true;
+          logger.info(`💸 Cancellation fee ₹${cancellationFee} deducted from user ${userId} wallet`);
+        } catch (walletError) {
+          logger.warn(`Could not deduct cancellation fee from wallet:`, walletError);
+          // Still allow cancellation even if wallet deduction fails (wallet may go negative)
+        }
+      }
+
       // Update booking
       booking.status = 'cancelled';
       booking.cancellationReason = reason;
       booking.cancelledAt = new Date();
       booking.cancelledBy = 'user';
+      (booking as any).cancellationFee = cancellationFee;
       await booking.save();
 
-      // Update offer based on service type
+      // Update offer — free up seat
       if (booking.serviceType === 'pooling' && booking.poolingOfferId) {
         const offer = await PoolingOffer.findOne({ offerId: booking.poolingOfferId });
         if (offer) {
           offer.availableSeats += 1;
-          // Remove passenger
           offer.passengers = offer.passengers.filter(
             (p) => p.userId !== userId
           );
@@ -818,9 +813,23 @@ class BookingService {
         }
       }
 
-      logger.info(`Booking cancelled: ${bookingId}`);
+      logger.info(`🚫 Booking cancelled: ${bookingId}`);
+      logger.info(`   User: ${userId} | 1st cancel: ${isFirstCancellation} | Fee: ₹${cancellationFee} (${feePercentage}%)`);
 
-      return booking.toJSON();
+      return {
+        ...booking.toJSON(),
+        cancellationDetails: {
+          isFirstCancellation,
+          feePercentage,
+          cancellationFee,
+          walletDeducted,
+          message: isFirstCancellation
+            ? 'Booking cancelled. First cancellation is free!'
+            : cancellationFee > 0
+              ? `Booking cancelled. ₹${cancellationFee} cancellation fee deducted from wallet.`
+              : 'Booking cancelled. No cancellation fee.',
+        },
+      };
     } catch (error) {
       logger.error('Error cancelling booking:', error);
       throw error;
@@ -903,48 +912,26 @@ class BookingService {
         if (!ownerId) {
           logger.warn(`⚠️ No ownerId found for booking ${bookingId}. Owner: ${JSON.stringify(booking.owner)}, Driver: ${JSON.stringify(booking.driver)}`);
         } else {
-          const owner = await User.findOne({ userId: ownerId });
-          if (!owner) {
-            logger.error(`❌ Owner not found: ${ownerId} for booking ${bookingId}`);
-          } else {
-            const previousOutflow = owner.outflowAmount || 0;
-            
-            if (booking.paymentMethod === 'offline_cash') {
-              // Offline cash: Owner collects totalAmount from renter
-              // Owner owes platformFee to Yariyatra (added to outflow)
-              const platformFeeOwed = booking.platformFee || 0;
-              const newOutflowAmount = (owner.outflowAmount || 0) + platformFeeOwed;
-              
-              // Use updateOne to ensure the change is persisted
-              const updateResult = await User.updateOne(
-                { userId: ownerId },
-                { $inc: { outflowAmount: platformFeeOwed } }
-              );
-              
-              logger.info(`💰 Offline rental payment: Booking ${bookingId}`);
-              logger.info(`   Owner: ${ownerId}`);
-              logger.info(`   Platform fee: ₹${platformFeeOwed}`);
-              logger.info(`   Outflow before: ₹${previousOutflow}`);
-              logger.info(`   Outflow after: ₹${newOutflowAmount}`);
-              logger.info(`   Owner keeps: ₹${ownerSettlementAmount} as earnings`);
-              logger.info(`   Update result: matched=${updateResult.matchedCount}, modified=${updateResult.modifiedCount}`);
-              
-              // Set booking fields
-              booking.settlementStatus = 'pending';
-              booking.paymentStatus = 'paid'; // Mark as paid since owner collected cash
-              
-              // Verify the update worked
-              const verifyOwner = await User.findOne({ userId: ownerId });
-              logger.info(`✅ Verification: Owner ${ownerId} outflowAmount after update: ₹${verifyOwner?.outflowAmount || 0}`);
-            } else {
-              // Online payment: Process settlement balance (add to inflow)
-              await this.processSettlementBalance(ownerId, ownerSettlementAmount);
-              booking.settlementStatus = 'driver_requested'; // Use driver_requested for rental owners (same concept)
-              booking.settlementRequestedAt = new Date();
-              
-              logger.info(`💰 Online rental payment: Added ₹${ownerSettlementAmount} to inflow for owner ${ownerId}`);
-            }
-          }
+          // NEW PAYMENT MODEL: Payment at trip end via Razorpay
+          // Create Razorpay order for the renter to pay
+          const { paymentService } = await import('./payment.service');
+          await paymentService.createRidePaymentOrder({
+            bookingId,
+            userId: booking.userId,
+            driverId: ownerId,
+            amount: booking.amount,
+            platformFee: booking.platformFee || 0,
+            totalAmount: booking.totalAmount,
+          });
+          
+          booking.settlementStatus = 'pending';
+          booking.paymentStatus = 'pending';
+          
+          logger.info(`💰 Rental payment order created at trip end: Booking ${bookingId}`);
+          logger.info(`   Owner: ${ownerId}`);
+          logger.info(`   Amount: ₹${booking.amount}`);
+          logger.info(`   Platform fee: ₹${booking.platformFee || 0}`);
+          logger.info(`   Total: ₹${booking.totalAmount}`);
         }
       }
       
@@ -1101,10 +1088,11 @@ class BookingService {
   async endPassengerTrip(
     bookingId: string,
     driverId: string,
-    passengerCode: string
+    passengerCode: string,
+    paymentMethod?: string
   ): Promise<any> {
     // Use the new verifyPassengerCodeAndComplete method
-    return this.verifyPassengerCodeAndComplete(bookingId, driverId, passengerCode);
+    return this.verifyPassengerCodeAndComplete(bookingId, driverId, passengerCode, paymentMethod);
   }
 
   /**
@@ -1210,7 +1198,9 @@ class BookingService {
   }
 
   /**
-   * Mark passenger as "Got Out" and generate code (driver action)
+   * Mark passenger as "Got Out" (driver action)
+   * No code generated here — passenger chooses payment method first
+   * Sends notification to passenger to complete payment
    */
   async markPassengerGotOut(bookingId: string, driverId: string): Promise<any> {
     try {
@@ -1230,27 +1220,29 @@ class BookingService {
         throw new ConflictError('Passenger must be marked as "got in" first');
       }
 
-      // Generate 4-digit code
-      const passengerCode = this.generatePassengerCode();
-      booking.passengerCode = passengerCode;
       booking.passengerStatus = 'got_out';
-      booking.codeGeneratedAt = new Date();
       await booking.save();
 
-      // Log code to console for easy testing
-      console.log('\n🔐 ========================================');
-      console.log(`🔐 PASSENGER CODE GENERATED`);
-      console.log(`🔐 Booking ID: ${bookingId}`);
-      console.log(`🔐 Passenger: ${booking.passengers?.[0]?.name || 'Unknown'}`);
-      console.log(`🔐 CODE: ${passengerCode}`);
-      console.log(`🔐 ========================================\n`);
-      
-      logger.info(`✅ Passenger marked as got out with code ${passengerCode}: booking ${bookingId}`);
+      // Send notification to passenger to pay
+      try {
+        const { notificationService } = await import('./notification.service');
+        await notificationService.createNotification({
+          userId: booking.userId,
+          type: 'payment_required',
+          title: 'Trip Ended — Please Pay',
+          message: `Your trip has ended. Amount: ₹${booking.totalAmount}. Please complete payment.`,
+          data: { bookingId, amount: booking.totalAmount },
+          actionRequired: true,
+        });
+      } catch (notifError) {
+        logger.warn('Could not send payment notification:', notifError);
+      }
+
+      logger.info(`✅ Passenger marked as got out: booking ${bookingId}. Waiting for payment choice.`);
 
       return {
         booking: booking.toJSON(),
-        passengerCode,
-        message: 'Passenger code generated. Please share with passenger.',
+        message: 'Passenger notified to complete payment.',
       };
     } catch (error) {
       logger.error('Error marking passenger got out:', error);
@@ -1259,12 +1251,104 @@ class BookingService {
   }
 
   /**
-   * Verify passenger code and complete trip (driver action)
+   * Passenger chooses payment method (passenger action)
+   * - Online: Creates Razorpay order for passenger to pay
+   * - Cash: Generates 4-digit code for passenger to show driver
+   */
+  async choosePaymentMethod(bookingId: string, passengerId: string, paymentMethod: 'online' | 'offline_cash'): Promise<any> {
+    try {
+      const booking = await Booking.findOne({ bookingId });
+      if (!booking) {
+        throw new NotFoundError('Booking not found');
+      }
+
+      // Verify this is the passenger
+      if (booking.userId !== passengerId) {
+        throw new ConflictError('You are not authorized for this booking');
+      }
+
+      // Must be got_out status
+      if (booking.passengerStatus !== 'got_out') {
+        throw new ConflictError('Trip must be ended by driver first');
+      }
+
+      const driverId = booking.driver?.userId;
+      if (!driverId) {
+        throw new ConflictError('Driver not found for this booking');
+      }
+
+      // ========== OFFLINE CASH ==========
+      if (paymentMethod === 'offline_cash') {
+        // Generate 4-digit code for passenger to show driver
+        const passengerCode = this.generatePassengerCode();
+        booking.passengerCode = passengerCode;
+        booking.paymentMethod = 'offline_cash';
+        booking.codeGeneratedAt = new Date();
+        await booking.save();
+
+        console.log('\n🔐 ========================================');
+        console.log(`🔐 CASH PAYMENT — CODE GENERATED`);
+        console.log(`🔐 Booking ID: ${bookingId}`);
+        console.log(`🔐 CODE: ${passengerCode}`);
+        console.log(`🔐 ========================================\n`);
+
+        logger.info(`💵 Cash selected for booking ${bookingId}. Code: ${passengerCode}`);
+
+        return {
+          booking: booking.toJSON(),
+          paymentMethod: 'offline_cash',
+          passengerCode,
+          message: 'Tell this code to your driver to complete the trip.',
+        };
+      }
+
+      // ========== ONLINE PAYMENT (Razorpay) ==========
+      const { paymentService } = await import('./payment.service');
+      
+      booking.paymentMethod = 'upi'; // Default online method
+      await booking.save();
+
+      const paymentResult = await paymentService.createRidePaymentOrder({
+        bookingId,
+        userId: passengerId,
+        driverId,
+        amount: booking.amount,
+        platformFee: booking.platformFee || 0,
+        totalAmount: booking.totalAmount,
+      });
+
+      booking.paymentStatus = 'pending';
+      await booking.save();
+
+      logger.info(`💳 Online payment selected for booking ${bookingId}. Razorpay order: ${paymentResult.razorpayOrder.id}`);
+
+      return {
+        booking: booking.toJSON(),
+        paymentMethod: 'online',
+        paymentOrder: {
+          razorpayOrderId: paymentResult.razorpayOrder.id,
+          amount: paymentResult.razorpayOrder.amount,
+          currency: paymentResult.razorpayOrder.currency,
+          key: paymentResult.razorpayOrder.key,
+          totalAmount: booking.totalAmount,
+        },
+        message: 'Complete payment to finish the trip.',
+      };
+    } catch (error) {
+      logger.error('Error in choosePaymentMethod:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Verify passenger code and complete trip (driver action — CASH ONLY)
+   * Called when passenger chose cash and showed code to driver
    */
   async verifyPassengerCodeAndComplete(
     bookingId: string,
     driverId: string,
-    passengerCode: string
+    passengerCode: string,
+    _paymentMethod?: string
   ): Promise<any> {
     try {
       const booking = await Booking.findOne({ bookingId });
@@ -1280,9 +1364,8 @@ class BookingService {
 
       // Verify code
       console.log('\n🔍 ========================================');
-      console.log(`🔍 CODE VERIFICATION ATTEMPT`);
+      console.log(`🔍 CASH CODE VERIFICATION`);
       console.log(`🔍 Booking ID: ${bookingId}`);
-      console.log(`🔍 Passenger: ${booking.passengers?.[0]?.name || 'Unknown'}`);
       console.log(`🔍 Expected Code: ${booking.passengerCode}`);
       console.log(`🔍 Entered Code: ${passengerCode}`);
       
@@ -1292,7 +1375,6 @@ class BookingService {
         ? passengerCode.length === 4 && /^\d{4}$/.test(passengerCode)
         : booking.passengerCode === passengerCode;
       
-      console.log(`🔍 Testing Mode: ${TESTING_MODE ? '✅ ENABLED (Any 4-digit code accepted)' : '❌ DISABLED'}`);
       console.log(`🔍 Match: ${isValidCode ? '✅ VALID' : '❌ INVALID'}`);
       console.log(`🔍 ========================================\n`);
       
@@ -1302,107 +1384,155 @@ class BookingService {
           : 'Invalid passenger code');
       }
 
-      // Check if passenger has got out
       if (booking.passengerStatus !== 'got_out') {
         throw new ConflictError('Passenger must be marked as "got out" first');
       }
 
-      // Update booking status
-      booking.status = 'completed';
-      booking.tripCompletedAt = new Date();
-
-      // Calculate settlement amount (amount - platform fee)
-      const driverSettlementAmount = booking.amount; // Driver gets amount, platform fee stays with Yariyatra
+      // Cash payment flow — process offline payment
+      const driverSettlementAmount = booking.amount;
       booking.driverSettlementAmount = driverSettlementAmount;
 
-      // Handle settlement based on payment method
-      const driver = await User.findOne({ userId: driverId });
-      if (!driver) {
-        throw new NotFoundError('Driver not found');
-      }
+      const { paymentService } = await import('./payment.service');
 
-      if (booking.paymentMethod === 'offline_cash') {
-        // Offline payment: Driver only owes platform fee to Yariyatra
-        // Driver collects totalAmount from passenger, but only platformFee goes to outflow
-        // Driver keeps (totalAmount - platformFee) as their earnings
-        const platformFeeOwed = booking.platformFee || 0;
-        const previousOutflow = driver.outflowAmount || 0;
-        const newOutflowAmount = previousOutflow + platformFeeOwed;
-        
-        // Use updateOne to ensure the change is persisted atomically
-        const updateResult = await User.updateOne(
-          { userId: driverId },
-          { $inc: { outflowAmount: platformFeeOwed } }
-        );
-        
-        booking.settlementStatus = 'pending'; // No settlement needed for offline
-        
-        logger.info(`💰 Offline payment: Booking ${bookingId}`);
-        logger.info(`   Driver: ${driverId}`);
-        logger.info(`   Platform fee: ₹${platformFeeOwed}`);
-        logger.info(`   Outflow before: ₹${previousOutflow}`);
-        logger.info(`   Outflow after: ₹${newOutflowAmount}`);
-        logger.info(`   Driver keeps: ₹${booking.amount} as earnings`);
-        logger.info(`   Update result: matched=${updateResult.matchedCount}, modified=${updateResult.modifiedCount}`);
-        
-        // Verify the update worked
-        const verifyDriver = await User.findOne({ userId: driverId });
-        logger.info(`✅ Verification: Driver ${driverId} outflowAmount after update: ₹${verifyDriver?.outflowAmount || 0}`);
-      } else {
-        // Online payment: Process settlement balance (subtract from outflow if exists, then add to inflow)
-        await this.processSettlementBalance(driverId, driverSettlementAmount);
-        booking.settlementStatus = 'driver_requested';
-        booking.settlementRequestedAt = new Date();
-        logger.info(`💰 Online payment: Processed settlement for driver ${driverId}`);
-      }
-      await booking.save();
+      await paymentService.processOfflineCashPayment({
+        bookingId,
+        userId: booking.userId,
+        driverId,
+        amount: booking.amount,
+        platformFee: booking.platformFee || 0,
+        totalAmount: booking.totalAmount,
+      });
 
-      // Check if all bookings for this offer are completed, then mark offer as completed
+      const updatedBooking = await Booking.findOne({ bookingId });
+
+      logger.info(`💵 Cash trip completed: Booking ${bookingId}`);
+      logger.info(`   Passenger paid ₹${booking.totalAmount} cash to driver`);
+      logger.info(`   Platform fee ₹${booking.platformFee || 0} deducted from driver wallet`);
+
+      await this.checkAndCompleteOffer(booking);
+
+      // Notify passenger that trip is completed
       try {
-        const offerId = booking.poolingOfferId || booking.rentalOfferId;
-        if (offerId) {
-          const serviceType = booking.poolingOfferId ? 'pooling' : 'rental';
-          const allBookings = await Booking.find({
-            [serviceType === 'pooling' ? 'poolingOfferId' : 'rentalOfferId']: offerId,
-            status: { $ne: 'cancelled' }, // Exclude cancelled bookings
-          });
-
-          const allCompleted = allBookings.length > 0 && allBookings.every(b => b.status === 'completed');
-          
-          if (allCompleted) {
-            if (serviceType === 'pooling') {
-              const poolingOffer = await PoolingOffer.findOne({ offerId });
-              if (poolingOffer && poolingOffer.status !== 'completed') {
-                poolingOffer.status = 'completed';
-                await poolingOffer.save();
-                logger.info(`✅ Marked pooling offer ${offerId} as completed (all bookings completed)`);
-              }
-            } else {
-              const rentalOffer = await RentalOffer.findOne({ offerId });
-              if (rentalOffer && rentalOffer.status !== 'completed') {
-                rentalOffer.status = 'completed';
-                await rentalOffer.save();
-                logger.info(`✅ Marked rental offer ${offerId} as completed (all bookings completed)`);
-              }
-            }
-          }
-        }
-      } catch (error) {
-        logger.warn('Failed to update offer status after booking completion:', error);
-        // Don't fail the booking completion if offer status update fails
+        const { notificationService } = await import('./notification.service');
+        await notificationService.createNotification({
+          userId: booking.userId,
+          type: 'payment_completed',
+          title: 'Trip Completed',
+          message: `Your trip is completed. ₹${booking.totalAmount} paid in cash.`,
+          data: { bookingId },
+        });
+      } catch (notifError) {
+        logger.warn('Could not send completion notification:', notifError);
       }
 
-      logger.info(`✅ Trip completed with code verification: booking ${bookingId}`);
+      // --- Coin Reward System: Award ride coins + check milestones ---
+      try {
+        const { coinService } = await import('./coin.service');
+
+        // Award coins to passenger
+        const passengerCoins = await coinService.awardRideCoins(booking.userId, bookingId);
+        logger.info(`🪙 Ride coins: ${passengerCoins} awarded to passenger ${booking.userId}`);
+
+        // Award coins to driver
+        const driverCoins = await coinService.awardRideCoins(driverId, bookingId);
+        logger.info(`🪙 Ride coins: ${driverCoins} awarded to driver ${driverId}`);
+
+        // Increment totalTrips for both
+        await User.findOneAndUpdate({ userId: booking.userId }, { $inc: { totalTrips: 1 } });
+        await User.findOneAndUpdate({ userId: driverId }, { $inc: { totalTrips: 1 } });
+
+        // Check milestones for both
+        const passengerMilestone = await coinService.awardMilestoneIfEligible(booking.userId);
+        const driverMilestone = await coinService.awardMilestoneIfEligible(driverId);
+
+        if (passengerMilestone) {
+          const { notificationService: ns } = await import('./notification.service');
+          await ns.createNotification({
+            userId: booking.userId,
+            type: 'milestone_achieved',
+            title: `🏅 Milestone: ${passengerMilestone.badge}!`,
+            message: `Congratulations! You earned the "${passengerMilestone.badge}" badge and ${passengerMilestone.coins} bonus coins!`,
+            data: { badge: passengerMilestone.badge, coins: passengerMilestone.coins },
+          });
+        }
+        if (driverMilestone) {
+          const { notificationService: ns } = await import('./notification.service');
+          await ns.createNotification({
+            userId: driverId,
+            type: 'milestone_achieved',
+            title: `🏅 Milestone: ${driverMilestone.badge}!`,
+            message: `Congratulations! You earned the "${driverMilestone.badge}" badge and ${driverMilestone.coins} bonus coins!`,
+            data: { badge: driverMilestone.badge, coins: driverMilestone.coins },
+          });
+        }
+
+        // Notify both about coins earned
+        const { notificationService: ns2 } = await import('./notification.service');
+        await ns2.createNotification({
+          userId: booking.userId,
+          type: 'coin_earned',
+          title: 'Coins Earned!',
+          message: `You earned ${passengerCoins} coins for completing your ride!`,
+          data: { coins: passengerCoins, bookingId },
+        });
+        await ns2.createNotification({
+          userId: driverId,
+          type: 'coin_earned',
+          title: 'Coins Earned!',
+          message: `You earned ${driverCoins} coins for completing a ride!`,
+          data: { coins: driverCoins, bookingId },
+        });
+      } catch (coinError) {
+        logger.error('🪙 Coin reward error (non-fatal):', coinError);
+      }
 
       return {
-        booking: booking.toJSON(),
+        booking: updatedBooking ? updatedBooking.toJSON() : booking.toJSON(),
         settlementAmount: driverSettlementAmount,
-        canWithdraw: booking.paymentMethod !== 'offline_cash',
-        message: 'Trip completed successfully. Settlement processed.',
+        paymentMethod: 'offline_cash',
+        message: 'Trip completed. Cash payment recorded.',
       };
     } catch (error) {
       logger.error('Error verifying passenger code:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Helper: Check if all bookings for an offer are completed, and mark the offer as completed
+   */
+  private async checkAndCompleteOffer(booking: any): Promise<void> {
+    try {
+      const offerId = booking.poolingOfferId || booking.rentalOfferId;
+      if (offerId) {
+        const serviceType = booking.poolingOfferId ? 'pooling' : 'rental';
+        const allBookings = await Booking.find({
+          [serviceType === 'pooling' ? 'poolingOfferId' : 'rentalOfferId']: offerId,
+          status: { $ne: 'cancelled' },
+        });
+
+        const allCompleted = allBookings.length > 0 && allBookings.every(b => b.status === 'completed');
+        
+        if (allCompleted) {
+          if (serviceType === 'pooling') {
+            const poolingOffer = await PoolingOffer.findOne({ offerId });
+            if (poolingOffer && poolingOffer.status !== 'completed') {
+              poolingOffer.status = 'completed';
+              await poolingOffer.save();
+              logger.info(`✅ Marked pooling offer ${offerId} as completed (all bookings completed)`);
+            }
+          } else {
+            const rentalOffer = await RentalOffer.findOne({ offerId });
+            if (rentalOffer && rentalOffer.status !== 'completed') {
+              rentalOffer.status = 'completed';
+              await rentalOffer.save();
+              logger.info(`✅ Marked rental offer ${offerId} as completed (all bookings completed)`);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      logger.warn('Failed to update offer status after booking completion:', error);
     }
   }
 
@@ -1566,37 +1696,26 @@ class BookingService {
         const driverSettlementAmount = booking.amount;
         booking.driverSettlementAmount = driverSettlementAmount;
         
-        // Handle settlement based on payment method
-        const driver = await User.findOne({ userId: driverId });
-        if (driver) {
-          if (booking.paymentMethod === 'offline_cash') {
-            const platformFeeOwed = booking.platformFee || 0;
-            const previousOutflow = driver.outflowAmount || 0;
-            const newOutflowAmount = previousOutflow + platformFeeOwed;
-            
-            // Use updateOne to ensure the change is persisted atomically
-            const updateResult = await User.updateOne(
-              { userId: driverId },
-              { $inc: { outflowAmount: platformFeeOwed } }
-            );
-            
-            booking.settlementStatus = 'pending';
-            
-            logger.info(`💰 Offline payment (endTrip): Booking ${booking.bookingId}`);
-            logger.info(`   Driver: ${driverId}`);
-            logger.info(`   Platform fee: ₹${platformFeeOwed}`);
-            logger.info(`   Outflow before: ₹${previousOutflow}`);
-            logger.info(`   Outflow after: ₹${newOutflowAmount}`);
-            logger.info(`   Update result: matched=${updateResult.matchedCount}, modified=${updateResult.modifiedCount}`);
-            
-            // Verify the update worked
-            const verifyDriver = await User.findOne({ userId: driverId });
-            logger.info(`✅ Verification: Driver ${driverId} outflowAmount after update: ₹${verifyDriver?.outflowAmount || 0}`);
-          } else {
-            await this.processSettlementBalance(driverId, driverSettlementAmount);
-            booking.settlementStatus = 'driver_requested';
-            booking.settlementRequestedAt = new Date();
-          }
+        // NEW PAYMENT MODEL: Create Razorpay order for each booking at trip end
+        const { paymentService } = await import('./payment.service');
+        try {
+          await paymentService.createRidePaymentOrder({
+            bookingId: booking.bookingId,
+            userId: booking.userId,
+            driverId,
+            amount: booking.amount,
+            platformFee: booking.platformFee || 0,
+            totalAmount: booking.totalAmount,
+          });
+          booking.settlementStatus = 'pending';
+          booking.paymentStatus = 'pending';
+          
+          logger.info(`💰 Ride payment order created (endTrip): Booking ${booking.bookingId}`);
+          logger.info(`   Passenger: ${booking.userId}, Driver: ${driverId}`);
+          logger.info(`   Total: ₹${booking.totalAmount}`);
+        } catch (payError) {
+          logger.error(`Failed to create payment order for booking ${booking.bookingId}:`, payError);
+          // Continue processing other bookings
         }
         
         await booking.save();
@@ -1660,11 +1779,6 @@ class BookingService {
         throw new ConflictError('Settlement already processed');
       }
 
-      // Check if online payment (offline doesn't need withdrawal)
-      if (booking.paymentMethod === 'offline_cash') {
-        throw new ConflictError('Withdrawal not available for offline cash payments');
-      }
-
       // Update settlement status
       booking.settlementStatus = 'driver_requested';
       booking.settlementRequestedAt = new Date();
@@ -1674,7 +1788,7 @@ class BookingService {
 
       return {
         booking: booking.toJSON(),
-        message: 'Withdrawal request submitted. Admin will process it.',
+        message: 'Withdrawal request submitted. Use the wallet withdrawal feature to withdraw funds.',
       };
     } catch (error) {
       logger.error('Error requesting withdrawal:', error);
@@ -1683,46 +1797,11 @@ class BookingService {
   }
 
   /**
-   * Process settlement and update inflow/outflow (called when online payment is made after offline payment)
+   * DEPRECATED: processSettlementBalance removed.
+   * New payment model uses centralized wallet.
+   * Driver earnings are credited to wallet via walletService.creditDriverEarnings()
+   * after Razorpay payment is verified at trip end.
    */
-  async processSettlementBalance(driverId: string, onlineAmount: number): Promise<void> {
-    try {
-      const driver = await User.findOne({ userId: driverId });
-      if (!driver) {
-        throw new NotFoundError('Driver not found');
-      }
-
-      // If driver has outflow, offset it first with online payment
-      if (driver.outflowAmount > 0) {
-        const originalOutflow = driver.outflowAmount;
-        
-        if (onlineAmount >= originalOutflow) {
-          // Online amount fully covers outflow, clear outflow and add excess to inflow
-          const excessAmount = onlineAmount - originalOutflow;
-          driver.outflowAmount = 0;
-          driver.inflowAmount = (driver.inflowAmount || 0) + excessAmount;
-          logger.info(
-            `💰 Outflow cleared (₹${originalOutflow}) and ₹${excessAmount} added to inflow for driver ${driverId}`
-          );
-        } else {
-          // Online amount partially covers outflow, reduce outflow
-          driver.outflowAmount = originalOutflow - onlineAmount;
-          logger.info(
-            `💰 Outflow reduced by ₹${onlineAmount} for driver ${driverId}. Remaining outflow: ₹${driver.outflowAmount}`
-          );
-        }
-      } else {
-        // No outflow, add to inflow
-        driver.inflowAmount = (driver.inflowAmount || 0) + onlineAmount;
-        logger.info(`💰 Added ₹${onlineAmount} to inflow for driver ${driverId}`);
-      }
-
-      await driver.save();
-    } catch (error) {
-      logger.error('Error processing settlement balance:', error);
-      throw error;
-    }
-  }
 }
 
 export const bookingService = new BookingService();

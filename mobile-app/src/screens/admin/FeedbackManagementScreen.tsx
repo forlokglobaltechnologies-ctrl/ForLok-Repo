@@ -1,640 +1,754 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   Dimensions,
   ImageBackground,
+  ActivityIndicator,
+  RefreshControl,
+  Platform,
+  StatusBar,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { BlurView } from 'expo-blur';
 import {
   ArrowLeft,
-  Search,
-  Filter,
-  AlertTriangle,
   Lightbulb,
   XCircle,
   CheckCircle,
   CreditCard,
   MessageSquare,
   Clock,
-  Shield,
-  TrendingUp,
-  Download,
+  ChevronRight,
+  Inbox,
+  AlertTriangle,
+  Eye,
+  Star,
+  Bug,
+  User,
+  Calendar,
 } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
-import { Card } from '@components/common/Card';
 import { useLanguage } from '@context/LanguageContext';
+import { adminFeedbackApi } from '@utils/apiClient';
 
-const { width } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const FeedbackManagementScreen = () => {
   const navigation = useNavigation();
-  const [activeTab, setActiveTab] = useState('All');
+  const { t } = useLanguage();
+  const [activeTab, setActiveTab] = useState('all');
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [feedbacks, setFeedbacks] = useState<any[]>([]);
+  const [stats, setStats] = useState<any>(null);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
 
-  const tabs = ['All', 'Pending', 'Acknowledged', 'Resolved', 'Archived'];
-
-  const feedbacks = [
-    {
-      id: 'FB20240115001',
-      type: 'Payment Issue',
-      user: 'Rajesh K.',
-      userId: '12345',
-      submitted: '15 Jan 2024, 10:30 AM',
-      status: 'Pending',
-      priority: 'High',
-      icon: CreditCard,
-    },
-    {
-      id: 'FB20240115002',
-      type: 'Feature Suggestion',
-      user: 'Priya M.',
-      userId: '67890',
-      submitted: '14 Jan 2024, 3:45 PM',
-      status: 'Acknowledged',
-      priority: 'Medium',
-      icon: Lightbulb,
-    },
-    {
-      id: 'FB20240114001',
-      type: 'Complaint',
-      user: 'Amit S.',
-      userId: '11111',
-      submitted: '13 Jan 2024, 11:20 AM',
-      status: 'Resolved',
-      priority: 'High',
-      icon: XCircle,
-    },
+  const tabs = [
+    { key: 'all', label: 'All', icon: MessageSquare, color: '#4A90D9' },
+    { key: 'pending', label: 'Pending', icon: Clock, color: '#F39C12' },
+    { key: 'acknowledged', label: 'In Review', icon: Eye, color: '#7B61FF' },
+    { key: 'resolved', label: 'Resolved', icon: CheckCircle, color: '#00B894' },
+    { key: 'archived', label: 'Archived', icon: Inbox, color: '#94A3B8' },
   ];
 
-  const stats = {
-    total: 1234,
-    pending: 45,
-    acknowledged: 234,
-    resolved: 890,
-    avgResponseTime: '2.5 hours',
+  const fetchData = useCallback(async (reset = false) => {
+    try {
+      if (reset) setLoading(true);
+      const currentPage = reset ? 1 : page;
+
+      const [statsRes, feedbackRes] = await Promise.all([
+        reset || !stats ? adminFeedbackApi.getStats() : Promise.resolve(null),
+        adminFeedbackApi.getAll({
+          status: activeTab !== 'all' ? activeTab : undefined,
+          page: currentPage,
+          limit: 20,
+        }),
+      ]);
+
+      if (statsRes?.success && statsRes.data) {
+        setStats(statsRes.data);
+      }
+
+      if (feedbackRes.success && feedbackRes.data) {
+        const newFeedbacks = feedbackRes.data.feedback || [];
+        if (reset) {
+          setFeedbacks(newFeedbacks);
+          setPage(2);
+        } else {
+          setFeedbacks((prev) => [...prev, ...newFeedbacks]);
+          setPage(currentPage + 1);
+        }
+        setTotal(feedbackRes.data.total || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching feedback data:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [activeTab, page, stats]);
+
+  useEffect(() => {
+    fetchData(true);
+  }, [activeTab]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchData(true);
   };
 
+  // ── Helpers ─────────────────────────────────────────────────
+  const getTypeConfig = (type: string) => {
+    const map: Record<string, { icon: any; color: string; bg: string; label: string }> = {
+      bug:        { icon: Bug,           color: '#E74C3C', bg: '#FFEBEE', label: 'Bug Report' },
+      issue:      { icon: AlertTriangle, color: '#F39C12', bg: '#FFF8E1', label: 'Issue' },
+      suggestion: { icon: Lightbulb,     color: '#4A90D9', bg: '#EBF5FF', label: 'Suggestion' },
+      complaint:  { icon: XCircle,       color: '#E74C3C', bg: '#FFEBEE', label: 'Complaint' },
+      feedback:   { icon: MessageSquare, color: '#7B61FF', bg: '#F0EBFF', label: 'Feedback' },
+      general:    { icon: MessageSquare, color: '#7B61FF', bg: '#F0EBFF', label: 'General' },
+    };
+    return map[type] || { icon: MessageSquare, color: '#94A3B8', bg: '#F1F5F9', label: type || 'Feedback' };
+  };
+
+  const getStatusConfig = (status: string) => {
+    const map: Record<string, { color: string; bg: string; label: string }> = {
+      pending:      { color: '#F39C12', bg: '#F39C12' + '15', label: 'Pending' },
+      acknowledged: { color: '#7B61FF', bg: '#7B61FF' + '15', label: 'In Review' },
+      resolved:     { color: '#00B894', bg: '#00B894' + '15', label: 'Resolved' },
+      archived:     { color: '#94A3B8', bg: '#94A3B8' + '15', label: 'Archived' },
+    };
+    return map[status] || { color: '#94A3B8', bg: '#F1F5F9', label: status };
+  };
+
+  const getPriorityConfig = (priority: string) => {
+    const map: Record<string, { color: string; bg: string; label: string }> = {
+      high:   { color: '#E74C3C', bg: '#E74C3C' + '15', label: 'High' },
+      medium: { color: '#F39C12', bg: '#F39C12' + '15', label: 'Medium' },
+      low:    { color: '#00B894', bg: '#00B894' + '15', label: 'Low' },
+    };
+    return map[priority] || { color: '#94A3B8', bg: '#F1F5F9', label: priority || 'Normal' };
+  };
+
+  const getTimeAgo = (dateStr: string) => {
+    try {
+      const now = new Date();
+      const date = new Date(dateStr);
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      if (diffMins < 1) return 'Just now';
+      if (diffMins < 60) return `${diffMins}m ago`;
+      const diffHours = Math.floor(diffMins / 60);
+      if (diffHours < 24) return `${diffHours}h ago`;
+      const diffDays = Math.floor(diffHours / 24);
+      if (diffDays < 7) return `${diffDays}d ago`;
+      return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+    } catch {
+      return '';
+    }
+  };
+
+  const capitalize = (str: string) => str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
+
+  // ── Stats summary row ───────────────────────────────────────
+  const statItems = stats
+    ? [
+        { label: 'Total', value: stats.total || 0, color: '#4A90D9', icon: MessageSquare },
+        { label: 'Pending', value: stats.pending || 0, color: '#F39C12', icon: Clock },
+        { label: 'Reviewed', value: stats.acknowledged || 0, color: '#7B61FF', icon: Eye },
+        { label: 'Resolved', value: stats.resolved || 0, color: '#00B894', icon: CheckCircle },
+      ]
+    : [];
+
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Blue Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <ArrowLeft size={24} color={COLORS.white} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('admin.feedbackManagement.title')}</Text>
-        <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.iconButton}>
-            <Search size={20} color={COLORS.white} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
-            <Filter size={20} color={COLORS.white} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
-            <Download size={20} color={COLORS.white} />
-          </TouchableOpacity>
-        </View>
-      </View>
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {/* Image Background with Statistics Cards */}
-        <View style={styles.imageContainer}>
-          <ImageBackground
-            source={require('../../../assets/feedback.png')}
-            style={styles.backgroundImage}
-            resizeMode="cover"
-          >
-            <View style={styles.overlay} />
-            <BlurView intensity={50} style={styles.blurContainer}>
-              <View style={styles.statsContainer}>
-                <Card style={styles.statCard}>
-                  <View style={styles.statTrendTopRight}>
-                    <TrendingUp size={12} color={COLORS.success} />
-                    <Text style={styles.statTrendText}>+20%</Text>
-                  </View>
-                  <View style={styles.statIconContainer}>
-                    <MessageSquare size={24} color={COLORS.white} />
-                  </View>
-                  <View style={styles.statContent}>
-                    <Text style={styles.statValue} numberOfLines={1}>{stats.total.toLocaleString()}</Text>
-                    <Text style={styles.statLabel} numberOfLines={1}>{t('admin.feedbackManagement.total')}</Text>
-                  </View>
-                </Card>
-
-                <Card style={styles.statCard}>
-                  <View style={[styles.statIconContainer, { backgroundColor: COLORS.warning + '30' }]}>
-                    <Clock size={24} color={COLORS.white} />
-                  </View>
-                  <View style={styles.statContent}>
-                    <Text style={styles.statValue} numberOfLines={1}>{stats.pending}</Text>
-                    <Text style={styles.statLabel} numberOfLines={1}>{t('admin.feedbackManagement.pending')}</Text>
-                  </View>
-                </Card>
-
-                <Card style={styles.statCard}>
-                  <View style={[styles.statIconContainer, { backgroundColor: COLORS.primary + '30' }]}>
-                    <CheckCircle size={24} color={COLORS.white} />
-                  </View>
-                  <View style={styles.statContent}>
-                    <Text style={styles.statValue} numberOfLines={1}>{stats.acknowledged}</Text>
-                    <Text style={styles.statLabel} numberOfLines={1}>{t('admin.feedbackManagement.acknowledged')}</Text>
-                  </View>
-                </Card>
-
-                <Card style={styles.statCard}>
-                  <View style={[styles.statIconContainer, { backgroundColor: COLORS.success + '30' }]}>
-                    <CheckCircle size={24} color={COLORS.white} />
-                  </View>
-                  <View style={styles.statContent}>
-                    <Text style={styles.statValue} numberOfLines={1}>{stats.resolved}</Text>
-                    <Text style={styles.statLabel} numberOfLines={1}>{t('admin.feedbackManagement.resolved')}</Text>
-                  </View>
-                </Card>
-              </View>
-            </BlurView>
-          </ImageBackground>
-        </View>
-
-        {/* Filter Tabs */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsContainer}>
-          {tabs.map((tab) => (
+      {/* ─── Hero Header ──────────────────────────────────────── */}
+      <ImageBackground
+        source={require('../../../assets/feedbackm.png')}
+        style={styles.heroHeader}
+        resizeMode="cover"
+      >
+        <View style={styles.heroOverlay} />
+        <BlurView intensity={20} tint="dark" style={styles.heroBlur}>
+          <View style={styles.heroNav}>
             <TouchableOpacity
-              key={tab}
-              style={[styles.tab, activeTab === tab && styles.tabActive]}
-              onPress={() => setActiveTab(tab)}
+              style={styles.heroBackBtn}
+              onPress={() => navigation.goBack()}
             >
-              <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
-                {tab}
-              </Text>
+              <ArrowLeft size={20} color="#fff" />
             </TouchableOpacity>
-          ))}
-        </ScrollView>
+            <View style={styles.heroTitleWrap}>
+              <Text style={styles.heroTitle}>Feedback Management</Text>
+              <Text style={styles.heroSubtitle}>
+                {total} total feedback{total !== 1 ? 's' : ''}
+              </Text>
+            </View>
+            <View style={{ width: 38 }} />
+          </View>
+        </BlurView>
+      </ImageBackground>
 
-        {/* Feedbacks List */}
-        <View style={styles.feedbacksSection}>
-        {feedbacks.map((feedback) => {
-          const IconComponent = feedback.icon;
+      {/* ─── Stats Strip ──────────────────────────────────────── */}
+      {stats && (
+        <View style={styles.statsStrip}>
+          {statItems.map((item, idx) => {
+            const Icon = item.icon;
+            return (
+              <View key={idx} style={styles.statsStripItem}>
+                <View style={[styles.statsStripIcon, { backgroundColor: item.color + '15' }]}>
+                  <Icon size={16} color={item.color} />
+                </View>
+                <Text style={[styles.statsStripValue, { color: item.color }]}>{item.value}</Text>
+                <Text style={styles.statsStripLabel}>{item.label}</Text>
+              </View>
+            );
+          })}
+        </View>
+      )}
+
+      {/* ─── Filter Tabs ──────────────────────────────────────── */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.tabsScroll}
+        contentContainerStyle={styles.tabsContent}
+      >
+        {tabs.map((tab) => {
+          const isActive = activeTab === tab.key;
+          const Icon = tab.icon;
+          const count = tab.key !== 'all' && stats ? stats[tab.key] || 0 : null;
           return (
-            <Card key={feedback.id} style={styles.feedbackCard}>
-              <View style={styles.feedbackHeader}>
-                <View style={styles.feedbackHeaderLeft}>
-                  <View style={styles.feedbackIdContainer}>
-                    <Text style={styles.feedbackId}>{feedback.id}</Text>
-                    <View
-                      style={[
-                        styles.statusBadge,
-                        feedback.status === 'Pending' && styles.statusPending,
-                        feedback.status === 'Resolved' && styles.statusResolved,
-                        feedback.status === 'Acknowledged' && styles.statusAcknowledged,
-                      ]}
-                    >
-                      <Text style={styles.statusText}>{feedback.status === 'Pending' ? t('admin.feedbackManagement.pending') : feedback.status === 'Resolved' ? t('admin.feedbackManagement.resolved') : feedback.status === 'Acknowledged' ? t('admin.feedbackManagement.acknowledged') : feedback.status}</Text>
-                    </View>
-                  </View>
-                  <View style={styles.userInfo}>
-                    <Text style={styles.userName}>{feedback.user}</Text>
-                    <Text style={styles.userId}>{t('admin.feedbackManagement.id')}: {feedback.userId}</Text>
-                  </View>
+            <TouchableOpacity
+              key={tab.key}
+              style={[styles.tab, isActive && { backgroundColor: tab.color }]}
+              activeOpacity={0.7}
+              onPress={() => setActiveTab(tab.key)}
+            >
+              <Icon size={14} color={isActive ? '#fff' : tab.color} />
+              <Text style={[styles.tabText, isActive && styles.tabTextActive]}>
+                {tab.label}
+              </Text>
+              {count !== null && count > 0 && (
+                <View style={[styles.tabBadge, isActive && { backgroundColor: 'rgba(255,255,255,0.3)' }]}>
+                  <Text style={[styles.tabBadgeText, isActive && { color: '#fff' }]}>{count}</Text>
                 </View>
-              </View>
-
-              <View style={styles.feedbackDetails}>
-                <View style={styles.detailRow}>
-                  <View style={styles.detailIconContainer}>
-                    <IconComponent size={18} color={COLORS.primary} />
-                  </View>
-                  <View style={styles.detailContent}>
-                    <Text style={styles.detailLabel}>Feedback Type</Text>
-                    <Text style={styles.detailValue}>{feedback.type}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.detailRow}>
-                  <View style={styles.detailIconContainer}>
-                    <Clock size={18} color={COLORS.primary} />
-                  </View>
-                  <View style={styles.detailContent}>
-                    <Text style={styles.detailLabel}>Submitted</Text>
-                    <Text style={styles.detailValue}>{feedback.submitted}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.feedbackMetrics}>
-                  <View style={styles.metricItem}>
-                    <View style={[
-                      styles.priorityBadge,
-                      feedback.priority === 'High' && styles.priorityHigh,
-                      feedback.priority === 'Medium' && styles.priorityMedium,
-                      feedback.priority === 'Low' && styles.priorityLow,
-                    ]}>
-                      <Text style={styles.priorityText}>{feedback.priority} Priority</Text>
-                    </View>
-                  </View>
-                </View>
-              </View>
-
-              <View style={styles.feedbackActions}>
-                <TouchableOpacity
-                  style={styles.actionButton}
-                  onPress={() => navigation.navigate('FeedbackDetails' as never, { feedbackId: feedback.id } as never)}
-                >
-                  <Text style={styles.actionButtonText}>View Details</Text>
-                </TouchableOpacity>
-              </View>
-            </Card>
+              )}
+            </TouchableOpacity>
           );
         })}
-        </View>
-
-        {/* Pagination */}
-        <View style={styles.pagination}>
-          <TouchableOpacity style={styles.pageButton}>
-            <Text style={styles.pageButtonText}>{t('admin.feedbackManagement.previous')}</Text>
-          </TouchableOpacity>
-          <View style={styles.pageNumbers}>
-            <TouchableOpacity style={[styles.pageNumber, styles.pageNumberActive]}>
-              <Text style={[styles.pageNumberText, styles.pageNumberTextActive]}>1</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.pageNumber}>
-              <Text style={styles.pageNumberText}>2</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.pageNumber}>
-              <Text style={styles.pageNumberText}>3</Text>
-            </TouchableOpacity>
-            <Text style={styles.pageEllipsis}>...</Text>
-          </View>
-          <TouchableOpacity style={styles.pageButton}>
-            <Text style={styles.pageButtonText}>{t('admin.feedbackManagement.next')}</Text>
-          </TouchableOpacity>
-        </View>
-
-        <Text style={styles.paginationInfo}>{t('admin.feedbackManagement.showing', { start: 1, end: 10, total: stats.total.toLocaleString() })}</Text>
       </ScrollView>
-    </SafeAreaView>
+
+      {/* ─── Content ──────────────────────────────────────────── */}
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#4A90D9" />
+          <Text style={styles.loadingText}>Loading feedback...</Text>
+        </View>
+      ) : (
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#4A90D9" />
+          }
+          showsVerticalScrollIndicator={false}
+        >
+          {feedbacks.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <View style={styles.emptyIconWrap}>
+                <Inbox size={48} color="#CBD5E1" />
+              </View>
+              <Text style={styles.emptyTitle}>No Feedback Found</Text>
+              <Text style={styles.emptyText}>
+                {activeTab === 'all'
+                  ? 'No feedback has been submitted yet.'
+                  : `No ${activeTab} feedback at the moment.`}
+              </Text>
+            </View>
+          ) : (
+            <>
+              {feedbacks.map((feedback) => {
+                const typeConf = getTypeConfig(feedback.type);
+                const statusConf = getStatusConfig(feedback.status);
+                const priorityConf = getPriorityConfig(feedback.priority);
+                const TypeIcon = typeConf.icon;
+
+                return (
+                  <TouchableOpacity
+                    key={feedback.feedbackId}
+                    style={styles.feedbackCard}
+                    activeOpacity={0.7}
+                    onPress={() =>
+                      navigation.navigate(
+                        'FeedbackDetails' as never,
+                        { feedbackId: feedback.feedbackId } as never
+                      )
+                    }
+                  >
+                    {/* Card header row */}
+                    <View style={styles.cardHeaderRow}>
+                      <View style={[styles.cardTypeIcon, { backgroundColor: typeConf.bg }]}>
+                        <TypeIcon size={18} color={typeConf.color} />
+                      </View>
+                      <View style={styles.cardHeaderInfo}>
+                        <Text style={styles.cardSubject} numberOfLines={1}>
+                          {feedback.subject || 'No Subject'}
+                        </Text>
+                        <Text style={styles.cardId}>#{feedback.feedbackId}</Text>
+                      </View>
+                      <ChevronRight size={18} color="#CBD5E1" />
+                    </View>
+
+                    {/* Message preview */}
+                    {feedback.description && (
+                      <Text style={styles.cardMessage} numberOfLines={2}>
+                        {feedback.description}
+                      </Text>
+                    )}
+
+                    {/* Badges row */}
+                    <View style={styles.cardBadgeRow}>
+                      {/* Status */}
+                      <View style={[styles.cardBadge, { backgroundColor: statusConf.bg }]}>
+                        <View style={[styles.cardBadgeDot, { backgroundColor: statusConf.color }]} />
+                        <Text style={[styles.cardBadgeText, { color: statusConf.color }]}>
+                          {statusConf.label}
+                        </Text>
+                      </View>
+
+                      {/* Type */}
+                      <View style={[styles.cardBadge, { backgroundColor: typeConf.bg }]}>
+                        <Text style={[styles.cardBadgeText, { color: typeConf.color }]}>
+                          {typeConf.label}
+                        </Text>
+                      </View>
+
+                      {/* Priority */}
+                      <View style={[styles.cardBadge, { backgroundColor: priorityConf.bg }]}>
+                        <Text style={[styles.cardBadgeText, { color: priorityConf.color }]}>
+                          {priorityConf.label}
+                        </Text>
+                      </View>
+
+                      {/* Responded indicator */}
+                      {feedback.adminResponse && (
+                        <View style={[styles.cardBadge, { backgroundColor: '#00B894' + '15' }]}>
+                          <CheckCircle size={10} color="#00B894" />
+                          <Text style={[styles.cardBadgeText, { color: '#00B894' }]}>
+                            Replied
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+
+                    {/* Footer row */}
+                    <View style={styles.cardFooter}>
+                      <View style={styles.cardUserRow}>
+                        <View style={styles.cardUserAvatar}>
+                          <User size={12} color="#94A3B8" />
+                        </View>
+                        <Text style={styles.cardUserName} numberOfLines={1}>
+                          {feedback.user?.name || 'Unknown User'}
+                        </Text>
+                      </View>
+                      <View style={styles.cardTimeRow}>
+                        <Clock size={12} color="#94A3B8" />
+                        <Text style={styles.cardTime}>
+                          {getTimeAgo(feedback.createdAt)}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Rating stars if available */}
+                    {feedback.rating > 0 && (
+                      <View style={styles.cardRatingRow}>
+                        {[1, 2, 3, 4, 5].map((s) => (
+                          <Star
+                            key={s}
+                            size={14}
+                            color={s <= feedback.rating ? '#F5A623' : '#E2E8F0'}
+                            fill={s <= feedback.rating ? '#F5A623' : 'transparent'}
+                          />
+                        ))}
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+
+              {/* Pagination info */}
+              {feedbacks.length > 0 && (
+                <Text style={styles.paginationInfo}>
+                  Showing {feedbacks.length} of {total}
+                </Text>
+              )}
+
+              {/* Load more */}
+              {feedbacks.length < total && (
+                <TouchableOpacity
+                  style={styles.loadMoreBtn}
+                  activeOpacity={0.7}
+                  onPress={() => fetchData(false)}
+                >
+                  <Text style={styles.loadMoreText}>Load More</Text>
+                  <ChevronRight size={14} color="#4A90D9" />
+                </TouchableOpacity>
+              )}
+            </>
+          )}
+
+          <View style={{ height: 40 }} />
+        </ScrollView>
+      )}
+    </View>
   );
 };
 
+// ═══════════════════════════════════════════════════════════════════
+// STYLES
+// ═══════════════════════════════════════════════════════════════════
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: '#F5F7FA',
   },
-  header: {
-    backgroundColor: COLORS.primary,
+
+  /* ── Hero Header ────────────────────────────────────────────── */
+  heroHeader: {
+    height: Platform.OS === 'android' ? 140 + (StatusBar.currentHeight || 0) : 160,
+    width: '100%',
+  },
+  heroOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(15, 52, 96, 0.5)',
+  },
+  heroBlur: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    paddingBottom: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+  },
+  heroNav: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.md,
-    paddingTop: SPACING.xl,
   },
-  backButton: {
-    padding: SPACING.xs,
+  heroBackBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  headerTitle: {
+  heroTitleWrap: {
+    alignItems: 'center',
+  },
+  heroTitle: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xl,
-    color: COLORS.white,
-    fontWeight: 'bold',
-    flex: 1,
-    marginLeft: SPACING.sm,
+    fontSize: 20,
+    color: '#fff',
+    fontWeight: '700',
   },
-  headerRight: {
+  heroSubtitle: {
+    fontFamily: FONTS.regular,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.7)',
+    marginTop: 2,
+  },
+
+  /* ── Stats Strip ────────────────────────────────────────────── */
+  statsStrip: {
     flexDirection: 'row',
-    gap: SPACING.sm,
+    backgroundColor: '#fff',
+    marginHorizontal: SPACING.lg,
+    marginTop: -SPACING.md,
+    borderRadius: 14,
+    padding: SPACING.sm,
+    ...SHADOWS.md,
+    zIndex: 10,
   },
-  iconButton: {
-    padding: SPACING.xs,
+  statsStripItem: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: SPACING.xs,
   },
+  statsStripIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  statsStripValue: {
+    fontFamily: FONTS.regular,
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  statsStripLabel: {
+    fontFamily: FONTS.regular,
+    fontSize: 10,
+    color: '#94A3B8',
+    fontWeight: '500',
+    marginTop: 1,
+  },
+
+  /* ── Filter Tabs ────────────────────────────────────────────── */
+  tabsScroll: {
+    marginTop: SPACING.md,
+    maxHeight: 48,
+  },
+  tabsContent: {
+    paddingHorizontal: SPACING.lg,
+    gap: SPACING.xs,
+  },
+  tab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  tabText: {
+    fontFamily: FONTS.regular,
+    fontSize: 12,
+    color: '#475569',
+    fontWeight: '600',
+  },
+  tabTextActive: {
+    color: '#fff',
+  },
+  tabBadge: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 8,
+    minWidth: 20,
+    alignItems: 'center',
+  },
+  tabBadgeText: {
+    fontFamily: FONTS.regular,
+    fontSize: 10,
+    color: '#64748B',
+    fontWeight: '700',
+  },
+
+  /* ── Loading ────────────────────────────────────────────────── */
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.sm,
+    color: '#94A3B8',
+    marginTop: SPACING.md,
+  },
+
+  /* ── Scroll ─────────────────────────────────────────────────── */
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: SPACING.xl,
+    padding: SPACING.lg,
+    paddingTop: SPACING.md,
   },
-  imageContainer: {
-    width: '100%',
-    height: 280,
-    position: 'relative',
-    overflow: 'hidden',
-    marginBottom: SPACING.md,
-  },
-  backgroundImage: {
-    width: '100%',
-    height: '100%',
-  },
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(7, 25, 82, 0.75)',
-  },
-  blurContainer: {
-    flex: 1,
-    padding: SPACING.md,
-    justifyContent: 'center',
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.md,
-  },
-  statCard: {
-    width: (width - SPACING.md * 3) / 2,
-    height: 100,
-    padding: SPACING.md,
-    flexDirection: 'row',
+
+  /* ── Empty State ────────────────────────────────────────────── */
+  emptyContainer: {
     alignItems: 'center',
-    ...SHADOWS.sm,
-    backgroundColor: COLORS.white + '95',
-    position: 'relative',
+    paddingVertical: SPACING.xxl * 2,
   },
-  statTrendTopRight: {
-    position: 'absolute',
-    top: SPACING.sm,
-    right: SPACING.sm,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-    backgroundColor: COLORS.success + '20',
-    paddingHorizontal: SPACING.xs,
-    paddingVertical: 2,
-    borderRadius: BORDER_RADIUS.sm,
-  },
-  statIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: COLORS.primary + '30',
+  emptyIconWrap: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#F1F5F9',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: SPACING.sm,
+    marginBottom: SPACING.lg,
   },
-  statContent: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  statValue: {
+  emptyTitle: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xl,
-    color: COLORS.white,
-    fontWeight: 'bold',
-    marginBottom: SPACING.xs / 2,
+    fontSize: FONTS.sizes.lg,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: SPACING.xs,
   },
-  statLabel: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.white + 'CC',
-  },
-  statTrendText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.success,
-    fontWeight: '600',
-  },
-  tabsContainer: {
-    marginBottom: SPACING.md,
-    paddingHorizontal: SPACING.md,
-  },
-  tab: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    marginRight: SPACING.sm,
-    borderRadius: BORDER_RADIUS.md,
-    backgroundColor: COLORS.white,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  tabActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  tabText: {
+  emptyText: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.sm,
-    color: COLORS.text,
-    fontWeight: '600',
+    color: '#94A3B8',
+    textAlign: 'center',
+    paddingHorizontal: SPACING.xl,
   },
-  tabTextActive: {
-    color: COLORS.white,
-  },
-  feedbacksSection: {
-    paddingHorizontal: SPACING.md,
-  },
+
+  /* ── Feedback Card ──────────────────────────────────────────── */
   feedbackCard: {
-    marginBottom: SPACING.md,
+    backgroundColor: '#fff',
+    borderRadius: 14,
     padding: SPACING.md,
+    marginBottom: SPACING.sm,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
     ...SHADOWS.sm,
   },
-  feedbackHeader: {
-    marginBottom: SPACING.md,
-    paddingBottom: SPACING.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  feedbackHeaderLeft: {
-    flex: 1,
-  },
-  feedbackIdContainer: {
+
+  /* Card header */
+  cardHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     marginBottom: SPACING.sm,
   },
-  feedbackId: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.textSecondary,
-    fontWeight: '600',
-  },
-  userInfo: {
-    marginTop: SPACING.xs,
-  },
-  userName: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
-    color: COLORS.text,
-    fontWeight: '600',
-  },
-  userId: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.textSecondary,
-    marginTop: 2,
-  },
-  feedbackDetails: {
-    marginBottom: SPACING.md,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: SPACING.md,
-  },
-  detailIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: COLORS.primary + '10',
+  cardTypeIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: SPACING.sm,
   },
-  detailContent: {
+  cardHeaderInfo: {
     flex: 1,
   },
-  detailLabel: {
+  cardSubject: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.textSecondary,
+    fontSize: FONTS.sizes.md,
+    color: '#1E293B',
+    fontWeight: '600',
     marginBottom: 2,
   },
-  detailValue: {
+  cardId: {
+    fontFamily: FONTS.regular,
+    fontSize: 11,
+    color: '#94A3B8',
+    fontWeight: '500',
+  },
+
+  /* Card message */
+  cardMessage: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.sm,
-    color: COLORS.text,
-    fontWeight: '600',
+    color: '#64748B',
+    lineHeight: 19,
+    marginBottom: SPACING.sm,
+    paddingLeft: 52,
   },
-  feedbackMetrics: {
-    flexDirection: 'row',
-    gap: SPACING.md,
-    marginTop: SPACING.sm,
-    paddingTop: SPACING.md,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-  },
-  metricItem: {
-    flex: 1,
-  },
-  statusBadge: {
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs / 2,
-    borderRadius: BORDER_RADIUS.sm,
-    backgroundColor: COLORS.lightGray,
-  },
-  statusPending: {
-    backgroundColor: COLORS.warning + '20',
-  },
-  statusResolved: {
-    backgroundColor: COLORS.success + '20',
-  },
-  statusAcknowledged: {
-    backgroundColor: COLORS.primary + '20',
-  },
-  statusText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.text,
-    fontWeight: '600',
-  },
-  priorityBadge: {
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs,
-    borderRadius: BORDER_RADIUS.sm,
-    backgroundColor: COLORS.lightGray,
-    alignSelf: 'flex-start',
-  },
-  priorityHigh: {
-    backgroundColor: COLORS.error + '20',
-  },
-  priorityMedium: {
-    backgroundColor: COLORS.warning + '20',
-  },
-  priorityLow: {
-    backgroundColor: COLORS.success + '20',
-  },
-  priorityText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.text,
-    fontWeight: '600',
-  },
-  feedbackActions: {
+
+  /* Card badges */
+  cardBadgeRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: SPACING.sm,
-    marginTop: SPACING.sm,
+    gap: 6,
+    marginBottom: SPACING.sm,
+    paddingLeft: 52,
   },
-  actionButton: {
+  cardBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderRadius: BORDER_RADIUS.sm,
-    backgroundColor: COLORS.primary + '20',
-    gap: SPACING.xs,
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
   },
-  actionButtonText: {
+  cardBadgeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  cardBadgeText: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.primary,
-    fontWeight: '600',
+    fontSize: 10,
+    fontWeight: '700',
   },
-  pagination: {
+
+  /* Card footer */
+  cardFooter: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginVertical: SPACING.lg,
-    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.sm,
+    borderTopWidth: 1,
+    borderTopColor: '#F8FAFC',
+    paddingLeft: 52,
   },
-  pageButton: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderRadius: BORDER_RADIUS.sm,
-    backgroundColor: COLORS.white,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  pageButtonText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.text,
-    fontWeight: '600',
-  },
-  pageNumbers: {
+  cardUserRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.xs,
+    gap: 6,
+    flex: 1,
   },
-  pageNumber: {
-    width: 32,
-    height: 32,
-    borderRadius: BORDER_RADIUS.sm,
-    backgroundColor: COLORS.white,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+  cardUserAvatar: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  pageNumberActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  pageNumberText: {
+  cardUserName: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.text,
+    fontSize: 12,
+    color: '#475569',
+    fontWeight: '500',
+    flex: 1,
   },
-  pageNumberTextActive: {
-    color: COLORS.white,
+  cardTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
-  pageEllipsis: {
+  cardTime: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.textSecondary,
+    fontSize: 11,
+    color: '#94A3B8',
+    fontWeight: '500',
   },
+
+  /* Card rating */
+  cardRatingRow: {
+    flexDirection: 'row',
+    gap: 2,
+    paddingLeft: 52,
+    marginTop: SPACING.xs,
+  },
+
+  /* ── Pagination & Load More ─────────────────────────────────── */
   paginationInfo: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.textSecondary,
+    fontSize: 12,
+    color: '#94A3B8',
     textAlign: 'center',
-    marginBottom: SPACING.md,
-    paddingHorizontal: SPACING.md,
+    marginTop: SPACING.sm,
+    marginBottom: SPACING.xs,
+  },
+  loadMoreBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: 12,
+    backgroundColor: '#4A90D9' + '10',
+    borderRadius: 12,
+    marginTop: SPACING.xs,
+  },
+  loadMoreText: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.sm,
+    color: '#4A90D9',
+    fontWeight: '600',
   },
 });
 

@@ -1,576 +1,403 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
-  Dimensions,
   ImageBackground,
+  Platform,
+  StatusBar,
+  Dimensions,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { BlurView } from 'expo-blur';
 import {
   ArrowLeft,
-  Search,
-  Filter,
-  BarChart3,
   Users,
-  CheckCircle,
-  AlertCircle,
-  Shield,
-  Clock,
   UserCheck,
   Building2,
-  TrendingUp,
-  Download,
+  CheckCircle,
+  Clock,
+  Shield,
+  ChevronRight,
+  AlertCircle,
+  User,
+  Calendar,
+  Inbox,
 } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
-import { Card } from '@components/common/Card';
-import { useLanguage } from '@context/LanguageContext';
+import { adminApi } from '@utils/apiClient';
 
 const { width } = Dimensions.get('window');
+const HEADER_HEIGHT = Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 180 : 200;
+
+const formatNumber = (num: number): string => {
+  if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+  return num.toString();
+};
+
+const TAB_COLORS: Record<string, string> = {
+  total: '#4A90D9',
+  individual: '#7B61FF',
+  company: '#F39C12',
+  verified: '#00B894',
+};
 
 const UserManagementScreen = () => {
   const navigation = useNavigation();
-  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState('All');
+  const [users, setUsers] = useState<any[]>([]);
+  const [stats, setStats] = useState({ total: 0, individual: 0, company: 0, verified: 0, pending: 0, suspended: 0 });
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalUsers, setTotalUsers] = useState(0);
 
-  const tabs = [
-    t('common.all'),
-    t('admin.userManagement.individual'),
-    t('admin.userManagement.company'),
-    t('admin.userManagement.verified'),
-    t('admin.userManagement.pending'),
-    t('admin.userManagement.suspended'),
-  ];
+  const tabs = ['All', 'Individual', 'Company', 'Verified', 'Pending', 'Suspended'];
 
-  const users = [
-    {
-      id: '12345',
-      name: 'Rajesh K.',
-      type: 'Individual',
-      status: 'Verified',
-      joined: '15 Jan 2024',
-    },
-    {
-      id: '67890',
-      name: 'Priya M.',
-      type: 'Individual',
-      status: 'Verified',
-      joined: '14 Jan 2024',
-    },
-    {
-      id: 'COMP001',
-      name: 'ABC Cars',
-      type: 'Company',
-      status: 'Verified',
-      joined: '10 Jan 2024',
-    },
-    {
-      id: '22222',
-      name: 'Amit S.',
-      type: 'Individual',
-      status: 'Pending',
-      joined: '16 Jan 2024',
-    },
-  ];
+  const fetchData = useCallback(async (isRefresh = false) => {
+    try {
+      if (!isRefresh) setLoading(true);
 
-  const stats = {
-    total: 45678,
-    individual: 38456,
-    company: 7222,
-    verified: 42100,
-    pending: 3578,
-    suspended: 23,
+      // Build query params based on active tab
+      const params: any = { page, limit: 20 };
+      if (activeTab === 'Individual') params.userType = 'individual';
+      else if (activeTab === 'Company') params.userType = 'company';
+      else if (activeTab === 'Verified') params.verified = true;
+      else if (activeTab === 'Pending') params.status = 'pending';
+      else if (activeTab === 'Suspended') params.status = 'suspended';
+
+      const [usersRes, statsRes] = await Promise.all([
+        adminApi.getUsers(params),
+        adminApi.getDashboardStats(),
+      ]);
+
+      if (usersRes.success && usersRes.data) {
+        const userData = usersRes.data;
+        setUsers(userData.users || userData.data || (Array.isArray(userData) ? userData : []));
+        setTotalUsers(userData.total || userData.totalCount || 0);
+      }
+
+      if (statsRes.success && statsRes.data) {
+        const s = statsRes.data;
+        const userStats = s.users || s;
+        setStats({
+          total: userStats.total || userStats.totalUsers || 0,
+          individual: userStats.individual || userStats.individualUsers || 0,
+          company: userStats.company || userStats.companyUsers || 0,
+          verified: userStats.verified || userStats.verifiedUsers || 0,
+          pending: userStats.pending || userStats.pendingUsers || 0,
+          suspended: userStats.suspended || userStats.suspendedUsers || 0,
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [activeTab, page]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [activeTab]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchData(true);
   };
 
+  const handleVerify = async (userId: string) => {
+    try {
+      await adminApi.verifyUser(userId);
+      fetchData(true);
+    } catch (e) {
+      console.error('Verify error:', e);
+    }
+  };
+
+  const handleSuspend = async (userId: string) => {
+    try {
+      await adminApi.suspendUser(userId);
+      fetchData(true);
+    } catch (e) {
+      console.error('Suspend error:', e);
+    }
+  };
+
+  const handleActivate = async (userId: string) => {
+    try {
+      await adminApi.activateUser(userId);
+      fetchData(true);
+    } catch (e) {
+      console.error('Activate error:', e);
+    }
+  };
+
+  const getStatusStyle = (status: string) => {
+    const s = status?.toLowerCase();
+    if (s === 'active' || s === 'verified') return { bg: 'rgba(0,184,148,0.2)', color: '#00B894' };
+    if (s === 'pending') return { bg: 'rgba(243,156,18,0.2)', color: '#F39C12' };
+    if (s === 'suspended') return { bg: 'rgba(231,76,60,0.2)', color: '#E74C3C' };
+    return { bg: '#F1F5F9', color: '#64748B' };
+  };
+
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return 'N/A';
+    try {
+      return new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    } catch { return dateStr; }
+  };
+
+  const statItems = [
+    { key: 'total', value: stats.total, label: 'Total Users', icon: Users, color: TAB_COLORS.total },
+    { key: 'individual', value: stats.individual, label: 'Individual', icon: UserCheck, color: TAB_COLORS.individual },
+    { key: 'company', value: stats.company, label: 'Company', icon: Building2, color: TAB_COLORS.company },
+    { key: 'verified', value: stats.verified, label: 'Verified', icon: CheckCircle, color: TAB_COLORS.verified },
+  ];
+
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Blue Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <ArrowLeft size={24} color={COLORS.white} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('admin.userManagement.title')}</Text>
-        <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.iconButton}>
-            <Search size={20} color={COLORS.white} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
-            <Filter size={20} color={COLORS.white} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
-            <BarChart3 size={20} color={COLORS.white} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
-            <Download size={20} color={COLORS.white} />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {/* Image Background with Statistics Cards */}
-        <View style={styles.imageContainer}>
-          <ImageBackground
-            source={require('../../../assets/pooling.jpg')}
-            style={styles.backgroundImage}
-            resizeMode="cover"
-          >
+    <View style={styles.container}>
+      <StatusBar translucent backgroundColor="transparent" />
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
+        {/* Hero Header */}
+        <View style={[styles.heroContainer, { height: HEADER_HEIGHT }]}>
+          <ImageBackground source={require('../../../assets/userm.png')} style={styles.heroImage} resizeMode="cover">
             <View style={styles.overlay} />
-            <BlurView intensity={50} style={styles.blurContainer}>
-              <View style={styles.statsContainer}>
-                <Card style={styles.statCard}>
-                  <View style={styles.statTrendTopRight}>
-                    <TrendingUp size={12} color={COLORS.success} />
-                    <Text style={styles.statTrendText}>+25%</Text>
-                  </View>
-                  <View style={styles.statIconContainer}>
-                    <Users size={24} color={COLORS.white} />
-                  </View>
-                  <View style={styles.statContent}>
-                    <Text style={styles.statValue} numberOfLines={1}>{stats.total.toLocaleString()}</Text>
-                    <Text style={styles.statLabel} numberOfLines={1}>{t('admin.userManagement.totalUsers')}</Text>
-                  </View>
-                </Card>
-
-                <Card style={styles.statCard}>
-                  <View style={[styles.statIconContainer, { backgroundColor: COLORS.primary + '30' }]}>
-                    <UserCheck size={24} color={COLORS.white} />
-                  </View>
-                  <View style={styles.statContent}>
-                    <Text style={styles.statValue} numberOfLines={1}>{stats.individual.toLocaleString()}</Text>
-                    <Text style={styles.statLabel} numberOfLines={1}>{t('admin.userManagement.individual')}</Text>
-                  </View>
-                </Card>
-
-                <Card style={styles.statCard}>
-                  <View style={[styles.statIconContainer, { backgroundColor: COLORS.warning + '30' }]}>
-                    <Building2 size={24} color={COLORS.white} />
-                  </View>
-                  <View style={styles.statContent}>
-                    <Text style={styles.statValue} numberOfLines={1}>{stats.company.toLocaleString()}</Text>
-                    <Text style={styles.statLabel} numberOfLines={1}>{t('admin.userManagement.company')}</Text>
-                  </View>
-                </Card>
-
-                <Card style={styles.statCard}>
-                  <View style={[styles.statIconContainer, { backgroundColor: COLORS.success + '30' }]}>
-                    <CheckCircle size={24} color={COLORS.white} />
-                  </View>
-                  <View style={styles.statContent}>
-                    <Text style={styles.statValue} numberOfLines={1}>{stats.verified.toLocaleString()}</Text>
-                    <Text style={styles.statLabel} numberOfLines={1}>{t('admin.userManagement.verified')}</Text>
-                  </View>
-                </Card>
-
-                <Card style={styles.statCard}>
-                  <View style={[styles.statIconContainer, { backgroundColor: COLORS.warning + '30' }]}>
-                    <Clock size={24} color={COLORS.white} />
-                  </View>
-                  <View style={styles.statContent}>
-                    <Text style={styles.statValue} numberOfLines={1}>{stats.pending.toLocaleString()}</Text>
-                    <Text style={styles.statLabel} numberOfLines={1}>{t('admin.userManagement.pending')}</Text>
-                  </View>
-                </Card>
-
-                <Card style={styles.statCard}>
-                  <View style={[styles.statIconContainer, { backgroundColor: COLORS.error + '30' }]}>
-                    <Shield size={24} color={COLORS.white} />
-                  </View>
-                  <View style={styles.statContent}>
-                    <Text style={styles.statValue} numberOfLines={1}>{stats.suspended}</Text>
-                    <Text style={styles.statLabel} numberOfLines={1}>{t('admin.userManagement.suspended')}</Text>
-                  </View>
-                </Card>
+            <BlurView intensity={20} tint="dark" style={StyleSheet.absoluteFill}>
+              <View style={styles.headerContent}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.8}>
+                  <BlurView intensity={40} tint="dark" style={styles.backButtonBlur}>
+                    <ArrowLeft size={22} color="#fff" />
+                  </BlurView>
+                </TouchableOpacity>
+                <View style={styles.titleContainer}>
+                  <Text style={styles.heroTitle}>User Management</Text>
+                  <Text style={styles.heroSubtitle}>Manage and monitor all platform users</Text>
+                </View>
               </View>
             </BlurView>
           </ImageBackground>
         </View>
 
+        {/* Floating Stats Strip */}
+        <View style={styles.statsStrip}>
+          {statItems.map((item) => {
+            const IconComponent = item.icon;
+            return (
+              <View key={item.key} style={styles.statCol}>
+                <View style={[styles.statIconChip, { backgroundColor: item.color + '20' }]}>
+                  <IconComponent size={18} color={item.color} />
+                </View>
+                <Text style={styles.statValue}>{formatNumber(item.value)}</Text>
+                <Text style={styles.statLabel} numberOfLines={1}>{item.label}</Text>
+              </View>
+            );
+          })}
+        </View>
+
         {/* Filter Tabs */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsContainer}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsWrapper} style={styles.tabsScroll}>
           {tabs.map((tab) => (
             <TouchableOpacity
               key={tab}
-              style={[styles.tab, activeTab === tab && styles.tabActive]}
+              style={[styles.tabPill, activeTab === tab && styles.tabPillActive]}
               onPress={() => setActiveTab(tab)}
+              activeOpacity={0.7}
             >
-              <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
-                {tab}
-              </Text>
+              <Text style={[styles.tabPillText, activeTab === tab && styles.tabPillTextActive]}>{tab}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
 
-        {/* Users List */}
+        {/* User Cards */}
         <View style={styles.usersSection}>
-        {users.map((user) => (
-          <Card key={user.id} style={styles.userCard}>
-            <View style={styles.userHeader}>
-              <View>
-                <Text style={styles.userId}>User ID: {user.id}</Text>
-                <Text style={styles.userName}>{user.name}</Text>
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={COLORS.primary} />
+              <Text style={styles.loadingText}>Loading users...</Text>
+            </View>
+          ) : users.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <View style={styles.emptyIconWrap}>
+                <Inbox size={48} color="#CBD5E1" />
               </View>
-              <View style={[styles.statusBadge, user.status === 'Verified' ? styles.statusVerified : styles.statusPending]}>
-                <Text style={styles.statusText}>{user.status}</Text>
-              </View>
+              <Text style={styles.emptyTitle}>No Users Found</Text>
+              <Text style={styles.emptyText}>No users match the selected filter.</Text>
             </View>
-            <View style={styles.userDetails}>
-              <Text style={styles.userDetail}>
-                <Text style={styles.detailLabel}>Type:</Text> {user.type}
-              </Text>
-              <Text style={styles.userDetail}>
-                <Text style={styles.detailLabel}>Joined:</Text> {user.joined}
-              </Text>
-            </View>
-            <View style={styles.userActions}>
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() => navigation.navigate('UserDetails' as never, { userId: user.id } as never)}
-              >
-                <Text style={styles.actionButtonText}>View</Text>
-              </TouchableOpacity>
-              {user.status === 'Pending' && (
-                <TouchableOpacity style={[styles.actionButton, styles.verifyButton]}>
-                  <CheckCircle size={16} color={COLORS.white} />
-                  <Text style={[styles.actionButtonText, styles.verifyButtonText]}>Verify</Text>
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity style={[styles.actionButton, styles.suspendButton]}>
-                <AlertCircle size={16} color={COLORS.error} />
-                <Text style={[styles.actionButtonText, styles.suspendButtonText]}>Suspend</Text>
-              </TouchableOpacity>
-            </View>
-          </Card>
-        ))}
+          ) : (
+            users.map((user: any) => {
+              const userId = user.userId || user._id || user.id;
+              const name = user.name || user.fullName || 'Unknown';
+              const type = user.userType || user.type || 'individual';
+              const status = user.status || (user.isVerified ? 'verified' : 'pending');
+              const joined = user.createdAt || user.joinedAt;
+              const statusStyle = getStatusStyle(status);
+
+              return (
+                <View key={userId} style={styles.userCard}>
+                  <View style={styles.userCardTop}>
+                    <View style={styles.avatarWrapper}>
+                      <View style={styles.avatarCircle}>
+                        <User size={24} color={COLORS.textSecondary} />
+                      </View>
+                    </View>
+                    <View style={styles.userInfo}>
+                      <Text style={styles.userName}>{name}</Text>
+                      <Text style={styles.userId}>ID: {userId}</Text>
+                      <View style={styles.badgeRow}>
+                        <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
+                          <Text style={[styles.statusText, { color: statusStyle.color }]}>
+                            {status.charAt(0).toUpperCase() + status.slice(1)}
+                          </Text>
+                        </View>
+                        <View style={styles.typeBadge}>
+                          <Text style={styles.typeText}>{type.charAt(0).toUpperCase() + type.slice(1)}</Text>
+                        </View>
+                      </View>
+                      {joined && (
+                        <View style={styles.joinedRow}>
+                          <Calendar size={12} color={COLORS.textSecondary} />
+                          <Text style={styles.joinedText}>{formatDate(joined)}</Text>
+                        </View>
+                      )}
+                    </View>
+                    <ChevronRight size={20} color={COLORS.textSecondary} />
+                  </View>
+                  <View style={styles.userActions}>
+                    <TouchableOpacity
+                      style={styles.actionBtn}
+                      onPress={() => navigation.navigate('UserDetails' as never, { userId } as never)}
+                    >
+                      <ChevronRight size={14} color={COLORS.primary} />
+                      <Text style={styles.actionBtnText}>View</Text>
+                    </TouchableOpacity>
+                    {status === 'pending' && (
+                      <TouchableOpacity style={[styles.actionBtn, styles.verifyBtn]} onPress={() => handleVerify(userId)}>
+                        <CheckCircle size={14} color="#fff" />
+                        <Text style={[styles.actionBtnText, styles.verifyBtnText]}>Verify</Text>
+                      </TouchableOpacity>
+                    )}
+                    {status === 'suspended' ? (
+                      <TouchableOpacity style={[styles.actionBtn, styles.activateBtn]} onPress={() => handleActivate(userId)}>
+                        <CheckCircle size={14} color="#fff" />
+                        <Text style={[styles.actionBtnText, styles.activateBtnText]}>Activate</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <TouchableOpacity style={[styles.actionBtn, styles.suspendBtn]} onPress={() => handleSuspend(userId)}>
+                        <AlertCircle size={14} color={COLORS.error} />
+                        <Text style={[styles.actionBtnText, styles.suspendBtnText]}>Suspend</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+              );
+            })
+          )}
         </View>
 
         {/* Pagination */}
-        <View style={styles.pagination}>
-          <TouchableOpacity style={styles.pageButton}>
-            <Text style={styles.pageButtonText}>{t('admin.userManagement.previous')}</Text>
-          </TouchableOpacity>
-          <View style={styles.pageNumbers}>
-            <TouchableOpacity style={[styles.pageNumber, styles.pageNumberActive]}>
-              <Text style={[styles.pageNumberText, styles.pageNumberTextActive]}>1</Text>
+        {!loading && users.length > 0 && (
+          <View style={styles.paginationRow}>
+            <TouchableOpacity
+              style={[styles.pageBtn, page === 1 && styles.pageBtnDisabled]}
+              onPress={() => page > 1 && setPage(page - 1)}
+              disabled={page === 1}
+            >
+              <Text style={styles.pageBtnText}>Previous</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.pageNumber}>
-              <Text style={styles.pageNumberText}>2</Text>
+            <Text style={styles.paginationInfo}>Page {page}</Text>
+            <TouchableOpacity
+              style={[styles.pageBtn, users.length < 20 && styles.pageBtnDisabled]}
+              onPress={() => users.length >= 20 && setPage(page + 1)}
+              disabled={users.length < 20}
+            >
+              <Text style={styles.pageBtnText}>Next</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.pageNumber}>
-              <Text style={styles.pageNumberText}>3</Text>
-            </TouchableOpacity>
-            <Text style={styles.pageEllipsis}>...</Text>
           </View>
-          <TouchableOpacity style={styles.pageButton}>
-            <Text style={styles.pageButtonText}>{t('admin.userManagement.next')}</Text>
-          </TouchableOpacity>
-        </View>
-
-        <Text style={styles.paginationInfo}>{t('admin.userManagement.showing', { start: 1, end: 10, total: stats.total.toLocaleString() })}</Text>
+        )}
+        {!loading && (
+          <Text style={styles.totalInfo}>
+            {totalUsers > 0 ? `${totalUsers.toLocaleString()} total users` : `${users.length} users shown`}
+          </Text>
+        )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  header: {
-    backgroundColor: COLORS.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.md,
-    paddingTop: SPACING.xl,
-  },
-  backButton: {
-    padding: SPACING.xs,
-  },
-  headerTitle: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xl,
-    color: COLORS.white,
-    fontWeight: 'bold',
-    flex: 1,
-    marginLeft: SPACING.sm,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    gap: SPACING.sm,
-  },
-  iconButton: {
-    padding: SPACING.xs,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: SPACING.xl,
-  },
-  imageContainer: {
-    width: '100%',
-    height: 420,
-    position: 'relative',
-    overflow: 'hidden',
-    marginBottom: SPACING.md,
-  },
-  backgroundImage: {
-    width: '100%',
-    height: '100%',
-  },
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(7, 25, 82, 0.75)',
-  },
-  blurContainer: {
-    flex: 1,
-    padding: SPACING.md,
-    justifyContent: 'center',
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.md,
-  },
-  statCard: {
-    width: (width - SPACING.md * 3) / 2,
-    height: 100,
-    padding: SPACING.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    ...SHADOWS.sm,
-    backgroundColor: COLORS.white + '95',
-    position: 'relative',
-  },
-  statTrendTopRight: {
-    position: 'absolute',
-    top: SPACING.sm,
-    right: SPACING.sm,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-    backgroundColor: COLORS.success + '20',
-    paddingHorizontal: SPACING.xs,
-    paddingVertical: 2,
-    borderRadius: BORDER_RADIUS.sm,
-  },
-  statIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: COLORS.primary + '30',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: SPACING.sm,
-  },
-  statContent: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  statValue: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xl,
-    color: COLORS.white,
-    fontWeight: 'bold',
-    marginBottom: SPACING.xs / 2,
-  },
-  statLabel: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.white + 'CC',
-  },
-  statTrendText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.success,
-    fontWeight: '600',
-  },
-  tabsContainer: {
-    marginBottom: SPACING.md,
-    paddingHorizontal: SPACING.md,
-  },
-  tab: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    marginRight: SPACING.sm,
-    borderRadius: BORDER_RADIUS.md,
-    backgroundColor: COLORS.white,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  tabActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  tabText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.text,
-    fontWeight: '600',
-  },
-  tabTextActive: {
-    color: COLORS.white,
-  },
-  usersSection: {
-    paddingHorizontal: SPACING.md,
-  },
-  userCard: {
-    marginBottom: SPACING.md,
-    padding: SPACING.md,
-    ...SHADOWS.sm,
-  },
-  userHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: SPACING.sm,
-  },
-  userId: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.textSecondary,
-    marginBottom: SPACING.xs / 2,
-  },
-  userName: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
-    color: COLORS.primary,
-    fontWeight: 'bold',
-  },
-  statusBadge: {
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs,
-    borderRadius: BORDER_RADIUS.sm,
-  },
-  statusVerified: {
-    backgroundColor: COLORS.success + '30',
-  },
-  statusPending: {
-    backgroundColor: COLORS.warning + '30',
-  },
-  statusText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.text,
-    fontWeight: '600',
-  },
-  userDetails: {
-    marginBottom: SPACING.sm,
-  },
-  userDetail: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.text,
-    marginBottom: SPACING.xs,
-  },
-  detailLabel: {
-    fontWeight: '600',
-    color: COLORS.text,
-  },
-  userActions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.sm,
-    marginTop: SPACING.sm,
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderRadius: BORDER_RADIUS.sm,
-    backgroundColor: COLORS.primary + '20',
-    gap: SPACING.xs,
-  },
-  actionButtonText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.primary,
-    fontWeight: '600',
-  },
-  verifyButton: {
-    backgroundColor: COLORS.success,
-  },
-  verifyButtonText: {
-    color: COLORS.white,
-  },
-  suspendButton: {
-    backgroundColor: COLORS.error + '20',
-  },
-  suspendButtonText: {
-    color: COLORS.error,
-  },
-  pagination: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginVertical: SPACING.lg,
-    paddingHorizontal: SPACING.md,
-  },
-  pageButton: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderRadius: BORDER_RADIUS.sm,
-    backgroundColor: COLORS.white,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  pageButtonText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.text,
-    fontWeight: '600',
-  },
-  pageNumbers: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.xs,
-  },
-  pageNumber: {
-    width: 32,
-    height: 32,
-    borderRadius: BORDER_RADIUS.sm,
-    backgroundColor: COLORS.white,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  pageNumberActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  pageNumberText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.text,
-  },
-  pageNumberTextActive: {
-    color: COLORS.white,
-  },
-  pageEllipsis: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.textSecondary,
-  },
-  paginationInfo: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    marginBottom: SPACING.md,
-    paddingHorizontal: SPACING.md,
-  },
+  container: { flex: 1, backgroundColor: '#F5F7FA' },
+  scrollView: { flex: 1 },
+  scrollContent: { paddingBottom: SPACING.xl },
+  heroContainer: { width: '100%', overflow: 'hidden' },
+  heroImage: { width: '100%', height: '100%' },
+  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(15, 52, 96, 0.5)' },
+  headerContent: { flex: 1, paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + SPACING.md : SPACING.xl, paddingHorizontal: SPACING.md, justifyContent: 'flex-start' },
+  backButton: { alignSelf: 'flex-start', marginBottom: SPACING.lg, overflow: 'hidden', borderRadius: BORDER_RADIUS.lg },
+  backButtonBlur: { padding: SPACING.sm, borderRadius: BORDER_RADIUS.lg, overflow: 'hidden' },
+  titleContainer: { alignItems: 'center', marginTop: SPACING.sm },
+  heroTitle: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.xxl, fontWeight: '700', color: '#fff', textAlign: 'center' },
+  heroSubtitle: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: 'rgba(255, 255, 255, 0.9)', marginTop: SPACING.xs },
+  statsStrip: { flexDirection: 'row', marginHorizontal: SPACING.md, marginTop: -SPACING.md, padding: SPACING.md, backgroundColor: '#fff', borderRadius: 14, borderWidth: 1, borderColor: '#F1F5F9', ...SHADOWS.sm },
+  statCol: { flex: 1, alignItems: 'center' },
+  statIconChip: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center', marginBottom: SPACING.xs },
+  statValue: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.md, fontWeight: '700', color: COLORS.text },
+  statLabel: { fontFamily: FONTS.regular, fontSize: 10, color: COLORS.textSecondary, marginTop: 2 },
+  tabsScroll: { marginTop: SPACING.lg },
+  tabsWrapper: { paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, gap: SPACING.sm },
+  tabPill: { paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, borderRadius: BORDER_RADIUS.round, backgroundColor: '#fff', borderWidth: 1, borderColor: '#F1F5F9', marginRight: SPACING.sm },
+  tabPillActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  tabPillText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, fontWeight: '600', color: COLORS.text },
+  tabPillTextActive: { color: '#fff' },
+  usersSection: { paddingHorizontal: SPACING.md, marginTop: SPACING.md },
+  loadingContainer: { alignItems: 'center', paddingVertical: SPACING.xxl * 2 },
+  loadingText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: COLORS.textSecondary, marginTop: SPACING.md },
+  emptyContainer: { alignItems: 'center', paddingVertical: SPACING.xxl * 2 },
+  emptyIconWrap: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center', marginBottom: SPACING.lg },
+  emptyTitle: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.lg, fontWeight: '700', color: '#1E293B', marginBottom: SPACING.xs },
+  emptyText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: '#94A3B8' },
+  userCard: { marginBottom: SPACING.md, padding: SPACING.md, borderRadius: 14, borderWidth: 1, borderColor: '#F1F5F9', backgroundColor: '#fff', ...SHADOWS.sm },
+  userCardTop: { flexDirection: 'row', alignItems: 'flex-start' },
+  avatarWrapper: { marginRight: SPACING.md },
+  avatarCircle: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' },
+  userInfo: { flex: 1 },
+  userName: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.md, fontWeight: '700', color: COLORS.text },
+  userId: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.xs, color: COLORS.textSecondary, marginTop: 2 },
+  badgeRow: { flexDirection: 'row', flexWrap: 'wrap', marginTop: SPACING.sm, gap: SPACING.xs },
+  statusBadge: { paddingHorizontal: SPACING.sm, paddingVertical: 4, borderRadius: BORDER_RADIUS.sm },
+  statusText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.xs, fontWeight: '600' },
+  typeBadge: { paddingHorizontal: SPACING.sm, paddingVertical: 4, borderRadius: BORDER_RADIUS.sm, backgroundColor: '#F1F5F9' },
+  typeText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.xs, color: COLORS.textSecondary, fontWeight: '600' },
+  joinedRow: { flexDirection: 'row', alignItems: 'center', marginTop: SPACING.sm, gap: 4 },
+  joinedText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.xs, color: COLORS.textSecondary },
+  userActions: { flexDirection: 'row', flexWrap: 'wrap', marginTop: SPACING.md, paddingTop: SPACING.sm, borderTopWidth: 1, borderTopColor: '#F1F5F9', gap: SPACING.sm },
+  actionBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, borderRadius: BORDER_RADIUS.sm, backgroundColor: COLORS.primary + '15', gap: SPACING.xs },
+  actionBtnText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, fontWeight: '600', color: COLORS.primary },
+  verifyBtn: { backgroundColor: '#00B894' },
+  verifyBtnText: { color: '#fff' },
+  activateBtn: { backgroundColor: '#4A90D9' },
+  activateBtnText: { color: '#fff' },
+  suspendBtn: { backgroundColor: COLORS.error + '15' },
+  suspendBtnText: { color: COLORS.error },
+  paginationRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: SPACING.lg, marginHorizontal: SPACING.md },
+  pageBtn: { paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, borderRadius: BORDER_RADIUS.sm, backgroundColor: '#fff', borderWidth: 1, borderColor: '#F1F5F9' },
+  pageBtnDisabled: { opacity: 0.4 },
+  pageBtnText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, fontWeight: '600', color: COLORS.text },
+  paginationInfo: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: COLORS.textSecondary },
+  totalInfo: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: COLORS.textSecondary, textAlign: 'center', marginTop: SPACING.sm, paddingHorizontal: SPACING.md, marginBottom: SPACING.lg },
 });
 
 export default UserManagementScreen;

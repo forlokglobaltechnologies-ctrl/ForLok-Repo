@@ -13,7 +13,7 @@ const envSchema = z.object({
 
   // Database
   MONGODB_URI: z.string().url().optional(),
-  MONGODB_DB_NAME: z.string().default('yaaryatra'),
+  MONGODB_DB_NAME: z.string().default('forlok'),
 
   // JWT
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters').optional(),
@@ -42,7 +42,7 @@ const envSchema = z.object({
   CLOUDINARY_CLOUD_NAME: z.string(),
   CLOUDINARY_API_KEY: z.string(),
   CLOUDINARY_API_SECRET: z.string(),
-  CLOUDINARY_FOLDER: z.string().default('yaaryatra'),
+  CLOUDINARY_FOLDER: z.string().default('forlok'),
 
   // Document Verification - IDfy
   DOCUMENT_VERIFICATION_PROVIDER: z.string().default('idfy'),
@@ -59,12 +59,6 @@ const envSchema = z.object({
   MAPS_PROVIDER: z.enum(['openstreetmap', 'google']).default('openstreetmap'),
   GOOGLE_MAPS_API_KEY: z.string().optional(),
   GOOGLE_MAPS_GEOCODING_API_KEY: z.string().optional(),
-
-  // OSRM - Open Source Routing Machine
-  OSRM_BASE_URL: z.string().url().default('http://router.project-osrm.org'),
-  OSRM_TIMEOUT_MS: z.string().default('10000'),
-  OSRM_RETRY_ATTEMPTS: z.string().default('3'),
-  OSRM_RETRY_DELAY_MS: z.string().default('1000'),
 
   // Admin
   ADMIN_USERNAME: z.string().default('admin'),
@@ -210,7 +204,7 @@ export const config = {
   admin: {
     username: env.ADMIN_USERNAME,
     password: env.ADMIN_PASSWORD || 'admin123456',
-    email: env.ADMIN_EMAIL || 'admin@yaaryatra.com',
+    email: env.ADMIN_EMAIL || 'admin@forlok.com',
   },
   websocket: {
     enabled: env.WEBSOCKET_ENABLED === 'true',
@@ -242,11 +236,5 @@ export const config = {
     secure: env.EMAIL_SECURE === 'true',
     user: env.EMAIL_USER || '',
     password: env.EMAIL_PASSWORD || '',
-  },
-  osrm: {
-    baseUrl: env.OSRM_BASE_URL,
-    timeoutMs: parseInt(env.OSRM_TIMEOUT_MS, 10),
-    retryAttempts: parseInt(env.OSRM_RETRY_ATTEMPTS, 10),
-    retryDelayMs: parseInt(env.OSRM_RETRY_DELAY_MS, 10),
   },
 };

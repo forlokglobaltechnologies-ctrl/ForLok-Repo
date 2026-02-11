@@ -88,7 +88,7 @@ class SMSService {
       const client = twilio(accountSid, authToken);
 
       const message = await client.messages.create({
-        body: `Your Yaaryatra verification code is: ${otp}. Valid for 5 minutes.`,
+        body: `Your Forlok verification code is: ${otp}. Valid for 5 minutes.`,
         from: fromNumber,
         to: phoneNumber,
       });
@@ -137,18 +137,14 @@ class SMSService {
         body: JSON.stringify({
           authkey: authKey,
           mobile: formattedPhone,
-          message: `Your Yaaryatra verification code is ${otp}. Valid for 5 minutes.`,
+          message: `Your Forlok verification code is ${otp}. Valid for 5 minutes.`,
           sender: senderId,
           otp: otp,
           otp_expiry: 5, // minutes
         }),
       });
 
-      const data = (await response.json()) as {
-        type?: string;
-        request_id?: string;
-        message?: string;
-      };
+      const data: any = await response.json();
 
       if (data.type === 'success') {
         console.log('✅ [SMS SERVICE] SMS sent via MSG91');
@@ -197,16 +193,12 @@ class SMSService {
         body: JSON.stringify({
           apikey: apiKey,
           numbers: formattedPhone,
-          message: `Your Yaaryatra verification code is: ${otp}. Valid for 5 minutes.`,
+          message: `Your Forlok verification code is: ${otp}. Valid for 5 minutes.`,
           sender: sender,
         }),
       });
 
-      const data = (await response.json()) as {
-        status?: string;
-        batch_id?: string;
-        errors?: Array<{ message?: string }>;
-      };
+      const data: any = await response.json();
 
       if (data.status === 'success') {
         console.log('✅ [SMS SERVICE] SMS sent via TextLocal');

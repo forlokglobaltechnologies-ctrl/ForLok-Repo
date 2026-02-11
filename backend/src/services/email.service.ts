@@ -57,7 +57,7 @@ class EmailService {
       }
 
       const mailOptions = {
-        from: `"Yaaryatra" <${(config as any).email?.user || 'noreply@yaaryatra.com'}>`,
+        from: `"Forlok" <${(config as any).email?.user || 'noreply@forlok.com'}>`,
         to: options.to,
         subject: options.subject,
         html: options.html,
@@ -93,16 +93,16 @@ class EmailService {
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Email Verification - Yaaryatra</title>
+          <title>Email Verification - Forlok</title>
         </head>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="background: linear-gradient(135deg, #071952 0%, #0A2A6B 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-            <h1 style="color: #FFFFFF; margin: 0; font-size: 28px;">Yaaryatra</h1>
+            <h1 style="color: #FFFFFF; margin: 0; font-size: 28px;">Forlok</h1>
           </div>
           <div style="background: #FFFFFF; padding: 40px; border: 1px solid #E0E0E0; border-top: none; border-radius: 0 0 10px 10px;">
             <h2 style="color: #071952; margin-top: 0;">Email Verification</h2>
             <p>Hello,</p>
-            <p>Thank you for registering with Yaaryatra. Please use the following OTP to verify your email address:</p>
+            <p>Thank you for registering with Forlok. Please use the following OTP to verify your email address:</p>
             <div style="background: #F5F5F5; border: 2px dashed #071952; border-radius: 8px; padding: 20px; text-align: center; margin: 30px 0;">
               <p style="font-size: 32px; font-weight: bold; color: #071952; letter-spacing: 5px; margin: 0;">${otp}</p>
             </div>
@@ -110,7 +110,7 @@ class EmailService {
             <p style="color: #757575; font-size: 12px; margin-top: 30px;">If you did not request this verification, please ignore this email.</p>
           </div>
           <div style="text-align: center; margin-top: 20px; color: #757575; font-size: 12px;">
-            <p>&copy; ${new Date().getFullYear()} Yaaryatra. All rights reserved.</p>
+            <p>&copy; ${new Date().getFullYear()} Forlok. All rights reserved.</p>
           </div>
         </body>
       </html>
@@ -118,7 +118,7 @@ class EmailService {
 
     return this.sendEmail({
       to: email,
-      subject: 'Yaaryatra - Email Verification OTP',
+      subject: 'Forlok - Email Verification OTP',
       html,
     });
   }

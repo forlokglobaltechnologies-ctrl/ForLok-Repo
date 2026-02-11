@@ -10,13 +10,16 @@ import {
   Alert,
   ActivityIndicator,
   Image,
+  ImageBackground,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { ArrowLeft, Plus, Car, AlertCircle, X, Clock, MessageCircle } from 'lucide-react-native';
+import { ArrowLeft, Plus, Car, AlertCircle, X, Clock, MessageCircle, MapPin, ArrowRight, Calendar, Users, Bike, ChevronRight } from 'lucide-react-native';
+import { BlurView } from 'expo-blur';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { Card } from '@components/common/Card';
 import { Button } from '@components/common/Button';
 import { useLanguage } from '@context/LanguageContext';
+import { useTheme } from '@context/ThemeContext';
 import { poolingApi, rentalApi } from '@utils/apiClient';
 
 // Component to check if trip can be started based on time
@@ -114,6 +117,7 @@ const StartTripButton = ({ offer, onPress }: { offer: any; onPress: () => void }
 const MyOffersScreen = () => {
   const navigation = useNavigation();
   const { t } = useLanguage();
+  const { theme } = useTheme();
   const [activeTab, setActiveTab] = useState('All');
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
   const [selectedOffer, setSelectedOffer] = useState<any>(null);
@@ -134,91 +138,55 @@ const MyOffersScreen = () => {
 
       if (poolingResponse.success && poolingResponse.data) {
         const poolingOffers = Array.isArray(poolingResponse.data) ? poolingResponse.data : [];
-        // Load booking counts for each pooling offer
-        const bookingApi = (await import('@utils/apiClient')).bookingApi;
-        const poolingOffersWithBookings = await Promise.all(
-          poolingOffers.map(async (offer: any) => {
-            let actualBookedSeats = 0;
-            try {
-              // Fetch actual bookings to get accurate seat count
-              const bookingsResponse = await bookingApi.getAllBookingsByOffer(offer.offerId || offer._id, 'pooling');
-              if (bookingsResponse.success && bookingsResponse.data) {
-                const bookingsList = Array.isArray(bookingsResponse.data) 
-                  ? bookingsResponse.data 
-                  : [];
-                // Count only confirmed, pending, or in_progress bookings (exclude cancelled)
-                actualBookedSeats = bookingsList.filter((b: any) => 
-                  b.status !== 'cancelled' && b.status !== 'completed'
-                ).length;
-              }
-            } catch (error) {
-              console.warn('Failed to load bookings for pooling offer:', offer.offerId, error);
-              // Fallback to calculation if API fails
-              actualBookedSeats = (offer.totalSeats || 0) - (offer.availableSeats || 0);
-            }
-            
-            return {
-              id: offer.offerId || offer._id,
-              type: 'pooling',
-              offerId: offer.offerId || offer._id,
-              route: {
-                from: offer.route?.from?.address || 'Unknown',
-                to: offer.route?.to?.address || 'Unknown',
-              },
-              date: offer.date ? new Date(offer.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A',
-              time: offer.time || new Date(offer.date).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
-              status: offer.status || 'active',
-              seatsBooked: actualBookedSeats,
-              totalSeats: offer.totalSeats || 0,
-              ...offer,
-            };
-          })
-        );
-        offers.push(...poolingOffersWithBookings);
+        // Use data already on the offer — no extra API calls needed
+        const poolingMapped = poolingOffers.map((offer: any) => {
+          // Backend already tracks availableSeats; booked = total - available
+          const booked = Math.max(0, (offer.totalSeats || 0) - (offer.availableSeats ?? offer.totalSeats ?? 0));
+          return {
+            id: offer.offerId || offer._id,
+            type: 'pooling',
+            offerId: offer.offerId || offer._id,
+            route: {
+              from: offer.route?.from?.address || 'Unknown',
+              to: offer.route?.to?.address || 'Unknown',
+            },
+            date: offer.date ? new Date(offer.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A',
+            time: offer.time || new Date(offer.date).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+            status: offer.status || 'active',
+            seatsBooked: booked,
+            totalSeats: offer.totalSeats || 0,
+            ...offer,
+          };
+        });
+        offers.push(...poolingMapped);
       }
 
       if (rentalResponse.success && rentalResponse.data) {
         const rentalOffers = Array.isArray(rentalResponse.data) ? rentalResponse.data : [];
-        // Load booking counts for each rental offer
-        const bookingApi = (await import('@utils/apiClient')).bookingApi;
-        const offersWithBookings = await Promise.all(
-          rentalOffers.map(async (offer: any) => {
-            let totalBookings = 0;
-            try {
-              // Use getAllBookingsByOffer to get all bookings for accurate count
-              const bookingsResponse = await bookingApi.getAllBookingsByOffer(offer.offerId || offer._id, 'rental');
-              if (bookingsResponse.success && bookingsResponse.data) {
-                const bookingsList = Array.isArray(bookingsResponse.data) 
-                  ? bookingsResponse.data 
-                  : [];
-                totalBookings = bookingsList.length; // Already filtered to exclude cancelled
-              }
-            } catch (error) {
-              console.warn('Failed to load bookings for offer:', offer.offerId, error);
-            }
-            
-            return {
+        // Use data already on the offer — no extra API calls needed
+        const rentalMapped = rentalOffers.map((offer: any) => {
+          const totalBookings = offer.totalBookings || 0;
+          return {
             id: offer.offerId || offer._id,
             type: 'rental',
             offerId: offer.offerId || offer._id,
-              vehicle: {
-                brand: offer.vehicle?.brand || 'Unknown',
-                vehicleModel: offer.vehicle?.vehicleModel || offer.vehicle?.model || '',
-                type: offer.vehicle?.type || 'car',
-                photos: offer.vehicle?.photos || [],
-                displayName: `${offer.vehicle?.brand || 'Unknown'} ${offer.vehicle?.vehicleModel || offer.vehicle?.model || ''}`,
-              },
+            vehicle: {
+              brand: offer.vehicle?.brand || 'Unknown',
+              vehicleModel: offer.vehicle?.vehicleModel || offer.vehicle?.model || '',
+              type: offer.vehicle?.type || 'car',
+              photos: offer.vehicle?.photos || [],
+              displayName: `${offer.vehicle?.brand || 'Unknown'} ${offer.vehicle?.vehicleModel || offer.vehicle?.model || ''}`,
+            },
             duration: offer.duration || 'N/A',
             date: offer.date ? new Date(offer.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A',
             time: offer.time || new Date(offer.date).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
-              status: totalBookings > 0 ? 'booked' : (offer.status || 'active'),
-              totalBookings: totalBookings,
+            status: totalBookings > 0 ? 'booked' : (offer.status || 'active'),
+            totalBookings: totalBookings,
             bookedBy: offer.bookedBy || null,
             ...offer,
-            };
-          })
-        );
-        offers.push(...offersWithBookings);
+          };
+        });
+        offers.push(...rentalMapped);
       }
 
       // Filter out completed offers - they should only appear in History
@@ -291,54 +259,93 @@ const MyOffersScreen = () => {
     setSelectedOffer(null);
   };
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <ArrowLeft size={24} color={COLORS.white} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('myOffers.title')}</Text>
-        <View style={styles.headerRight}>
-          <TouchableOpacity
-            onPress={() => navigation.navigate('ChatList' as never)}
-            style={styles.headerIconButton}
-          >
-            <MessageCircle size={22} color={COLORS.white} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => navigation.navigate('OfferServices' as never)}
-            style={styles.headerIconButton}
-          >
-            <Plus size={24} color={COLORS.white} />
-          </TouchableOpacity>
-        </View>
-      </View>
+  const getFromAddress = (offer: any) => {
+    if (typeof offer.route?.from === 'string') return offer.route.from;
+    return offer.route?.from?.address || 'Unknown';
+  };
 
-      <View style={styles.tabs}>
+  const getToAddress = (offer: any) => {
+    if (typeof offer.route?.to === 'string') return offer.route.to;
+    return offer.route?.to?.address || 'Unknown';
+  };
+
+  const getStatusStyle = (status: string) => {
+    switch (status) {
+      case 'active': return { bg: '#4CAF50' + '15', color: '#4CAF50' };
+      case 'booked': return { bg: '#2196F3' + '15', color: '#2196F3' };
+      case 'pending': return { bg: '#FF9800' + '15', color: '#FF9800' };
+      case 'expired': return { bg: '#9E9E9E' + '15', color: '#9E9E9E' };
+      case 'completed': return { bg: '#4CAF50' + '15', color: '#4CAF50' };
+      default: return { bg: '#9E9E9E' + '15', color: '#9E9E9E' };
+    }
+  };
+
+  const getVehicleImageUri = (offer: any) => {
+    const photos = offer.vehicle?.photos;
+    if (photos) {
+      if (Array.isArray(photos) && photos.length > 0) return photos[0];
+      if (photos.front) return photos.front;
+    }
+    return offer.vehicle?.type === 'bike'
+      ? 'https://images.unsplash.com/photo-1558980664-769d59546b3b?w=400&h=300&fit=crop'
+      : 'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=400&h=300&fit=crop';
+  };
+
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      {/* ── Hero Header ── */}
+      <ImageBackground
+        source={require('../../../assets/myoffers.png')}
+        style={styles.headerImage}
+        resizeMode="cover"
+      >
+        <View style={[styles.headerOverlay, { backgroundColor: theme.colors.primary }]} />
+        <BlurView intensity={40} style={styles.blurContainer}>
+          <View style={styles.headerNav}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.navButton}>
+              <ArrowLeft size={22} color="#FFF" />
+            </TouchableOpacity>
+            <View style={styles.headerCenter}>
+              <Text style={styles.navTitle}>{t('myOffers.title')}</Text>
+              <Text style={styles.navSubtitle}>{filteredOffers.length} offer{filteredOffers.length !== 1 ? 's' : ''}</Text>
+            </View>
+            <View style={styles.headerActions}>
+              <TouchableOpacity onPress={() => navigation.navigate('ChatList' as never)} style={styles.navButton}>
+                <MessageCircle size={20} color="#FFF" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => navigation.navigate('OfferServices' as never)} style={styles.navButton}>
+                <Plus size={22} color="#FFF" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </BlurView>
+      </ImageBackground>
+
+      {/* ── Filter Tabs ── */}
+      <View style={[styles.tabs, { backgroundColor: theme.colors.surface }]}>
         {tabs.map((tab) => (
           <TouchableOpacity
             key={tab}
-            style={[styles.tab, activeTab === tab && styles.activeTab]}
+            style={[styles.tab, activeTab === tab && [styles.activeTab, { borderBottomColor: theme.colors.primary }]]}
             onPress={() => setActiveTab(tab)}
           >
-            <Text
-              style={[styles.tabText, activeTab === tab && styles.activeTabText]}
-            >
+            <Text style={[styles.tabText, { color: theme.colors.textSecondary }, activeTab === tab && { color: theme.colors.primary, fontWeight: '700' }]}>
               {tab}
             </Text>
           </TouchableOpacity>
         ))}
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {loading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={COLORS.primary} />
-            <Text style={styles.loadingText}>Loading offers...</Text>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+            <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading offers...</Text>
           </View>
         ) : filteredOffers.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>{t('myOffers.noOffers')}</Text>
+            <Car size={48} color={theme.colors.textSecondary} />
+            <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>{t('myOffers.noOffers')}</Text>
             <Button
               title={t('myOffers.createOffer')}
               onPress={() => navigation.navigate('OfferServices' as never)}
@@ -348,147 +355,158 @@ const MyOffersScreen = () => {
             />
           </View>
         ) : (
-          filteredOffers.map((offer) => (
-            <TouchableOpacity 
-              key={offer.id} 
-              onPress={() => handleView(offer)}
-              activeOpacity={0.7}
+          filteredOffers.map((offer) => {
+            const statusStyle = getStatusStyle(offer.status);
+            const isPooling = offer.type === 'pooling';
+            return (
+            <TouchableOpacity
+              key={offer.id}
+              onPress={isPooling ? undefined : () => handleView(offer)}
+              activeOpacity={isPooling ? 1 : 0.7}
+              disabled={isPooling}
             >
-            <Card style={styles.offerCard}>
-              <View style={styles.offerHeader}>
-                {offer.type === 'pooling' ? (
-                  <Car size={24} color={COLORS.primary} />
-                ) : (
-                  <Car size={24} color={COLORS.primary} />
-                )}
-                <Text style={styles.offerType}>
-                  {offer.type === 'pooling' ? t('myOffers.pooling') : t('myOffers.rental')}
-                </Text>
-              </View>
-
-              {/* Vehicle Image for Rental Offers */}
-              {offer.type === 'rental' && offer.vehicle && (
-                <Image 
-                  source={{ 
-                    uri: (offer.vehicle.photos && (offer.vehicle.photos.front || offer.vehicle.photos[0] || (Array.isArray(offer.vehicle.photos) ? offer.vehicle.photos[0] : ''))) ||
-                         (offer.vehicle?.type === 'bike' 
-                           ? 'https://images.unsplash.com/photo-1558980664-769d59546b3b?w=400&h=300&fit=crop'
-                           : 'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=400&h=300&fit=crop')
-                  }} 
-                  style={styles.vehicleImage}
-                  resizeMode="cover"
-                />
-              )}
-
-              {offer.type === 'pooling' && offer.route && (
-                <>
-                  <Text style={styles.offerRoute}>
-                    {typeof offer.route?.from === 'string' 
-                      ? offer.route.from 
-                      : offer.route?.from?.address || 'Unknown'} → {typeof offer.route?.to === 'string' 
-                      ? offer.route.to 
-                      : offer.route?.to?.address || 'Unknown'}
+              <View style={[styles.offerCard, { backgroundColor: theme.colors.surface }]}>
+                {/* Card Header */}
+                <View style={[styles.offerHeader, { borderBottomColor: theme.colors.border }]}>
+                  <View style={[styles.offerTypeIcon, { backgroundColor: theme.colors.primary + '12' }]}>
+                    {offer.type === 'pooling' ? (
+                      (offer.vehicle?.type?.toLowerCase() === 'bike' ? <Bike size={20} color={theme.colors.primary} /> : <Car size={20} color={theme.colors.primary} />)
+                    ) : (
+                      <Car size={20} color={theme.colors.primary} />
+                    )}
+                  </View>
+                  <Text style={[styles.offerType, { color: theme.colors.text }]}>
+                    {offer.type === 'pooling' ? t('myOffers.pooling') : t('myOffers.rental')}
                   </Text>
-                  <Text style={styles.offerDateTime}>
-                    {offer.date}, {offer.time}
-                  </Text>
-                  {offer.status === 'active' && (
-                    <Text style={styles.seatsText}>
-                      {t('myOffers.seats')}: {offer.seatsBooked}/{offer.totalSeats} {t('myOffers.booked')}
+                  <View style={[styles.statusPill, { backgroundColor: statusStyle.bg }]}>
+                    <Text style={[styles.statusPillText, { color: statusStyle.color }]}>
+                      {offer.status.charAt(0).toUpperCase() + offer.status.slice(1)}
                     </Text>
-                  )}
-                </>
-              )}
+                  </View>
+                </View>
 
-              {offer.type === 'rental' && (
-                <>
-                  {/* Vehicle Image - Always show, use vehicle photos or fallback to internet image */}
-                  <Image 
-                    source={{ 
-                      uri: (offer.vehicle?.photos && (
-                        (Array.isArray(offer.vehicle.photos) && offer.vehicle.photos.length > 0 && offer.vehicle.photos[0]) ||
-                        offer.vehicle.photos.front ||
-                        offer.vehicle.photos[0]
-                      )) ||
-                      (offer.vehicle?.type === 'bike' 
-                        ? 'https://images.unsplash.com/photo-1558980664-769d59546b3b?w=400&h=300&fit=crop'
-                        : 'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=400&h=300&fit=crop')
-                    }} 
-                    style={styles.vehicleImage}
-                    resizeMode="cover"
-                  />
-                  <Text style={styles.offerVehicle}>
-                    {offer.vehicle?.displayName || `${offer.vehicle?.brand || 'Unknown'} ${offer.vehicle?.vehicleModel || offer.vehicle?.model || ''}`}
-                  </Text>
-                  <Text style={styles.offerDateTime}>
-                    {offer.date ? new Date(offer.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'}, {offer.availableFrom || 'N/A'} - {offer.availableUntil || 'N/A'}
-                  </Text>
-                  {offer.totalBookings !== undefined && offer.totalBookings > 0 && (
-                    <View style={styles.bookingCountContainer}>
-                      <Text style={styles.bookingCountText}>
-                        {offer.totalBookings} booking{offer.totalBookings !== 1 ? 's' : ''}
-                      </Text>
+                {/* ── Pooling Offer Content ── */}
+                {offer.type === 'pooling' && offer.route && (
+                  <View style={styles.poolingContent}>
+                    {/* Route Display - Input-style boxes with arrow */}
+                    <View style={styles.routeSection}>
+                      <View style={[styles.routeBox, { backgroundColor: theme.colors.background, borderColor: theme.colors.border }]}>
+                        <MapPin size={16} color={theme.colors.primary} />
+                        <Text style={[styles.routeText, { color: theme.colors.text }]} numberOfLines={1}>
+                          {getFromAddress(offer)}
+                        </Text>
+                      </View>
+                      <View style={styles.routeArrow}>
+                        <ArrowRight size={18} color={theme.colors.primary} />
+                      </View>
+                      <View style={[styles.routeBox, { backgroundColor: theme.colors.background, borderColor: theme.colors.border }]}>
+                        <MapPin size={16} color="#F44336" />
+                        <Text style={[styles.routeText, { color: theme.colors.text }]} numberOfLines={1}>
+                          {getToAddress(offer)}
+                        </Text>
+                      </View>
                     </View>
-                  )}
-                  {offer.status === 'booked' && offer.bookedBy && (
-                    <Text style={styles.bookedByText}>
-                      {t('myOffers.bookedBy')}: {offer.bookedBy}
-                    </Text>
-                  )}
-                </>
-              )}
 
-              <View style={styles.statusContainer}>
-                <View
-                  style={[
-                    styles.statusBadge,
-                    offer.status === 'active' && styles.statusActive,
-                    offer.status === 'booked' && styles.statusBooked,
-                    offer.status === 'completed' && styles.statusCompleted,
-                  ]}
-                >
-                  <Text style={styles.statusText}>{offer.status}</Text>
+                    {/* Date/Time + Seats Row */}
+                    <View style={styles.metaRow}>
+                      <View style={[styles.metaChip, { backgroundColor: theme.colors.background }]}>
+                        <Calendar size={13} color={theme.colors.primary} />
+                        <Text style={[styles.metaChipText, { color: theme.colors.text }]}>{offer.date}</Text>
+                      </View>
+                      <View style={[styles.metaChip, { backgroundColor: theme.colors.background }]}>
+                        <Clock size={13} color={theme.colors.primary} />
+                        <Text style={[styles.metaChipText, { color: theme.colors.text }]}>{offer.time}</Text>
+                      </View>
+                      {offer.status === 'active' && (
+                        <View style={[styles.metaChip, { backgroundColor: theme.colors.primary + '12' }]}>
+                          <Users size={13} color={theme.colors.primary} />
+                          <Text style={[styles.metaChipText, { color: theme.colors.primary, fontWeight: '600' }]}>
+                            {offer.seatsBooked}/{offer.totalSeats}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                )}
+
+                {/* ── Rental Offer Content ── */}
+                {offer.type === 'rental' && (
+                  <View style={styles.rentalContent}>
+                    <Image source={{ uri: getVehicleImageUri(offer) }} style={styles.vehicleImage} resizeMode="cover" />
+                    <Text style={[styles.offerVehicle, { color: theme.colors.text }]}>
+                      {offer.vehicle?.displayName || `${offer.vehicle?.brand || 'Unknown'} ${offer.vehicle?.vehicleModel || offer.vehicle?.model || ''}`}
+                    </Text>
+                    <View style={styles.metaRow}>
+                      <View style={[styles.metaChip, { backgroundColor: theme.colors.background }]}>
+                        <Calendar size={13} color={theme.colors.primary} />
+                        <Text style={[styles.metaChipText, { color: theme.colors.text }]}>
+                          {offer.date ? new Date(offer.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'N/A'}
+                        </Text>
+                      </View>
+                      <View style={[styles.metaChip, { backgroundColor: theme.colors.background }]}>
+                        <Clock size={13} color={theme.colors.primary} />
+                        <Text style={[styles.metaChipText, { color: theme.colors.text }]}>
+                          {offer.availableFrom || 'N/A'} - {offer.availableUntil || 'N/A'}
+                        </Text>
+                      </View>
+                    </View>
+                    {offer.totalBookings > 0 && (
+                      <View style={[styles.metaChip, { backgroundColor: theme.colors.primary + '12', alignSelf: 'flex-start' }]}>
+                        <Users size={13} color={theme.colors.primary} />
+                        <Text style={[styles.metaChipText, { color: theme.colors.primary, fontWeight: '600' }]}>
+                          {offer.totalBookings} booking{offer.totalBookings !== 1 ? 's' : ''}
+                        </Text>
+                      </View>
+                    )}
+                    {offer.status === 'booked' && offer.bookedBy && (
+                      <Text style={[styles.bookedByText, { color: theme.colors.textSecondary }]}>
+                        {t('myOffers.bookedBy')}: {offer.bookedBy}
+                      </Text>
+                    )}
+                  </View>
+                )}
+
+                {/* ── Actions ── */}
+                <View style={[styles.actionsContainer, { borderTopColor: theme.colors.border }]}>
+                  {(offer.seatsBooked > 0 || offer.totalBookings > 0) && (
+                    <TouchableOpacity
+                      onPress={() => navigation.navigate('ChatList' as never)}
+                      style={[styles.chatButton, { borderColor: theme.colors.primary, backgroundColor: theme.colors.primary + '08' }]}
+                    >
+                      <MessageCircle size={16} color={theme.colors.primary} />
+                      <Text style={[styles.chatButtonText, { color: theme.colors.primary }]}>Chat</Text>
+                    </TouchableOpacity>
+                  )}
+                  {offer.type === 'pooling' && (offer.status === 'active' || offer.status === 'booked' || offer.status === 'pending') && (
+                    <StartTripButton
+                      offer={offer}
+                      onPress={() => {
+                        navigation.navigate('DriverTrip' as never, {
+                          offerId: offer.offerId,
+                          offer: offer,
+                        } as never);
+                      }}
+                    />
+                  )}
+                  {offer.type === 'rental' && offer.totalBookings > 0 && (
+                    <Button
+                      title="Manage Bookings"
+                      onPress={() => handleView(offer)}
+                      variant="primary"
+                      size="small"
+                      style={styles.actionButton}
+                    />
+                  )}
+                  {offer.type !== 'pooling' && (
+                    <TouchableOpacity style={styles.viewDetailArrow} onPress={() => handleView(offer)}>
+                      <ChevronRight size={20} color={theme.colors.textSecondary} />
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
-
-              <View style={styles.actionsContainer}>
-                {/* Chat button for both pooling and rental offers when there are bookings */}
-                {(offer.seatsBooked > 0 || offer.totalBookings > 0) && (
-                  <TouchableOpacity
-                    onPress={() => navigation.navigate('ChatList' as never)}
-                    style={styles.chatButton}
-                  >
-                    <MessageCircle size={18} color={COLORS.primary} />
-                    <Text style={styles.chatButtonText}>Chat</Text>
-                  </TouchableOpacity>
-                )}
-                
-                {/* Only show StartTripButton for pooling offers */}
-                {offer.type === 'pooling' && (offer.status === 'active' || offer.status === 'booked' || offer.status === 'pending') && (
-                  <StartTripButton
-                    offer={offer}
-                    onPress={() => {
-                      navigation.navigate('DriverTrip' as never, { 
-                        offerId: offer.offerId,
-                        offer: offer 
-                      } as never);
-                    }}
-                  />
-                )}
-                {/* For rental offers, card is tappable to navigate to management screen */}
-                {offer.type === 'rental' && offer.totalBookings > 0 && (
-                  <Button
-                    title="Manage Bookings"
-                    onPress={() => handleView(offer)}
-                    variant="primary"
-                    size="small"
-                    style={styles.actionButton}
-                  />
-                )}
-              </View>
-            </Card>
             </TouchableOpacity>
-          ))
+            );
+          })
         )}
       </ScrollView>
 
@@ -543,38 +561,64 @@ const MyOffersScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: COLORS.background 
+  /* ── Container ── */
+  container: {
+    flex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+
+  /* ── Hero Header ── */
+  headerImage: {
+    width: '100%',
+    height: 170,
+  },
+  headerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.78,
+  },
+  blurContainer: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'flex-end',
+    paddingBottom: SPACING.lg,
     paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.lg,
-    paddingTop: SPACING.xl + 8,
-    backgroundColor: COLORS.primary,
-    ...SHADOWS.md,
   },
-  headerTitle: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xl,
-    color: COLORS.white,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  headerRight: {
+  headerNav: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.md,
   },
-  headerIconButton: {
-    padding: SPACING.xs,
+  navButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  headerCenter: {
+    flex: 1,
+    paddingHorizontal: SPACING.md,
+  },
+  navTitle: {
+    fontFamily: FONTS.regular,
+    fontSize: 22,
+    color: '#FFF',
+    fontWeight: '800',
+    letterSpacing: 0.4,
+  },
+  navSubtitle: {
+    fontFamily: FONTS.regular,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.7)',
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+  },
+
+  /* ── Tabs ── */
   tabs: {
     flexDirection: 'row',
-    backgroundColor: COLORS.white,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
     paddingHorizontal: SPACING.xs,
@@ -582,146 +626,193 @@ const styles = StyleSheet.create({
   },
   tab: {
     flex: 1,
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.sm,
+    paddingVertical: 13,
     alignItems: 'center',
     borderBottomWidth: 3,
     borderBottomColor: 'transparent',
-    marginHorizontal: SPACING.xs,
+    marginHorizontal: 2,
   },
-  activeTab: {
-    borderBottomColor: COLORS.primary,
-  },
+  activeTab: {},
   tabText: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.textSecondary,
+    fontSize: 13,
     fontWeight: '500',
   },
-  activeTabText: {
-    color: COLORS.primary,
-    fontWeight: '700',
-  },
-  scrollContent: { 
+
+  /* ── Scroll ── */
+  scrollContent: {
     padding: SPACING.md,
-    paddingBottom: SPACING.xl,
+    paddingBottom: 100,
   },
-  offerCard: { 
+
+  /* ── Offer Card ── */
+  offerCard: {
+    borderRadius: 16,
     padding: SPACING.lg,
     marginBottom: SPACING.md,
-    borderRadius: BORDER_RADIUS.lg,
-    backgroundColor: COLORS.white,
     ...SHADOWS.md,
   },
   offerHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.sm,
     marginBottom: SPACING.md,
-    paddingBottom: SPACING.md,
+    paddingBottom: SPACING.sm,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+  },
+  offerTypeIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: SPACING.sm,
   },
   offerType: {
+    flex: 1,
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.lg,
-    color: COLORS.text,
+    fontSize: 16,
     fontWeight: '700',
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
   },
-  offerRoute: {
+  statusPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+  statusPillText: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
-    color: COLORS.text,
-    marginBottom: SPACING.sm,
-    lineHeight: 22,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.4,
+  },
+
+  /* ── Pooling Route Display ── */
+  poolingContent: {
+    marginBottom: SPACING.xs,
+  },
+  routeSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+    gap: 6,
+  },
+  routeBox: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    gap: 6,
+  },
+  routeText: {
+    flex: 1,
+    fontFamily: FONTS.regular,
+    fontSize: 12,
     fontWeight: '500',
+    lineHeight: 16,
+  },
+  routeArrow: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: COLORS.primary + '15',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  /* ── Meta Chips ── */
+  metaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 4,
+  },
+  metaChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  metaChipText: {
+    fontFamily: FONTS.regular,
+    fontSize: 12,
+    fontWeight: '500',
+  },
+
+  /* ── Rental Content ── */
+  rentalContent: {
+    marginBottom: SPACING.xs,
+  },
+  vehicleImage: {
+    width: '100%',
+    height: 160,
+    borderRadius: 12,
+    marginBottom: SPACING.sm,
+    backgroundColor: '#F0F0F0',
   },
   offerVehicle: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
-    color: COLORS.text,
-    marginBottom: SPACING.sm,
-    fontWeight: '500',
-  },
-  offerDateTime: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.textSecondary,
-    marginBottom: SPACING.sm,
-  },
-  seatsText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.primary,
-    marginBottom: SPACING.sm,
+    fontSize: 16,
     fontWeight: '600',
-    backgroundColor: `${COLORS.primary}10`,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs,
-    borderRadius: BORDER_RADIUS.sm,
-    alignSelf: 'flex-start',
+    marginBottom: SPACING.sm,
   },
   bookedByText: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.textSecondary,
-    marginBottom: SPACING.sm,
-  },
-  statusContainer: {
-    marginBottom: SPACING.md,
+    fontSize: 13,
     marginTop: SPACING.xs,
   },
-  statusBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.xs + 2,
-    borderRadius: BORDER_RADIUS.round,
-  },
-  statusActive: {
-    backgroundColor: `${COLORS.success}20`,
-  },
-  statusBooked: {
-    backgroundColor: `${COLORS.secondary}20`,
-  },
-  statusCompleted: {
-    backgroundColor: `${COLORS.primary}20`,
-  },
-  statusText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.text,
-    textTransform: 'capitalize',
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
+
+  /* ── Actions ── */
   actionsContainer: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: SPACING.sm,
     marginTop: SPACING.md,
     paddingTop: SPACING.md,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+  },
+  chatButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  chatButtonText: {
+    fontFamily: FONTS.regular,
+    fontSize: 13,
+    fontWeight: '600',
   },
   actionButton: {
     flex: 1,
     ...SHADOWS.sm,
   },
-  cancelButton: {
-    borderColor: COLORS.error,
+  viewDetailArrow: {
+    marginLeft: 'auto',
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(0,0,0,0.04)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+
+  /* ── Empty & Loading ── */
   emptyContainer: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: SPACING.xxl,
-    minHeight: 400,
+    paddingVertical: SPACING.xxl * 2,
+    gap: SPACING.md,
   },
   emptyText: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.lg,
-    color: COLORS.textSecondary,
-    marginBottom: SPACING.lg,
+    fontSize: 16,
     textAlign: 'center',
   },
   createButton: {
@@ -729,18 +820,17 @@ const styles = StyleSheet.create({
     ...SHADOWS.md,
   },
   loadingContainer: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: SPACING.xxl,
-    minHeight: 400,
+    paddingVertical: SPACING.xxl * 2,
   },
   loadingText: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
-    color: COLORS.textSecondary,
+    fontSize: 14,
     marginTop: SPACING.md,
   },
+
+  /* ── Cancel Modal ── */
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
@@ -750,7 +840,7 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: COLORS.white,
-    borderRadius: BORDER_RADIUS.xl,
+    borderRadius: 20,
     padding: SPACING.xl,
     width: '100%',
     maxWidth: 400,
@@ -770,7 +860,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xl,
+    fontSize: 20,
     color: COLORS.text,
     fontWeight: '700',
     marginBottom: SPACING.sm,
@@ -778,11 +868,11 @@ const styles = StyleSheet.create({
   },
   modalMessage: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
+    fontSize: 14,
     color: COLORS.textSecondary,
     textAlign: 'center',
     marginBottom: SPACING.xl,
-    lineHeight: 24,
+    lineHeight: 22,
   },
   modalButtons: {
     flexDirection: 'row',
@@ -796,6 +886,8 @@ const styles = StyleSheet.create({
   confirmCancelButton: {
     backgroundColor: COLORS.error,
   },
+
+  /* ── Start Trip ── */
   startTripContainer: {
     alignItems: 'center',
   },
@@ -804,47 +896,9 @@ const styles = StyleSheet.create({
   },
   timeRemainingText: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
+    fontSize: 11,
     color: COLORS.textSecondary,
-    marginTop: SPACING.xs,
-  },
-  vehicleImage: {
-    width: '100%',
-    height: 180,
-    borderRadius: BORDER_RADIUS.md,
-    marginBottom: SPACING.md,
-    backgroundColor: COLORS.lightGray,
-  },
-  bookingCountContainer: {
-    backgroundColor: `${COLORS.primary}15`,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs,
-    borderRadius: BORDER_RADIUS.sm,
-    alignSelf: 'flex-start',
-    marginTop: SPACING.xs,
-  },
-  bookingCountText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.primary,
-    fontWeight: '600',
-  },
-  chatButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.xs,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    backgroundColor: `${COLORS.primary}15`,
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-  },
-  chatButtonText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.primary,
-    fontWeight: '600',
+    marginTop: 3,
   },
 });
 

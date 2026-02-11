@@ -4,20 +4,19 @@ import { PaymentStatus, PaymentMethod } from '../types';
 export interface IPayment extends Document {
   paymentId: string;
   bookingId: string; // Reference to Booking
-  userId: string; // Reference to User
-  amount: number;
-  platformFee: number;
-  totalAmount: number;
-  paymentMethod: PaymentMethod;
+  userId: string; // Reference to User (passenger who pays)
+  driverId?: string; // Reference to User (driver who earns)
+  amount: number; // Ride amount (driver's share)
+  platformFee: number; // Platform fee (10%)
+  totalAmount: number; // Total amount passenger pays (amount + platformFee)
+  paymentMethod: PaymentMethod; // How passenger paid at trip end
+  paymentType: 'ride_payment' | 'wallet_top_up'; // Type of payment
   status: PaymentStatus;
   razorpayOrderId?: string;
   razorpayPaymentId?: string;
   razorpaySignature?: string;
   transactionId?: string;
   failureReason?: string;
-  refundAmount?: number;
-  refundReason?: string;
-  refundedAt?: Date;
   metadata?: Record<string, any>;
   createdAt: Date;
   updatedAt: Date;
@@ -32,12 +31,15 @@ const paymentSchema = new Schema<IPayment>(
     },
     bookingId: {
       type: String,
-      required: true,
       ref: 'Booking',
     },
     userId: {
       type: String,
       required: true,
+      ref: 'User',
+    },
+    driverId: {
+      type: String,
       ref: 'User',
     },
     amount: {
@@ -61,6 +63,11 @@ const paymentSchema = new Schema<IPayment>(
       required: true,
       index: true,
     },
+    paymentType: {
+      type: String,
+      enum: ['ride_payment', 'wallet_top_up'],
+      default: 'ride_payment',
+    },
     status: {
       type: String,
       enum: ['pending', 'paid', 'failed', 'refunded'],
@@ -81,16 +88,6 @@ const paymentSchema = new Schema<IPayment>(
     failureReason: {
       type: String,
     },
-    refundAmount: {
-      type: Number,
-      min: 0,
-    },
-    refundReason: {
-      type: String,
-    },
-    refundedAt: {
-      type: Date,
-    },
     metadata: {
       type: Schema.Types.Mixed,
     },
@@ -104,9 +101,11 @@ const paymentSchema = new Schema<IPayment>(
 paymentSchema.index({ paymentId: 1 }, { unique: true });
 paymentSchema.index({ bookingId: 1 });
 paymentSchema.index({ userId: 1, status: 1 });
+paymentSchema.index({ driverId: 1 });
 paymentSchema.index({ status: 1, createdAt: -1 });
 paymentSchema.index({ razorpayOrderId: 1 });
 paymentSchema.index({ razorpayPaymentId: 1 });
+paymentSchema.index({ paymentType: 1 });
 paymentSchema.index({ createdAt: -1 });
 
 const Payment: Model<IPayment> = mongoose.model<IPayment>('Payment', paymentSchema);

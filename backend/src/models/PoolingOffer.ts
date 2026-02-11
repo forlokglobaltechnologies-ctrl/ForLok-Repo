@@ -6,6 +6,7 @@ export interface IPoolingOffer extends Document {
   driverId: string; // Reference to User
   driverName: string;
   driverPhoto?: string;
+  driverGender?: 'Male' | 'Female' | 'Other'; // Driver's gender for Pink Pooling filtering
   rating: number;
   totalReviews: number;
   route: Route;
@@ -21,6 +22,7 @@ export interface IPoolingOffer extends Document {
   totalSeats: number;
   price?: number; // Optional: Legacy price field (not used for dynamic pricing)
   notes?: string;
+  isPinkPooling?: boolean; // Flag for Pink Pooling offers
   passengers: Array<{
     userId: string;
     name: string;
@@ -54,6 +56,10 @@ const poolingOfferSchema = new Schema<IPoolingOffer>(
     driverPhoto: {
       type: String,
     },
+    driverGender: {
+      type: String,
+      enum: ['Male', 'Female', 'Other'],
+    },
     rating: {
       type: Number,
       default: 0,
@@ -86,17 +92,6 @@ const poolingOfferSchema = new Schema<IPoolingOffer>(
         lng: Number,
         index: Number, // Sequential index in the polyline
       }], // Polyline coordinates for route matching
-      roadSegments: [{
-        roadId: String,           // OSRM way_id or hash-based road identifier
-        roadName: String,         // Actual road name from OSRM (e.g., "Kaleswara Rao Flyover", "NH-65")
-        roadRef: String,          // Road reference number (e.g., "NH16", "SH255", "MDR0105")
-        direction: String,        // 'forward' | 'backward' | 'bidirectional'
-        estimatedTime: Date,      // Expected arrival time at this segment
-        lat: Number,              // Segment start coordinate
-        lng: Number,
-        segmentIndex: Number,     // Order in route (0, 1, 2...)
-        distance: Number,         // Distance of this segment in meters
-      }], // Road-aware segments for advanced matching (includes road names for flyover vs service road handling)
     },
     date: {
       type: Date,
@@ -141,6 +136,10 @@ const poolingOfferSchema = new Schema<IPoolingOffer>(
       type: String,
       maxlength: 500,
     },
+    isPinkPooling: {
+      type: Boolean,
+      default: false,
+    },
     passengers: [
       {
         userId: {
@@ -182,6 +181,7 @@ poolingOfferSchema.index({ 'route.to.lat': 1, 'route.to.lng': 1 });
 poolingOfferSchema.index({ offerId: 1 }, { unique: true });
 poolingOfferSchema.index({ createdAt: -1 });
 poolingOfferSchema.index({ status: 1, date: 1 });
+poolingOfferSchema.index({ driverGender: 1 });
 
 const PoolingOffer: Model<IPoolingOffer> = mongoose.model<IPoolingOffer>(
   'PoolingOffer',

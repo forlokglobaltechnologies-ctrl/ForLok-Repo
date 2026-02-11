@@ -11,6 +11,7 @@ import {
   Image,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import LottieView from 'lottie-react-native';
 import { 
   ArrowLeft, 
   CheckCircle, 
@@ -31,8 +32,22 @@ import { Button } from '@components/common/Button';
 import { useLanguage } from '@context/LanguageContext';
 import { bookingApi } from '@utils/apiClient';
 
+const RENTAL_COMING_SOON = true; // V2 feature — flip to false to re-enable
+
 const EndRentalScreen = () => {
   const navigation = useNavigation();
+
+  if (RENTAL_COMING_SOON) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' }}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ position: 'absolute', top: 50, left: 16, zIndex: 10, width: 40, height: 40, borderRadius: 20, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' }}>
+          <ArrowLeft size={22} color="#1E293B" />
+        </TouchableOpacity>
+        <LottieView source={require('../../../assets/videos/Coming soon.json')} autoPlay loop style={{ width: 300, height: 300 }} />
+      </View>
+    );
+  }
+
   const route = useRoute();
   const { t } = useLanguage();
   const params = route.params as any;
@@ -95,12 +110,12 @@ const EndRentalScreen = () => {
                 );
 
                 if (response.success) {
-                  const isOfflineCash = booking.paymentMethod === 'offline_cash';
+                  const isPending = booking.paymentStatus === 'pending';
                   Alert.alert(
                     '✅ Rental Completed Successfully',
                     isOfflineCash
-                      ? `Rental completed!\n\n💵 Collect ₹${totalAmount.toFixed(2)} from renter in cash.\n\n⚠️ Platform fee (₹${platformFee.toFixed(2)}) has been added to your outflow. You can pay it later via app or bank transfer.`
-                      : `Rental completed!\n\n✅ Settlement amount (₹${ownerSettlement.toFixed(2)}) has been added to your inflow.\n\n💰 You can request withdrawal from your dashboard.`,
+                      ? `Rental completed!\n\n💵 Collect ₹${totalAmount.toFixed(2)} from renter in cash.\n\n⚠️ Platform fee (₹${platformFee.toFixed(2)}) has been deducted from your wallet.`
+                      : `Rental completed!\n\n✅ Earnings (₹${ownerSettlement.toFixed(2)}) credited to your wallet.\n\n💰 You can request withdrawal from your dashboard.`,
                     [
                       {
                         text: 'OK',
@@ -143,6 +158,7 @@ const EndRentalScreen = () => {
   const platformFee = booking.platformFee || Math.round(rentalAmount * 0.05 * 100) / 100;
   const totalAmount = booking.totalAmount || rentalAmount + platformFee;
   const ownerSettlement = rentalAmount; // Owner gets rental amount, platform keeps fee
+  const isPending = booking.paymentStatus === 'pending';
   const isOfflineCash = booking.paymentMethod === 'offline_cash';
 
   return (
@@ -314,7 +330,7 @@ const EndRentalScreen = () => {
               <View style={styles.settlementHighlightContent}>
                 <Text style={styles.settlementHighlightLabel}>Your Settlement</Text>
                 <Text style={styles.settlementHighlightSubtext}>
-                  {isOfflineCash ? 'Amount to collect' : 'Added to inflow'}
+                  {isOfflineCash ? 'Amount to collect' : 'Added to wallet'}
                 </Text>
               </View>
               <Text style={styles.settlementHighlightValue}>₹{ownerSettlement.toFixed(2)}</Text>
@@ -331,8 +347,8 @@ const EndRentalScreen = () => {
               <View style={styles.infoBoxContent}>
                 <Text style={styles.infoBoxText}>
                   • Collect ₹{totalAmount.toFixed(2)} from renter in cash{'\n'}
-                  • Platform fee (₹{platformFee.toFixed(2)}) will be added to your outflow{'\n'}
-                  • Pay platform fee later via app or bank transfer
+                  • Platform fee (₹{platformFee.toFixed(2)}) deducted from your wallet{'\n'}
+                  • Your wallet balance has been updated
                 </Text>
               </View>
             </View>
@@ -344,8 +360,8 @@ const EndRentalScreen = () => {
               </View>
               <View style={styles.infoBoxContent}>
                 <Text style={styles.infoBoxText}>
-                  • Payment already received online{'\n'}
-                  • Settlement amount (₹{ownerSettlement.toFixed(2)}) added to your inflow{'\n'}
+                  • Payment received online via Razorpay{'\n'}
+                  • Earnings (₹{ownerSettlement.toFixed(2)}) credited to your wallet{'\n'}
                   • Request withdrawal from dashboard to receive payment
                 </Text>
               </View>
@@ -518,6 +534,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   addressText: {
+    fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.sm,
   },
   paymentMethodBadge: {

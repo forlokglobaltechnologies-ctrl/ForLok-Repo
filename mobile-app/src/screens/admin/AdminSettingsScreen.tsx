@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   SafeAreaView,
   Switch,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { ArrowLeft, Settings, Lock, Bell, Shield } from 'lucide-react-native';
@@ -143,14 +144,22 @@ const AdminSettingsScreen = () => {
         <View style={styles.actionButtons}>
           <Button
             title={t('admin.settings.saveChanges')}
-            onPress={() => {}}
+            onPress={() => Alert.alert('Coming Soon', 'Settings API is not yet configured on the backend. Changes are only local.')}
             variant="primary"
             size="large"
             style={styles.saveButton}
           />
           <Button
             title={t('admin.settings.resetToDefault')}
-            onPress={() => {}}
+            onPress={() => {
+              setPlatformFee('10');
+              setMinBookingAmount('100');
+              setMaxBookingAmount('50000');
+              setAutoApproveHours('24');
+              setRequireManualApproval(true);
+              setEmailNotifications(true);
+              setSmsNotifications(false);
+            }}
             variant="outline"
             size="large"
             style={styles.resetButton}

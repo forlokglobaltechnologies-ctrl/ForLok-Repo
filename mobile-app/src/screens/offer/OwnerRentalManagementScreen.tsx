@@ -11,6 +11,7 @@ import {
   Image,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import LottieView from 'lottie-react-native';
 import { ArrowLeft, Clock, User, Car, MapPin, IndianRupee, CheckCircle, XCircle, Play, Square } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { Card } from '@components/common/Card';
@@ -18,8 +19,22 @@ import { Button } from '@components/common/Button';
 import { useLanguage } from '@context/LanguageContext';
 import { bookingApi, rentalApi } from '@utils/apiClient';
 
+const RENTAL_COMING_SOON = true; // V2 feature — flip to false to re-enable
+
 const OwnerRentalManagementScreen = () => {
   const navigation = useNavigation();
+
+  if (RENTAL_COMING_SOON) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' }}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ position: 'absolute', top: 50, left: 16, zIndex: 10, width: 40, height: 40, borderRadius: 20, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' }}>
+          <ArrowLeft size={22} color="#1E293B" />
+        </TouchableOpacity>
+        <LottieView source={require('../../../assets/videos/Coming soon.json')} autoPlay loop style={{ width: 300, height: 300 }} />
+      </View>
+    );
+  }
+
   const route = useRoute();
   const { t } = useLanguage();
   const params = route.params as any;
@@ -355,15 +370,14 @@ const OwnerRentalManagementScreen = () => {
                 </View>
                 <View style={styles.detailRow}>
                   <Text style={[styles.detailText, { fontSize: FONTS.sizes.xs, color: COLORS.textSecondary }]}>
-                    Payment: {booking.paymentMethod === 'offline_cash' ? 'Cash (Pay at return)' : (booking.paymentMethod?.toUpperCase() || 'N/A')} | Status: {booking.paymentStatus || 'pending'}
+                    Payment: {booking.paymentMethod === 'offline_cash' ? 'Cash' : booking.paymentMethod?.toUpperCase() || 'Pay at trip end'} | Status: {booking.paymentStatus || 'pending'}
                   </Text>
                 </View>
               </View>
 
               {/* Action Buttons */}
-              {/* Show Start Rental for confirmed bookings OR pending bookings with offline cash payment */}
-              {(booking.status === 'confirmed' || 
-                (booking.status === 'pending' && booking.paymentMethod === 'offline_cash')) && (
+              {/* Show Start Rental for confirmed bookings (payment happens at trip end) */}
+              {(booking.status === 'confirmed' || booking.status === 'pending') && (
                 (() => {
                   const startCheck = canStartRental(booking);
                   if (startCheck.canStart) {

@@ -34,7 +34,7 @@ export interface IBooking extends Document {
   amount: number;
   platformFee: number;
   totalAmount: number;
-  paymentMethod: PaymentMethod;
+  paymentMethod?: PaymentMethod; // Set at trip end when passenger chooses online or cash
   passengerStatus?: 'waiting' | 'got_in' | 'got_out'; // Track passenger boarding status
   paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
   paymentId?: string; // Reference to Payment
@@ -47,6 +47,7 @@ export interface IBooking extends Document {
   cancellationReason?: string;
   cancelledAt?: Date;
   cancelledBy?: string;
+  cancellationFee?: number;
   // Code generation for passenger verification
   passengerCode?: string; // 4-digit code generated when passenger gets out
   codeGeneratedAt?: Date;
@@ -58,22 +59,6 @@ export interface IBooking extends Document {
   settlementRejectedReason?: string;
   tripStartedAt?: Date; // When trip actually started
   tripCompletedAt?: Date; // When passenger reached destination
-  // Road-aware matching fields
-  passengerPickupSegment?: {
-    roadId: string;
-    direction: string;
-    lat: number;
-    lng: number;
-    estimatedTime: Date;
-  };
-  passengerDropSegment?: {
-    roadId: string;
-    direction: string;
-    lat: number;
-    lng: number;
-    estimatedTime: Date;
-  };
-  matchingConfidence?: number; // 0.0 - 1.0
   createdAt: Date;
   updatedAt: Date;
 }
@@ -194,7 +179,7 @@ const bookingSchema = new Schema<IBooking>(
     paymentMethod: {
       type: String,
       enum: ['upi', 'card', 'wallet', 'net_banking', 'offline_cash'],
-      required: true,
+      required: false, // Set at trip end when passenger chooses payment method
     },
     paymentStatus: {
       type: String,
@@ -230,6 +215,10 @@ const bookingSchema = new Schema<IBooking>(
     cancelledBy: {
       type: String,
       enum: ['user', 'driver', 'owner', 'admin'],
+    },
+    cancellationFee: {
+      type: Number,
+      default: 0,
     },
     // Code generation for passenger verification
     passengerCode: {
@@ -269,26 +258,6 @@ const bookingSchema = new Schema<IBooking>(
     tripCompletedAt: {
       type: Date,
     },
-    // Road-aware matching fields
-    passengerPickupSegment: {
-      roadId: String,
-      direction: String,
-      lat: Number,
-      lng: Number,
-      estimatedTime: Date,
-    },
-    passengerDropSegment: {
-      roadId: String,
-      direction: String,
-      lat: Number,
-      lng: Number,
-      estimatedTime: Date,
-    },
-    matchingConfidence: {
-      type: Number,
-      min: 0,
-      max: 1,
-    }, // 0.0 - 1.0
   },
   {
     timestamps: true,

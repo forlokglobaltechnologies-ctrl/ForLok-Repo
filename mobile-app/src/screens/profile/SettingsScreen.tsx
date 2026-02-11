@@ -10,13 +10,11 @@ import {
   Modal,
   Alert,
 } from 'react-native';
-import { useNavigation, CommonActions } from '@react-navigation/native';
-import { ArrowLeft, ChevronRight, User, Lock, Bell, Globe, CreditCard, HelpCircle, FileText, Info, Check } from 'lucide-react-native';
+import { useNavigation } from '@react-navigation/native';
+import { ArrowLeft, ChevronRight, User, Lock, Bell, Globe, CreditCard, HelpCircle, FileText, Info, Check, Wallet, UserX, Shield } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '@constants/theme';
 import { Card } from '@components/common/Card';
 import { useLanguage } from '@context/LanguageContext';
-import { apiService } from '@services/api.service';
-import { websocketService } from '@services/websocket.service';
 
 const SettingsScreen = () => {
   const navigation = useNavigation();
@@ -32,55 +30,13 @@ const SettingsScreen = () => {
     Alert.alert(t('language.languageChanged'), '', [{ text: t('common.close') }]);
   };
 
-  const handleLogout = () => {
-    Alert.alert(
-      t('profile.logout'),
-      'Are you sure you want to logout?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: t('profile.logout'),
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              // Clear all stored tokens
-              await apiService.clearTokens();
-              
-              // Disconnect websocket
-              websocketService.disconnect();
-              
-              // Reset navigation to SignIn screen and clear history
-              navigation.dispatch(
-                CommonActions.reset({
-                  index: 0,
-                  routes: [{ name: 'SignIn' }],
-                })
-              );
-            } catch (error) {
-              console.error('Logout error:', error);
-              // Even if there's an error, navigate to SignIn
-              navigation.dispatch(
-                CommonActions.reset({
-                  index: 0,
-                  routes: [{ name: 'SignIn' }],
-                })
-              );
-            }
-          },
-        },
-      ]
-    );
-  };
-
   const settingsSections = [
     {
       title: t('settings.account'),
       items: [
-        { icon: User, label: t('settings.editProfile'), onPress: () => {} },
+        { icon: User, label: t('settings.editProfile'), onPress: () => navigation.navigate('Profile' as never) },
         { icon: Lock, label: t('settings.changePassword'), onPress: () => {} },
+        { icon: UserX, label: 'Blocked Users', onPress: () => navigation.navigate('BlockedUsers' as never) },
         { icon: Bell, label: t('settings.privacySettings'), onPress: () => {} },
       ],
     },
@@ -125,6 +81,7 @@ const SettingsScreen = () => {
     {
       title: t('settings.payment'),
       items: [
+        { icon: Wallet, label: 'Wallet', onPress: () => navigation.navigate('Wallet' as never) },
         { icon: CreditCard, label: t('settings.paymentMethods'), onPress: () => {} },
         { icon: CreditCard, label: t('settings.transactionHistory'), onPress: () => {} },
       ],
@@ -132,16 +89,18 @@ const SettingsScreen = () => {
     {
       title: t('settings.support'),
       items: [
-        { icon: HelpCircle, label: t('settings.helpCenter'), onPress: () => {} },
-        { icon: HelpCircle, label: t('settings.contactUs'), onPress: () => {} },
-        { icon: HelpCircle, label: t('settings.reportIssue'), onPress: () => {} },
+        { icon: HelpCircle, label: t('settings.helpCenter'), onPress: () => navigation.navigate('HelpSupport' as never) },
+        { icon: HelpCircle, label: t('settings.contactUs'), onPress: () => navigation.navigate('HelpSupport' as never) },
+        { icon: HelpCircle, label: t('settings.reportIssue'), onPress: () => navigation.navigate('ReportBug' as never) },
       ],
     },
     {
       title: t('settings.about'),
       items: [
+        { icon: Info, label: 'About Us', onPress: () => navigation.navigate('About' as never) },
         { icon: FileText, label: t('settings.termsConditions'), onPress: () => {} },
         { icon: FileText, label: t('settings.privacyPolicy'), onPress: () => {} },
+        { icon: Shield, label: 'Patents & Copyrights', onPress: () => navigation.navigate('IntellectualProperty' as never) },
         { icon: Info, label: t('settings.appVersion'), value: '1.0.0', onPress: () => {} },
       ],
     },
@@ -202,7 +161,7 @@ const SettingsScreen = () => {
           </View>
         ))}
 
-        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+        <TouchableOpacity style={styles.logoutButton}>
           <Text style={styles.logoutText}>{t('profile.logout')}</Text>
         </TouchableOpacity>
       </ScrollView>

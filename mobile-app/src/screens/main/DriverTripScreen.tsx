@@ -10,16 +10,22 @@ import {
   Alert,
   Modal,
   TextInput,
+  ImageBackground,
+  Dimensions,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { ArrowLeft, MapPin, Clock, Navigation, Play, Square, Phone, MessageCircle, Users, LogIn, LogOut, KeyRound, X } from 'lucide-react-native';
+import { ArrowLeft, MapPin, Clock, Navigation, Play, Square, Phone, MessageCircle, Users, LogIn, LogOut, KeyRound, X, ArrowRight, Route, Timer, Gauge, User, CircleDot, ChevronDown } from 'lucide-react-native';
+import { BlurView } from 'expo-blur';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { Card } from '@components/common/Card';
 import { Button } from '@components/common/Button';
 import { useLanguage } from '@context/LanguageContext';
+import { useTheme } from '@context/ThemeContext';
 import { trackingApi, bookingApi } from '@utils/apiClient';
 import * as Location from 'expo-location';
 import { WebView } from 'react-native-webview';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface RouteParams {
   bookingId?: string;
@@ -32,6 +38,7 @@ const DriverTripScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { t } = useLanguage();
+  const { theme } = useTheme();
   const params = (route.params as RouteParams) || {};
   const bookingId = params.bookingId || params.booking?.bookingId;
 
@@ -52,6 +59,7 @@ const DriverTripScreen = () => {
   const [selectedPassenger, setSelectedPassenger] = useState<any>(null);
   const [passengerCode, setPassengerCode] = useState('');
   const [verifyingCode, setVerifyingCode] = useState(false);
+  // Payment method selection now happens on passenger's device
 
   /**
    * Calculate distance between two coordinates using Haversine formula
@@ -408,28 +416,67 @@ const DriverTripScreen = () => {
   const handleGetOut = async (passengerBookingId: string) => {
     try {
       const response = await bookingApi.markPassengerGotOut(passengerBookingId);
-      if (response.success && response.data) {
-        const passengerCode = response.data.passengerCode;
-        setSelectedPassenger({ bookingId: passengerBookingId, code: passengerCode });
+      if (response.success) {
+        setSelectedPassenger({ bookingId: passengerBookingId, waitingForPayment: true });
         setShowCodeModal(true);
-        Alert.alert(
-          'Code Generated',
-          `Passenger code: ${passengerCode}. Please share this code with the passenger, then verify it below.`,
-          [{ text: 'OK' }]
-        );
-        // Don't reload passengers here - keep the button visible
-        // loadPassengers();
+        // Start polling for passenger payment choice
+        startPaymentPolling(passengerBookingId);
       } else {
-        Alert.alert('Error', response.error || 'Failed to generate code');
+        Alert.alert('Error', response.error || 'Failed to mark passenger got out');
       }
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to generate code');
+      Alert.alert('Error', error.message || 'Failed to mark passenger got out');
     }
   };
 
+  // Poll booking to detect payment choice by passenger
+  const paymentPollRef = useRef<NodeJS.Timeout | null>(null);
+
+  const startPaymentPolling = (passengerBookingId: string) => {
+    // Clear any existing poll
+    if (paymentPollRef.current) clearInterval(paymentPollRef.current);
+
+    paymentPollRef.current = setInterval(async () => {
+      try {
+        const response = await bookingApi.getBooking(passengerBookingId);
+        if (response.success && response.data) {
+          const b = response.data;
+
+          // If passenger chose CASH → code is set, show code entry
+          if (b.paymentMethod === 'offline_cash' && b.passengerCode) {
+            if (paymentPollRef.current) clearInterval(paymentPollRef.current);
+            setSelectedPassenger({ bookingId: passengerBookingId, waitingForPayment: false, cashMode: true });
+            // Keep modal open, switch to code entry view
+          }
+
+          // If passenger chose ONLINE and payment completed
+          if (b.status === 'completed') {
+            if (paymentPollRef.current) clearInterval(paymentPollRef.current);
+            setShowCodeModal(false);
+            setSelectedPassenger(null);
+            Alert.alert(
+              'Payment Received',
+              `₹${b.totalAmount || ''} paid online. Trip completed!\n\nEarnings credited to your wallet.`,
+              [{ text: 'OK', onPress: () => loadPassengers() }]
+            );
+          }
+        }
+      } catch (err) {
+        console.error('Payment poll error:', err);
+      }
+    }, 3000); // Poll every 3 seconds
+  };
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (paymentPollRef.current) clearInterval(paymentPollRef.current);
+    };
+  }, []);
+
   const handleVerifyCode = async () => {
     if (!selectedPassenger || !passengerCode) {
-      Alert.alert('Error', 'Please enter the passenger code');
+      Alert.alert('Error', 'Please enter the 4-digit code');
       return;
     }
 
@@ -440,23 +487,21 @@ const DriverTripScreen = () => {
 
     try {
       setVerifyingCode(true);
-      const response = await bookingApi.verifyPassengerCode(selectedPassenger.bookingId, passengerCode);
+      const response = await bookingApi.verifyPassengerCode(selectedPassenger.bookingId, passengerCode, 'offline_cash');
 
       if (response.success) {
         Alert.alert(
-          'Success',
-          response.data?.message || 'Passenger trip completed successfully!',
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                setShowCodeModal(false);
-                setPassengerCode('');
-                setSelectedPassenger(null);
-                loadPassengers();
-              },
+          'Trip Completed',
+          `Cash payment recorded. Platform fee deducted from wallet.`,
+          [{
+            text: 'OK',
+            onPress: () => {
+              setShowCodeModal(false);
+              setPassengerCode('');
+              setSelectedPassenger(null);
+              loadPassengers();
             },
-          ]
+          }]
         );
       } else {
         Alert.alert('Error', response.error || 'Invalid code');
@@ -958,43 +1003,68 @@ const DriverTripScreen = () => {
     setMapHTML(html);
   };
 
+  // ─── Address Helpers ───
+  const getFromAddr = () => {
+    if (typeof booking?.route?.from === 'string') return booking.route.from;
+    return booking?.route?.from?.address || params.offer?.route?.from?.address || 'N/A';
+  };
+  const getToAddr = () => {
+    if (typeof booking?.route?.to === 'string') return booking.route.to;
+    return booking?.route?.to?.address || params.offer?.route?.to?.address || 'N/A';
+  };
+
+  const getPassengerStatusStyle = (status: string) => {
+    switch (status) {
+      case 'waiting': return { bg: '#FF9800' + '15', color: '#FF9800', label: 'Waiting' };
+      case 'got_in': return { bg: '#4CAF50' + '15', color: '#4CAF50', label: 'In Vehicle' };
+      case 'got_out': return { bg: '#2196F3' + '15', color: '#2196F3', label: 'Dropped Off' };
+      default: return { bg: '#9E9E9E' + '15', color: '#9E9E9E', label: status || 'Unknown' };
+    }
+  };
+
+  // ─── Loading State ───
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>Loading trip details...</Text>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading trip details...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <ArrowLeft size={24} color={COLORS.white} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Driver Trip</Text>
-        <View style={styles.placeholder} />
-      </View>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      {/* ── Hero Header ── */}
+      <ImageBackground
+        source={require('../../../assets/track.png')}
+        style={styles.headerImage}
+        resizeMode="cover"
+      >
+        <View style={[styles.headerOverlay, { backgroundColor: theme.colors.primary }]} />
+        <BlurView intensity={40} style={styles.blurContainer}>
+          <View style={styles.headerNav}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.navButton}>
+              <ArrowLeft size={22} color="#FFF" />
+            </TouchableOpacity>
+            <View style={styles.headerCenter}>
+              <Text style={styles.navTitle}>Driver Trip</Text>
+              <Text style={styles.navSubtitle}>
+                {isTracking ? 'Trip in progress' : 'Ready to start'}
+              </Text>
+            </View>
+            {/* Live Indicator */}
+            <View style={[styles.liveIndicator, { backgroundColor: isTracking ? '#4CAF50' : 'rgba(255,255,255,0.25)' }]}>
+              <View style={[styles.liveDot, { backgroundColor: isTracking ? '#FFF' : 'rgba(255,255,255,0.5)' }]} />
+              <Text style={styles.liveText}>{isTracking ? 'LIVE' : 'OFF'}</Text>
+            </View>
+          </View>
+        </BlurView>
+      </ImageBackground>
 
-      <View style={styles.statusBar}>
-        <View style={[
-          styles.statusIndicator,
-          { backgroundColor: isTracking ? `${COLORS.success}15` : `${COLORS.textSecondary}15` }
-        ]}>
-          <View style={[styles.statusDot, isTracking && styles.statusDotActive]} />
-          <Text style={styles.statusText}>
-            {isTracking ? 'Tracking Active' : 'Tracking Inactive'}
-          </Text>
-        </View>
-        {isTracking && (
-          <Text style={styles.etaText}>ETA: {eta} min</Text>
-        )}
-      </View>
-
-      <View style={styles.mapContainer}>
+      {/* ── Map ── */}
+      <View style={[styles.mapContainer, { borderColor: theme.colors.border }]}>
         {mapHTML ? (
           <WebView
             source={{ html: mapHTML }}
@@ -1003,210 +1073,318 @@ const DriverTripScreen = () => {
           />
         ) : (
           <View style={styles.mapPlaceholder}>
-            <ActivityIndicator size="large" color={COLORS.primary} />
-            <Text style={styles.mapHint}>Loading map...</Text>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+            <Text style={[styles.mapHint, { color: theme.colors.textSecondary }]}>Loading map...</Text>
           </View>
         )}
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Card style={styles.tripDetailsCard}>
-          <Text style={styles.sectionTitle}>Trip Details</Text>
-          <View style={styles.detailItem}>
-            <MapPin size={20} color={COLORS.primary} />
-            <Text style={styles.detailText}>
-              From: {typeof booking?.route?.from === 'string' 
-                ? booking.route.from 
-                : booking?.route?.from?.address || 'N/A'}
-            </Text>
-          </View>
-          <View style={styles.detailItem}>
-            <MapPin size={20} color={COLORS.primary} />
-            <Text style={styles.detailText}>
-              To: {typeof booking?.route?.to === 'string' 
-                ? booking.route.to 
-                : booking?.route?.to?.address || 'N/A'}
-            </Text>
-          </View>
-          <View style={styles.detailItem}>
-            <Navigation size={20} color={COLORS.primary} />
-            <Text style={styles.detailText}>Distance: {distance} km</Text>
-          </View>
-          <View style={styles.detailItem}>
-            <Clock size={20} color={COLORS.primary} />
-            <Text style={styles.detailText}>Duration: {duration}</Text>
-          </View>
-        </Card>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
-        {/* Stopping Locations Card */}
+        {/* ── Metric Strip (below map) ── */}
+        <View style={[styles.metricStrip, { backgroundColor: theme.colors.surface }]}>
+          <View style={styles.metricItem}>
+            <Route size={14} color={theme.colors.primary} />
+            <Text style={[styles.metricValue, { color: theme.colors.text }]}>{distance || 0} km</Text>
+            <Text style={[styles.metricLabel, { color: theme.colors.textSecondary }]}>Distance</Text>
+          </View>
+          <View style={[styles.metricDivider, { backgroundColor: theme.colors.border }]} />
+          <View style={styles.metricItem}>
+            <Timer size={14} color={theme.colors.primary} />
+            <Text style={[styles.metricValue, { color: theme.colors.text }]}>{duration || '0m'}</Text>
+            <Text style={[styles.metricLabel, { color: theme.colors.textSecondary }]}>Duration</Text>
+          </View>
+          <View style={[styles.metricDivider, { backgroundColor: theme.colors.border }]} />
+          <View style={styles.metricItem}>
+            <Gauge size={14} color={theme.colors.primary} />
+            <Text style={[styles.metricValue, { color: theme.colors.text }]}>{eta || 0} min</Text>
+            <Text style={[styles.metricLabel, { color: theme.colors.textSecondary }]}>ETA</Text>
+          </View>
+        </View>
+
+        {/* ── Route Card ── */}
+        <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+          <Text style={[styles.cardTitle, { color: theme.colors.text }]}>Route</Text>
+          <View style={styles.routeSection}>
+            <View style={[styles.routeBox, { backgroundColor: theme.colors.background, borderColor: theme.colors.border }]}>
+              <MapPin size={16} color={theme.colors.primary} />
+              <Text style={[styles.routeText, { color: theme.colors.text }]} numberOfLines={2}>
+                {getFromAddr()}
+              </Text>
+            </View>
+            <View style={[styles.routeArrowCircle, { backgroundColor: theme.colors.primary + '15' }]}>
+              <ArrowRight size={16} color={theme.colors.primary} />
+            </View>
+            <View style={[styles.routeBox, { backgroundColor: theme.colors.background, borderColor: theme.colors.border }]}>
+              <MapPin size={16} color="#F44336" />
+              <Text style={[styles.routeText, { color: theme.colors.text }]} numberOfLines={2}>
+                {getToAddr()}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* ── Stopping Locations ── */}
         {stoppingLocations.length > 0 && (
-          <Card style={styles.stoppingLocationsCard}>
-            <View style={styles.sectionHeader}>
-              <MapPin size={20} color={COLORS.primary} />
-              <Text style={styles.sectionTitle}>Stopping Locations</Text>
-            </View>
-            {stoppingLocations.map((stop, index) => (
-              <View key={index} style={styles.stoppingLocationItem}>
-                <View style={styles.stoppingLocationInfo}>
-                  <Text style={styles.stoppingLocationType}>
-                    {stop.type === 'pickup' ? 'Pickup' : 'Dropoff'}
-                  </Text>
-                  <Text style={styles.stoppingLocationName}>{stop.passengerName}</Text>
-                  <Text style={styles.stoppingLocationAddress}>
-                    {typeof stop.location === 'object' ? stop.location.address : stop.location}
-                  </Text>
-                </View>
+          <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+            <View style={styles.cardTitleRow}>
+              <MapPin size={18} color={theme.colors.primary} />
+              <Text style={[styles.cardTitle, { color: theme.colors.text, marginBottom: 0 }]}>Stops</Text>
+              <View style={[styles.countBadge, { backgroundColor: theme.colors.primary + '15' }]}>
+                <Text style={[styles.countBadgeText, { color: theme.colors.primary }]}>{stoppingLocations.length}</Text>
               </View>
-            ))}
-          </Card>
+            </View>
+
+            {stoppingLocations.map((stop, index) => {
+              const isPickup = stop.type === 'pickup';
+              return (
+                <View key={index} style={styles.stopRow}>
+                  <View style={styles.stopTimeline}>
+                    <View style={[styles.stopDot, { backgroundColor: isPickup ? '#4CAF50' : '#F44336' }]} />
+                    {index < stoppingLocations.length - 1 && (
+                      <View style={[styles.stopLine, { backgroundColor: theme.colors.border }]} />
+                    )}
+                  </View>
+                  <View style={[styles.stopContent, { backgroundColor: theme.colors.background }]}>
+                    <View style={styles.stopHeader}>
+                      <View style={[styles.stopTypeBadge, { backgroundColor: (isPickup ? '#4CAF50' : '#F44336') + '15' }]}>
+                        <Text style={[styles.stopTypeText, { color: isPickup ? '#4CAF50' : '#F44336' }]}>
+                          {isPickup ? 'Pickup' : 'Dropoff'}
+                        </Text>
+                      </View>
+                      <Text style={[styles.stopPassengerName, { color: theme.colors.text }]}>{stop.passengerName}</Text>
+                    </View>
+                    <Text style={[styles.stopAddress, { color: theme.colors.textSecondary }]} numberOfLines={2}>
+                      {typeof stop.location === 'object' ? stop.location.address : stop.location}
+                    </Text>
+                  </View>
+                </View>
+              );
+            })}
+          </View>
         )}
 
-        {/* Passengers Card */}
+        {/* ── Passengers ── */}
         {passengers.length > 0 && (
-          <Card style={styles.passengersCard}>
-            <View style={styles.sectionHeader}>
-              <Users size={20} color={COLORS.primary} />
-              <Text style={styles.sectionTitle}>Passengers ({passengers.length})</Text>
-            </View>
-            {passengers.map((passenger: any, index: number) => (
-              <View key={index} style={styles.passengerItem}>
-                <View style={styles.passengerInfo}>
-                  <Text style={styles.passengerName}>{passenger.passengerName}</Text>
-                  <Text style={styles.passengerRoute}>
-                    {typeof passenger.route?.from === 'object' 
-                      ? passenger.route.from.address?.split(',')[0] 
-                      : 'From'} → {typeof passenger.route?.to === 'object' 
-                      ? passenger.route.to.address?.split(',')[0] 
-                      : 'To'}
-                  </Text>
-                </View>
-                <View style={styles.passengerActions}>
-                  {passenger.passengerStatus === 'waiting' && (
-                    <Button
-                      title="Get In"
-                      onPress={() => handleGetIn(passenger.bookingId)}
-                      variant="primary"
-                      size="small"
-                      style={styles.passengerActionButton}
-                      icon={<LogIn size={16} color={COLORS.white} />}
-                    />
-                  )}
-                  {(passenger.passengerStatus === 'got_in' || (passenger.passengerStatus === 'got_out' && passenger.status !== 'completed')) && (
-                    <Button
-                      title={passenger.passengerStatus === 'got_out' ? "Verify Code" : "Get Out"}
-                      onPress={() => {
-                        if (passenger.passengerStatus === 'got_out') {
-                          // Show code verification modal with the generated code
-                          setSelectedPassenger({ 
-                            bookingId: passenger.bookingId, 
-                            code: passenger.passengerCode || '' 
-                          });
-                          setShowCodeModal(true);
-                        } else {
-                          handleGetOut(passenger.bookingId);
-                        }
-                      }}
-                      variant={passenger.passengerStatus === 'got_out' ? "primary" : "outline"}
-                      size="small"
-                      style={styles.passengerActionButton}
-                      icon={passenger.passengerStatus === 'got_out' ? <KeyRound size={16} color={COLORS.white} /> : <LogOut size={16} color={COLORS.primary} />}
-                    />
-                  )}
-                  {passenger.status === 'completed' && passenger.settlementStatus === 'driver_requested' && (
-                    <Button
-                      title="Withdraw"
-                      onPress={() => handleWithdraw(passenger.bookingId)}
-                      variant="primary"
-                      size="small"
-                      style={styles.passengerActionButton}
-                      icon={<KeyRound size={16} color={COLORS.white} />}
-                    />
-                  )}
-                </View>
+          <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+            <View style={styles.cardTitleRow}>
+              <Users size={18} color={theme.colors.primary} />
+              <Text style={[styles.cardTitle, { color: theme.colors.text, marginBottom: 0 }]}>Passengers</Text>
+              <View style={[styles.countBadge, { backgroundColor: theme.colors.primary + '15' }]}>
+                <Text style={[styles.countBadgeText, { color: theme.colors.primary }]}>{passengers.length}</Text>
               </View>
-            ))}
-          </Card>
+            </View>
+
+            {passengers.map((passenger: any, index: number) => {
+              const pStatus = getPassengerStatusStyle(passenger.passengerStatus);
+              return (
+                <View key={index} style={[styles.passengerCard, { backgroundColor: theme.colors.background }]}>
+                  <View style={styles.passengerTop}>
+                    <View style={[styles.passengerAvatar, { backgroundColor: theme.colors.primary + '15' }]}>
+                      <User size={18} color={theme.colors.primary} />
+                    </View>
+                    <View style={styles.passengerInfo}>
+                      <Text style={[styles.passengerName, { color: theme.colors.text }]}>{passenger.passengerName}</Text>
+                      <View style={styles.passengerRouteRow}>
+                        <Text style={[styles.passengerRouteText, { color: theme.colors.textSecondary }]} numberOfLines={1}>
+                          {typeof passenger.route?.from === 'object'
+                            ? passenger.route.from.address?.split(',')[0]
+                            : 'From'}
+                        </Text>
+                        <ArrowRight size={12} color={theme.colors.textSecondary} />
+                        <Text style={[styles.passengerRouteText, { color: theme.colors.textSecondary }]} numberOfLines={1}>
+                          {typeof passenger.route?.to === 'object'
+                            ? passenger.route.to.address?.split(',')[0]
+                            : 'To'}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={[styles.pStatusBadge, { backgroundColor: pStatus.bg }]}>
+                      <Text style={[styles.pStatusText, { color: pStatus.color }]}>{pStatus.label}</Text>
+                    </View>
+                  </View>
+
+                  {/* Action Buttons */}
+                  <View style={styles.passengerActions}>
+                    {passenger.passengerStatus === 'waiting' && (
+                      <TouchableOpacity
+                        style={[styles.pActionBtn, { backgroundColor: theme.colors.primary }]}
+                        onPress={() => handleGetIn(passenger.bookingId)}
+                      >
+                        <LogIn size={15} color="#FFF" />
+                        <Text style={styles.pActionBtnText}>Get In</Text>
+                      </TouchableOpacity>
+                    )}
+                    {(passenger.passengerStatus === 'got_in' || (passenger.passengerStatus === 'got_out' && passenger.status !== 'completed')) && (
+                      <TouchableOpacity
+                        style={[styles.pActionBtn, {
+                          backgroundColor: passenger.passengerStatus === 'got_out' ? theme.colors.primary : 'transparent',
+                          borderWidth: passenger.passengerStatus === 'got_out' ? 0 : 1.5,
+                          borderColor: theme.colors.primary,
+                        }]}
+                        onPress={() => {
+                          if (passenger.passengerStatus === 'got_out') {
+                            if (passenger.paymentMethod === 'offline_cash' && passenger.passengerCode) {
+                              setSelectedPassenger({ bookingId: passenger.bookingId, waitingForPayment: false, cashMode: true });
+                              setShowCodeModal(true);
+                            } else if (passenger.status === 'completed') {
+                              Alert.alert('Completed', 'This trip is already completed.');
+                            } else {
+                              setSelectedPassenger({ bookingId: passenger.bookingId, waitingForPayment: true });
+                              setShowCodeModal(true);
+                              startPaymentPolling(passenger.bookingId);
+                            }
+                          } else {
+                            handleGetOut(passenger.bookingId);
+                          }
+                        }}
+                      >
+                        {passenger.passengerStatus === 'got_out'
+                          ? <KeyRound size={15} color="#FFF" />
+                          : <LogOut size={15} color={theme.colors.primary} />}
+                        <Text style={[styles.pActionBtnText, {
+                          color: passenger.passengerStatus === 'got_out' ? '#FFF' : theme.colors.primary,
+                        }]}>
+                          {passenger.passengerStatus === 'got_out' ? 'Verify Code' : 'Get Out'}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                    {passenger.status === 'completed' && passenger.settlementStatus === 'driver_requested' && (
+                      <TouchableOpacity
+                        style={[styles.pActionBtn, { backgroundColor: theme.colors.primary }]}
+                        onPress={() => handleWithdraw(passenger.bookingId)}
+                      >
+                        <KeyRound size={15} color="#FFF" />
+                        <Text style={styles.pActionBtnText}>Withdraw</Text>
+                      </TouchableOpacity>
+                    )}
+                    {passenger.status === 'completed' && !passenger.settlementStatus && (
+                      <View style={[styles.completedBadge, { backgroundColor: '#4CAF50' + '15' }]}>
+                        <Text style={[styles.completedBadgeText, { color: '#4CAF50' }]}>Completed</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              );
+            })}
+          </View>
         )}
 
-        <View style={styles.actionsContainer}>
+        {/* ── Start / End Trip Button ── */}
+        <View style={styles.tripActionContainer}>
           {!isTracking ? (
-            <Button
-              title="Start Trip & Begin Tracking"
+            <TouchableOpacity
+              style={[styles.tripStartBtn, { backgroundColor: theme.colors.primary }]}
               onPress={startTrip}
-              variant="primary"
-              size="large"
-              style={styles.actionButton}
-              icon={<Play size={20} color={COLORS.white} />}
-            />
+              activeOpacity={0.85}
+            >
+              <Play size={22} color="#FFF" />
+              <Text style={styles.tripStartBtnText}>Start Trip & Begin Tracking</Text>
+            </TouchableOpacity>
           ) : (
-            <Button
-              title="End Trip"
+            <TouchableOpacity
+              style={[styles.tripEndBtn]}
               onPress={endTrip}
-              variant="outline"
-              size="large"
-              style={[styles.actionButton, styles.endButton]}
-              icon={<Square size={20} color={COLORS.error} />}
-            />
+              activeOpacity={0.85}
+            >
+              <Square size={20} color="#F44336" />
+              <Text style={styles.tripEndBtnText}>End Trip</Text>
+            </TouchableOpacity>
           )}
         </View>
       </ScrollView>
 
-      {/* Code Verification Modal */}
+      {/* ── Payment / Code Modal ── */}
       <Modal
         visible={showCodeModal}
         transparent
         animationType="slide"
-        onRequestClose={() => setShowCodeModal(false)}
+        onRequestClose={() => {
+          if (paymentPollRef.current) clearInterval(paymentPollRef.current);
+          setShowCodeModal(false);
+          setPassengerCode('');
+          setSelectedPassenger(null);
+        }}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, { backgroundColor: theme.colors.surface }]}>
+            <View style={styles.modalHandle} />
             <TouchableOpacity
               style={styles.modalCloseButton}
               onPress={() => {
+                if (paymentPollRef.current) clearInterval(paymentPollRef.current);
                 setShowCodeModal(false);
                 setPassengerCode('');
                 setSelectedPassenger(null);
               }}
             >
-              <X size={24} color={COLORS.textSecondary} />
+              <X size={22} color={theme.colors.textSecondary} />
             </TouchableOpacity>
 
-            <Text style={styles.modalTitle}>Enter Passenger Code</Text>
-            <Text style={styles.modalSubtitle}>
-              Please enter the 4-digit code provided by the passenger
-            </Text>
+            {/* STATE 1: Waiting for passenger to choose payment */}
+            {selectedPassenger?.waitingForPayment && (
+              <>
+                <View style={[styles.modalIconCircle, { backgroundColor: theme.colors.primary + '12' }]}>
+                  <Clock size={32} color={theme.colors.primary} />
+                </View>
+                <Text style={[styles.modalTitle, { color: theme.colors.text }]}>Waiting for Payment</Text>
+                <Text style={[styles.modalSubtitle, { color: theme.colors.textSecondary }]}>
+                  Passenger has been notified to pay.{'\n'}Waiting for them to choose Online or Cash.
+                </Text>
+                <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginVertical: 24 }} />
+                <Text style={[styles.modalHint, { color: theme.colors.textSecondary }]}>
+                  This screen will update automatically
+                </Text>
+              </>
+            )}
 
-            <TextInput
-              style={styles.codeInput}
-              value={passengerCode}
-              onChangeText={setPassengerCode}
-              placeholder="Enter 4-digit code"
-              keyboardType="number-pad"
-              maxLength={4}
-              autoFocus
-            />
+            {/* STATE 2: Passenger chose CASH — enter code */}
+            {selectedPassenger?.cashMode && (
+              <>
+                <View style={[styles.modalIconCircle, { backgroundColor: '#4CAF50' + '12' }]}>
+                  <KeyRound size={32} color="#4CAF50" />
+                </View>
+                <Text style={[styles.modalTitle, { color: theme.colors.text }]}>Enter Cash Code</Text>
+                <Text style={[styles.modalSubtitle, { color: theme.colors.textSecondary }]}>
+                  Passenger chose to pay cash.{'\n'}Ask them for the 4-digit code.
+                </Text>
 
-            <View style={styles.modalButtons}>
-              <Button
-                title="Cancel"
-                onPress={() => {
-                  setShowCodeModal(false);
-                  setPassengerCode('');
-                  setSelectedPassenger(null);
-                }}
-                variant="outline"
-                size="medium"
-                style={styles.modalButton}
-              />
-              <Button
-                title={verifyingCode ? 'Verifying...' : 'Verify'}
-                onPress={handleVerifyCode}
-                variant="primary"
-                size="medium"
-                style={styles.modalButton}
-                disabled={verifyingCode || passengerCode.length !== 4}
-              />
-            </View>
+                <TextInput
+                  style={[styles.codeInput, { borderColor: theme.colors.primary, backgroundColor: theme.colors.background, color: theme.colors.text }]}
+                  value={passengerCode}
+                  onChangeText={setPassengerCode}
+                  placeholder="0000"
+                  placeholderTextColor={theme.colors.textSecondary}
+                  keyboardType="number-pad"
+                  maxLength={4}
+                  autoFocus
+                />
+
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity
+                    style={[styles.modalCancelBtn, { borderColor: theme.colors.border }]}
+                    onPress={() => {
+                      if (paymentPollRef.current) clearInterval(paymentPollRef.current);
+                      setShowCodeModal(false);
+                      setPassengerCode('');
+                      setSelectedPassenger(null);
+                    }}
+                  >
+                    <Text style={[styles.modalCancelText, { color: theme.colors.textSecondary }]}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.modalConfirmBtn, {
+                      backgroundColor: theme.colors.primary,
+                      opacity: verifyingCode || passengerCode.length !== 4 ? 0.5 : 1,
+                    }]}
+                    onPress={handleVerifyCode}
+                    disabled={verifyingCode || passengerCode.length !== 4}
+                  >
+                    <Text style={styles.modalConfirmText}>{verifyingCode ? 'Verifying...' : 'Verify Code'}</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
           </View>
         </View>
       </Modal>
@@ -1215,217 +1393,384 @@ const DriverTripScreen = () => {
 };
 
 const styles = StyleSheet.create({
+  /* ── Container ── */
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
   },
-  header: {
-    backgroundColor: COLORS.primary,
+
+  /* ── Hero Header ── */
+  headerImage: {
+    width: '100%',
+    height: 150,
+  },
+  headerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.78,
+  },
+  blurContainer: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'flex-end',
+    paddingBottom: SPACING.md,
+    paddingHorizontal: SPACING.md,
+  },
+  headerNav: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.lg,
-    paddingTop: SPACING.xl + 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.23,
-    shadowRadius: 2.62,
-    elevation: 4,
+    marginBottom: SPACING.md,
   },
-  headerTitle: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xl,
-    color: COLORS.white,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  placeholder: {
-    width: 24,
-  },
-  statusBar: {
-    backgroundColor: COLORS.white,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.md,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  navButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.18,
-    shadowRadius: 1.0,
-    elevation: 1,
+    justifyContent: 'center',
   },
-  statusIndicator: {
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: SPACING.md,
+  },
+  navTitle: {
+    fontFamily: FONTS.regular,
+    fontSize: 22,
+    color: '#FFF',
+    fontWeight: '800',
+    letterSpacing: 0.4,
+    textAlign: 'center',
+  },
+  navSubtitle: {
+    fontFamily: FONTS.regular,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.7)',
+    fontWeight: '500',
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  liveIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.sm,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.xs,
-    borderRadius: BORDER_RADIUS.round,
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
   },
-  statusDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: COLORS.textSecondary,
+  liveDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
   },
-  statusDotActive: {
-    backgroundColor: COLORS.success,
-    shadowColor: COLORS.success,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  statusText: {
+  liveText: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.text,
-    fontWeight: '600',
+    fontSize: 11,
+    color: '#FFF',
+    fontWeight: '800',
+    letterSpacing: 1,
   },
-  etaText: {
+
+  /* ── Metric Strip (card below map) ── */
+  metricStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 6,
+    marginBottom: SPACING.md,
+    ...SHADOWS.sm,
+  },
+  metricItem: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 2,
+  },
+  metricValue: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
-    color: COLORS.primary,
-    fontWeight: '700',
-    backgroundColor: `${COLORS.primary}10`,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.xs,
-    borderRadius: BORDER_RADIUS.md,
+    fontSize: 16,
+    fontWeight: '800',
   },
+  metricLabel: {
+    fontFamily: FONTS.regular,
+    fontSize: 10,
+    fontWeight: '500',
+  },
+  metricDivider: {
+    width: 1,
+    height: 28,
+  },
+
+  /* ── Map ── */
   mapContainer: {
-    height: 280,
-    backgroundColor: COLORS.lightGray,
+    height: 260,
     marginHorizontal: SPACING.md,
-    marginTop: SPACING.md,
-    borderRadius: BORDER_RADIUS.lg,
+    marginTop: 23,
+    borderRadius: 16,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.23,
-    shadowRadius: 2.62,
-    elevation: 4,
+    ...SHADOWS.md,
   },
   webView: {
     flex: 1,
-    height: 280,
-    borderRadius: BORDER_RADIUS.lg,
+    height: 260,
   },
   mapPlaceholder: {
     width: '100%',
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: COLORS.lightGray,
+    backgroundColor: '#F0F0F0',
   },
   mapHint: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.textSecondary,
-    marginTop: SPACING.md,
+    fontSize: 13,
+    marginTop: SPACING.sm,
   },
+
+  /* ── Scroll ── */
   scrollContent: {
     padding: SPACING.md,
     paddingBottom: SPACING.xl,
   },
-  tripDetailsCard: {
+
+  /* ── Shared Card ── */
+  card: {
+    borderRadius: 16,
     padding: SPACING.lg,
     marginBottom: SPACING.md,
-    borderRadius: BORDER_RADIUS.lg,
-    backgroundColor: COLORS.white,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.23,
-    shadowRadius: 2.62,
-    elevation: 4,
+    ...SHADOWS.md,
   },
-  sectionTitle: {
+  cardTitle: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.lg,
-    color: COLORS.text,
+    fontSize: 16,
     fontWeight: '700',
     marginBottom: SPACING.md,
+    letterSpacing: 0.2,
+  },
+  cardTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: SPACING.md,
+  },
+  countBadge: {
+    marginLeft: 'auto',
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  countBadgeText: {
+    fontFamily: FONTS.regular,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+
+  /* ── Route Display ── */
+  routeSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  routeBox: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 11,
+    gap: 6,
+  },
+  routeText: {
+    flex: 1,
+    fontFamily: FONTS.regular,
+    fontSize: 12,
+    fontWeight: '500',
+    lineHeight: 16,
+  },
+  routeArrowCircle: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  /* ── Stopping Locations (Timeline) ── */
+  stopRow: {
+    flexDirection: 'row',
+    marginBottom: 2,
+  },
+  stopTimeline: {
+    width: 24,
+    alignItems: 'center',
+  },
+  stopDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginTop: 10,
+  },
+  stopLine: {
+    width: 2,
+    flex: 1,
+    marginTop: 4,
+  },
+  stopContent: {
+    flex: 1,
+    borderRadius: 12,
+    padding: 12,
+    marginLeft: 8,
+    marginBottom: 8,
+  },
+  stopHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  stopTypeBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  stopTypeText: {
+    fontFamily: FONTS.regular,
+    fontSize: 10,
+    fontWeight: '700',
     letterSpacing: 0.3,
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-    marginBottom: SPACING.md,
-  },
-  detailItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: SPACING.md,
-    marginBottom: SPACING.md,
-    paddingBottom: SPACING.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  detailText: {
+  stopPassengerName: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
-    color: COLORS.text,
-    flex: 1,
-    lineHeight: 22,
+    fontSize: 13,
+    fontWeight: '600',
   },
-  passengersCard: {
-    padding: SPACING.lg,
-    marginBottom: SPACING.md,
-    borderRadius: BORDER_RADIUS.lg,
-    backgroundColor: COLORS.white,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.23,
-    shadowRadius: 2.62,
-    elevation: 4,
+  stopAddress: {
+    fontFamily: FONTS.regular,
+    fontSize: 12,
+    lineHeight: 17,
   },
-  passengerItem: {
+
+  /* ── Passengers ── */
+  passengerCard: {
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 8,
+  },
+  passengerTop: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.sm,
-    marginBottom: SPACING.xs,
-    backgroundColor: COLORS.background,
-    borderRadius: BORDER_RADIUS.md,
+  },
+  passengerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  passengerInfo: {
+    flex: 1,
   },
   passengerName: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
-    color: COLORS.text,
+    fontSize: 14,
     fontWeight: '600',
   },
-  passengerStatus: {
+  passengerRouteRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 3,
+  },
+  passengerRouteText: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.success,
-    textTransform: 'capitalize',
-    backgroundColor: `${COLORS.success}15`,
-    paddingHorizontal: SPACING.sm,
+    fontSize: 11,
+    maxWidth: SCREEN_WIDTH * 0.25,
+  },
+  pStatusBadge: {
+    paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: BORDER_RADIUS.sm,
+    borderRadius: 12,
+  },
+  pStatusText: {
+    fontFamily: FONTS.regular,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  passengerActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.06)',
+  },
+  pActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 10,
+  },
+  pActionBtnText: {
+    fontFamily: FONTS.regular,
+    fontSize: 13,
     fontWeight: '600',
+    color: '#FFF',
   },
-  actionsContainer: {
-    marginTop: SPACING.lg,
-    paddingHorizontal: SPACING.xs,
+  completedBadge: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
   },
-  actionButton: {
-    marginBottom: 0,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.23,
-    shadowRadius: 2.62,
-    elevation: 4,
+  completedBadgeText: {
+    fontFamily: FONTS.regular,
+    fontSize: 12,
+    fontWeight: '700',
   },
-  endButton: {
-    borderColor: COLORS.error,
+
+  /* ── Trip Action Buttons ── */
+  tripActionContainer: {
+    marginTop: SPACING.sm,
+  },
+  tripStartBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingVertical: 16,
+    borderRadius: 16,
+    ...SHADOWS.md,
+  },
+  tripStartBtnText: {
+    fontFamily: FONTS.regular,
+    fontSize: 16,
+    color: '#FFF',
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  tripEndBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingVertical: 16,
+    borderRadius: 16,
     borderWidth: 2,
+    borderColor: '#F44336',
+    backgroundColor: '#F44336' + '08',
   },
+  tripEndBtnText: {
+    fontFamily: FONTS.regular,
+    fontSize: 16,
+    color: '#F44336',
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+
+  /* ── Loading ── */
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -1434,80 +1779,30 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
-    color: COLORS.textSecondary,
+    fontSize: 14,
     marginTop: SPACING.md,
   },
-  stoppingLocationsCard: {
-    padding: SPACING.lg,
-    marginBottom: SPACING.md,
-    borderRadius: BORDER_RADIUS.lg,
-    backgroundColor: COLORS.white,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.23,
-    shadowRadius: 2.62,
-    elevation: 4,
-  },
-  stoppingLocationItem: {
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.sm,
-    marginBottom: SPACING.xs,
-    backgroundColor: COLORS.background,
-    borderRadius: BORDER_RADIUS.md,
-  },
-  stoppingLocationInfo: {
-    flex: 1,
-  },
-  stoppingLocationType: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.textSecondary,
-    textTransform: 'uppercase',
-    marginBottom: SPACING.xs,
-  },
-  stoppingLocationName: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
-    color: COLORS.text,
-    fontWeight: '600',
-    marginBottom: SPACING.xs,
-  },
-  stoppingLocationAddress: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.textSecondary,
-  },
-  passengerInfo: {
-    flex: 1,
-  },
-  passengerRoute: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.textSecondary,
-    marginTop: SPACING.xs,
-  },
-  passengerActions: {
-    flexDirection: 'row',
-    gap: SPACING.xs,
-  },
-  passengerActionButton: {
-    minWidth: 100,
-  },
+
+  /* ── Modal ── */
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: SPACING.lg,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: COLORS.white,
-    borderRadius: BORDER_RADIUS.xl,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     padding: SPACING.xl,
-    width: '100%',
-    maxWidth: 400,
+    paddingTop: SPACING.md,
+    alignItems: 'center',
     ...SHADOWS.lg,
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(0,0,0,0.15)',
+    marginBottom: SPACING.lg,
   },
   modalCloseButton: {
     position: 'absolute',
@@ -1516,39 +1811,75 @@ const styles = StyleSheet.create({
     padding: SPACING.xs,
     zIndex: 1,
   },
+  modalIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: SPACING.md,
+  },
   modalTitle: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xl,
-    color: COLORS.text,
+    fontSize: 20,
     fontWeight: '700',
-    marginBottom: SPACING.sm,
+    marginBottom: 6,
     textAlign: 'center',
   },
   modalSubtitle: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.textSecondary,
+    fontSize: 13,
     textAlign: 'center',
+    lineHeight: 20,
     marginBottom: SPACING.lg,
   },
-  codeInput: {
-    borderWidth: 2,
-    borderColor: COLORS.primary,
-    borderRadius: BORDER_RADIUS.md,
-    padding: SPACING.md,
-    fontSize: FONTS.sizes.xxl,
-    fontFamily: FONTS.medium,
+  modalHint: {
+    fontFamily: FONTS.regular,
+    fontSize: 11,
     textAlign: 'center',
-    letterSpacing: SPACING.md,
+  },
+  codeInput: {
+    width: '100%',
+    borderWidth: 2,
+    borderRadius: 14,
+    padding: SPACING.md,
+    fontSize: 28,
+    fontFamily: FONTS.regular,
+    fontWeight: '800',
+    textAlign: 'center',
+    letterSpacing: 16,
     marginBottom: SPACING.lg,
-    backgroundColor: COLORS.background,
   },
   modalButtons: {
     flexDirection: 'row',
     gap: SPACING.md,
+    width: '100%',
   },
-  modalButton: {
+  modalCancelBtn: {
     flex: 1,
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCancelText: {
+    fontFamily: FONTS.regular,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  modalConfirmBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalConfirmText: {
+    fontFamily: FONTS.regular,
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFF',
   },
 });
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Image, ImageBackground, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import LottieView from 'lottie-react-native';
 import { ArrowLeft, Search, Filter, Star, MapPin, Calendar, Clock } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import { COLORS, FONTS, SPACING, SHADOWS } from '@constants/theme';
@@ -15,8 +16,22 @@ interface RouteParams {
   duration?: string;
 }
 
+const RENTAL_COMING_SOON = true; // V2 feature — flip to false to re-enable
+
 const SearchRentalScreen = () => {
   const navigation = useNavigation();
+
+  if (RENTAL_COMING_SOON) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' }}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ position: 'absolute', top: 50, left: 16, zIndex: 10, width: 40, height: 40, borderRadius: 20, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' }}>
+          <ArrowLeft size={22} color="#1E293B" />
+        </TouchableOpacity>
+        <LottieView source={require('../../../assets/videos/Coming soon.json')} autoPlay loop style={{ width: 300, height: 300 }} />
+      </View>
+    );
+  }
+
   const route = useRoute();
   const { t } = useLanguage();
   const params = (route.params as RouteParams) || {};

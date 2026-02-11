@@ -6,27 +6,29 @@ import { BlurView } from 'expo-blur';
 import { ArrowLeft, Users, KeyRound } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { useLanguage } from '@context/LanguageContext';
+import { useTheme } from '@context/ThemeContext';
 
 const OfferServicesScreen = () => {
   const navigation = useNavigation();
   const { t } = useLanguage();
+  const { theme } = useTheme();
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.colors.primary }]}>
       <LinearGradient
-        colors={[COLORS.primary, COLORS.primaryDark]}
+        colors={[theme.colors.primary, theme.colors.primaryDark || theme.colors.primary]}
         style={styles.gradientBackground}
       >
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-            <ArrowLeft size={24} color={COLORS.white} />
+            <ArrowLeft size={24} color={theme.colors.white} />
         </TouchableOpacity>
 
         <View style={styles.headerContent}>
-          <Text style={styles.title}>{t('offerServices.title')}</Text>
-          <Text style={styles.subtitle}>{t('offerServices.subtitle')}</Text>
+          <Text style={[styles.title, { color: theme.colors.white }]}>{t('offerServices.title')}</Text>
+          <Text style={[styles.subtitle, { color: theme.colors.white }]}>{t('offerServices.subtitle')}</Text>
         </View>
       </LinearGradient>
 
@@ -45,17 +47,17 @@ const OfferServicesScreen = () => {
             <BlurView intensity={20} style={styles.blurContainer}>
               <View style={styles.cardContent}>
                 <View style={styles.iconWrapper}>
-                  <Users size={36} color={COLORS.primary} />
+                  <Users size={36} color={theme.colors.primary} />
                 </View>
-                <Text style={styles.optionTitle}>{t('offerServices.pooling')}</Text>
+                <Text style={[styles.optionTitle, { color: theme.colors.primary }]}>{t('offerServices.pooling')}</Text>
                 <View style={styles.featuresList}>
                   <View style={styles.featureItem}>
-                    <View style={styles.bullet} />
-                    <Text style={styles.featureText}>{t('offerServices.poolingFeature1')}</Text>
+                    <View style={[styles.bullet, { backgroundColor: theme.colors.primary }]} />
+                    <Text style={[styles.featureText, { color: theme.colors.text }]}>{t('offerServices.poolingFeature1')}</Text>
                   </View>
                   <View style={styles.featureItem}>
-                    <View style={styles.bullet} />
-                    <Text style={styles.featureText}>{t('offerServices.poolingFeature2')}</Text>
+                    <View style={[styles.bullet, { backgroundColor: theme.colors.primary }]} />
+                    <Text style={[styles.featureText, { color: theme.colors.text }]}>{t('offerServices.poolingFeature2')}</Text>
                   </View>
                 </View>
             </View>
@@ -77,17 +79,17 @@ const OfferServicesScreen = () => {
             <BlurView intensity={20} style={styles.blurContainer}>
               <View style={styles.cardContent}>
                 <View style={styles.iconWrapper}>
-                  <KeyRound size={36} color={COLORS.primary} />
+                  <KeyRound size={36} color={theme.colors.primary} />
                 </View>
-                <Text style={styles.optionTitle}>{t('offerServices.rental')}</Text>
+                <Text style={[styles.optionTitle, { color: theme.colors.primary }]}>{t('offerServices.rental')}</Text>
                 <View style={styles.featuresList}>
                   <View style={styles.featureItem}>
-                    <View style={styles.bullet} />
-                    <Text style={styles.featureText}>{t('offerServices.rentalFeature1')}</Text>
+                    <View style={[styles.bullet, { backgroundColor: theme.colors.primary }]} />
+                    <Text style={[styles.featureText, { color: theme.colors.text }]}>{t('offerServices.rentalFeature1')}</Text>
                   </View>
                   <View style={styles.featureItem}>
-                    <View style={styles.bullet} />
-                    <Text style={styles.featureText}>{t('offerServices.rentalFeature2')}</Text>
+                    <View style={[styles.bullet, { backgroundColor: theme.colors.primary }]} />
+                    <Text style={[styles.featureText, { color: theme.colors.text }]}>{t('offerServices.rentalFeature2')}</Text>
                   </View>
                 </View>
               </View>
@@ -95,7 +97,7 @@ const OfferServicesScreen = () => {
           </ImageBackground>
         </TouchableOpacity>
 
-        <Text style={styles.note}>
+        <Text style={[styles.note, { color: theme.colors.textSecondary }]}>
           {t('offerServices.note')}
         </Text>
       </View>
@@ -106,7 +108,6 @@ const OfferServicesScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.primary,
   },
   gradientBackground: {
     paddingTop: 50,
@@ -125,14 +126,12 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.xxxl,
-    color: COLORS.white,
     fontWeight: 'bold',
     marginBottom: SPACING.sm,
   },
   subtitle: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.md,
-    color: COLORS.white,
     opacity: 0.9,
   },
   cardContainer: {
@@ -179,7 +178,6 @@ const styles = StyleSheet.create({
   optionTitle: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.lg,
-    color: COLORS.primary,
     fontWeight: 'bold',
     marginBottom: SPACING.sm,
     textAlign: 'center',
@@ -196,19 +194,16 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: COLORS.primary,
     marginRight: SPACING.md,
   },
   featureText: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.md,
-    color: COLORS.text,
     flex: 1,
   },
   note: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.sm,
-    color: COLORS.textSecondary,
     textAlign: 'center',
     marginTop: SPACING.lg,
     fontStyle: 'italic',

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, Image, StyleSheet, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, FONTS, SPACING } from '@constants/theme';
 
@@ -12,7 +12,11 @@ const LoadingScreen = () => {
       <View style={styles.content}>
         <View style={styles.logoContainer}>
           <View style={styles.logoCircle}>
-            <Text style={styles.logoText}>Y</Text>
+            <Image
+              source={require('../../../assets/flogo.png')}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
           </View>
         </View>
         <ActivityIndicator size="large" color={COLORS.white} style={styles.loader} />
@@ -39,15 +43,13 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: COLORS.white,
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  logoText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xxxl,
-    color: COLORS.primary,
-    fontWeight: 'bold',
+  logoImage: {
+    width: 100,
+    height: 100,
   },
   loader: {
     marginBottom: SPACING.md,

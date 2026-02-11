@@ -94,6 +94,7 @@ const styles = StyleSheet.create({
     borderRightColor: COLORS.border,
   },
   flagEmoji: {
+    fontFamily: FONTS.regular,
     fontSize: 20,
     marginRight: SPACING.xs,
   },

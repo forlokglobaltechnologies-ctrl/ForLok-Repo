@@ -351,6 +351,7 @@ export const poolingApi = {
     fromLng: number; // Required for polyline matching
     toLat: number; // Required for polyline matching
     toLng: number; // Required for polyline matching
+    pinkOnly?: boolean; // Filter for Pink Pooling (women only)
   }) => {
     // Validate coordinates are present
     if (params.fromLat === undefined || params.fromLng === undefined || 
@@ -391,6 +392,9 @@ export const poolingApi = {
     }
     if (params.vehicleType) {
       queryParams.vehicleType = params.vehicleType;
+    }
+    if (params.pinkOnly === true) {
+      queryParams.pinkOnly = 'true';
     }
 
     return apiCall(API_CONFIG.ENDPOINTS.POOLING.SEARCH, {
@@ -533,7 +537,7 @@ export const rentalApi = {
 export const bookingApi = {
   createPoolingBooking: (data: {
     poolingOfferId: string;
-    paymentMethod: 'upi' | 'card' | 'wallet' | 'net_banking' | 'offline_cash';
+    paymentMethod?: 'upi' | 'card' | 'wallet' | 'net_banking';
     passengerRoute: {
       from: { address: string; lat: number; lng: number; city?: string; state?: string };
       to: { address: string; lat: number; lng: number; city?: string; state?: string };
@@ -555,7 +559,7 @@ export const bookingApi = {
     duration?: number;
     startTime?: string; // HH:mm format
     endTime?: string; // HH:mm format
-    paymentMethod: 'upi' | 'card' | 'wallet' | 'net_banking' | 'offline_cash';
+    paymentMethod?: 'upi' | 'card' | 'wallet' | 'net_banking';
   }) =>
     apiCall(API_CONFIG.ENDPOINTS.BOOKING.CREATE_RENTAL, {
       method: 'POST',
@@ -584,9 +588,16 @@ export const bookingApi = {
 
   cancelBooking: (bookingId: string, reason?: string) =>
     apiCall(API_CONFIG.ENDPOINTS.BOOKING.CANCEL, {
-      method: 'POST',
+      method: 'PUT',
       params: { bookingId },
       body: { reason },
+      requiresAuth: true,
+    }),
+
+  previewCancellationFee: (bookingId: string) =>
+    apiCall(API_CONFIG.ENDPOINTS.BOOKING.CANCEL_PREVIEW, {
+      method: 'GET',
+      params: { bookingId },
       requiresAuth: true,
     }),
 
@@ -641,11 +652,19 @@ export const bookingApi = {
       requiresAuth: true,
     }),
 
-  verifyPassengerCode: (bookingId: string, passengerCode: string) =>
+  choosePaymentMethod: (bookingId: string, paymentMethod: 'online' | 'offline_cash') =>
+    apiCall(API_CONFIG.ENDPOINTS.BOOKING.CHOOSE_PAYMENT, {
+      method: 'POST',
+      params: { bookingId },
+      body: { paymentMethod },
+      requiresAuth: true,
+    }),
+
+  verifyPassengerCode: (bookingId: string, passengerCode: string, paymentMethod?: string) =>
     apiCall('/api/bookings/:bookingId/end-trip', {
       method: 'POST',
       params: { bookingId },
-      body: { passengerCode },
+      body: { passengerCode, ...(paymentMethod ? { paymentMethod } : {}) },
       requiresAuth: true,
     }),
 
@@ -727,6 +746,101 @@ export const paymentApi = {
       method: 'GET',
       requiresAuth: false,
     }),
+
+  simulateTestPayment: (razorpayOrderId: string) =>
+    apiCall(API_CONFIG.ENDPOINTS.PAYMENT.SIMULATE_TEST, {
+      method: 'POST',
+      body: { razorpayOrderId },
+      requiresAuth: true,
+    }),
+};
+
+/**
+ * Withdrawal API calls
+ */
+export const withdrawalApi = {
+  createWithdrawal: (data: {
+    amount: number;
+    paymentMethod: 'bank' | 'upi';
+    bankAccount?: {
+      accountNumber: string;
+      ifscCode: string;
+      accountHolderName: string;
+      bankName: string;
+    };
+    upiId?: string;
+  }) =>
+    apiCall(API_CONFIG.ENDPOINTS.WITHDRAWAL.CREATE, {
+      method: 'POST',
+      body: data,
+      requiresAuth: true,
+    }),
+
+  getMyWithdrawals: (params?: {
+    status?: string;
+    page?: number;
+    limit?: number;
+  }) =>
+    apiCall(API_CONFIG.ENDPOINTS.WITHDRAWAL.MY_WITHDRAWALS, {
+      method: 'GET',
+      query: params,
+      requiresAuth: true,
+    }),
+
+  getWithdrawal: (withdrawalId: string) =>
+    apiCall(API_CONFIG.ENDPOINTS.WITHDRAWAL.GET, {
+      method: 'GET',
+      params: { withdrawalId },
+      requiresAuth: true,
+    }),
+
+  // Admin APIs
+  getPendingWithdrawals: (params?: {
+    page?: number;
+    limit?: number;
+  }) =>
+    apiCall(API_CONFIG.ENDPOINTS.WITHDRAWAL.ADMIN_PENDING, {
+      method: 'GET',
+      query: params,
+      requiresAuth: true,
+    }),
+
+  getApprovedWithdrawals: (params?: {
+    page?: number;
+    limit?: number;
+  }) =>
+    apiCall(API_CONFIG.ENDPOINTS.WITHDRAWAL.ADMIN_APPROVED, {
+      method: 'GET',
+      query: params,
+      requiresAuth: true,
+    }),
+
+  approveWithdrawal: (withdrawalId: string) =>
+    apiCall(API_CONFIG.ENDPOINTS.WITHDRAWAL.ADMIN_APPROVE, {
+      method: 'POST',
+      params: { withdrawalId },
+      body: {}, // Empty body required for POST requests
+      requiresAuth: true,
+    }),
+
+  completeWithdrawal: (withdrawalId: string, data: {
+    transactionId: string;
+    notes?: string;
+  }) =>
+    apiCall(API_CONFIG.ENDPOINTS.WITHDRAWAL.ADMIN_COMPLETE, {
+      method: 'POST',
+      params: { withdrawalId },
+      body: data,
+      requiresAuth: true,
+    }),
+
+  rejectWithdrawal: (withdrawalId: string, reason: string) =>
+    apiCall(API_CONFIG.ENDPOINTS.WITHDRAWAL.ADMIN_REJECT, {
+      method: 'POST',
+      params: { withdrawalId },
+      body: { reason },
+      requiresAuth: true,
+    }),
 };
 
 /**
@@ -765,6 +879,121 @@ export const trackingApi = {
     apiCall(API_CONFIG.ENDPOINTS.TRACKING.TRIP_METRICS, {
       method: 'GET',
       params: { bookingId },
+      requiresAuth: true,
+    }),
+};
+
+/**
+ * Admin API calls
+ */
+export const adminApi = {
+  login: (username: string, password: string) =>
+    apiCall(API_CONFIG.ENDPOINTS.ADMIN.LOGIN, {
+      method: 'POST',
+      body: { username, password },
+      requiresAuth: false,
+    }),
+
+  getDashboardStats: () =>
+    apiCall(API_CONFIG.ENDPOINTS.ADMIN.DASHBOARD_STATS, {
+      method: 'GET',
+      requiresAuth: true,
+    }),
+
+  getUsers: (params?: {
+    status?: string;
+    userType?: string;
+    verified?: boolean;
+    page?: number;
+    limit?: number;
+  }) =>
+    apiCall(API_CONFIG.ENDPOINTS.ADMIN.USERS, {
+      method: 'GET',
+      query: params,
+      requiresAuth: true,
+    }),
+
+  getUserDetails: (userId: string) =>
+    apiCall(API_CONFIG.ENDPOINTS.ADMIN.USER_DETAILS, {
+      method: 'GET',
+      params: { userId },
+      requiresAuth: true,
+    }),
+
+  verifyUser: (userId: string) =>
+    apiCall(API_CONFIG.ENDPOINTS.ADMIN.VERIFY_USER, {
+      method: 'POST',
+      params: { userId },
+      requiresAuth: true,
+    }),
+
+  suspendUser: (userId: string) =>
+    apiCall(API_CONFIG.ENDPOINTS.ADMIN.SUSPEND_USER, {
+      method: 'POST',
+      params: { userId },
+      requiresAuth: true,
+    }),
+
+  activateUser: (userId: string) =>
+    apiCall(API_CONFIG.ENDPOINTS.ADMIN.ACTIVATE_USER, {
+      method: 'POST',
+      params: { userId },
+      requiresAuth: true,
+    }),
+
+  // Pooling management
+  getPoolingOffers: (params?: { status?: string; page?: number; limit?: number }) =>
+    apiCall(API_CONFIG.ENDPOINTS.ADMIN.POOLING_OFFERS, {
+      method: 'GET',
+      query: params,
+      requiresAuth: true,
+    }),
+
+  approvePoolingOffer: (offerId: string) =>
+    apiCall(API_CONFIG.ENDPOINTS.ADMIN.POOLING_APPROVE, {
+      method: 'PUT',
+      params: { offerId },
+      body: {},
+      requiresAuth: true,
+    }),
+
+  suspendPoolingOffer: (offerId: string) =>
+    apiCall(API_CONFIG.ENDPOINTS.ADMIN.POOLING_SUSPEND, {
+      method: 'PUT',
+      params: { offerId },
+      body: {},
+      requiresAuth: true,
+    }),
+
+  // Rental management
+  getRentalOffers: (params?: { status?: string; page?: number; limit?: number }) =>
+    apiCall(API_CONFIG.ENDPOINTS.ADMIN.RENTAL_OFFERS, {
+      method: 'GET',
+      query: params,
+      requiresAuth: true,
+    }),
+
+  approveRentalOffer: (offerId: string) =>
+    apiCall(API_CONFIG.ENDPOINTS.ADMIN.RENTAL_APPROVE, {
+      method: 'PUT',
+      params: { offerId },
+      body: {},
+      requiresAuth: true,
+    }),
+
+  suspendRentalOffer: (offerId: string) =>
+    apiCall(API_CONFIG.ENDPOINTS.ADMIN.RENTAL_SUSPEND, {
+      method: 'PUT',
+      params: { offerId },
+      body: {},
+      requiresAuth: true,
+    }),
+
+  // Bookings
+  getBookings: (params?: { status?: string; serviceType?: string; page?: number; limit?: number }) =>
+    apiCall(API_CONFIG.ENDPOINTS.ADMIN.BOOKINGS, {
+      method: 'GET',
+      query: params,
       requiresAuth: true,
     }),
 };
@@ -954,6 +1183,457 @@ export const chatApi = {
     apiCall(API_CONFIG.ENDPOINTS.CHAT.DELETE_MESSAGE, {
       method: 'DELETE',
       params: { messageId },
+      requiresAuth: true,
+    }),
+};
+
+/**
+ * Wallet API calls
+ */
+export const walletApi = {
+  getSummary: () =>
+    apiCall(API_CONFIG.ENDPOINTS.WALLET.SUMMARY, {
+      method: 'GET',
+      requiresAuth: true,
+    }),
+
+  canBookRide: () =>
+    apiCall(API_CONFIG.ENDPOINTS.WALLET.CAN_BOOK || '/api/wallet/can-book', {
+      method: 'GET',
+      requiresAuth: true,
+    }),
+
+  topUp: (amount: number) =>
+    apiCall(API_CONFIG.ENDPOINTS.WALLET.TOP_UP, {
+      method: 'POST',
+      body: { amount },
+      requiresAuth: true,
+    }),
+
+  getTransactions: (options?: { page?: number; limit?: number; type?: string }) =>
+    apiCall(API_CONFIG.ENDPOINTS.WALLET.TRANSACTIONS, {
+      method: 'GET',
+      query: options as any,
+      requiresAuth: true,
+    }),
+
+  getConfig: () =>
+    apiCall(API_CONFIG.ENDPOINTS.WALLET.CONFIG, {
+      method: 'GET',
+      requiresAuth: false,
+    }),
+};
+
+/**
+ * Block API calls
+ */
+export const blockApi = {
+  getBlockedUsers: () =>
+    apiCall(API_CONFIG.ENDPOINTS.BLOCK.LIST, {
+      method: 'GET',
+      requiresAuth: true,
+    }),
+
+  blockUser: (data: { 
+    blockedId: string; 
+    reason?: string; 
+    reasonCategory?: string; 
+    bookingId?: string 
+  }) =>
+    apiCall(API_CONFIG.ENDPOINTS.BLOCK.BLOCK_USER, {
+      method: 'POST',
+      body: data,
+      requiresAuth: true,
+    }),
+
+  unblockUser: (userId: string) =>
+    apiCall(API_CONFIG.ENDPOINTS.BLOCK.UNBLOCK_USER, {
+      method: 'DELETE',
+      params: { userId },
+      requiresAuth: true,
+    }),
+
+  checkBlocked: (userId: string) =>
+    apiCall(API_CONFIG.ENDPOINTS.BLOCK.CHECK, {
+      method: 'GET',
+      params: { userId },
+      requiresAuth: true,
+    }),
+};
+
+/**
+ * Refund API calls
+ */
+export const refundApi = {
+  getPolicy: () =>
+    apiCall(API_CONFIG.ENDPOINTS.REFUND.POLICY, {
+      method: 'GET',
+      requiresAuth: false,
+    }),
+
+  calculateRefund: (bookingId: string) =>
+    apiCall(API_CONFIG.ENDPOINTS.REFUND.CALCULATE, {
+      method: 'GET',
+      params: { bookingId },
+      requiresAuth: true,
+    }),
+
+  getBookingRefund: (bookingId: string) =>
+    apiCall(API_CONFIG.ENDPOINTS.REFUND.BOOKING_REFUND, {
+      method: 'GET',
+      params: { bookingId },
+      requiresAuth: true,
+    }),
+
+  getHistory: (options?: { page?: number; limit?: number }) =>
+    apiCall(API_CONFIG.ENDPOINTS.REFUND.HISTORY, {
+      method: 'GET',
+      query: options as any,
+      requiresAuth: true,
+    }),
+};
+
+/**
+ * Enhanced Rating API calls
+ */
+export const ratingApi = {
+  create: (data: {
+    bookingId: string;
+    ratedUserId: string;
+    serviceType: 'pooling' | 'rental';
+    ratingType: 'passenger_to_driver' | 'driver_to_passenger';
+    overallRating: number;
+    punctuality?: number;
+    vehicleCondition?: number;
+    driving?: number;
+    behavior?: number;
+    communication?: number;
+    service?: number;
+    comment?: string;
+    tags?: string[];
+  }) =>
+    apiCall(API_CONFIG.ENDPOINTS.RATING.CREATE, {
+      method: 'POST',
+      body: data,
+      requiresAuth: true,
+    }),
+
+  canRate: (bookingId: string) =>
+    apiCall(API_CONFIG.ENDPOINTS.RATING.CAN_RATE, {
+      method: 'GET',
+      params: { bookingId },
+      requiresAuth: true,
+    }),
+
+  getBreakdown: (userId: string) =>
+    apiCall(API_CONFIG.ENDPOINTS.RATING.BREAKDOWN, {
+      method: 'GET',
+      params: { userId },
+      requiresAuth: false,
+    }),
+
+  getUserRatingsDetails: (userId: string, options?: { page?: number; limit?: number; ratingType?: string }) =>
+    apiCall(API_CONFIG.ENDPOINTS.RATING.USER_RATINGS_DETAILS, {
+      method: 'GET',
+      params: { userId },
+      query: options as any,
+      requiresAuth: false,
+    }),
+
+  getTags: (ratingType: 'passenger_to_driver' | 'driver_to_passenger') =>
+    apiCall(API_CONFIG.ENDPOINTS.RATING.TAGS, {
+      method: 'GET',
+      params: { ratingType },
+      requiresAuth: false,
+    }),
+
+  getBookingRating: (bookingId: string) =>
+    apiCall(API_CONFIG.ENDPOINTS.RATING.BOOKING_RATING, {
+      method: 'GET',
+      params: { bookingId },
+      requiresAuth: false,
+    }),
+};
+
+/**
+ * Analytics API calls (Admin)
+ */
+export const analyticsApi = {
+  getRealtime: () =>
+    apiCall(API_CONFIG.ENDPOINTS.ANALYTICS.REALTIME, {
+      method: 'GET',
+      requiresAuth: true,
+    }),
+
+  getTodayStats: () =>
+    apiCall(API_CONFIG.ENDPOINTS.ANALYTICS.TODAY, {
+      method: 'GET',
+      requiresAuth: true,
+    }),
+
+  getTrends: (period: 'week' | 'month' = 'week') =>
+    apiCall(API_CONFIG.ENDPOINTS.ANALYTICS.TRENDS, {
+      method: 'GET',
+      query: { period },
+      requiresAuth: true,
+    }),
+
+  getPoolingStats: () =>
+    apiCall(API_CONFIG.ENDPOINTS.ANALYTICS.POOLING, {
+      method: 'GET',
+      requiresAuth: true,
+    }),
+
+  getFinancialSummary: (period: 'week' | 'month' | 'year' = 'month') =>
+    apiCall(API_CONFIG.ENDPOINTS.ANALYTICS.FINANCIAL, {
+      method: 'GET',
+      query: { period },
+      requiresAuth: true,
+    }),
+
+  getUserGrowth: () =>
+    apiCall(API_CONFIG.ENDPOINTS.ANALYTICS.USERS, {
+      method: 'GET',
+      requiresAuth: true,
+    }),
+
+  getTopEarners: (limit: number = 10) =>
+    apiCall(API_CONFIG.ENDPOINTS.ANALYTICS.LEADERBOARD_EARNERS, {
+      method: 'GET',
+      query: { limit },
+      requiresAuth: true,
+    }),
+
+  getMostActive: (limit: number = 10) =>
+    apiCall(API_CONFIG.ENDPOINTS.ANALYTICS.LEADERBOARD_ACTIVE, {
+      method: 'GET',
+      query: { limit },
+      requiresAuth: true,
+    }),
+
+  getHighestRated: (limit: number = 10) =>
+    apiCall(API_CONFIG.ENDPOINTS.ANALYTICS.LEADERBOARD_RATED, {
+      method: 'GET',
+      query: { limit },
+      requiresAuth: true,
+    }),
+};
+
+/**
+ * Notification API calls
+ */
+export const notificationApi = {
+  getNotifications: (filters?: { read?: boolean; type?: string; page?: number; limit?: number }) =>
+    apiCall(API_CONFIG.ENDPOINTS.NOTIFICATION.LIST, {
+      method: 'GET',
+      query: filters,
+      requiresAuth: true,
+    }),
+
+  markAsRead: (notificationId: string) =>
+    apiCall(API_CONFIG.ENDPOINTS.NOTIFICATION.MARK_READ, {
+      method: 'PUT',
+      params: { notificationId },
+      body: {},
+      requiresAuth: true,
+    }),
+
+  markAllAsRead: () =>
+    apiCall(API_CONFIG.ENDPOINTS.NOTIFICATION.MARK_ALL_READ, {
+      method: 'PUT',
+      body: {},
+      requiresAuth: true,
+    }),
+
+  deleteNotification: (notificationId: string) =>
+    apiCall(API_CONFIG.ENDPOINTS.NOTIFICATION.DELETE, {
+      method: 'DELETE',
+      params: { notificationId },
+      requiresAuth: true,
+    }),
+
+  getUnreadCount: () =>
+    apiCall(API_CONFIG.ENDPOINTS.NOTIFICATION.UNREAD_COUNT, {
+      method: 'GET',
+      requiresAuth: true,
+    }),
+};
+
+// ==================
+// COIN API
+// ==================
+export const coinApi = {
+  getBalance: () =>
+    apiCall(API_CONFIG.ENDPOINTS.COIN.BALANCE, {
+      method: 'GET',
+      requiresAuth: true,
+    }),
+
+  getTransactions: (page: number = 1, limit: number = 20) =>
+    apiCall(API_CONFIG.ENDPOINTS.COIN.TRANSACTIONS, {
+      method: 'GET',
+      requiresAuth: true,
+      body: undefined,
+      params: undefined,
+    }),
+
+  getDiscountPreview: (rideAmount: number) =>
+    apiCall(`${API_CONFIG.ENDPOINTS.COIN.DISCOUNT_PREVIEW}?rideAmount=${rideAmount}`, {
+      method: 'GET',
+      requiresAuth: true,
+    }),
+
+  redeemCoins: (bookingId: string, coinsToUse: number) =>
+    apiCall(API_CONFIG.ENDPOINTS.COIN.REDEEM, {
+      method: 'POST',
+      body: { bookingId, coinsToUse },
+      requiresAuth: true,
+    }),
+
+  getMilestones: () =>
+    apiCall(API_CONFIG.ENDPOINTS.COIN.MILESTONES, {
+      method: 'GET',
+      requiresAuth: true,
+    }),
+};
+
+// ==================
+// REFERRAL API
+// ==================
+export const referralApi = {
+  getMyCode: () =>
+    apiCall(API_CONFIG.ENDPOINTS.REFERRAL.MY_CODE, {
+      method: 'GET',
+      requiresAuth: true,
+    }),
+
+  getStats: () =>
+    apiCall(API_CONFIG.ENDPOINTS.REFERRAL.STATS, {
+      method: 'GET',
+      requiresAuth: true,
+    }),
+
+  validateCode: (code: string) =>
+    apiCall(API_CONFIG.ENDPOINTS.REFERRAL.VALIDATE, {
+      method: 'POST',
+      body: { code },
+    }),
+};
+
+// ==================
+// PROMO API
+// ==================
+export const promoApi = {
+  submit: (platform: 'instagram_story' | 'instagram_reel' | 'youtube_short', proofUrl: string) =>
+    apiCall(API_CONFIG.ENDPOINTS.PROMO.SUBMIT, {
+      method: 'POST',
+      body: { platform, proofUrl },
+      requiresAuth: true,
+    }),
+
+  getMySubmissions: (page: number = 1, limit: number = 20) =>
+    apiCall(API_CONFIG.ENDPOINTS.PROMO.MY_SUBMISSIONS, {
+      method: 'GET',
+      requiresAuth: true,
+    }),
+};
+
+// ==================
+// SOS API
+// ==================
+export const sosApi = {
+  trigger: (location: { lat: number; lng: number; address?: string }, bookingId?: string) =>
+    apiCall('/api/sos/trigger', {
+      method: 'POST',
+      body: { location, bookingId },
+      requiresAuth: true,
+    }),
+  getHistory: (page: number = 1, limit: number = 20) =>
+    apiCall(`/api/sos/history?page=${page}&limit=${limit}`, {
+      method: 'GET',
+      requiresAuth: true,
+    }),
+};
+
+// ==================
+// Feedback API
+// ==================
+export const feedbackApi = {
+  submit: (data: {
+    type: 'issue' | 'suggestion' | 'complaint';
+    subject: string;
+    description: string;
+    priority?: 'high' | 'medium' | 'low';
+  }) =>
+    apiCall(API_CONFIG.ENDPOINTS.FEEDBACK.SUBMIT, {
+      method: 'POST',
+      body: data,
+      requiresAuth: true,
+    }),
+
+  getMyFeedback: (filters?: {
+    status?: string;
+    type?: string;
+    page?: number;
+    limit?: number;
+  }) =>
+    apiCall(API_CONFIG.ENDPOINTS.FEEDBACK.MY_FEEDBACK, {
+      method: 'GET',
+      query: filters as any,
+      requiresAuth: true,
+    }),
+
+  getById: (feedbackId: string) =>
+    apiCall(API_CONFIG.ENDPOINTS.FEEDBACK.GET, {
+      method: 'GET',
+      params: { feedbackId },
+      requiresAuth: true,
+    }),
+};
+
+// ==================
+// Admin Feedback API
+// ==================
+export const adminFeedbackApi = {
+  getAll: (filters?: {
+    status?: string;
+    type?: string;
+    priority?: string;
+    page?: number;
+    limit?: number;
+  }) =>
+    apiCall(API_CONFIG.ENDPOINTS.ADMIN.FEEDBACK_LIST, {
+      method: 'GET',
+      query: filters as any,
+      requiresAuth: true,
+    }),
+
+  getById: (feedbackId: string) =>
+    apiCall(API_CONFIG.ENDPOINTS.ADMIN.FEEDBACK_DETAIL, {
+      method: 'GET',
+      params: { feedbackId },
+      requiresAuth: true,
+    }),
+
+  updateStatus: (feedbackId: string, status: string) =>
+    apiCall(API_CONFIG.ENDPOINTS.ADMIN.FEEDBACK_UPDATE_STATUS, {
+      method: 'PUT',
+      params: { feedbackId },
+      body: { status },
+      requiresAuth: true,
+    }),
+
+  respond: (feedbackId: string, response: string) =>
+    apiCall(API_CONFIG.ENDPOINTS.ADMIN.FEEDBACK_RESPOND, {
+      method: 'POST',
+      params: { feedbackId },
+      body: { response },
+      requiresAuth: true,
+    }),
+
+  getStats: () =>
+    apiCall(API_CONFIG.ENDPOINTS.ADMIN.FEEDBACK_STATS, {
+      method: 'GET',
       requiresAuth: true,
     }),
 };

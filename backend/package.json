@@ -1,7 +1,7 @@
 {
-  "name": "yaaryatra-backend",
+  "name": "forlok-backend",
   "version": "1.0.0",
-  "description": "YAARYATRA Backend API - Ride Sharing Platform",
+  "description": "FORLOK Backend API - Ride Sharing Platform",
   "main": "dist/app.js",
   "scripts": {
     "dev": "nodemon --exec ts-node src/app.ts",
@@ -23,7 +23,7 @@
     "rental",
     "api"
   ],
-  "author": "YAARYATRA Team",
+  "author": "FORLOK Team",
   "license": "ISC",
   "dependencies": {
     "@fastify/cors": "^8.4.0",

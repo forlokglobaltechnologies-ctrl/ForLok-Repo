@@ -1,3 +1,53 @@
+import { StyleSheet, Platform } from 'react-native';
+
+/* ─────────────────────────────────────────────────────────────
+   GLOBAL FONT FIX – StyleSheet.create patch
+   
+   On Android, specifying fontWeight (700, 800, bold …) alongside
+   a custom fontFamily causes the OS to look for a bold-variant
+   font file.  If it cannot find one it silently falls back to
+   the SYSTEM font (Roboto).
+   
+   Because we ship only a single-weight file (MomoTrustDisplay-
+   Regular), the fix is to:
+     1. Inject fontFamily into every text-related style
+     2. Strip fontWeight on Android so the OS never attempts
+        a bold-variant lookup
+   
+   This patch runs BEFORE any screen module calls StyleSheet.create
+   (theme.ts is imported first in App.tsx's dependency tree).
+   ───────────────────────────────────────────────────────────── */
+const _GLOBAL_FONT = 'MomoTrustDisplay-Regular';
+const _IS_ANDROID = Platform.OS === 'android';
+
+const _isTextStyle = (s: Record<string, any>): boolean =>
+  s.fontSize !== undefined ||
+  s.fontWeight !== undefined ||
+  s.fontFamily !== undefined ||
+  s.fontStyle !== undefined ||
+  s.lineHeight !== undefined ||
+  s.letterSpacing !== undefined ||
+  s.textAlign !== undefined ||
+  s.textDecorationLine !== undefined ||
+  s.textTransform !== undefined;
+
+const _origCreate = StyleSheet.create;
+(StyleSheet as any).create = function (styles: Record<string, any>) {
+  const patched: Record<string, any> = {};
+  for (const key of Object.keys(styles)) {
+    const style = styles[key];
+    if (style && typeof style === 'object' && !Array.isArray(style) && _isTextStyle(style)) {
+      patched[key] = { ...style, fontFamily: _GLOBAL_FONT };
+      if (_IS_ANDROID) delete patched[key].fontWeight;
+    } else {
+      patched[key] = style;
+    }
+  }
+  return _origCreate(patched);
+};
+
+/* ───────────────────────────────────────────────────────────── */
+
 export const COLORS = {
   primary: '#071952',
   primaryDark: '#050E3A',
@@ -21,9 +71,24 @@ export const COLORS = {
   overlay: 'rgba(0, 0, 0, 0.5)',
 };
 
+// Pink Pooling Theme Colors
+export const PINK_COLORS = {
+  primary: '#FF6B9D',
+  primaryDark: '#FF87A8',
+  primaryLight: '#FFDEE7',
+  secondary: '#FFB6C1',
+  accent: '#FF6B9D',
+  background: '#FFF5F8',
+  border: '#FFDEE7',
+  pinkGradient: ['#FFDEE7', '#FF87A8'],
+};
+
 export const FONTS = {
   regular: 'MomoTrustDisplay-Regular',
-  bold: 'MomoTrustDisplay-Regular', // Add bold variant if available
+  medium: 'MomoTrustDisplay-Regular',
+  semiBold: 'MomoTrustDisplay-Regular',
+  bold: 'MomoTrustDisplay-Regular',
+  light: 'MomoTrustDisplay-Regular',
   sizes: {
     xs: 12,
     sm: 14,

@@ -8,6 +8,7 @@ import { Card } from '@components/common/Card';
 import { Button as CustomButton } from '@components/common/Button';
 import { Input } from '@components/common/Input';
 import { useLanguage } from '@context/LanguageContext';
+import { useTheme } from '@context/ThemeContext';
 import { poolingApi } from '@utils/apiClient';
 import { LocationData } from '@components/common/LocationPicker';
 
@@ -15,12 +16,15 @@ interface RouteParams {
   from?: LocationData;
   to?: LocationData;
   date?: string;
+  vehicleType?: 'Car' | 'Bike';
+  passengers?: number;
 }
 
 const SearchPoolingScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { t } = useLanguage();
+  const { isPinkMode, theme } = useTheme();
   const params = (route.params as RouteParams) || {};
   
   const [offers, setOffers] = useState<any[]>([]);
@@ -28,6 +32,9 @@ const SearchPoolingScreen = () => {
   const [fromLocation, setFromLocation] = useState<LocationData | null>(params.from || null);
   const [toLocation, setToLocation] = useState<LocationData | null>(params.to || null);
   const [date, setDate] = useState(params.date || new Date().toISOString().split('T')[0]);
+  const [vehicleType, setVehicleType] = useState<'Car' | 'Bike' | null>(params.vehicleType || null);
+  const [passengers, setPassengers] = useState<number>(params.passengers || 1);
+  const [hasAutoSearched, setHasAutoSearched] = useState(false);
 
   const loadOffers = async () => {
     if (!fromLocation || !toLocation) {
@@ -63,18 +70,28 @@ const SearchPoolingScreen = () => {
         date,
       });
 
-      const response = await poolingApi.searchOffers({
+      const searchParams: any = {
         fromLat,
         fromLng,
         toLat,
         toLng,
-        date: date || undefined, // Pass date string directly
-      });
+        date: date || undefined,
+        pinkOnly: isPinkMode,
+      };
+      if (vehicleType) {
+        searchParams.vehicleType = vehicleType;
+      }
+
+      const response = await poolingApi.searchOffers(searchParams);
       
       if (response.success && response.data) {
-        const offersData = response.data.offers || response.data || [];
+        let offersData = response.data.offers || response.data || [];
+        // Filter by minimum available seats if passengers filter is set
+        if (passengers > 1) {
+          offersData = offersData.filter((offer: any) => (offer.availableSeats || 0) >= passengers);
+        }
         setOffers(offersData);
-        console.log(`✅ Loaded ${offersData.length} pooling offers`);
+        console.log(`✅ Loaded ${offersData.length} pooling offers (filtered for ${passengers} passenger(s))`);
       } else {
         console.warn('⚠️ No offers found:', response.error);
         setOffers([]);
@@ -88,6 +105,20 @@ const SearchPoolingScreen = () => {
       setLoading(false);
     }
   };
+
+  // Auto-search when navigated from dashboard with valid locations
+  useEffect(() => {
+    if (
+      !hasAutoSearched &&
+      fromLocation?.lat && fromLocation?.lng &&
+      toLocation?.lat && toLocation?.lng &&
+      fromLocation.lat !== 0 && fromLocation.lng !== 0 &&
+      toLocation.lat !== 0 && toLocation.lng !== 0
+    ) {
+      setHasAutoSearched(true);
+      loadOffers();
+    }
+  }, [fromLocation, toLocation]);
 
   const handleSelectFromLocation = () => {
     navigation.navigate('LocationPicker' as never, {
@@ -110,23 +141,23 @@ const SearchPoolingScreen = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <ImageBackground
         source={require('../../../assets/pooling search.jpg')}
         style={styles.headerImage}
         resizeMode="cover"
       >
-        <View style={styles.overlay} />
+        <View style={[styles.overlay, { backgroundColor: theme.colors.primary }]} />
         <BlurView intensity={50} style={styles.blurContainer}>
           <View style={styles.header}>
             <TouchableOpacity 
               onPress={() => navigation.goBack()} 
               style={[styles.iconButton, styles.backButton]}
             >
-              <ArrowLeft size={20} color={COLORS.white} />
+              <ArrowLeft size={20} color={theme.colors.white} />
             </TouchableOpacity>
             <View style={styles.quotationContainer}>
-              <Text style={styles.quotationText}>
+              <Text style={[styles.quotationText, { color: theme.colors.white }]}>
                 {t('searchPooling.quotation')}
               </Text>
             </View>
@@ -135,8 +166,8 @@ const SearchPoolingScreen = () => {
       </ImageBackground>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Location Selection Card */}
-        <View style={styles.searchCard}>
-          <Text style={styles.searchCardTitle}>Search Pooling Offers</Text>
+        <View style={[styles.searchCard, { backgroundColor: theme.colors.surface }]}>
+          <Text style={[styles.searchCardTitle, { color: theme.colors.text }]}>Search Pooling Offers</Text>
           
           <TouchableOpacity onPress={handleSelectFromLocation} activeOpacity={0.7}>
             <Input
@@ -145,12 +176,12 @@ const SearchPoolingScreen = () => {
               placeholder="Select pickup location"
               editable={false}
               containerStyle={styles.locationInput}
-              leftIcon={<MapPin size={20} color={COLORS.primary} />}
+              leftIcon={<MapPin size={20} color={theme.colors.primary} />}
             />
           </TouchableOpacity>
 
           <View style={styles.arrowDivider}>
-            <ArrowRight size={18} color={COLORS.textSecondary} />
+            <ArrowRight size={18} color={theme.colors.textSecondary} />
           </View>
 
           <TouchableOpacity onPress={handleSelectToLocation} activeOpacity={0.7}>
@@ -160,13 +191,13 @@ const SearchPoolingScreen = () => {
               placeholder="Select destination"
               editable={false}
               containerStyle={styles.locationInput}
-              leftIcon={<MapPin size={20} color={COLORS.primary} />}
+              leftIcon={<MapPin size={20} color={theme.colors.primary} />}
             />
           </TouchableOpacity>
 
-          <View style={styles.dateContainer}>
-            <Calendar size={18} color={COLORS.textSecondary} />
-            <Text style={styles.dateText}>
+          <View style={[styles.dateContainer, { borderTopColor: theme.colors.border }]}>
+            <Calendar size={18} color={theme.colors.textSecondary} />
+            <Text style={[styles.dateText, { color: theme.colors.textSecondary }]}>
               {new Date(date).toLocaleDateString('en-IN', { 
                 weekday: 'short',
                 day: 'numeric', 
@@ -174,6 +205,75 @@ const SearchPoolingScreen = () => {
                 year: 'numeric' 
               })}
             </Text>
+          </View>
+
+          {/* Vehicle Type Filter */}
+          <View style={styles.filterSection}>
+            <Text style={[styles.filterLabel, { color: theme.colors.text }]}>Vehicle Type</Text>
+            <View style={styles.vehicleFilterRow}>
+              <TouchableOpacity
+                style={[
+                  styles.vehicleFilterBtn,
+                  { borderColor: theme.colors.border },
+                  vehicleType === null && { borderColor: theme.colors.primary, backgroundColor: `${theme.colors.primary}15` },
+                ]}
+                onPress={() => setVehicleType(null)}
+              >
+                <Text style={[styles.vehicleFilterText, { color: vehicleType === null ? theme.colors.primary : theme.colors.textSecondary }]}>All</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.vehicleFilterBtn,
+                  { borderColor: theme.colors.border },
+                  vehicleType === 'Car' && { borderColor: theme.colors.primary, backgroundColor: `${theme.colors.primary}15` },
+                ]}
+                onPress={() => { setVehicleType('Car'); setOffers([]); }}
+              >
+                <Car size={16} color={vehicleType === 'Car' ? theme.colors.primary : theme.colors.textSecondary} />
+                <Text style={[styles.vehicleFilterText, { color: vehicleType === 'Car' ? theme.colors.primary : theme.colors.textSecondary }]}>Car</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.vehicleFilterBtn,
+                  { borderColor: theme.colors.border },
+                  vehicleType === 'Bike' && { borderColor: theme.colors.primary, backgroundColor: `${theme.colors.primary}15` },
+                ]}
+                onPress={() => { setVehicleType('Bike'); setPassengers(1); setOffers([]); }}
+              >
+                <Bike size={16} color={vehicleType === 'Bike' ? theme.colors.primary : theme.colors.textSecondary} />
+                <Text style={[styles.vehicleFilterText, { color: vehicleType === 'Bike' ? theme.colors.primary : theme.colors.textSecondary }]}>Bike</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Passengers Filter */}
+          <View style={styles.filterSection}>
+            <Text style={[styles.filterLabel, { color: theme.colors.text }]}>Passengers</Text>
+            <View style={styles.vehicleFilterRow}>
+              {[1, 2, 3, 4].map((num) => (
+                <TouchableOpacity
+                  key={num}
+                  style={[
+                    styles.passengerFilterBtn,
+                    { borderColor: theme.colors.border },
+                    passengers === num && { borderColor: theme.colors.primary, backgroundColor: `${theme.colors.primary}15` },
+                    vehicleType === 'Bike' && num > 1 && { opacity: 0.4 },
+                  ]}
+                  onPress={() => {
+                    if (vehicleType !== 'Bike' || num === 1) {
+                      setPassengers(num);
+                      setOffers([]);
+                    }
+                  }}
+                  disabled={vehicleType === 'Bike' && num > 1}
+                >
+                  <Text style={[styles.vehicleFilterText, { color: passengers === num ? theme.colors.primary : theme.colors.textSecondary }]}>{num}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            {vehicleType === 'Bike' && (
+              <Text style={[styles.hintText, { color: theme.colors.textSecondary }]}>Only 1 passenger for Bike</Text>
+            )}
           </View>
 
           {/* Search Button */}
@@ -191,7 +291,7 @@ const SearchPoolingScreen = () => {
         {fromLocation && toLocation && (
           <View style={styles.resultsHeader}>
             <View style={styles.resultsHeaderLeft}>
-              <Text style={styles.resultsCount}>
+              <Text style={[styles.resultsCount, { color: theme.colors.text }]}>
                 {loading 
                   ? 'Searching...' 
                   : offers.length > 0 
@@ -199,17 +299,17 @@ const SearchPoolingScreen = () => {
                     : 'No pools found'}
               </Text>
               {offers.length > 0 && (
-                <Text style={styles.resultsSubtext}>
+                <Text style={[styles.resultsSubtext, { color: theme.colors.textSecondary }]}>
                   {fromLocation.address.split(',')[0]} → {toLocation.address.split(',')[0]}
                 </Text>
               )}
             </View>
             {offers.length > 0 && (
               <TouchableOpacity
-                style={styles.filterButton}
+                style={[styles.filterButton, { backgroundColor: `${theme.colors.primary}15` }]}
                 onPress={() => navigation.navigate('Filter' as never)}
               >
-                <Filter size={20} color={COLORS.primary} />
+                <Filter size={20} color={theme.colors.primary} />
               </TouchableOpacity>
             )}
           </View>
@@ -217,35 +317,48 @@ const SearchPoolingScreen = () => {
         
         {loading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={COLORS.primary} />
-            <Text style={styles.loadingText}>Searching for pooling offers...</Text>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+            <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Searching for pooling offers...</Text>
           </View>
         ) : offers.length > 0 ? (
-          offers.map((offer) => (
-            <Card key={offer.offerId || offer._id} style={styles.offerCard}>
-              <View style={styles.offerHeader}>
-                {offer.vehicle?.type?.toLowerCase() === 'car' ? (
-                  <Car size={24} color={COLORS.primary} />
-                ) : (
-                  <Bike size={24} color={COLORS.primary} />
-                )}
-                <Text style={styles.timeText}>
-                  {offer.time || new Date(offer.date).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+          <>
+            {isPinkMode && (
+              <View style={[styles.pinkModeBanner, { backgroundColor: theme.colors.primaryLight }]}>
+                <Text style={[styles.pinkModeText, { color: theme.colors.primary }]}>
+                  Showing only female drivers - Pink Pooling Mode
                 </Text>
               </View>
-              <Text style={styles.driverName}>
-                {offer.driver?.name || offer.driverId || 'Driver'}
-              </Text>
+            )}
+            {offers.map((offer) => (
+              <Card key={offer.offerId || offer._id} style={styles.offerCard}>
+                <View style={styles.offerHeader}>
+                  {offer.vehicle?.type?.toLowerCase() === 'car' ? (
+                    <Car size={24} color={theme.colors.primary} />
+                  ) : (
+                    <Bike size={24} color={theme.colors.primary} />
+                  )}
+                  <Text style={[styles.timeText, { color: theme.colors.text }]}>
+                    {offer.time || new Date(offer.date).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                  </Text>
+                  {isPinkMode && (
+                    <View style={[styles.pinkBadge, { backgroundColor: theme.colors.primary }]}>
+                      <Text style={[styles.pinkBadgeText, { color: theme.colors.white }]}>Pink</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={[styles.driverName, { color: theme.colors.text }]}>
+                  {offer.driver?.name || offer.driverId || 'Driver'}
+                </Text>
               <View style={styles.ratingContainer}>
-                <Star size={16} color={COLORS.warning} fill={COLORS.warning} />
-                <Text style={styles.ratingText}>
-                  {offer.driver?.rating || 0} ({offer.driver?.totalReviews || 0} {t('common.reviews')})
+                <Star size={16} color={theme.colors.warning} fill={theme.colors.warning} />
+                <Text style={[styles.ratingText, { color: theme.colors.textSecondary }]}>
+                  {Number(offer.driver?.rating || offer.rating || 0).toFixed(1)} ({offer.driver?.totalReviews || offer.totalReviews || 0} {t('common.reviews')})
                 </Text>
               </View>
-              <Text style={styles.seatsText}>
+              <Text style={[styles.seatsText, { color: theme.colors.text }]}>
                 {t('searchPooling.available')}: {offer.availableSeats || 0} {t('searchPooling.seats')}
               </Text>
-              <Text style={styles.priceText}>₹{offer.price || 0} {t('searchPooling.perPerson')}</Text>
+              <Text style={[styles.priceText, { color: theme.colors.primary }]}>₹{offer.price || 0} {t('searchPooling.perPerson')}</Text>
               <CustomButton 
                 title={t('searchPooling.viewDetails')} 
                 onPress={() => navigation.navigate('PoolingDetails' as never, { 
@@ -261,11 +374,12 @@ const SearchPoolingScreen = () => {
                 style={styles.detailsButton} 
               />
             </Card>
-          ))
+          ))}
+          </>
         ) : fromLocation && toLocation && !loading ? (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No pooling offers found</Text>
-            <Text style={styles.emptySubtext}>Try adjusting your search criteria or selecting different locations</Text>
+            <Text style={[styles.emptyText, { color: theme.colors.text }]}>No pooling offers found</Text>
+            <Text style={[styles.emptySubtext, { color: theme.colors.textSecondary }]}>Try adjusting your search criteria or selecting different locations</Text>
           </View>
         ) : null}
       </ScrollView>
@@ -276,7 +390,6 @@ const SearchPoolingScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
   },
   headerImage: {
     width: '100%',
@@ -284,7 +397,6 @@ const styles = StyleSheet.create({
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: COLORS.primary,
     opacity: 0.6,
   },
   blurContainer: {
@@ -321,14 +433,12 @@ const styles = StyleSheet.create({
   quotationText: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.md,
-    color: COLORS.white,
     textAlign: 'center',
     lineHeight: 22,
     maxWidth: '100%',
   },
   scrollContent: { padding: SPACING.md },
   searchCard: {
-    backgroundColor: COLORS.white,
     borderRadius: BORDER_RADIUS.lg,
     padding: SPACING.lg,
     marginBottom: SPACING.md,
@@ -337,7 +447,6 @@ const styles = StyleSheet.create({
   searchCardTitle: {
     fontFamily: FONTS.medium,
     fontSize: FONTS.sizes.lg,
-    color: COLORS.text,
     marginBottom: SPACING.lg,
     fontWeight: '600',
   },
@@ -357,12 +466,50 @@ const styles = StyleSheet.create({
     marginTop: SPACING.xs,
     marginBottom: SPACING.md,
     borderTopWidth: 1,
-    borderTopColor: COLORS.lightGray,
   },
   dateText: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.sm,
-    color: COLORS.textSecondary,
+  },
+  filterSection: {
+    marginTop: SPACING.sm,
+    marginBottom: SPACING.sm,
+  },
+  filterLabel: {
+    fontFamily: FONTS.medium,
+    fontSize: FONTS.sizes.sm,
+    fontWeight: '600',
+    marginBottom: SPACING.xs,
+  },
+  vehicleFilterRow: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+  },
+  vehicleFilterBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+  },
+  passengerFilterBtn: {
+    width: 44,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+  },
+  vehicleFilterText: {
+    fontFamily: FONTS.medium,
+    fontSize: FONTS.sizes.sm,
+  },
+  hintText: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.xs,
+    marginTop: SPACING.xs,
   },
   searchButton: {
     marginTop: SPACING.sm,
@@ -380,34 +527,31 @@ const styles = StyleSheet.create({
   resultsCount: {
     fontFamily: FONTS.medium,
     fontSize: FONTS.sizes.md,
-    color: COLORS.text,
     fontWeight: '600',
     marginBottom: SPACING.xs,
   },
   resultsSubtext: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.sm,
-    color: COLORS.textSecondary,
   },
   filterButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: `${COLORS.primary}15`,
     justifyContent: 'center',
     alignItems: 'center',
   },
   offerCard: { marginBottom: SPACING.md, padding: SPACING.md },
   offerHeader: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.sm },
-  timeText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.md, color: COLORS.text, fontWeight: 'bold' },
-  driverName: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.md, color: COLORS.text, marginBottom: SPACING.xs },
+  timeText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.md, fontWeight: 'bold' },
+  driverName: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.md, marginBottom: SPACING.xs },
   ratingContainer: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs, marginBottom: SPACING.xs },
-  ratingText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: COLORS.textSecondary },
-  seatsText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: COLORS.text, marginBottom: SPACING.xs },
-  priceText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.md, color: COLORS.primary, fontWeight: 'bold', marginBottom: SPACING.sm },
+  ratingText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm },
+  seatsText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, marginBottom: SPACING.xs },
+  priceText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.md, fontWeight: 'bold', marginBottom: SPACING.sm },
   detailsButton: { marginTop: SPACING.xs },
   loadMore: { alignItems: 'center', padding: SPACING.md },
-  loadMoreText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.md, color: COLORS.primary },
+  loadMoreText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.md },
   loadingContainer: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -416,8 +560,29 @@ const styles = StyleSheet.create({
   loadingText: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.md,
-    color: COLORS.textSecondary,
     marginTop: SPACING.md,
+  },
+  pinkModeBanner: {
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    marginBottom: SPACING.md,
+    alignItems: 'center',
+  },
+  pinkModeText: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.sm,
+    fontWeight: '600',
+  },
+  pinkBadge: {
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    borderRadius: BORDER_RADIUS.sm,
+    marginLeft: 'auto',
+  },
+  pinkBadgeText: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.xs,
+    fontWeight: 'bold',
   },
   emptyContainer: {
     alignItems: 'center',
@@ -427,14 +592,12 @@ const styles = StyleSheet.create({
   emptyText: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.md,
-    color: COLORS.text,
     fontWeight: '600',
     marginBottom: SPACING.xs,
   },
   emptySubtext: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.sm,
-    color: COLORS.textSecondary,
   },
 });
 

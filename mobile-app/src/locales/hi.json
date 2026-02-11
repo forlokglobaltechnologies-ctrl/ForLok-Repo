@@ -41,7 +41,7 @@
     "details": "विवरण"
   },
   "splash": {
-    "appName": "YAARYATRA",
+    "appName": "FORLOK",
     "tagline": "अपनी यात्रा साझा करें, अपना पैसा बचाएं"
   },
   "onboarding": {
@@ -53,7 +53,7 @@
   },
   "signUp": {
     "title": "अपना खाता बनाएं",
-    "subtitle": "चुनें कि आप YAARYATRA का उपयोग कैसे करना चाहते हैं",
+    "subtitle": "चुनें कि आप FORLOK का उपयोग कैसे करना चाहते हैं",
     "selectLanguage": "भाषा चुनें",
     "english": "अंग्रेजी",
     "telugu": "तेलुगु",
@@ -517,7 +517,18 @@
     "rateService": "सेवा को रेट करें",
     "addComment": "टिप्पणी जोड़ें (वैकल्पिक)",
     "submitRating": "रेटिंग जमा करें",
-    "thankYou": "आपके फीडबैक के लिए धन्यवाद!"
+    "thankYou": "आपके फीडबैक के लिए धन्यवाद!",
+    "howWasTrip": "आपकी यात्रा कैसी रही?",
+    "tapToRate": "रेट करने के लिए स्टार टैप करें",
+    "writeReview": "समीक्षा लिखें",
+    "shareExperience": "अपना अनुभव समुदाय के साथ साझा करें...",
+    "rateSpecificAspects": "विशिष्ट पहलुओं को रेट करें",
+    "punctuality": "समयनिष्ठा",
+    "vehicleCondition": "वाहन स्थिति",
+    "driving": "ड्राइविंग",
+    "submitReview": "समीक्षा जमा करें",
+    "quickTags": "त्वरित टैग",
+    "selectTags": "लागू होने वाले टैग चुनें..."
   },
   "profile": {
     "title": "प्रोफ़ाइल",
@@ -718,7 +729,7 @@
   },
   "admin": {
     "login": {
-      "title": "YAARYATRA एडमिन",
+      "title": "FORLOK एडमिन",
       "restrictedArea": "प्रतिबंधित पहुंच क्षेत्र",
       "adminId": "एडमिन ID *",
       "enterAdminId": "एडमिन ID दर्ज करें",
@@ -731,7 +742,7 @@
       "securityNotice": "सुरक्षा सूचना:\nयह एक प्रतिबंधित एडमिन क्षेत्र है।\nअनधिकृत पहुंच निषिद्ध है।"
     },
     "dashboard": {
-      "title": "YAARYATRA एडमिन",
+      "title": "FORLOK एडमिन",
       "activeUsers": "सक्रिय उपयोगकर्ता",
       "live": "लाइव",
       "totalUsers": "कुल उपयोगकर्ता",

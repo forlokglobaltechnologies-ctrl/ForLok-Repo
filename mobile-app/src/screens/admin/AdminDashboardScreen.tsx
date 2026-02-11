@@ -1,23 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   RefreshControl,
-  ImageBackground,
+  Image,
   Dimensions,
-  Alert,
+  ActivityIndicator,
+  FlatList,
+  Platform,
+  StatusBar,
 } from 'react-native';
-import { useNavigation, CommonActions } from '@react-navigation/native';
-import { BlurView } from 'expo-blur';
+import { useNavigation } from '@react-navigation/native';
+import { LinearGradient } from 'expo-linear-gradient';
+import LottieView from 'lottie-react-native';
 import {
-  Menu,
   Bell,
   Settings,
-  User,
   LogOut,
   TrendingUp,
   Users,
@@ -26,597 +27,718 @@ import {
   Car,
   KeyRound,
   Clock,
-  Shield,
-  ChevronLeft,
   ChevronRight,
-  AlertCircle,
   CheckCircle,
-  CreditCard,
   Lightbulb,
-  XCircle,
+  Wallet,
+  Coins,
+  BarChart3,
+  Shield,
+  Activity,
+  ArrowUpRight,
+  ArrowDownRight,
+  Circle,
+  Zap,
 } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
-import { Card } from '@components/common/Card';
 import { useLanguage } from '@context/LanguageContext';
-import { apiService } from '@services/api.service';
-import { websocketService } from '@services/websocket.service';
+import { adminApi, analyticsApi, apiCall } from '@utils/apiClient';
 
-const { width } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const CAROUSEL_HEIGHT = 180;
+const STAT_CARD_WIDTH = (SCREEN_WIDTH - SPACING.lg * 2 - SPACING.sm) / 2;
+
+// ── Carousel images ──────────────────────────────────────────────
+const CAROUSEL_IMAGES = [
+  require('../../../assets/admin1.png'),
+  require('../../../assets/admin2.png'),
+  require('../../../assets/admin3.png'),
+  require('../../../assets/admin4.png'),
+  require('../../../assets/admin5.png'),
+];
+
+// ── Quick-action config ──────────────────────────────────────────
+const QUICK_ACTIONS = [
+  { key: 'pooling', icon: Car, label: 'Pooling', color: '#4A90D9', route: 'PoolingManagement' },
+  { key: 'rental', icon: KeyRound, label: 'Rentals', color: '#7B61FF', route: 'RentalManagement' },
+  { key: 'users', icon: Users, label: 'Users', color: '#00B894', route: 'UserManagement' },
+  { key: 'history', icon: Clock, label: 'History', color: '#F39C12', route: 'RidesHistory' },
+  { key: 'feedback', icon: MessageSquare, label: 'Feedback', color: '#E74C3C', route: 'FeedbackManagement' },
+  { key: 'analytics', icon: BarChart3, label: 'Analytics', color: '#0984E3', route: 'Analytics' },
+  { key: 'payments', icon: Wallet, label: 'Payments', color: '#6C5CE7', route: 'AdminPendingPayments' },
+  { key: 'promos', icon: Lightbulb, label: 'Promos', color: '#F5A623', route: 'AdminPromoReview' },
+];
 
 const AdminDashboardScreen = () => {
   const navigation = useNavigation();
   const { t } = useLanguage();
   const [refreshing, setRefreshing] = useState(false);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [animDone, setAnimDone] = useState(false);
+  const [dataDone, setDataDone] = useState(false);
+  const flatListRef = useRef<FlatList>(null);
+  const autoScrollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [activeSlide, setActiveSlide] = useState(0);
 
-  const carouselImages = [
-    require('../../../assets/onboarding2.jpg'),
-    require('../../../assets/pooling search.jpg'),
-    require('../../../assets/user.jpg'),
-    require('../../../assets/signin.jpg'),
-  ];
+  // Real data states
+  const [stats, setStats] = useState<any>({
+    users: { total: 0, active: 0 },
+    bookings: { total: 0, today: 0, pending: 0, completed: 0 },
+    revenue: { total: 0, today: 0 },
+  });
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [coinStats, setCoinStats] = useState<any>(null);
+  const [pendingPromos, setPendingPromos] = useState(0);
 
-  const onRefresh = () => {
+  // ── Data fetch ────────────────────────────────────────────────
+  const fetchDashboardData = useCallback(async () => {
+    try {
+      const [statsRes, realtimeRes, coinStatsRes, pendingPromosRes] = await Promise.all([
+        adminApi.getDashboardStats(),
+        analyticsApi.getRealtime().catch(() => ({ success: false })),
+        apiCall('/api/admin/coins/stats', { method: 'GET', requiresAuth: true }).catch(() => ({ success: false })),
+        apiCall('/api/admin/promos?status=pending', { method: 'GET', requiresAuth: true }).catch(() => ({ success: false })),
+      ]);
+
+      if (statsRes.success && statsRes.data) setStats(statsRes.data);
+      if (realtimeRes.success && realtimeRes.data?.recentActivity) setRecentActivity(realtimeRes.data.recentActivity);
+      if (coinStatsRes.success && coinStatsRes.data) setCoinStats(coinStatsRes.data);
+      if (pendingPromosRes.success) {
+        const submissions = pendingPromosRes.data?.submissions || pendingPromosRes.data || [];
+        setPendingPromos(Array.isArray(submissions) ? submissions.length : 0);
+      }
+    } catch (error) {
+      console.error('Error fetching admin dashboard data:', error);
+    } finally {
+      setDataDone(true);
+    }
+  }, []);
+
+  // Start data fetch and 3-second animation timer together
+  useEffect(() => {
+    fetchDashboardData();
+    const timer = setTimeout(() => setAnimDone(true), 3000);
+    return () => clearTimeout(timer);
+  }, [fetchDashboardData]);
+
+  // Only hide loading when BOTH animation and data are done
+  useEffect(() => {
+    if (animDone && dataDone) setLoading(false);
+  }, [animDone, dataDone]);
+
+  // ── Auto-scroll carousel ──────────────────────────────────────
+  useEffect(() => {
+    autoScrollTimer.current = setInterval(() => {
+      setActiveSlide((prev) => {
+        const next = (prev + 1) % CAROUSEL_IMAGES.length;
+        flatListRef.current?.scrollToIndex({ index: next, animated: true });
+        return next;
+      });
+    }, 3500);
+    return () => { if (autoScrollTimer.current) clearInterval(autoScrollTimer.current); };
+  }, []);
+
+  const onRefresh = async () => {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 2000);
+    await fetchDashboardData();
+    setRefreshing(false);
   };
 
-  const goToPrevious = () => {
-    setCurrentImageIndex((prev) => 
-      prev === 0 ? carouselImages.length - 1 : prev - 1
+  const formatCurrency = (amount: number) => {
+    if (amount >= 10000000) return `₹${(amount / 10000000).toFixed(1)}Cr`;
+    if (amount >= 100000) return `₹${(amount / 100000).toFixed(1)}L`;
+    if (amount >= 1000) return `₹${(amount / 1000).toFixed(0)}K`;
+    return `₹${amount}`;
+  };
+
+  const formatNumber = (num: number) => {
+    if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+    return num.toLocaleString();
+  };
+
+  // ── Loading state ─────────────────────────────────────────────
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <StatusBar barStyle="dark-content" translucent backgroundColor="transparent" />
+        <LottieView
+          source={require('../../../assets/videos/Ai loading model.json')}
+          autoPlay
+          loop={false}
+          speed={1}
+          style={styles.loadingAnimation}
+        />
+        <Text style={styles.loadingText}>Loading Dashboard...</Text>
+      </View>
     );
-  };
+  }
 
-  const goToNext = () => {
-    setCurrentImageIndex((prev) => 
-      prev === carouselImages.length - 1 ? 0 : prev + 1
-    );
-  };
-
-  const handleLogout = () => {
-    Alert.alert(
-      t('profile.logout'),
-      'Are you sure you want to logout?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: t('profile.logout'),
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              // Clear all stored tokens
-              await apiService.clearTokens();
-              
-              // Disconnect websocket
-              websocketService.disconnect();
-              
-              // Reset navigation to SignIn screen and clear history
-              navigation.dispatch(
-                CommonActions.reset({
-                  index: 0,
-                  routes: [{ name: 'SignIn' }],
-                })
-              );
-            } catch (error) {
-              console.error('Logout error:', error);
-              // Even if there's an error, navigate to SignIn
-              navigation.dispatch(
-                CommonActions.reset({
-                  index: 0,
-                  routes: [{ name: 'SignIn' }],
-                })
-              );
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  // Mock data
-  const stats = {
-    presentUsers: 1234,
-    totalUsers: 45678,
-    todayEarnings: 125450,
-    totalEarnings: 24567890,
-    pendingFeedback: 5,
-    totalTransactions: 1234,
-  };
-
-  const recentTransactions = [
-    { id: '1', user: 'Rajesh K.', service: 'Car Pool', date: '15 Jan', revenue: '₹450' },
-    { id: '2', user: 'Priya M.', service: 'Rental', date: '15 Jan', revenue: '₹3,200' },
-    { id: '3', user: 'Amit S.', service: 'Bike Pool', date: '14 Jan', revenue: '₹300' },
-  ];
-
-  const recentFeedback = [
-    { id: '1', type: 'Payment Issue', user: 'User ID: 12345', status: 'Pending', icon: CreditCard },
-    { id: '2', type: 'Feature Suggestion', user: 'User ID: 67890', status: 'Acknowledged', icon: Lightbulb },
-    { id: '3', type: 'Complaint', user: 'User ID: 11111', status: 'Resolved', icon: XCircle },
-  ];
+  // ── Carousel item ─────────────────────────────────────────────
+  const renderCarouselItem = ({ item }: { item: any }) => (
+    <View style={styles.carouselSlide}>
+      <Image source={item} style={styles.carouselImage} resizeMode="cover" />
+    </View>
+  );
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Blue Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.menuButton}>
-          <Menu size={24} color={COLORS.white} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('admin.dashboard.title')}</Text>
-        <View style={styles.headerRight}>
-          <TouchableOpacity
-            style={styles.iconButton}
-            onPress={() => navigation.navigate('Notifications' as never)}
-          >
-            <Bell size={24} color={COLORS.white} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.iconButton}
-            onPress={() => navigation.navigate('AdminSettings' as never)}
-          >
-            <Settings size={24} color={COLORS.white} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.iconButton}
-            onPress={handleLogout}
-          >
-            <LogOut size={24} color={COLORS.white} />
-          </TouchableOpacity>
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+
+      {/* ─── Dark gradient header ─────────────────────────────── */}
+      <LinearGradient colors={['#1A1A2E', '#16213E', '#0F3460']} style={styles.header}>
+        <View style={styles.headerContent}>
+          <View style={styles.headerLeft}>
+            <View style={styles.adminAvatarWrap}>
+              <Shield size={18} color="#4A90D9" />
+            </View>
+            <View>
+              <Text style={styles.headerGreeting}>Welcome back</Text>
+              <Text style={styles.headerTitle}>Admin Panel</Text>
+            </View>
+          </View>
+          <View style={styles.headerRight}>
+            <TouchableOpacity
+              style={styles.headerIconBtn}
+              onPress={() => navigation.navigate('Notifications' as never)}
+            >
+              <Bell size={20} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.headerIconBtn}
+              onPress={() => navigation.navigate('AdminSettings' as never)}
+            >
+              <Settings size={20} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.headerIconBtn}
+              onPress={() => navigation.navigate('SignIn' as never)}
+            >
+              <LogOut size={20} color="#FF6B6B" />
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      </LinearGradient>
 
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#4A90D9" />
+        }
         showsVerticalScrollIndicator={false}
       >
-        {/* Image Carousel */}
+        {/* ─── Carousel ───────────────────────────────────────── */}
         <View style={styles.carouselContainer}>
-          <ImageBackground
-            source={carouselImages[currentImageIndex]}
-            style={styles.carouselImage}
-            resizeMode="cover"
-          >
-            <View style={styles.overlay} />
-            <BlurView intensity={50} style={styles.blurContainer}>
-              <TouchableOpacity
-                style={styles.carouselArrow}
-                onPress={goToPrevious}
-              >
-                <ChevronLeft size={24} color={COLORS.white} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.carouselArrow, styles.carouselArrowRight]}
-                onPress={goToNext}
-              >
-                <ChevronRight size={24} color={COLORS.white} />
-              </TouchableOpacity>
-            </BlurView>
-          </ImageBackground>
-          <View style={styles.carouselIndicators}>
-            {carouselImages.map((_, index) => (
+          <FlatList
+            ref={flatListRef}
+            data={CAROUSEL_IMAGES}
+            renderItem={renderCarouselItem}
+            keyExtractor={(_, i) => `slide-${i}`}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onScroll={(e) => {
+              const slideWidth = SCREEN_WIDTH - SPACING.lg * 2;
+              const index = Math.round(e.nativeEvent.contentOffset.x / slideWidth);
+              if (index >= 0 && index < CAROUSEL_IMAGES.length) {
+                setActiveSlide(index);
+              }
+            }}
+            scrollEventThrottle={200}
+            getItemLayout={(_, index) => ({
+              length: SCREEN_WIDTH - SPACING.lg * 2,
+              offset: (SCREEN_WIDTH - SPACING.lg * 2) * index,
+              index,
+            })}
+          />
+          <View style={styles.dotsRow}>
+            {CAROUSEL_IMAGES.map((_, i) => (
               <View
-                key={index}
-                style={[
-                  styles.indicator,
-                  index === currentImageIndex && styles.indicatorActive,
-                ]}
+                key={i}
+                style={[styles.dot, activeSlide === i && styles.dotActive]}
               />
             ))}
           </View>
         </View>
 
-        {/* Statistics Boxes */}
-        <View style={styles.statsContainer}>
-          <Card style={styles.statBox}>
-            <View style={styles.statIconContainer}>
-              <Users size={32} color={COLORS.primary} />
+        {/* ─── Stat Cards (2x2 grid) ─────────────────────────── */}
+        <View style={styles.statsGrid}>
+          {/* Active Users */}
+          <View style={[styles.statCard, { backgroundColor: '#EBF5FF' }]}>
+            <View style={styles.statCardHeader}>
+              <View style={[styles.statIconWrap, { backgroundColor: '#4A90D9' }]}>
+                <Activity size={18} color="#fff" />
+              </View>
+              <View style={styles.liveBadge}>
+                <Circle size={6} color="#00B894" fill="#00B894" />
+                <Text style={styles.liveBadgeText}>Live</Text>
+              </View>
             </View>
-            <Text style={styles.statValue}>{stats.presentUsers.toLocaleString()}</Text>
-            <Text style={styles.statLabel}>{t('admin.dashboard.activeUsers')}</Text>
-            <View style={styles.liveIndicator}>
-              <View style={styles.liveDot} />
-              <Text style={styles.liveText}>{t('admin.dashboard.live')}</Text>
+            <Text style={[styles.statCardValue, { color: '#4A90D9' }]}>
+              {formatNumber(stats.users?.active || 0)}
+            </Text>
+            <Text style={styles.statCardLabel}>Active Users</Text>
+          </View>
+
+          {/* Total Users */}
+          <View style={[styles.statCard, { backgroundColor: '#F0EBFF' }]}>
+            <View style={styles.statCardHeader}>
+              <View style={[styles.statIconWrap, { backgroundColor: '#7B61FF' }]}>
+                <Users size={18} color="#fff" />
+              </View>
             </View>
-          </Card>
-          <Card style={styles.statBox}>
-            <View style={styles.statIconContainer}>
-              <Users size={32} color={COLORS.primary} />
+            <Text style={[styles.statCardValue, { color: '#7B61FF' }]}>
+              {formatNumber(stats.users?.total || 0)}
+            </Text>
+            <Text style={styles.statCardLabel}>Total Users</Text>
+          </View>
+
+          {/* Today's Revenue */}
+          <View style={[styles.statCard, { backgroundColor: '#E8FFF3' }]}>
+            <View style={styles.statCardHeader}>
+              <View style={[styles.statIconWrap, { backgroundColor: '#00B894' }]}>
+                <DollarSign size={18} color="#fff" />
+              </View>
+              <View style={styles.trendBadge}>
+                <ArrowUpRight size={12} color="#00B894" />
+                <Text style={[styles.trendText, { color: '#00B894' }]}>Today</Text>
+              </View>
             </View>
-            <Text style={styles.statValue}>{(stats.totalUsers / 1000).toFixed(0)}K</Text>
-            <Text style={styles.statLabel}>{t('admin.dashboard.totalUsers')}</Text>
-            <View style={styles.growthIndicator}>
-              <TrendingUp size={14} color={COLORS.success} />
-              <Text style={styles.growthText}>+12%</Text>
+            <Text style={[styles.statCardValue, { color: '#00B894' }]}>
+              {formatCurrency(stats.revenue?.today || 0)}
+            </Text>
+            <Text style={styles.statCardLabel}>Today's Revenue</Text>
+          </View>
+
+          {/* Total Revenue */}
+          <View style={[styles.statCard, { backgroundColor: '#FFF3E8' }]}>
+            <View style={styles.statCardHeader}>
+              <View style={[styles.statIconWrap, { backgroundColor: '#F39C12' }]}>
+                <TrendingUp size={18} color="#fff" />
+              </View>
             </View>
-          </Card>
-          <Card style={styles.statBox}>
-            <View style={styles.statIconContainer}>
-              <DollarSign size={32} color={COLORS.primary} />
-            </View>
-            <Text style={styles.statValue}>₹{(stats.todayEarnings / 1000).toFixed(0)}K</Text>
-            <Text style={styles.statLabel}>{t('admin.dashboard.todaysEarnings')}</Text>
-            <View style={styles.growthIndicator}>
-              <TrendingUp size={14} color={COLORS.success} />
-              <Text style={styles.growthText}>+15%</Text>
-            </View>
-          </Card>
+            <Text style={[styles.statCardValue, { color: '#F39C12' }]}>
+              {formatCurrency(stats.revenue?.total || 0)}
+            </Text>
+            <Text style={styles.statCardLabel}>Total Revenue</Text>
+          </View>
         </View>
 
-        {/* Quick Actions */}
-        <View style={styles.quickActionsContainer}>
-          <Text style={styles.sectionTitle}>{t('admin.dashboard.quickActions')}</Text>
+        {/* ─── Quick Actions ──────────────────────────────────── */}
+        <View style={styles.sectionWrap}>
+          <Text style={styles.sectionTitle}>Quick Actions</Text>
           <View style={styles.quickActionsGrid}>
+            {QUICK_ACTIONS.map((action) => {
+              const Icon = action.icon;
+              return (
+                <TouchableOpacity
+                  key={action.key}
+                  style={styles.quickActionCard}
+                  activeOpacity={0.7}
+                  onPress={() => navigation.navigate(action.route as never)}
+                >
+                  <View style={[styles.quickActionIcon, { backgroundColor: action.color + '15' }]}>
+                    <Icon size={22} color={action.color} />
+                  </View>
+                  <Text style={styles.quickActionLabel} numberOfLines={1}>{action.label}</Text>
+                  {action.key === 'promos' && pendingPromos > 0 && (
+                    <View style={styles.actionBadge}>
+                      <Text style={styles.actionBadgeText}>{pendingPromos}</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* ─── Bookings Overview ──────────────────────────────── */}
+        <View style={styles.sectionWrap}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Bookings Overview</Text>
             <TouchableOpacity
-              style={styles.quickActionCard}
-              onPress={() => navigation.navigate('PoolingManagement' as never)}
-            >
-              <View style={styles.quickActionContent}>
-                <View style={styles.quickActionIconContainer}>
-                  <Car size={24} color={COLORS.primary} />
-                </View>
-                <Text style={styles.quickActionText}>{t('admin.dashboard.pooling')}</Text>
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.quickActionCard}
-              onPress={() => navigation.navigate('RentalManagement' as never)}
-            >
-              <View style={styles.quickActionContent}>
-                <View style={styles.quickActionIconContainer}>
-                  <KeyRound size={24} color={COLORS.primary} />
-                </View>
-                <Text style={styles.quickActionText}>{t('admin.dashboard.rental')}</Text>
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.quickActionCard}
+              style={styles.viewAllBtn}
               onPress={() => navigation.navigate('RidesHistory' as never)}
             >
-              <View style={styles.quickActionContent}>
-                <View style={styles.quickActionIconContainer}>
-                  <Clock size={24} color={COLORS.primary} />
-                </View>
-                <Text style={styles.quickActionText}>{t('admin.dashboard.history')}</Text>
-              </View>
+              <Text style={styles.viewAllText}>View All</Text>
+              <ChevronRight size={14} color="#4A90D9" />
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.quickActionCard}
-              onPress={() => navigation.navigate('UserManagement' as never)}
-            >
-              <View style={styles.quickActionContent}>
-                <View style={styles.quickActionIconContainer}>
-                  <Users size={24} color={COLORS.primary} />
-                </View>
-                <Text style={styles.quickActionText}>{t('admin.dashboard.users')}</Text>
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.quickActionCard}
-              onPress={() => navigation.navigate('FeedbackManagement' as never)}
-            >
-              <View style={styles.quickActionContent}>
-                <View style={styles.quickActionIconContainer}>
-                  <MessageSquare size={24} color={COLORS.primary} />
-                </View>
-                <Text style={styles.quickActionText}>{t('admin.dashboard.feedback')}</Text>
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.quickActionCard}
-              onPress={() => navigation.navigate('Analytics' as never)}
-            >
-              <View style={styles.quickActionContent}>
-                <View style={styles.quickActionIconContainer}>
-                  <TrendingUp size={24} color={COLORS.primary} />
-                </View>
-                <Text style={styles.quickActionText}>{t('admin.dashboard.analytics')}</Text>
-              </View>
-            </TouchableOpacity>
+          </View>
+
+          <View style={styles.bookingRow}>
+            {/* Today */}
+            <View style={styles.bookingCard}>
+              <LinearGradient
+                colors={['#4A90D9', '#357ABD']}
+                style={styles.bookingCardGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <Zap size={20} color="#fff" />
+                <Text style={styles.bookingCardValue}>{stats.bookings?.today || 0}</Text>
+                <Text style={styles.bookingCardLabel}>Today</Text>
+              </LinearGradient>
+            </View>
+
+            {/* Pending */}
+            <View style={styles.bookingCard}>
+              <LinearGradient
+                colors={['#F39C12', '#E67E22']}
+                style={styles.bookingCardGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <Clock size={20} color="#fff" />
+                <Text style={styles.bookingCardValue}>{stats.bookings?.pending || 0}</Text>
+                <Text style={styles.bookingCardLabel}>Pending</Text>
+              </LinearGradient>
+            </View>
+
+            {/* Completed */}
+            <View style={styles.bookingCard}>
+              <LinearGradient
+                colors={['#00B894', '#00A884']}
+                style={styles.bookingCardGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <CheckCircle size={20} color="#fff" />
+                <Text style={styles.bookingCardValue}>{stats.bookings?.completed || 0}</Text>
+                <Text style={styles.bookingCardLabel}>Completed</Text>
+              </LinearGradient>
+            </View>
           </View>
         </View>
 
-        {/* Recent Transactions */}
-        <View style={styles.sectionContainer}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{t('admin.dashboard.recentTransactions')}</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('RidesHistory' as never)}>
-              <Text style={styles.viewAllText}>{t('admin.dashboard.viewAll')}</Text>
-            </TouchableOpacity>
-          </View>
-          {recentTransactions.map((transaction) => (
-            <Card key={transaction.id} style={styles.transactionCard}>
-              <View style={styles.transactionHeader}>
-                <View style={styles.transactionInfo}>
-                  <Text style={styles.transactionUser}>{transaction.user}</Text>
-                  <Text style={styles.transactionService}>{transaction.service}</Text>
-                </View>
-                <View style={styles.transactionRight}>
-                  <Text style={styles.transactionRevenue}>{transaction.revenue}</Text>
-                  <Text style={styles.transactionDate}>{transaction.date}</Text>
-                </View>
-              </View>
+        {/* ─── Coin System Overview ───────────────────────────── */}
+        {coinStats && (
+          <View style={styles.sectionWrap}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Coin System</Text>
               <TouchableOpacity
-                style={styles.detailsButton}
+                style={styles.viewAllBtn}
+                onPress={() => navigation.navigate('AdminPromoReview' as never)}
+              >
+                <Text style={styles.viewAllText}>Manage</Text>
+                <ChevronRight size={14} color="#4A90D9" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.coinRow}>
+              <View style={styles.coinCard}>
+                <View style={[styles.coinIconWrap, { backgroundColor: '#F5A623' + '20' }]}>
+                  <Coins size={20} color="#F5A623" />
+                </View>
+                <Text style={styles.coinValue}>{formatNumber(coinStats.totalCoinsInCirculation || 0)}</Text>
+                <Text style={styles.coinLabel}>In Circulation</Text>
+              </View>
+              <View style={styles.coinCard}>
+                <View style={[styles.coinIconWrap, { backgroundColor: '#00B894' + '20' }]}>
+                  <TrendingUp size={20} color="#00B894" />
+                </View>
+                <Text style={styles.coinValue}>{formatNumber(coinStats.totalCoinsIssued || 0)}</Text>
+                <Text style={styles.coinLabel}>Total Issued</Text>
+              </View>
+              <View style={styles.coinCard}>
+                <View style={[styles.coinIconWrap, { backgroundColor: '#4A90D9' + '20' }]}>
+                  <DollarSign size={20} color="#4A90D9" />
+                </View>
+                <Text style={styles.coinValue}>{formatNumber(coinStats.totalCoinsRedeemed || 0)}</Text>
+                <Text style={styles.coinLabel}>Redeemed</Text>
+              </View>
+            </View>
+
+            {/* Promo breakdown pills */}
+            {coinStats.promos && (
+              <View style={styles.promoSection}>
+                <Text style={styles.promoSectionTitle}>Promo Submissions</Text>
+                <View style={styles.promoPillRow}>
+                  <View style={[styles.promoPill, { backgroundColor: '#F39C12' + '15' }]}>
+                    <Text style={[styles.promoPillValue, { color: '#F39C12' }]}>
+                      {coinStats.promos.pending || 0}
+                    </Text>
+                    <Text style={styles.promoPillLabel}>Pending</Text>
+                  </View>
+                  <View style={[styles.promoPill, { backgroundColor: '#00B894' + '15' }]}>
+                    <Text style={[styles.promoPillValue, { color: '#00B894' }]}>
+                      {coinStats.promos.approved || 0}
+                    </Text>
+                    <Text style={styles.promoPillLabel}>Approved</Text>
+                  </View>
+                  <View style={[styles.promoPill, { backgroundColor: '#E74C3C' + '15' }]}>
+                    <Text style={[styles.promoPillValue, { color: '#E74C3C' }]}>
+                      {coinStats.promos.rejected || 0}
+                    </Text>
+                    <Text style={styles.promoPillLabel}>Rejected</Text>
+                  </View>
+                </View>
+
+                {(coinStats.promos.pending || 0) > 0 && (
+                  <TouchableOpacity
+                    style={styles.reviewButton}
+                    activeOpacity={0.8}
+                    onPress={() => navigation.navigate('AdminPromoReview' as never)}
+                  >
+                    <LinearGradient
+                      colors={['#F5A623', '#E69500']}
+                      style={styles.reviewButtonGradient}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                    >
+                      <Lightbulb size={16} color="#fff" />
+                      <Text style={styles.reviewButtonText}>
+                        Review {coinStats.promos.pending} Pending
+                      </Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* ─── Recent Activity ────────────────────────────────── */}
+        {recentActivity.length > 0 && (
+          <View style={styles.sectionWrap}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Recent Transactions</Text>
+              <TouchableOpacity
+                style={styles.viewAllBtn}
                 onPress={() => navigation.navigate('RidesHistory' as never)}
               >
-                <Text style={styles.detailsButtonText}>{t('admin.dashboard.viewDetails')}</Text>
+                <Text style={styles.viewAllText}>View All</Text>
+                <ChevronRight size={14} color="#4A90D9" />
               </TouchableOpacity>
-            </Card>
-          ))}
-        </View>
+            </View>
 
-        {/* Recent Feedback */}
-        <View style={styles.sectionContainer}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{t('admin.dashboard.recentFeedback')}</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('FeedbackManagement' as never)}>
-              <Text style={styles.viewAllText}>{t('admin.dashboard.viewAll')}</Text>
-            </TouchableOpacity>
-          </View>
-          {recentFeedback.map((feedback) => {
-            const IconComponent = feedback.icon;
-            return (
-              <Card key={feedback.id} style={styles.feedbackCard}>
-                <View style={styles.feedbackHeader}>
-                  <View style={styles.feedbackIconContainer}>
-                    <IconComponent size={24} color={COLORS.primary} />
-                  </View>
-                  <View style={styles.feedbackInfo}>
-                    <Text style={styles.feedbackType}>{feedback.type}</Text>
-                    <Text style={styles.feedbackUser}>{feedback.user}</Text>
-                  </View>
-                  <View style={[
-                    styles.statusBadge,
-                    feedback.status === 'Pending' && styles.statusPending,
-                    feedback.status === 'Resolved' && styles.statusResolved,
-                  ]}>
-                    <Text style={styles.statusText}>{feedback.status}</Text>
-                  </View>
-                </View>
+            {recentActivity.slice(0, 4).map((activity: any, idx: number) => (
               <TouchableOpacity
-                style={styles.viewButton}
-                onPress={() => navigation.navigate('FeedbackManagement' as never)}
+                key={activity.bookingId || idx}
+                style={styles.activityCard}
+                activeOpacity={0.7}
+                onPress={() => navigation.navigate('RidesHistory' as never)}
               >
-                <Text style={styles.viewButtonText}>{t('admin.dashboard.viewDetails')}</Text>
+                <View style={styles.activityIconWrap}>
+                  <DollarSign size={18} color="#4A90D9" />
+                </View>
+                <View style={styles.activityInfo}>
+                  <Text style={styles.activityUser} numberOfLines={1}>
+                    {activity.passengerName || activity.driverName || 'User'}
+                  </Text>
+                  <Text style={styles.activityType}>
+                    {activity.type || activity.status || 'Ride'} &middot;{' '}
+                    {activity.createdAt
+                      ? new Date(activity.createdAt).toLocaleDateString('en-IN', {
+                          day: 'numeric',
+                          month: 'short',
+                        })
+                      : ''}
+                  </Text>
+                </View>
+                <View style={styles.activityAmount}>
+                  <Text style={styles.activityAmountText}>
+                    ₹{activity.amount || activity.totalAmount || 0}
+                  </Text>
+                  <ChevronRight size={14} color={COLORS.textSecondary} />
+                </View>
               </TouchableOpacity>
-            </Card>
-            );
-          })}
-        </View>
+            ))}
+          </View>
+        )}
 
-        {/* Summary Cards */}
-        <View style={styles.summaryContainer}>
-          <Card style={styles.summaryCard}>
-            <View style={styles.summaryIconContainer}>
-              <DollarSign size={24} color={COLORS.primary} />
-            </View>
-            <Text style={styles.summaryValue}>₹{(stats.totalEarnings / 1000000).toFixed(1)}M</Text>
-            <Text style={styles.summaryLabel}>{t('admin.dashboard.totalEarnings')}</Text>
-          </Card>
-          <Card style={styles.summaryCard}>
-            <View style={styles.summaryIconContainer}>
-              <MessageSquare size={24} color={COLORS.primary} />
-            </View>
-            <Text style={styles.summaryValue}>{stats.pendingFeedback}</Text>
-            <Text style={styles.summaryLabel}>{t('admin.dashboard.pendingFeedback')}</Text>
-          </Card>
-        </View>
+        {/* bottom spacing */}
+        <View style={{ height: SPACING.xl * 2 }} />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
+// ═══════════════════════════════════════════════════════════════════
+// STYLES
+// ═══════════════════════════════════════════════════════════════════
 const styles = StyleSheet.create({
+  /* ── Container & Loading ────────────────────────────────────── */
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: '#F5F7FA',
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  loadingAnimation: {
+    width: 200,
+    height: 200,
+  },
+  loadingText: {
+    marginTop: SPACING.sm,
+    color: '#64748B',
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.md,
+  },
+
+  /* ── Header ─────────────────────────────────────────────────── */
   header: {
-    backgroundColor: COLORS.primary,
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + SPACING.md : 54,
+    paddingBottom: SPACING.lg,
+    paddingHorizontal: SPACING.lg,
+  },
+  headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.md,
-    paddingTop: SPACING.xl,
   },
-  menuButton: {
-    padding: SPACING.xs,
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  adminAvatarWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(74, 144, 217, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerGreeting: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.xs,
+    color: 'rgba(255,255,255,0.6)',
   },
   headerTitle: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xl,
-    color: COLORS.white,
-    fontWeight: 'bold',
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    textAlign: 'center',
-    zIndex: -1,
+    fontSize: FONTS.sizes.lg,
+    color: '#fff',
+    fontWeight: '700',
   },
   headerRight: {
     flexDirection: 'row',
-    gap: SPACING.sm,
+    gap: SPACING.xs,
   },
-  iconButton: {
-    padding: SPACING.xs,
+  headerIconBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
+
+  /* ── Scroll ─────────────────────────────────────────────────── */
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: SPACING.md,
-    paddingBottom: SPACING.xl,
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.md,
   },
+
+  /* ── Carousel ───────────────────────────────────────────────── */
   carouselContainer: {
     marginBottom: SPACING.lg,
-    borderRadius: BORDER_RADIUS.xl,
+    borderRadius: 16,
     overflow: 'hidden',
+    backgroundColor: '#fff',
     ...SHADOWS.md,
+  },
+  carouselSlide: {
+    width: SCREEN_WIDTH - SPACING.lg * 2,
+    height: CAROUSEL_HEIGHT,
   },
   carouselImage: {
     width: '100%',
-    height: 200,
-    position: 'relative',
+    height: '100%',
   },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: COLORS.primary,
-    opacity: 0.6,
-  },
-  blurContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: SPACING.md,
-  },
-  carouselArrow: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  carouselArrowRight: {
-    marginLeft: 'auto',
-  },
-  carouselIndicators: {
+  dotsRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: SPACING.xs,
-    paddingVertical: SPACING.sm,
-    backgroundColor: COLORS.white,
+    paddingVertical: 10,
+    gap: 6,
+    backgroundColor: '#fff',
   },
-  indicator: {
+  dot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: COLORS.lightGray,
+    backgroundColor: '#D1D5DB',
   },
-  indicatorActive: {
-    backgroundColor: COLORS.primary,
+  dotActive: {
+    backgroundColor: '#4A90D9',
     width: 24,
+    borderRadius: 12,
   },
-  statsContainer: {
-    flexDirection: 'row',
-    gap: SPACING.md,
-    marginBottom: SPACING.lg,
-  },
-  statBox: {
-    flex: 1,
-    alignItems: 'center',
-    padding: SPACING.md,
-    minHeight: 140,
-    justifyContent: 'center',
-  },
-  statIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: COLORS.primary + '15',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: SPACING.sm,
-  },
-  statValue: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xxl,
-    color: COLORS.primary,
-    fontWeight: 'bold',
-    marginBottom: SPACING.xs,
-  },
-  statLabel: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    marginBottom: SPACING.xs,
-  },
-  liveIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.xs / 2,
-  },
-  liveDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: COLORS.success,
-  },
-  liveText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.success,
-    fontWeight: '600',
-  },
-  growthIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.xs / 2,
-  },
-  growthText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.success,
-    fontWeight: '600',
-  },
-  quickActionsContainer: {
-    marginBottom: SPACING.md,
-  },
-  sectionTitle: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.lg,
-    color: COLORS.primary,
-    fontWeight: 'bold',
-    marginBottom: SPACING.md,
-  },
-  quickActionsGrid: {
+
+  /* ── Stat Cards ─────────────────────────────────────────────── */
+  statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: SPACING.md,
+    gap: SPACING.sm,
+    marginBottom: SPACING.lg,
   },
-  quickActionCard: {
-    width: (width - SPACING.md * 2 - SPACING.md) / 2,
-    aspectRatio: 1,
-    backgroundColor: COLORS.white,
-    borderRadius: BORDER_RADIUS.lg,
-    ...SHADOWS.sm,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+  statCard: {
+    width: STAT_CARD_WIDTH,
+    borderRadius: 16,
     padding: SPACING.md,
+    minHeight: 120,
+    ...SHADOWS.sm,
   },
-  quickActionContent: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: '100%',
-  },
-  quickActionIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: COLORS.primary + '15',
-    justifyContent: 'center',
+  statCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: SPACING.sm,
   },
-  quickActionText: {
+  statIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  liveBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#00B894' + '15',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+  },
+  liveBadgeText: {
+    fontFamily: FONTS.regular,
+    fontSize: 10,
+    color: '#00B894',
+    fontWeight: '700',
+  },
+  trendBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  trendText: {
+    fontFamily: FONTS.regular,
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  statCardValue: {
+    fontFamily: FONTS.regular,
+    fontSize: 24,
+    fontWeight: '800',
+    marginBottom: 2,
+  },
+  statCardLabel: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.xs,
-    color: COLORS.text,
-    fontWeight: '600',
-    textAlign: 'center',
+    color: '#64748B',
+    fontWeight: '500',
   },
-  sectionContainer: {
+
+  /* ── Section Shared ─────────────────────────────────────────── */
+  sectionWrap: {
     marginBottom: SPACING.lg,
   },
   sectionHeader: {
@@ -625,156 +747,236 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: SPACING.md,
   },
+  sectionTitle: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.lg,
+    color: '#1E293B',
+    fontWeight: '700',
+    marginBottom: 0,
+  },
+  viewAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
   viewAllText: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.sm,
-    color: COLORS.primary,
+    color: '#4A90D9',
     fontWeight: '600',
   },
-  transactionCard: {
-    padding: SPACING.md,
-    marginBottom: SPACING.md,
-  },
-  transactionHeader: {
+
+  /* ── Quick Actions ──────────────────────────────────────────── */
+  quickActionsGrid: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: SPACING.sm,
+    flexWrap: 'wrap',
+    gap: SPACING.sm,
+    marginTop: SPACING.sm,
   },
-  transactionInfo: {
-    flex: 1,
-  },
-  transactionUser: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
-    color: COLORS.text,
-    fontWeight: 'bold',
-    marginBottom: SPACING.xs / 2,
-  },
-  transactionService: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.textSecondary,
-  },
-  transactionRight: {
-    alignItems: 'flex-end',
-  },
-  transactionRevenue: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
-    color: COLORS.primary,
-    fontWeight: 'bold',
-    marginBottom: SPACING.xs / 2,
-  },
-  transactionDate: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.textSecondary,
-  },
-  detailsButton: {
-    paddingVertical: SPACING.sm,
-    borderRadius: BORDER_RADIUS.sm,
-    backgroundColor: COLORS.primary,
+  quickActionCard: {
+    width: (SCREEN_WIDTH - SPACING.lg * 2 - SPACING.sm * 3) / 4,
     alignItems: 'center',
+    paddingVertical: SPACING.md,
+    position: 'relative',
   },
-  detailsButtonText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.white,
-    fontWeight: '600',
-  },
-  feedbackCard: {
-    padding: SPACING.md,
-    marginBottom: SPACING.md,
-  },
-  feedbackHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: SPACING.sm,
-  },
-  feedbackIconContainer: {
-    marginRight: SPACING.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  feedbackInfo: {
-    flex: 1,
-  },
-  feedbackType: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.text,
-    fontWeight: '600',
-    marginBottom: SPACING.xs / 2,
-  },
-  feedbackUser: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.textSecondary,
-  },
-  statusBadge: {
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs / 2,
-    borderRadius: BORDER_RADIUS.sm,
-    backgroundColor: COLORS.lightGray,
-  },
-  statusPending: {
-    backgroundColor: COLORS.warning + '30',
-  },
-  statusResolved: {
-    backgroundColor: COLORS.success + '30',
-  },
-  statusText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.text,
-    fontWeight: '600',
-  },
-  viewButton: {
-    paddingVertical: SPACING.sm,
-    borderRadius: BORDER_RADIUS.sm,
-    backgroundColor: COLORS.primary,
-    alignItems: 'center',
-  },
-  viewButtonText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.white,
-    fontWeight: '600',
-  },
-  summaryContainer: {
-    flexDirection: 'row',
-    gap: SPACING.md,
-    marginTop: SPACING.md,
-  },
-  summaryCard: {
-    flex: 1,
-    alignItems: 'center',
-    padding: SPACING.md,
-    minHeight: 100,
-    justifyContent: 'center',
-  },
-  summaryIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: COLORS.primary + '15',
+  quickActionIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: SPACING.sm,
-  },
-  summaryValue: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xl,
-    color: COLORS.primary,
-    fontWeight: 'bold',
     marginBottom: SPACING.xs,
   },
-  summaryLabel: {
+  quickActionLabel: {
+    fontFamily: FONTS.regular,
+    fontSize: 11,
+    color: '#475569',
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  actionBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 4,
+    backgroundColor: '#E74C3C',
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#F5F7FA',
+  },
+  actionBadgeText: {
+    fontFamily: FONTS.regular,
+    fontSize: 9,
+    color: '#fff',
+    fontWeight: '800',
+  },
+
+  /* ── Bookings Row ───────────────────────────────────────────── */
+  bookingRow: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+  },
+  bookingCard: {
+    flex: 1,
+    borderRadius: 14,
+    overflow: 'hidden',
+    ...SHADOWS.sm,
+  },
+  bookingCardGradient: {
+    padding: SPACING.md,
+    alignItems: 'center',
+    minHeight: 100,
+    justifyContent: 'center',
+    gap: 6,
+  },
+  bookingCardValue: {
+    fontFamily: FONTS.regular,
+    fontSize: 22,
+    color: '#fff',
+    fontWeight: '800',
+  },
+  bookingCardLabel: {
+    fontFamily: FONTS.regular,
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.85)',
+    fontWeight: '600',
+  },
+
+  /* ── Coin System ────────────────────────────────────────────── */
+  coinRow: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+  },
+  coinCard: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    padding: SPACING.md,
+    alignItems: 'center',
+    ...SHADOWS.sm,
+  },
+  coinIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: SPACING.xs,
+  },
+  coinValue: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.lg,
+    fontWeight: '800',
+    color: '#1E293B',
+    marginBottom: 2,
+  },
+  coinLabel: {
+    fontFamily: FONTS.regular,
+    fontSize: 10,
+    color: '#64748B',
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+
+  /* ── Promo Section ──────────────────────────────────────────── */
+  promoSection: {
+    marginTop: SPACING.md,
+  },
+  promoSectionTitle: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.sm,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
+    color: '#475569',
+    fontWeight: '600',
+    marginBottom: SPACING.sm,
+  },
+  promoPillRow: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    marginBottom: SPACING.sm,
+  },
+  promoPill: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: SPACING.sm,
+    borderRadius: 12,
+  },
+  promoPillValue: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.xl,
+    fontWeight: '800',
+  },
+  promoPillLabel: {
+    fontFamily: FONTS.regular,
+    fontSize: 10,
+    color: '#64748B',
+    marginTop: 2,
+    fontWeight: '500',
+  },
+  reviewButton: {
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  reviewButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    gap: SPACING.xs,
+  },
+  reviewButtonText: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.sm,
+    color: '#fff',
+    fontWeight: '700',
+  },
+
+  /* ── Recent Activity ────────────────────────────────────────── */
+  activityCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    padding: SPACING.md,
+    marginBottom: SPACING.sm,
+    ...SHADOWS.sm,
+  },
+  activityIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: '#4A90D9' + '15',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: SPACING.sm,
+  },
+  activityInfo: {
+    flex: 1,
+  },
+  activityUser: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.md,
+    color: '#1E293B',
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  activityType: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.xs,
+    color: '#94A3B8',
+  },
+  activityAmount: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  activityAmountText: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.md,
+    color: '#00B894',
+    fontWeight: '700',
   },
 });
 

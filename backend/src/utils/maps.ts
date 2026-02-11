@@ -16,36 +16,53 @@ export interface GeocodeResult {
   pincode?: string;
 }
 
-// OpenStreetMap Nominatim search response (array of results)
-interface NominatimSearchResult {
+// Type definitions for API responses
+interface OpenStreetMapGeocodeResult {
   display_name: string;
   lat: string;
   lon: string;
+  address?: {
+    city?: string;
+    state?: string;
+    postcode?: string;
+  };
 }
 
-// OpenStreetMap Nominatim reverse response (single object)
-interface NominatimReverseResult {
-  address?: Record<string, string>;
-  display_name: string;
-  lat: string;
-  lon: string;
-}
-
-// Google Maps Geocode API response
-interface GoogleGeocodeResponse {
+interface GoogleMapsGeocodeResponse {
   status: string;
-  results?: Array<{
+  results: Array<{
     formatted_address: string;
-    geometry: { location: { lat: number; lng: number } };
-    address_components?: Array<{ types: string[]; long_name: string }>;
+    geometry: {
+      location: {
+        lat: number;
+        lng: number;
+      };
+    };
+    address_components: Array<{
+      long_name: string;
+      short_name: string;
+      types: string[];
+    }>;
   }>;
 }
 
-// OSRM routing API response
+interface OpenStreetMapReverseGeocodeResult {
+  display_name: string;
+  lat: string;
+  lon: string;
+  address?: {
+    city?: string;
+    state?: string;
+    postcode?: string;
+  };
+}
+
 interface OSRMRouteResponse {
   code: string;
-  routes?: Array<{
-    geometry: { coordinates: [number, number][] };
+  routes: Array<{
+    geometry: {
+      coordinates: Array<[number, number]>;
+    };
   }>;
 }
 
@@ -75,7 +92,7 @@ async function geocodeWithOpenStreetMap(address: string): Promise<GeocodeResult 
 
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Yaaryatra-App/1.0', // Required by Nominatim
+        'User-Agent': 'Forlok-App/1.0', // Required by Nominatim
       },
     });
 
@@ -83,7 +100,7 @@ async function geocodeWithOpenStreetMap(address: string): Promise<GeocodeResult 
       throw new Error(`OpenStreetMap API error: ${response.statusText}`);
     }
 
-    const data = (await response.json()) as NominatimSearchResult[];
+    const data = (await response.json()) as OpenStreetMapGeocodeResult[];
 
     if (!data || !Array.isArray(data) || data.length === 0) {
       return null;
@@ -124,7 +141,7 @@ async function geocodeWithGoogleMaps(address: string): Promise<GeocodeResult | n
       throw new Error(`Google Maps API error: ${response.statusText}`);
     }
 
-    const data = (await response.json()) as GoogleGeocodeResponse;
+    const data = (await response.json()) as GoogleMapsGeocodeResponse;
 
     if (data.status !== 'OK' || !data.results || data.results.length === 0) {
       return null;
@@ -132,7 +149,7 @@ async function geocodeWithGoogleMaps(address: string): Promise<GeocodeResult | n
 
     const result = data.results[0];
     const location = result.geometry.location;
-    const addressComponents = result.address_components || [];
+    const addressComponents = result.address_components;
 
     return {
       address: result.formatted_address,
@@ -173,7 +190,7 @@ async function reverseGeocodeWithOpenStreetMap(lat: number, lng: number): Promis
 
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Yaaryatra-App/1.0',
+        'User-Agent': 'Forlok-App/1.0',
       },
     });
 
@@ -181,9 +198,9 @@ async function reverseGeocodeWithOpenStreetMap(lat: number, lng: number): Promis
       throw new Error(`OpenStreetMap API error: ${response.statusText}`);
     }
 
-    const data = (await response.json()) as NominatimReverseResult;
+    const data = (await response.json()) as OpenStreetMapReverseGeocodeResult;
 
-    if (!data || !data.address) {
+    if (!data || !data.display_name) {
       return null;
     }
 
@@ -220,14 +237,14 @@ async function reverseGeocodeWithGoogleMaps(lat: number, lng: number): Promise<G
       throw new Error(`Google Maps API error: ${response.statusText}`);
     }
 
-    const data = (await response.json()) as GoogleGeocodeResponse;
+    const data = (await response.json()) as GoogleMapsGeocodeResponse;
 
     if (data.status !== 'OK' || !data.results || data.results.length === 0) {
       return null;
     }
 
     const result = data.results[0];
-    const addressComponents = result.address_components || [];
+    const addressComponents = result.address_components;
 
     return {
       address: result.formatted_address,
@@ -274,153 +291,37 @@ function extractPincode(parts: string[]): string | undefined {
   return undefined;
 }
 
-function extractCityFromComponents(components: any[]): string | undefined {
+function extractCityFromComponents(
+  components: Array<{
+    long_name: string;
+    short_name: string;
+    types: string[];
+  }>
+): string | undefined {
   const city = components.find((c) => c.types.includes('locality'));
   return city?.long_name;
 }
 
-function extractStateFromComponents(components: any[]): string | undefined {
+function extractStateFromComponents(
+  components: Array<{
+    long_name: string;
+    short_name: string;
+    types: string[];
+  }>
+): string | undefined {
   const state = components.find((c) => c.types.includes('administrative_area_level_1'));
   return state?.long_name;
 }
 
-function extractPincodeFromComponents(components: any[]): string | undefined {
+function extractPincodeFromComponents(
+  components: Array<{
+    long_name: string;
+    short_name: string;
+    types: string[];
+  }>
+): string | undefined {
   const pincode = components.find((c) => c.types.includes('postal_code'));
   return pincode?.long_name;
-}
-
-/**
- * Get route with road segments from OSRM
- * Returns road segments for road-aware matching
- * Returns empty array on failure (doesn't throw) to allow graceful fallback
- */
-export async function getRouteWithRoadSegments(
-  fromLat: number,
-  fromLng: number,
-  toLat: number,
-  toLng: number,
-  startTime?: Date
-): Promise<Array<{
-  roadId: string;
-  roadName?: string;                                   // Actual road name for matching (optional)
-  roadRef?: string;                                    // Road reference (NH-65, etc.)
-  direction: 'forward' | 'backward' | 'bidirectional';
-  estimatedTime: Date;
-  lat: number;
-  lng: number;
-  segmentIndex: number;
-  distance?: number;                                   // Distance of segment
-}>> {
-  // [DEBUG] ENTERED getRouteWithRoadSegments
-  logger.error('[DEBUG] ENTERED getRouteWithRoadSegments');
-  
-  try {
-    // Validate coordinates before making API call
-    if (
-      !Number.isFinite(fromLat) || !Number.isFinite(fromLng) ||
-      !Number.isFinite(toLat) || !Number.isFinite(toLng)
-    ) {
-      logger.warn(
-        `Invalid coordinates for road segments: from(${fromLat}, ${fromLng}), to(${toLat}, ${toLng})`
-      );
-      return [];
-    }
-
-    // [DEBUG] Calling osrmService.getRouteWithSegments
-    logger.error(`[DEBUG] Calling osrmService.getRouteWithSegments from(${fromLat}, ${fromLng}) to(${toLat}, ${toLng}), startTime=${startTime?.toISOString() || 'undefined'}`);
-    
-    const segments = await osrmService.getRouteWithSegments(fromLat, fromLng, toLat, toLng, startTime);
-    
-    logger.error(`[DEBUG] getRouteWithSegments returned ${segments?.length || 0} segments`);
-    
-    // Validate segments
-    if (!segments || segments.length === 0) {
-      logger.error('[DEBUG] OSRM returned empty segments array');
-      logger.warn('OSRM returned empty segments array');
-      return [];
-    }
-
-    logger.info(`Successfully retrieved ${segments.length} segments from OSRM`);
-
-    // Validate segment structure
-    const invalidSegments = segments.filter(seg => 
-      !seg.roadId || 
-      !seg.direction || 
-      !Number.isFinite(seg.lat) || 
-      !Number.isFinite(seg.lng) ||
-      !seg.estimatedTime ||
-      typeof seg.segmentIndex !== 'number'
-    );
-
-    if (invalidSegments.length > 0) {
-      logger.warn(`Found ${invalidSegments.length} invalid segments, filtering them out`);
-      const validSegments = segments.filter(seg => 
-        seg.roadId && 
-        seg.direction && 
-        Number.isFinite(seg.lat) && 
-        Number.isFinite(seg.lng) &&
-        seg.estimatedTime &&
-        typeof seg.segmentIndex === 'number'
-      );
-      
-      if (validSegments.length === 0) {
-        logger.error('[DEBUG] All segments were invalid after filtering');
-        logger.error('All segments were invalid after filtering');
-        return [];
-      }
-      
-      logger.error(`[DEBUG] Returning ${validSegments.length} valid segments after filtering`);
-      return validSegments;
-    }
-
-    logger.error(`[DEBUG] Returning ${segments.length} segments from getRouteWithRoadSegments`);
-    return segments;
-  } catch (error) {
-    // IMPROVED: Log the actual error with stack trace for debugging
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    const errorStack = error instanceof Error ? error.stack : undefined;
-    logger.error(
-      `[DEBUG] ERROR in getRouteWithRoadSegments: ${errorMessage}. fromLat=${fromLat}, fromLng=${fromLng}, toLat=${toLat}, toLng=${toLng}`
-    );
-    logger.error(
-      `Error getting route with road segments: ${errorMessage}. fromLat=${fromLat}, fromLng=${fromLng}, toLat=${toLat}, toLng=${toLng}`
-    );
-    if (errorStack) {
-      logger.error(`Stack trace: ${errorStack}`);
-    }
-    // Return empty array instead of throwing to allow graceful fallback
-    return [];
-  }
-}
-
-/**
- * Snap GPS coordinate to nearest road using OSRM Nearest API
- * Returns snapped coordinates with road name for matching
- */
-export async function snapToRoad(
-  lat: number,
-  lng: number
-): Promise<{
-  lat: number;
-  lng: number;
-  roadId: string;
-  roadName?: string;                                   // Actual road name from OSRM (optional)
-  roadRef?: string;                                    // Road reference (NH-65, etc.)
-  direction: 'forward' | 'backward' | 'bidirectional';
-  confidence: number;
-  distanceFromOriginal?: number;                       // Distance from original point
-} | null> {
-  try {
-    // Validate coordinates
-    if (Math.abs(lat) > 90 || Math.abs(lng) > 180) {
-      logger.error(`Invalid coordinates provided for snapToRoad: (${lat},${lng})`);
-      return null;
-    }
-    return await osrmService.snapToRoad(lat, lng);
-  } catch (error) {
-    logger.error('Error snapping coordinate to road:', error);
-    return null;
-  }
 }
 
 /**
@@ -440,7 +341,7 @@ export async function getRoutePolyline(
 
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Yaaryatra-App/1.0',
+        'User-Agent': 'Forlok-App/1.0',
       },
     });
 
@@ -732,4 +633,129 @@ export function isRouteOnPath(
   );
 
   return isMatch;
+}
+
+/**
+ * Get route with road segments from OSRM
+ * Returns road segments for road-aware matching
+ * Returns empty array on failure (doesn't throw) to allow graceful fallback
+ */
+export async function getRouteWithRoadSegments(
+  fromLat: number,
+  fromLng: number,
+  toLat: number,
+  toLng: number,
+  startTime?: Date
+): Promise<Array<{
+  roadId: string;
+  roadName?: string;
+  roadRef?: string;
+  direction: 'forward' | 'backward' | 'bidirectional';
+  estimatedTime: Date;
+  lat: number;
+  lng: number;
+  segmentIndex: number;
+  distance?: number;
+}>> {
+  logger.error('[DEBUG] ENTERED getRouteWithRoadSegments');
+  
+  try {
+    // Validate coordinates before making API call
+    if (
+      !Number.isFinite(fromLat) || !Number.isFinite(fromLng) ||
+      !Number.isFinite(toLat) || !Number.isFinite(toLng)
+    ) {
+      logger.warn(
+        `Invalid coordinates for road segments: from(${fromLat}, ${fromLng}), to(${toLat}, ${toLng})`
+      );
+      return [];
+    }
+
+    logger.error(`[DEBUG] Calling osrmService.getRouteWithSegments from(${fromLat}, ${fromLng}) to(${toLat}, ${toLng}), startTime=${startTime?.toISOString() || 'undefined'}`);
+    
+    const segments = await osrmService.getRouteWithSegments(fromLat, fromLng, toLat, toLng, startTime);
+    
+    logger.error(`[DEBUG] getRouteWithSegments returned ${segments?.length || 0} segments`);
+    
+    // Validate segments
+    if (!segments || segments.length === 0) {
+      logger.error('[DEBUG] OSRM returned empty segments array');
+      logger.warn('OSRM returned empty segments array');
+      return [];
+    }
+
+    logger.info(`Successfully retrieved ${segments.length} segments from OSRM`);
+
+    // Validate segment structure
+    const invalidSegments = segments.filter(seg => 
+      !seg.roadId || 
+      !seg.direction || 
+      !Number.isFinite(seg.lat) || 
+      !Number.isFinite(seg.lng) ||
+      !seg.estimatedTime ||
+      typeof seg.segmentIndex !== 'number'
+    );
+
+    if (invalidSegments.length > 0) {
+      logger.warn(`Found ${invalidSegments.length} invalid segments, filtering them out`);
+      const validSegments = segments.filter(seg => 
+        seg.roadId && 
+        seg.direction && 
+        Number.isFinite(seg.lat) && 
+        Number.isFinite(seg.lng) &&
+        seg.estimatedTime &&
+        typeof seg.segmentIndex === 'number'
+      );
+      
+      if (validSegments.length === 0) {
+        logger.error('[DEBUG] All segments were invalid after filtering');
+        return [];
+      }
+      
+      logger.error(`[DEBUG] Returning ${validSegments.length} valid segments after filtering`);
+      return validSegments;
+    }
+
+    logger.error(`[DEBUG] Returning ${segments.length} segments from getRouteWithRoadSegments`);
+    return segments;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    logger.error(
+      `[DEBUG] ERROR in getRouteWithRoadSegments: ${errorMessage}. fromLat=${fromLat}, fromLng=${fromLng}, toLat=${toLat}, toLng=${toLng}`
+    );
+    if (errorStack) {
+      logger.error(`Stack trace: ${errorStack}`);
+    }
+    return [];
+  }
+}
+
+/**
+ * Snap GPS coordinate to nearest road using OSRM Nearest API
+ * Returns snapped coordinates with road name for matching
+ */
+export async function snapToRoad(
+  lat: number,
+  lng: number
+): Promise<{
+  lat: number;
+  lng: number;
+  roadId: string;
+  roadName?: string;
+  roadRef?: string;
+  direction: 'forward' | 'backward' | 'bidirectional';
+  confidence: number;
+  distanceFromOriginal?: number;
+} | null> {
+  try {
+    if (Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+      logger.error(`Invalid coordinates provided for snapToRoad: (${lat},${lng})`);
+      return null;
+    }
+    return await osrmService.snapToRoad(lat, lng);
+  } catch (error) {
+    logger.error('Error snapping coordinate to road:', error);
+    return null;
+  }
 }

@@ -191,6 +191,7 @@ export async function authRoutes(fastify: FastifyInstance) {
         email?: string;
         password: string;
         confirmPassword?: string;
+        referralCode?: string;
       };
 
       console.log('📝 [SIGNUP ROUTE] Received registration data:');

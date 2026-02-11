@@ -31,10 +31,23 @@ export type NotificationType =
   | 'booking_request'
   | 'booking_confirmed'
   | 'booking_cancelled'
+  | 'payment_required'
   | 'payment_received'
+  | 'payment_completed'
   | 'rating_request'
   | 'document_verified'
-  | 'document_rejected';
+  | 'document_rejected'
+  | 'coin_earned'
+  | 'coin_redeemed'
+  | 'referral_reward'
+  | 'milestone_achieved'
+  | 'promo_approved'
+  | 'promo_rejected'
+  | 'sos_alert'
+  | 'feedback_acknowledged'
+  | 'feedback_resolved'
+  | 'feedback_response'
+  | 'feedback_archived';
 export type FeedbackType = 'issue' | 'suggestion' | 'complaint';
 export type FeedbackStatus = 'pending' | 'acknowledged' | 'resolved' | 'archived';
 export type FeedbackPriority = 'high' | 'medium' | 'low';
@@ -77,14 +90,6 @@ export interface Route {
   distance?: number; // in km
   duration?: number; // in minutes
   polyline?: Array<{ lat: number; lng: number; index: number }>; // Polyline coordinates with indices for route matching
-  roadSegments?: Array<{
-    roadId: string;
-    direction: 'forward' | 'backward' | 'bidirectional';
-    estimatedTime: Date;
-    lat: number;
-    lng: number;
-    segmentIndex: number;
-  }>;
 }
 
 // JWT Payload

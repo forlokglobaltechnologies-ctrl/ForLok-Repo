@@ -85,7 +85,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
       const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`;
       const response = await fetch(url, {
         headers: {
-          'User-Agent': 'Yaaryatra-App/1.0',
+          'User-Agent': 'Forlok-App/1.0',
         },
       });
 
@@ -128,7 +128,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
       const url = `https://nominatim.openstreetmap.org/search?q=${encodedQuery}&format=json&limit=5&countrycodes=in`;
       const response = await fetch(url, {
         headers: {
-          'User-Agent': 'Yaaryatra-App/1.0',
+          'User-Agent': 'Forlok-App/1.0',
         },
       });
 

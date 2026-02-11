@@ -1,19 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, ImageBackground, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { ArrowLeft, Calendar, Search, Car, Key, Clock } from 'lucide-react-native';
+import { ArrowLeft, Calendar, Search, Car, Key, Clock, MapPin, ArrowRight, ChevronRight } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
-import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '@constants/theme';
+import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { Card } from '@components/common/Card';
 import { Button } from '@components/common/Button';
 import { BottomTabNavigator } from '@components/navigation/BottomTabNavigator';
 import { useLanguage } from '@context/LanguageContext';
+import { useTheme } from '@context/ThemeContext';
 import { bookingApi, rentalApi } from '@utils/apiClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const HistoryScreen = () => {
   const navigation = useNavigation();
   const { t } = useLanguage();
+  const { theme } = useTheme();
   const [activeTab, setActiveTab] = useState('All');
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -111,116 +113,185 @@ const HistoryScreen = () => {
     return true;
   });
 
+  const getStatusStyle = (status: string) => {
+    switch (status) {
+      case 'confirmed': return { bg: '#2196F3' + '15', color: '#2196F3' };
+      case 'pending': return { bg: '#FF9800' + '15', color: '#FF9800' };
+      case 'in_progress': return { bg: '#4CAF50' + '15', color: '#4CAF50' };
+      case 'completed': return { bg: '#4CAF50' + '15', color: '#4CAF50' };
+      case 'cancelled': return { bg: '#F44336' + '15', color: '#F44336' };
+      default: return { bg: '#9E9E9E' + '15', color: '#9E9E9E' };
+    }
+  };
+
+  const getFromText = (booking: any) => {
+    if (!booking.route) return 'N/A';
+    return typeof booking.route.from === 'string' ? booking.route.from : booking.route.from?.address || 'N/A';
+  };
+
+  const getToText = (booking: any) => {
+    if (!booking.route) return 'N/A';
+    return typeof booking.route.to === 'string' ? booking.route.to : booking.route.to?.address || 'N/A';
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <ImageBackground
-        source={require('../../../assets/history iamge.jpg')}
+        source={require('../../../assets/history.png')}
         style={styles.headerImage}
         resizeMode="cover"
       >
-        <View style={styles.overlay} />
+        <View style={[styles.overlay, { backgroundColor: theme.colors.primary }]} />
         <BlurView intensity={50} style={styles.blurContainer}>
           <View style={styles.headerTop}>
-            <TouchableOpacity 
-              onPress={() => navigation.goBack()} 
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
               style={styles.iconButton}
             >
-              <ArrowLeft size={20} color={COLORS.white} />
+              <ArrowLeft size={20} color="#FFF" />
             </TouchableOpacity>
+            <Text style={styles.headerTitle}>{t('history.title')}</Text>
             <View style={styles.headerRight}>
               <TouchableOpacity style={styles.iconButton}>
-                <Calendar size={20} color={COLORS.white} />
+                <Calendar size={20} color="#FFF" />
               </TouchableOpacity>
               <TouchableOpacity style={styles.iconButton}>
-                <Search size={20} color={COLORS.white} />
+                <Search size={20} color="#FFF" />
               </TouchableOpacity>
             </View>
           </View>
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>{t('history.title')}</Text>
-          </View>
         </BlurView>
       </ImageBackground>
-      <View style={styles.tabs}>
+
+      <View style={[styles.tabs, { backgroundColor: theme.colors.surface }]}>
         {tabs.map((tab) => (
           <TouchableOpacity
             key={tab}
-            style={[styles.tab, activeTab === tab && styles.activeTab]}
+            style={[styles.tab, activeTab === tab && [styles.activeTab, { borderBottomColor: theme.colors.primary }]]}
             onPress={() => setActiveTab(tab)}
           >
-            <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>{tab}</Text>
+            <Text style={[styles.tabText, { color: theme.colors.textSecondary }, activeTab === tab && { color: theme.colors.primary, fontWeight: '700' }]}>
+              {tab}
+            </Text>
           </TouchableOpacity>
         ))}
       </View>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {loading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={COLORS.primary} />
-            <Text style={styles.loadingText}>Loading bookings...</Text>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+            <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading bookings...</Text>
           </View>
         ) : filteredBookings.length > 0 ? (
-          filteredBookings.map((booking) => (
-            <Card key={booking.id || booking.bookingId} style={styles.bookingCard}>
-              <View style={styles.bookingHeader}>
-                {booking.type === 'pooling' ? (
-                  <Car size={24} color={COLORS.primary} />
-                ) : (
-                  <Key size={24} color={COLORS.primary} />
-                )}
-                <View style={styles.bookingDateContainer}>
-                  <Clock size={16} color={COLORS.textSecondary} />
-                  <Text style={styles.bookingDate}>{booking.date}</Text>
-                </View>
-              </View>
-              <Text style={styles.bookingType}>
-                {booking.type === 'pooling' ? t('history.pooling') : t('history.rental')}
-              </Text>
-              {booking.route && (
-                <Text style={styles.bookingRoute}>
-                  {typeof booking.route.from === 'string' 
-                    ? booking.route.from 
-                    : booking.route.from?.address || 'N/A'} → {typeof booking.route.to === 'string' 
-                    ? booking.route.to 
-                    : booking.route.to?.address || 'N/A'}
-                </Text>
-              )}
-              {booking.vehicle && (
-                <Text style={styles.bookingVehicle}>
-                  {booking.vehicle.brand} {booking.vehicle.number && `(${booking.vehicle.number})`} {booking.duration && `- ${booking.duration} hours`}
-                </Text>
-              )}
-              <View style={styles.bookingFooter}>
-                <View style={[styles.statusBadge, booking.status === 'confirmed' && styles.statusConfirmed, booking.status === 'completed' && styles.statusCompleted, booking.status === 'cancelled' && styles.statusCancelled]}>
-                  <Text style={styles.statusText}>{booking.status}</Text>
-                </View>
-                <View style={styles.actions}>
-                  <Button 
-                    title={t('history.viewDetails')} 
-                    onPress={() => navigation.navigate('BookingDetails' as never, { 
-                      bookingId: booking.bookingId || booking.id,
-                      booking: booking 
-                    } as never)} 
-                    variant="outline" 
-                    size="small" 
-                    style={styles.detailsButton} 
-                  />
-                  {booking.status === 'completed' && (
-                    <Button 
-                      title={t('history.rate')} 
-                      onPress={() => navigation.navigate('Rating' as never, { booking } as never)} 
-                      variant="primary" 
-                      size="small" 
-                      style={styles.rateButton} 
-                    />
+          filteredBookings.map((booking) => {
+            const sts = getStatusStyle(booking.status);
+            return (
+              <TouchableOpacity
+                key={booking.id || booking.bookingId}
+                activeOpacity={0.7}
+                onPress={() => navigation.navigate('BookingDetails' as never, {
+                  bookingId: booking.bookingId || booking.id,
+                  booking: booking,
+                } as never)}
+              >
+                <View style={[styles.bookingCard, { backgroundColor: theme.colors.surface }]}>
+                  {/* Card Header */}
+                  <View style={[styles.bookingHeader, { borderBottomColor: theme.colors.border }]}>
+                    <View style={[styles.typeIcon, { backgroundColor: theme.colors.primary + '12' }]}>
+                      {booking.type === 'pooling' ? (
+                        <Car size={18} color={theme.colors.primary} />
+                      ) : (
+                        <Key size={18} color={theme.colors.primary} />
+                      )}
+                    </View>
+                    <Text style={[styles.bookingType, { color: theme.colors.text }]}>
+                      {booking.type === 'pooling' ? t('history.pooling') : t('history.rental')}
+                    </Text>
+                    <View style={[styles.statusPill, { backgroundColor: sts.bg }]}>
+                      <Text style={[styles.statusPillText, { color: sts.color }]}>
+                        {booking.status.charAt(0).toUpperCase() + booking.status.slice(1).replace('_', ' ')}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Route Display */}
+                  {booking.route && (
+                    <View style={styles.routeSection}>
+                      <View style={[styles.routeBox, { backgroundColor: theme.colors.background, borderColor: theme.colors.border }]}>
+                        <MapPin size={14} color={theme.colors.primary} />
+                        <Text style={[styles.routeText, { color: theme.colors.text }]} numberOfLines={1}>
+                          {getFromText(booking)}
+                        </Text>
+                      </View>
+                      <View style={[styles.routeArrow, { backgroundColor: theme.colors.primary + '15' }]}>
+                        <ArrowRight size={14} color={theme.colors.primary} />
+                      </View>
+                      <View style={[styles.routeBox, { backgroundColor: theme.colors.background, borderColor: theme.colors.border }]}>
+                        <MapPin size={14} color="#F44336" />
+                        <Text style={[styles.routeText, { color: theme.colors.text }]} numberOfLines={1}>
+                          {getToText(booking)}
+                        </Text>
+                      </View>
+                    </View>
                   )}
+
+                  {/* Meta Row */}
+                  <View style={styles.metaRow}>
+                    <View style={[styles.metaChip, { backgroundColor: theme.colors.background }]}>
+                      <Calendar size={12} color={theme.colors.primary} />
+                      <Text style={[styles.metaChipText, { color: theme.colors.text }]}>{booking.date}</Text>
+                    </View>
+                    {booking.time && (
+                      <View style={[styles.metaChip, { backgroundColor: theme.colors.background }]}>
+                        <Clock size={12} color={theme.colors.primary} />
+                        <Text style={[styles.metaChipText, { color: theme.colors.text }]}>{booking.time}</Text>
+                      </View>
+                    )}
+                    {booking.vehicle && (
+                      <View style={[styles.metaChip, { backgroundColor: theme.colors.background }]}>
+                        <Car size={12} color={theme.colors.primary} />
+                        <Text style={[styles.metaChipText, { color: theme.colors.text }]}>
+                          {booking.vehicle.brand}{booking.vehicle.number ? ` (${booking.vehicle.number})` : ''}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+
+                  {/* Footer */}
+                  <View style={[styles.bookingFooter, { borderTopColor: theme.colors.border }]}>
+                    <Button
+                      title={t('history.viewDetails')}
+                      onPress={() => navigation.navigate('BookingDetails' as never, {
+                        bookingId: booking.bookingId || booking.id,
+                        booking: booking,
+                      } as never)}
+                      variant="outline"
+                      size="small"
+                      style={styles.detailsButton}
+                    />
+                    {booking.status === 'completed' && (
+                      <Button
+                        title={t('history.rate')}
+                        onPress={() => navigation.navigate('Rating' as never, { booking } as never)}
+                        variant="primary"
+                        size="small"
+                        style={styles.rateButton}
+                      />
+                    )}
+                    <View style={{ marginLeft: 'auto' }}>
+                      <ChevronRight size={18} color={theme.colors.textSecondary} />
+                    </View>
+                  </View>
                 </View>
-              </View>
-            </Card>
-          ))
+              </TouchableOpacity>
+            );
+          })
         ) : (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No bookings found</Text>
-            <Text style={styles.emptySubtext}>
+            <Car size={48} color={theme.colors.textSecondary} />
+            <Text style={[styles.emptyText, { color: theme.colors.text }]}>No bookings found</Text>
+            <Text style={[styles.emptySubtext, { color: theme.colors.textSecondary }]}>
               {activeTab === t('history.all')
                 ? 'You haven\'t made any bookings yet'
                 : `No ${activeTab.toLowerCase()} bookings`}
@@ -236,38 +307,35 @@ const HistoryScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
   },
+
+  /* ── Header ── */
   headerImage: {
     width: '100%',
-    height: 200,
+    height: 150,
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: COLORS.primary,
-    opacity: 0.6,
+    opacity: 0.78,
   },
   blurContainer: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'flex-end',
+    paddingBottom: SPACING.lg,
+    paddingHorizontal: SPACING.md,
   },
   headerTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.xl,
-    paddingBottom: SPACING.sm,
-  },
-  headerCenter: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   headerTitle: {
+    flex: 1,
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xl,
-    color: COLORS.white,
-    fontWeight: '600',
+    fontSize: 22,
+    color: '#FFF',
+    fontWeight: '800',
+    textAlign: 'center',
+    letterSpacing: 0.4,
   },
   headerRight: {
     flexDirection: 'row',
@@ -277,61 +345,168 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(255,255,255,0.18)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  tabs: { flexDirection: 'row', backgroundColor: COLORS.white, borderBottomWidth: 1, borderBottomColor: COLORS.border },
-  tab: { flex: 1, padding: SPACING.md, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: 'transparent' },
-  activeTab: { borderBottomColor: COLORS.primary },
-  tabText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: COLORS.textSecondary },
-  activeTabText: { color: COLORS.primary, fontWeight: 'bold' },
-  scrollContent: { padding: SPACING.md },
-  bookingCard: { padding: SPACING.md, marginBottom: SPACING.md },
-  bookingHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACING.sm },
-  bookingDateContainer: { flexDirection: 'row', alignItems: 'center', gap: SPACING.xs },
-  bookingDate: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: COLORS.textSecondary },
-  bookingType: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.md, color: COLORS.text, marginBottom: SPACING.xs },
-  bookingRoute: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: COLORS.textSecondary, marginBottom: SPACING.xs },
-  bookingVehicle: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: COLORS.textSecondary, marginBottom: SPACING.sm },
-  bookingFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: SPACING.sm },
-  statusBadge: { paddingHorizontal: SPACING.sm, paddingVertical: SPACING.xs, borderRadius: 4 },
-  statusConfirmed: { backgroundColor: COLORS.secondary + '20' },
-  statusCompleted: { backgroundColor: COLORS.success + '20' },
-  statusCancelled: { backgroundColor: COLORS.error + '20' },
-  statusText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.xs, color: COLORS.text, textTransform: 'capitalize' },
-  actions: { flexDirection: 'row', gap: SPACING.xs },
-  detailsButton: { marginRight: SPACING.xs },
-  rateButton: {},
-  loadingContainer: {
+
+  /* ── Tabs ── */
+  tabs: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    ...SHADOWS.sm,
+  },
+  tab: {
     flex: 1,
+    paddingVertical: 13,
+    alignItems: 'center',
+    borderBottomWidth: 3,
+    borderBottomColor: 'transparent',
+  },
+  activeTab: {},
+  tabText: {
+    fontFamily: FONTS.regular,
+    fontSize: 13,
+    fontWeight: '500',
+  },
+
+  /* ── Scroll ── */
+  scrollContent: {
+    padding: SPACING.md,
+    paddingBottom: SPACING.xl,
+  },
+
+  /* ── Booking Card ── */
+  bookingCard: {
+    borderRadius: 16,
+    padding: SPACING.lg,
+    marginBottom: SPACING.md,
+    ...SHADOWS.md,
+  },
+  bookingHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+    paddingBottom: SPACING.sm,
+    borderBottomWidth: 1,
+  },
+  typeIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: SPACING.sm,
+  },
+  bookingType: {
+    flex: 1,
+    fontFamily: FONTS.regular,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  statusPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+  statusPillText: {
+    fontFamily: FONTS.regular,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+
+  /* ── Route Display ── */
+  routeSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: SPACING.sm,
+  },
+  routeBox: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    gap: 6,
+  },
+  routeText: {
+    flex: 1,
+    fontFamily: FONTS.regular,
+    fontSize: 12,
+    fontWeight: '500',
+    lineHeight: 16,
+  },
+  routeArrow: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  /* ── Meta Chips ── */
+  metaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: SPACING.sm,
+  },
+  metaChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+  },
+  metaChipText: {
+    fontFamily: FONTS.regular,
+    fontSize: 11,
+    fontWeight: '500',
+  },
+
+  /* ── Footer ── */
+  bookingFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    marginTop: SPACING.sm,
+    paddingTop: SPACING.sm,
+    borderTopWidth: 1,
+  },
+  detailsButton: {},
+  rateButton: {},
+
+  /* ── Empty & Loading ── */
+  loadingContainer: {
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: SPACING.xl * 2,
+    paddingVertical: SPACING.xxl * 2,
   },
   loadingText: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
-    color: COLORS.textSecondary,
+    fontSize: 14,
     marginTop: SPACING.md,
   },
   emptyContainer: {
-    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: SPACING.xl * 2,
+    paddingVertical: SPACING.xxl * 2,
+    gap: SPACING.sm,
   },
   emptyText: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.lg,
-    color: COLORS.text,
+    fontSize: 16,
     fontWeight: '600',
-    marginBottom: SPACING.sm,
   },
   emptySubtext: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.textSecondary,
+    fontSize: 13,
   },
 });
 

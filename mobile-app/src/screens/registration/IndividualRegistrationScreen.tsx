@@ -9,6 +9,7 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { ArrowLeft } from 'lucide-react-native';
@@ -18,6 +19,7 @@ import { Input } from '@components/common/Input';
 import { PhoneInput } from '@components/common/PhoneInput';
 import { useLanguage } from '@context/LanguageContext';
 import { authApi } from '@utils/apiClient';
+import LottieView from 'lottie-react-native';
 
 const IndividualRegistrationScreen = () => {
   const navigation = useNavigation();
@@ -40,6 +42,11 @@ const IndividualRegistrationScreen = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [gender, setGender] = useState<'Male' | 'Female' | 'Other' | null>(null);
+  const [referralCode, setReferralCode] = useState('');
+
+  // Coin celebration
+  const [showCoinCelebration, setShowCoinCelebration] = useState(false);
 
   const handleNext = async () => {
     if (currentStep === 1) {
@@ -98,6 +105,12 @@ const IndividualRegistrationScreen = () => {
         return;
       }
       
+      // Validate gender
+      if (!gender) {
+        Alert.alert('Error', 'Please select your gender');
+        return;
+      }
+      
       // Register user with backend
       setLoading(true);
       try {
@@ -109,6 +122,8 @@ const IndividualRegistrationScreen = () => {
           userType: 'individual',
           password: password,
           confirmPassword: confirmPassword,
+          gender: gender,
+          ...(referralCode.trim() ? { referralCode: referralCode.trim().toUpperCase() } : {}),
         });
         
         if (response.success) {
@@ -116,8 +131,12 @@ const IndividualRegistrationScreen = () => {
           if (response.data?.accessToken && response.data?.refreshToken) {
             // Tokens will be saved by apiService automatically
           }
-          // Navigate to main dashboard
-          navigation.navigate('MainDashboard' as never);
+          // Show coin celebration, then navigate to dashboard
+          setShowCoinCelebration(true);
+          setTimeout(() => {
+            setShowCoinCelebration(false);
+            navigation.navigate('MainDashboard' as never);
+          }, 4000);
         } else {
           Alert.alert('Error', response.error || 'Failed to register. Please try again.');
         }
@@ -351,6 +370,81 @@ const IndividualRegistrationScreen = () => {
           Password must be at least 8 characters with uppercase, lowercase, and a number.
         </Text>
       </View>
+      
+      {/* Gender Selection */}
+      <View style={styles.genderContainer}>
+        <Text style={styles.genderLabel}>Gender *</Text>
+        <View style={styles.genderOptions}>
+          <TouchableOpacity
+            style={[
+              styles.genderOption,
+              gender === 'Male' && styles.genderOptionSelected,
+            ]}
+            onPress={() => setGender('Male')}
+          >
+            <View style={[
+              styles.radioButton,
+              gender === 'Male' && styles.radioButtonSelected,
+            ]}>
+              {gender === 'Male' && <View style={styles.radioButtonInner} />}
+            </View>
+            <Text style={[
+              styles.genderOptionText,
+              gender === 'Male' && styles.genderOptionTextSelected,
+            ]}>Male</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.genderOption,
+              gender === 'Female' && styles.genderOptionSelected,
+            ]}
+            onPress={() => setGender('Female')}
+          >
+            <View style={[
+              styles.radioButton,
+              gender === 'Female' && styles.radioButtonSelected,
+            ]}>
+              {gender === 'Female' && <View style={styles.radioButtonInner} />}
+            </View>
+            <Text style={[
+              styles.genderOptionText,
+              gender === 'Female' && styles.genderOptionTextSelected,
+            ]}>Female</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.genderOption,
+              gender === 'Other' && styles.genderOptionSelected,
+            ]}
+            onPress={() => setGender('Other')}
+          >
+            <View style={[
+              styles.radioButton,
+              gender === 'Other' && styles.radioButtonSelected,
+            ]}>
+              {gender === 'Other' && <View style={styles.radioButtonInner} />}
+            </View>
+            <Text style={[
+              styles.genderOptionText,
+              gender === 'Other' && styles.genderOptionTextSelected,
+            ]}>Other</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Referral Code (Optional) */}
+      <View style={styles.referralContainer}>
+        <Text style={styles.genderLabel}>Referral Code (Optional)</Text>
+        <Input
+          placeholder="e.g. FORLOK-ABC123"
+          value={referralCode}
+          onChangeText={setReferralCode}
+          autoCapitalize="characters"
+        />
+        <Text style={[styles.infoText, { marginTop: 4 }]}>
+          Have a friend's referral code? Enter it to earn bonus coins!
+        </Text>
+      </View>
     </View>
   );
 
@@ -398,7 +492,7 @@ const IndividualRegistrationScreen = () => {
               ? otpSent
                 ? !otp || otp.length !== 6
                 : !phone || phone.length < 10
-              : !name.trim() || !password || password.length < 8 || password !== confirmPassword)
+              : !name.trim() || !password || password.length < 8 || password !== confirmPassword || !gender)
           }
         />
         {(loading || verifying) && (
@@ -409,6 +503,39 @@ const IndividualRegistrationScreen = () => {
           />
         )}
       </View>
+      {/* ========== COIN SIGNUP CELEBRATION MODAL ========== */}
+      <Modal
+        visible={showCoinCelebration}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          setShowCoinCelebration(false);
+          navigation.navigate('MainDashboard' as never);
+        }}
+      >
+        <TouchableOpacity
+          style={styles.celebrationOverlay}
+          activeOpacity={1}
+          onPress={() => {
+            setShowCoinCelebration(false);
+            navigation.navigate('MainDashboard' as never);
+          }}
+        >
+          <View style={styles.celebrationContent}>
+            <LottieView
+              source={require('../../../assets/videos/reward.json')}
+              autoPlay
+              loop={false}
+              style={styles.celebrationLottie}
+            />
+            <Text style={styles.celebrationTitle}>Welcome Bonus!</Text>
+            <Text style={styles.celebrationText}>
+              You earned signup coins! Start your FORLOK journey with free coins.
+            </Text>
+            <Text style={styles.celebrationHint}>Tap anywhere to continue</Text>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </KeyboardAvoidingView>
   );
 };
@@ -526,6 +653,112 @@ const styles = StyleSheet.create({
   },
   loader: {
     marginTop: SPACING.sm,
+  },
+  genderContainer: {
+    marginTop: SPACING.md,
+    marginBottom: SPACING.md,
+  },
+  referralContainer: {
+    marginTop: SPACING.sm,
+    marginBottom: SPACING.md,
+  },
+  genderLabel: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.md,
+    color: COLORS.text,
+    marginBottom: SPACING.sm,
+    fontWeight: '600',
+  },
+  genderOptions: {
+    flexDirection: 'row',
+    gap: SPACING.md,
+  },
+  genderOption: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.white,
+  },
+  genderOptionSelected: {
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.primary + '10',
+  },
+  radioButton: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: COLORS.border,
+    marginRight: SPACING.sm,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  radioButtonSelected: {
+    borderColor: COLORS.primary,
+  },
+  radioButtonInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: COLORS.primary,
+  },
+  genderOptionText: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.md,
+    color: COLORS.text,
+  },
+  genderOptionTextSelected: {
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
+  // Coin celebration modal styles
+  celebrationOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  celebrationContent: {
+    backgroundColor: COLORS.white,
+    borderRadius: 24,
+    padding: SPACING.xl,
+    alignItems: 'center',
+    width: '85%',
+    maxWidth: 340,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  celebrationLottie: {
+    width: 200,
+    height: 200,
+  },
+  celebrationTitle: {
+    fontFamily: FONTS.regular,
+    fontSize: 24,
+    fontWeight: 'bold' as const,
+    color: '#F5A623',
+    marginTop: SPACING.sm,
+  },
+  celebrationText: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.md,
+    color: COLORS.text,
+    textAlign: 'center' as const,
+    marginTop: SPACING.sm,
+  },
+  celebrationHint: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.sm,
+    color: COLORS.textSecondary,
+    marginTop: SPACING.xs,
+    textAlign: 'center' as const,
   },
 });
 

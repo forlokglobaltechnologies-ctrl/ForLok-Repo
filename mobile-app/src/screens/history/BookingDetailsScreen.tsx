@@ -12,12 +12,13 @@ import {
   Alert,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { ArrowLeft, Share2, Settings, MapPin, Calendar, Clock, Phone, MessageCircle, Car, Tag, User, CreditCard, IndianRupee, ArrowDown, Star, CheckCircle } from 'lucide-react-native';
+import { ArrowLeft, Share2, Settings, MapPin, Calendar, Clock, Phone, MessageCircle, Car, Tag, User, CreditCard, IndianRupee, ArrowRight, Star, CheckCircle } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import { COLORS, FONTS, SPACING, SHADOWS, BORDER_RADIUS } from '@constants/theme';
 import { Card } from '@components/common/Card';
 import { Button } from '@components/common/Button';
 import { useLanguage } from '@context/LanguageContext';
+import { useTheme } from '@context/ThemeContext';
 import { bookingApi } from '@utils/apiClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -25,6 +26,7 @@ const BookingDetailsScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { t } = useLanguage();
+  const { theme } = useTheme();
   const params = route.params as any;
   const passedBooking = params?.booking;
   const bookingId = params?.bookingId || passedBooking?.bookingId || passedBooking?.id;
@@ -32,6 +34,7 @@ const BookingDetailsScreen = () => {
   const [booking, setBooking] = useState<any>(passedBooking || null);
   const [loading, setLoading] = useState(!!bookingId && !passedBooking);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
     loadCurrentUserId();
@@ -157,6 +160,63 @@ const BookingDetailsScreen = () => {
     );
   }
 
+  const handleCancelBooking = async () => {
+    const bId = booking?.bookingId || bookingId;
+    if (!bId) return;
+
+    setCancelling(true);
+    try {
+      const preview = await bookingApi.previewCancellationFee(bId);
+      if (!preview.success) {
+        Alert.alert('Error', preview.message || 'Could not load cancellation details');
+        setCancelling(false);
+        return;
+      }
+
+      const info = preview.data;
+      const title = info.isFirstCancellation
+        ? 'Cancel Booking (Free)'
+        : `Cancel Booking (Fee: ₹${info.cancellationFee})`;
+      const message = info.isFirstCancellation
+        ? 'This is your first cancellation — no charges will apply.\n\nAre you sure you want to cancel?'
+        : `Cancellation fee: ₹${info.cancellationFee} (${info.feePercentage}% of ₹${info.rideAmount})\n\nThis amount will be deducted from your wallet.\n\nAre you sure?`;
+
+      setCancelling(false);
+
+      Alert.alert(title, message, [
+        { text: 'No, Keep Booking', style: 'cancel' },
+        {
+          text: info.cancellationFee > 0 ? `Yes, Pay ₹${info.cancellationFee} & Cancel` : 'Yes, Cancel',
+          style: 'destructive',
+          onPress: async () => {
+            setCancelling(true);
+            try {
+              const result = await bookingApi.cancelBooking(bId, 'Cancelled by user');
+              if (result.success) {
+                const details = result.data?.cancellationDetails;
+                Alert.alert(
+                  'Booking Cancelled',
+                  details?.message || 'Your booking has been cancelled.',
+                  [{ text: 'OK', onPress: () => navigation.goBack() }]
+                );
+                setBooking({ ...booking, status: 'cancelled' });
+              } else {
+                Alert.alert('Error', result.message || 'Failed to cancel booking');
+              }
+            } catch (err: any) {
+              Alert.alert('Error', err.message || 'Failed to cancel booking');
+            } finally {
+              setCancelling(false);
+            }
+          },
+        },
+      ]);
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to load cancellation details');
+      setCancelling(false);
+    }
+  };
+
   if (!booking) {
     return (
       <SafeAreaView style={styles.container}>
@@ -200,72 +260,76 @@ const BookingDetailsScreen = () => {
     return `${displayHours}:${String(minutes).padStart(2, '0')} ${period}`;
   };
 
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'confirmed': return { bg: '#2196F3' + '15', color: '#2196F3' };
+      case 'pending': return { bg: '#FF9800' + '15', color: '#FF9800' };
+      case 'in_progress': return { bg: '#4CAF50' + '15', color: '#4CAF50' };
+      case 'completed': return { bg: '#4CAF50' + '15', color: '#4CAF50' };
+      case 'cancelled': return { bg: '#F44336' + '15', color: '#F44336' };
+      default: return { bg: '#9E9E9E' + '15', color: '#9E9E9E' };
+    }
+  };
+  const stsColor = getStatusColor(booking.status);
+
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <ImageBackground
         source={require('../../../assets/booking details.jpg')}
         style={styles.headerImage}
         resizeMode="cover"
       >
-        <View style={styles.overlay} />
+        <View style={[styles.overlay, { backgroundColor: theme.colors.primary }]} />
         <BlurView intensity={50} style={styles.blurContainer}>
           <View style={styles.headerTop}>
-            <TouchableOpacity 
-              onPress={() => navigation.goBack()} 
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
               style={styles.iconButton}
             >
-              <ArrowLeft size={20} color={COLORS.white} />
+              <ArrowLeft size={20} color="#FFF" />
             </TouchableOpacity>
+            <Text style={styles.headerTitle}>{t('bookingDetails.title')}</Text>
             <View style={styles.headerRight}>
               <TouchableOpacity style={styles.iconButton} onPress={() => {}}>
-                <Share2 size={20} color={COLORS.white} />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.iconButton} onPress={() => {}}>
-                <Settings size={20} color={COLORS.white} />
+                <Share2 size={20} color="#FFF" />
               </TouchableOpacity>
             </View>
-          </View>
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>{t('bookingDetails.title')}</Text>
           </View>
         </BlurView>
       </ImageBackground>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Booking Header Card */}
-        <View style={styles.bookingHeaderCard}>
+        <View style={[styles.bookingHeaderCard, { backgroundColor: theme.colors.surface }]}>
           <View style={styles.bookingIdContainer}>
-            <Text style={styles.bookingIdLabel}>{t('bookingDetails.bookingId')}</Text>
-            <Text style={styles.bookingId}>{booking.bookingId || 'N/A'}</Text>
+            <Text style={[styles.bookingIdLabel, { color: theme.colors.textSecondary }]}>{t('bookingDetails.bookingId')}</Text>
+            <Text style={[styles.bookingId, { color: theme.colors.text }]}>{booking.bookingId || 'N/A'}</Text>
           </View>
-          <View style={[
-            styles.statusBadge, 
-            booking.status === 'confirmed' && styles.statusConfirmed, 
-            booking.status === 'completed' && styles.statusCompleted, 
-            booking.status === 'cancelled' && styles.statusCancelled
-          ]}>
-            <Text style={styles.statusText}>{booking.status?.toUpperCase() || 'N/A'}</Text>
+          <View style={[styles.statusPill, { backgroundColor: stsColor.bg }]}>
+            <Text style={[styles.statusPillText, { color: stsColor.color }]}>
+              {booking.status?.charAt(0).toUpperCase() + booking.status?.slice(1).replace('_', ' ') || 'N/A'}
+            </Text>
           </View>
         </View>
 
         {/* Service Type, Date & Time Flags */}
         <View style={styles.flagsContainer}>
-          <View style={styles.flagBadge}>
-            <Tag size={16} color={COLORS.primary} />
-            <Text style={styles.flagText}>
+          <View style={[styles.flagBadge, { backgroundColor: theme.colors.primary + '12' }]}>
+            <Tag size={14} color={theme.colors.primary} />
+            <Text style={[styles.flagText, { color: theme.colors.primary }]}>
               {booking.type === 'pooling' ? t('history.pooling') : t('history.rental')}
             </Text>
           </View>
           {booking.date && (
-            <View style={styles.flagBadge}>
-              <Calendar size={16} color={COLORS.primary} />
-              <Text style={styles.flagText}>{booking.date}</Text>
+            <View style={[styles.flagBadge, { backgroundColor: theme.colors.background }]}>
+              <Calendar size={14} color={theme.colors.primary} />
+              <Text style={[styles.flagText, { color: theme.colors.text }]}>{booking.date}</Text>
             </View>
           )}
           {booking.time && (
-            <View style={styles.flagBadge}>
-              <Clock size={16} color={COLORS.primary} />
-              <Text style={styles.flagText}>{booking.time}</Text>
+            <View style={[styles.flagBadge, { backgroundColor: theme.colors.background }]}>
+              <Clock size={14} color={theme.colors.primary} />
+              <Text style={[styles.flagText, { color: theme.colors.text }]}>{booking.time}</Text>
             </View>
           )}
         </View>
@@ -318,39 +382,37 @@ const BookingDetailsScreen = () => {
           </View>
         ) : (
           booking.route && (
-            <View style={styles.sectionCard}>
+            <View style={[styles.sectionCard, { backgroundColor: theme.colors.surface }]}>
               <View style={styles.sectionHeader}>
-                <MapPin size={20} color={COLORS.primary} />
-                <Text style={styles.sectionTitle}>{t('bookingDetails.route')}</Text>
+                <MapPin size={20} color={theme.colors.primary} />
+                <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t('bookingDetails.route')}</Text>
               </View>
-              <View style={styles.divider} />
-              <View style={styles.routeFrom}>
-                <View style={styles.routeIconContainer}>
-                  <MapPin size={18} color={COLORS.primary} />
+              <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
+              <View style={styles.routeBoxRow}>
+                <View style={[styles.routeBox, { backgroundColor: theme.colors.background, borderColor: theme.colors.border }]}>
+                  <MapPin size={15} color={theme.colors.primary} />
+                  <View style={styles.routeBoxContent}>
+                    <Text style={[styles.routeBoxLabel, { color: theme.colors.textSecondary }]}>{t('dashboard.from')}</Text>
+                    <Text style={[styles.routeBoxText, { color: theme.colors.text }]} numberOfLines={2}>
+                      {typeof booking.route?.from === 'string'
+                        ? booking.route.from
+                        : booking.route?.from?.address || 'N/A'}
+                    </Text>
+                  </View>
                 </View>
-                <View style={styles.routeInfo}>
-                  <Text style={styles.routeLabel}>{t('dashboard.from')}</Text>
-                  <Text style={styles.routeText}>
-                    {typeof booking.route?.from === 'string' 
-                      ? booking.route.from 
-                      : booking.route?.from?.address || 'N/A'}
-                  </Text>
+                <View style={[styles.routeArrowCircle, { backgroundColor: theme.colors.primary + '15' }]}>
+                  <ArrowRight size={16} color={theme.colors.primary} />
                 </View>
-              </View>
-              <View style={styles.arrowContainer}>
-                <ArrowDown size={24} color={COLORS.primary} />
-              </View>
-              <View style={styles.routeTo}>
-                <View style={styles.routeIconContainer}>
-                  <MapPin size={18} color={COLORS.primary} />
-                </View>
-                <View style={styles.routeInfo}>
-                  <Text style={styles.routeLabel}>{t('dashboard.to')}</Text>
-                  <Text style={styles.routeText}>
-                    {typeof booking.route?.to === 'string' 
-                      ? booking.route.to 
-                      : booking.route?.to?.address || 'N/A'}
-                  </Text>
+                <View style={[styles.routeBox, { backgroundColor: theme.colors.background, borderColor: theme.colors.border }]}>
+                  <MapPin size={15} color="#F44336" />
+                  <View style={styles.routeBoxContent}>
+                    <Text style={[styles.routeBoxLabel, { color: theme.colors.textSecondary }]}>{t('dashboard.to')}</Text>
+                    <Text style={[styles.routeBoxText, { color: theme.colors.text }]} numberOfLines={2}>
+                      {typeof booking.route?.to === 'string'
+                        ? booking.route.to
+                        : booking.route?.to?.address || 'N/A'}
+                    </Text>
+                  </View>
                 </View>
               </View>
             </View>
@@ -551,7 +613,7 @@ const BookingDetailsScreen = () => {
               <View style={styles.paymentMethodContainer}>
                 <CreditCard size={16} color={COLORS.primary} />
                 <Text style={styles.paymentMethodText}>
-                  {booking.paymentMethod === 'offline_cash' ? 'Cash (Collect from renter)' : booking.paymentMethod || 'N/A'}
+                  {booking.paymentMethod === 'offline_cash' ? 'Cash' : booking.paymentMethod ? booking.paymentMethod.toUpperCase() : 'Pay at trip end'}
                 </Text>
               </View>
             </View>
@@ -576,9 +638,7 @@ const BookingDetailsScreen = () => {
                          COLORS.textSecondary
                 }
               ]}>
-                {booking.paymentMethod === 'offline_cash'
-                  ? 'Collect cash from renter at vehicle return'
-                  : booking.paymentStatus === 'paid'
+                {booking.paymentStatus === 'paid'
                   ? 'Payment received - Settlement pending'
                   : booking.paymentStatus === 'pending'
                   ? 'Payment pending'
@@ -623,7 +683,7 @@ const BookingDetailsScreen = () => {
               <Text style={styles.paymentLabel}>Payment Method</Text>
               <View style={styles.paymentMethodContainer}>
                 <CreditCard size={16} color={COLORS.primary} />
-                <Text style={styles.paymentMethodText}>{booking.paymentMethod || 'N/A'}</Text>
+                <Text style={styles.paymentMethodText}>{booking.paymentMethod === 'offline_cash' ? 'Cash' : booking.paymentMethod || 'N/A'}</Text>
               </View>
             </View>
             <View style={[
@@ -650,8 +710,8 @@ const BookingDetailsScreen = () => {
                          COLORS.textSecondary
                 }
               ]}>
-                {booking.paymentStatus === 'pending' && booking.paymentMethod === 'offline_cash'
-                  ? 'Payment Pending - Pay at vehicle return'
+                {booking.paymentStatus === 'pending'
+                  ? 'Payment at trip end'
                   : booking.paymentStatus === 'paid'
                   ? 'Payment Successful'
                   : booking.paymentStatus === 'pending'
@@ -754,17 +814,6 @@ const BookingDetailsScreen = () => {
                 style={styles.actionButtonLarge}
               />
               
-              {/* Cancel Booking - Only for renters */}
-              {isRenter && booking.status === 'confirmed' && (
-                <Button
-                  title={t('bookingDetails.cancelBooking')}
-                  onPress={() => {}}
-                  variant="outline"
-                  size="large"
-                  style={[styles.actionButtonLarge, styles.cancelButton]}
-                />
-              )}
-              
               {/* Manage Rental button - Only for owners */}
               {isRental && isOwner && booking.rentalOfferId && (
                 <Button
@@ -782,6 +831,20 @@ const BookingDetailsScreen = () => {
               )}
             </>
           )}
+
+          {/* Cancel Booking — visible for any passenger/renter whose booking is not yet cancelled/completed/in_progress */}
+          {booking.status !== 'cancelled' &&
+            booking.status !== 'completed' &&
+            booking.status !== 'in_progress' && (
+            <Button
+              title={cancelling ? 'Loading...' : 'Cancel Booking'}
+              onPress={handleCancelBooking}
+              variant="outline"
+              size="large"
+              disabled={cancelling}
+              style={[styles.actionButtonLarge, styles.cancelButton]}
+            />
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -789,40 +852,37 @@ const BookingDetailsScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: COLORS.background 
+  container: {
+    flex: 1,
   },
+
+  /* ── Header ── */
   headerImage: {
     width: '100%',
-    height: 200,
+    height: 150,
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: COLORS.primary,
-    opacity: 0.6,
+    opacity: 0.78,
   },
   blurContainer: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'flex-end',
+    paddingBottom: SPACING.lg,
+    paddingHorizontal: SPACING.md,
   },
   headerTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.xl,
-    paddingBottom: SPACING.sm,
-  },
-  headerCenter: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   headerTitle: {
+    flex: 1,
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xl,
-    color: COLORS.white,
-    fontWeight: '600',
+    fontSize: 22,
+    color: '#FFF',
+    fontWeight: '800',
+    textAlign: 'center',
+    letterSpacing: 0.4,
   },
   headerRight: {
     flexDirection: 'row',
@@ -832,17 +892,20 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(255,255,255,0.18)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  scrollContent: { 
+
+  /* ── Scroll ── */
+  scrollContent: {
     padding: SPACING.md,
-    paddingTop: SPACING.lg,
+    paddingBottom: SPACING.xl,
   },
+
+  /* ── Booking Header ── */
   bookingHeaderCard: {
-    backgroundColor: COLORS.white,
-    borderRadius: BORDER_RADIUS.xl,
+    borderRadius: 16,
     padding: SPACING.lg,
     marginBottom: SPACING.md,
     flexDirection: 'row',
@@ -855,60 +918,51 @@ const styles = StyleSheet.create({
   },
   bookingIdLabel: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.textSecondary,
-    marginBottom: SPACING.xs,
+    fontSize: 11,
+    marginBottom: 4,
   },
   bookingId: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xl,
-    color: COLORS.text,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '700',
   },
-  statusBadge: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderRadius: BORDER_RADIUS.md,
+  statusPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 20,
   },
-  statusConfirmed: {
-    backgroundColor: `${COLORS.secondary}20`,
-  },
-  statusCompleted: {
-    backgroundColor: `${COLORS.success}20`,
-  },
-  statusCancelled: {
-    backgroundColor: `${COLORS.error}20`,
-  },
-  statusText: {
+  statusPillText: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.text,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
+
+  /* ── Flags ── */
   flagsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: SPACING.sm,
+    gap: 8,
     marginBottom: SPACING.md,
   },
   flagBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: `${COLORS.primary}15`,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderRadius: BORDER_RADIUS.round,
-    gap: SPACING.xs,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    gap: 5,
   },
   flagText: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.primary,
+    fontSize: 12,
     fontWeight: '600',
   },
+
+  /* ── Section Card ── */
   sectionCard: {
     backgroundColor: COLORS.white,
-    borderRadius: BORDER_RADIUS.xl,
+    borderRadius: 16,
     padding: SPACING.lg,
     marginBottom: SPACING.md,
     ...SHADOWS.md,
@@ -920,9 +974,9 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.lg,
+    fontSize: 16,
     color: COLORS.text,
-    fontWeight: '600',
+    fontWeight: '700',
     marginLeft: SPACING.sm,
   },
   divider: {
@@ -930,43 +984,46 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.border,
     marginBottom: SPACING.md,
   },
-  routeFrom: {
+
+  /* ── Route Box Display ── */
+  routeBoxRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: SPACING.sm,
+    gap: 6,
   },
-  routeTo: {
+  routeBox: {
+    flex: 1,
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    gap: 8,
   },
-  routeIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: `${COLORS.primary}15`,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: SPACING.md,
-  },
-  routeInfo: {
+  routeBoxContent: {
     flex: 1,
   },
-  routeLabel: {
+  routeBoxLabel: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.textSecondary,
-    marginBottom: SPACING.xs,
+    fontSize: 10,
+    fontWeight: '500',
+    marginBottom: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  routeText: {
+  routeBoxText: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
-    color: COLORS.text,
+    fontSize: 12,
     fontWeight: '600',
+    lineHeight: 16,
   },
-  arrowContainer: {
+  routeArrowCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     alignItems: 'center',
-    marginVertical: SPACING.xs,
-    marginLeft: SPACING.md + 36,
+    justifyContent: 'center',
   },
   detailRow: {
     flexDirection: 'row',

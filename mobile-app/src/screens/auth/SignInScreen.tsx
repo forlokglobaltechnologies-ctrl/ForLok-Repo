@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ImageBackground,
+  Image,
   Alert,
   ActivityIndicator,
 } from 'react-native';
@@ -98,7 +99,11 @@ const SignInScreen = () => {
 
             <View style={styles.logoContainer}>
               <View style={styles.logoCircle}>
-                <Text style={styles.logoText}>Y</Text>
+                <Image
+                  source={require('../../../assets/flogo.png')}
+                  style={styles.logoImage}
+                  resizeMode="contain"
+                />
               </View>
             </View>
 
@@ -185,7 +190,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     padding: SPACING.lg,
-    paddingTop: SPACING.xxl,
+    paddingTop: 80,
   },
   headerRow: {
     flexDirection: 'row',
@@ -222,11 +227,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  logoText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xxxl,
-    color: COLORS.primary,
-    fontWeight: 'bold',
+  logoImage: {
+    width: 70,
+    height: 70,
   },
   title: {
     fontFamily: FONTS.regular,

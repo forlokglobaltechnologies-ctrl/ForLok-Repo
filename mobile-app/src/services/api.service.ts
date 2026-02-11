@@ -6,8 +6,8 @@
 import { API_CONFIG, getApiUrl } from '../config/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const TOKEN_KEY = '@yaaryatra_access_token';
-const REFRESH_TOKEN_KEY = '@yaaryatra_refresh_token';
+const TOKEN_KEY = '@forlok_access_token';
+const REFRESH_TOKEN_KEY = '@forlok_refresh_token';
 
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';

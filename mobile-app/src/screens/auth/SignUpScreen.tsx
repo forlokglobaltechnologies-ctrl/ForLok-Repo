@@ -262,6 +262,7 @@ const styles = StyleSheet.create({
     marginRight: SPACING.xs,
   },
   languageArrow: {
+    fontFamily: FONTS.regular,
     fontSize: 12,
     color: COLORS.primary,
   },

@@ -11,11 +11,10 @@
 // For production: Use your deployed backend URL
 
 // Default: localhost (works for emulator/simulator)
-// For physical device (Expo Go): use your computer's IP - run "ipconfig" to find it
-// Current WiFi IP: 10.5.40.38 (update when you change networks)
+// For physical device, change to your computer's IP address
 const API_BASE_URL = __DEV__
-  ? 'http://10.206.92.236:3000' // Your computer's IP for Expo physical device
-  : 'https://api.yaaryatra.com'; // Production URL
+  ? 'http://10.165.34.16:3000' // Your computer's IP for Expo physical device
+  : 'https://api.forlok.com'; // Production URL
 
 export const API_CONFIG = {
   BASE_URL: API_BASE_URL,
@@ -110,6 +109,7 @@ export const API_CONFIG = {
       LIST: '/api/bookings',
       GET: '/api/bookings/:bookingId',
       CANCEL: '/api/bookings/:bookingId/cancel',
+      CANCEL_PREVIEW: '/api/bookings/:bookingId/cancel-preview',
       UPDATE_STATUS: '/api/bookings/:bookingId/status',
       DRIVER_BOOKINGS: '/api/bookings/driver',
       BY_OFFER: '/api/bookings/by-offer/:offerId',
@@ -120,6 +120,7 @@ export const API_CONFIG = {
       TRIP_PASSENGERS: '/api/bookings/trip/:offerId/passengers',
       START_TRIP: '/api/bookings/start-trip',
       END_TRIP: '/api/bookings/end-trip',
+      CHOOSE_PAYMENT: '/api/bookings/:bookingId/choose-payment',
     },
     // Payments
     PAYMENT: {
@@ -130,6 +131,7 @@ export const API_CONFIG = {
       REFUND: '/api/payments/:paymentId/refund',
       METHODS: '/api/payments/methods',
       WEBHOOK: '/api/payments/webhook',
+      SIMULATE_TEST: '/api/payments/simulate-test',
     },
     // Food
     FOOD: {
@@ -147,9 +149,13 @@ export const API_CONFIG = {
       CREATE: '/api/ratings',
       GET: '/api/ratings/:ratingId',
       USER_RATINGS: '/api/ratings/user/:userId',
+      USER_RATINGS_DETAILS: '/api/ratings/user/:userId/details',
       BOOKING_RATING: '/api/ratings/booking/:bookingId',
       UPDATE: '/api/ratings/:ratingId',
       DELETE: '/api/ratings/:ratingId',
+      CAN_RATE: '/api/ratings/can-rate/:bookingId',
+      BREAKDOWN: '/api/ratings/breakdown/:userId',
+      TAGS: '/api/ratings/tags/:ratingType',
     },
     // Notifications
     NOTIFICATION: {
@@ -169,11 +175,28 @@ export const API_CONFIG = {
     ADMIN: {
       LOGIN: '/api/admin/auth/login',
       DASHBOARD_STATS: '/api/admin/dashboard/stats',
+      // Users
       USERS: '/api/admin/users',
       USER_DETAILS: '/api/admin/users/:userId',
       VERIFY_USER: '/api/admin/users/:userId/verify',
       SUSPEND_USER: '/api/admin/users/:userId/suspend',
       ACTIVATE_USER: '/api/admin/users/:userId/activate',
+      // Pooling
+      POOLING_OFFERS: '/api/admin/pooling/offers',
+      POOLING_APPROVE: '/api/admin/pooling/offers/:offerId/approve',
+      POOLING_SUSPEND: '/api/admin/pooling/offers/:offerId/suspend',
+      // Rental
+      RENTAL_OFFERS: '/api/admin/rental/offers',
+      RENTAL_APPROVE: '/api/admin/rental/offers/:offerId/approve',
+      RENTAL_SUSPEND: '/api/admin/rental/offers/:offerId/suspend',
+      // Bookings
+      BOOKINGS: '/api/admin/bookings',
+      // Feedback
+      FEEDBACK_LIST: '/api/admin/feedback',
+      FEEDBACK_DETAIL: '/api/admin/feedback/:feedbackId',
+      FEEDBACK_UPDATE_STATUS: '/api/admin/feedback/:feedbackId/status',
+      FEEDBACK_RESPOND: '/api/admin/feedback/:feedbackId/respond',
+      FEEDBACK_STATS: '/api/admin/feedback/stats',
     },
     // Tracking
     TRACKING: {
@@ -200,6 +223,71 @@ export const API_CONFIG = {
       MARK_MESSAGE_READ: '/api/chat/messages/:messageId/read',
       MARK_MESSAGES_READ: '/api/chat/conversations/:conversationId/messages/read',
       DELETE_MESSAGE: '/api/chat/messages/:messageId',
+    },
+    // Withdrawals
+    WITHDRAWAL: {
+      CREATE: '/api/withdrawals/create',
+      MY_WITHDRAWALS: '/api/withdrawals/my-withdrawals',
+      GET: '/api/withdrawals/:withdrawalId',
+      ADMIN_PENDING: '/api/withdrawals/admin/pending',
+      ADMIN_APPROVED: '/api/withdrawals/admin/approved',
+      ADMIN_APPROVE: '/api/withdrawals/admin/:withdrawalId/approve',
+      ADMIN_COMPLETE: '/api/withdrawals/admin/:withdrawalId/complete',
+      ADMIN_REJECT: '/api/withdrawals/admin/:withdrawalId/reject',
+    },
+    // Wallet
+    WALLET: {
+      SUMMARY: '/api/wallet/summary',
+      CAN_BOOK: '/api/wallet/can-book',
+      CAN_BOOK_OFFLINE: '/api/wallet/can-book-offline',
+      TOP_UP: '/api/wallet/top-up',
+      TRANSACTIONS: '/api/wallet/transactions',
+      CONFIG: '/api/wallet/config',
+    },
+    // Block Users
+    BLOCK: {
+      LIST: '/api/blocks',
+      BLOCK_USER: '/api/blocks',
+      UNBLOCK_USER: '/api/blocks/:userId',
+      CHECK: '/api/blocks/check/:userId',
+    },
+    // Refund
+    REFUND: {
+      POLICY: '/api/refunds/policy',
+      CALCULATE: '/api/refunds/calculate/:bookingId',
+      BOOKING_REFUND: '/api/refunds/booking/:bookingId',
+      HISTORY: '/api/refunds/history',
+    },
+    // Coins
+    COIN: {
+      BALANCE: '/api/coins/balance',
+      TRANSACTIONS: '/api/coins/transactions',
+      DISCOUNT_PREVIEW: '/api/coins/discount-preview',
+      REDEEM: '/api/coins/redeem',
+      MILESTONES: '/api/coins/milestones',
+    },
+    // Referrals
+    REFERRAL: {
+      MY_CODE: '/api/referrals/my-code',
+      STATS: '/api/referrals/stats',
+      VALIDATE: '/api/referrals/validate',
+    },
+    // Promotions
+    PROMO: {
+      SUBMIT: '/api/promos/submit',
+      MY_SUBMISSIONS: '/api/promos/my-submissions',
+    },
+    // Admin Analytics
+    ANALYTICS: {
+      REALTIME: '/api/admin/analytics/realtime',
+      TODAY: '/api/admin/analytics/today',
+      TRENDS: '/api/admin/analytics/trends',
+      POOLING: '/api/admin/analytics/pooling',
+      FINANCIAL: '/api/admin/analytics/financial',
+      USERS: '/api/admin/analytics/users',
+      LEADERBOARD_EARNERS: '/api/admin/analytics/leaderboards/earners',
+      LEADERBOARD_ACTIVE: '/api/admin/analytics/leaderboards/active',
+      LEADERBOARD_RATED: '/api/admin/analytics/leaderboards/rated',
     },
   },
 };

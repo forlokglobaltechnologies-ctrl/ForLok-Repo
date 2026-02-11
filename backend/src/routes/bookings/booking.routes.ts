@@ -8,7 +8,7 @@ import { ApiResponse, PaymentMethod, Route } from '../../types';
 // Request schemas
 const createPoolingBookingSchema = z.object({
   poolingOfferId: z.string(),
-  paymentMethod: z.enum(['upi', 'card', 'wallet', 'net_banking', 'offline_cash']),
+  paymentMethod: z.enum(['upi', 'card', 'wallet', 'net_banking', 'offline_cash']).optional(), // Payment method selected at trip end
   passengerRoute: z.object({
     from: z.object({
       address: z.string(),
@@ -37,7 +37,7 @@ const createRentalBookingSchema = z.object({
   duration: z.number().min(1).optional(),
   startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).optional(), // HH:mm format
   endTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).optional(), // HH:mm format
-  paymentMethod: z.enum(['upi', 'card', 'wallet', 'net_banking', 'offline_cash']),
+  paymentMethod: z.enum(['upi', 'card', 'wallet', 'net_banking', 'offline_cash']).optional(), // Payment method selected at trip end
 }).refine(
   (data) => data.duration || (data.startTime && data.endTime),
   {
@@ -285,6 +285,31 @@ export async function bookingRoutes(fastify: FastifyInstance) {
   );
 
   /**
+   * GET /api/bookings/:bookingId/cancel-preview
+   * Preview cancellation fee before cancelling (authenticated)
+   */
+  fastify.get(
+    '/:bookingId/cancel-preview',
+    {
+      preHandler: [authenticate],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const userId = (request as any).user.userId;
+      const { bookingId } = request.params as { bookingId: string };
+
+      const preview = await bookingService.previewCancellationFee(bookingId, userId);
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Cancellation fee preview',
+        data: preview,
+      };
+
+      return reply.status(200).send(response);
+    }
+  );
+
+  /**
    * PUT /api/bookings/:bookingId/cancel
    * Cancel booking (authenticated)
    */
@@ -449,20 +474,24 @@ export async function bookingRoutes(fastify: FastifyInstance) {
   /**
    * POST /api/bookings/:bookingId/end-trip
    * End trip for a specific passenger with code verification (authenticated - driver only)
+   * Body: { passengerCode: string, paymentMethod?: 'offline_cash' | 'upi' | 'card' | 'net_banking' }
+   * If paymentMethod is 'offline_cash', cash payment is recorded immediately.
+   * Otherwise, a Razorpay order is created for online payment.
    */
   fastify.post(
     '/:bookingId/end-trip',
     {
       preHandler: [authenticate, validate(z.object({
         passengerCode: z.string().length(4),
+        paymentMethod: z.enum(['upi', 'card', 'wallet', 'net_banking', 'offline_cash']).optional(),
       }))],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const userId = (request as any).user.userId;
       const { bookingId } = request.params as { bookingId: string };
-      const { passengerCode } = request.body as { passengerCode: string };
+      const { passengerCode, paymentMethod } = request.body as { passengerCode: string; paymentMethod?: string };
 
-      const result = await bookingService.endPassengerTrip(bookingId, userId, passengerCode);
+      const result = await bookingService.endPassengerTrip(bookingId, userId, passengerCode, paymentMethod);
 
       const response: ApiResponse = {
         success: true,
@@ -566,6 +595,37 @@ export async function bookingRoutes(fastify: FastifyInstance) {
       const { bookingId } = request.params as { bookingId: string };
 
       const result = await bookingService.markPassengerGotOut(bookingId, userId);
+
+      const response: ApiResponse = {
+        success: true,
+        message: result.message,
+        data: result,
+      };
+
+      return reply.status(200).send(response);
+    }
+  );
+
+  /**
+   * POST /api/bookings/:bookingId/choose-payment
+   * Passenger chooses payment method after trip ends (authenticated - passenger only)
+   * Body: { paymentMethod: 'online' | 'offline_cash' }
+   * Online → Razorpay order created, passenger pays
+   * Cash → 4-digit code generated, passenger shows to driver
+   */
+  fastify.post(
+    '/:bookingId/choose-payment',
+    {
+      preHandler: [authenticate, validate(z.object({
+        paymentMethod: z.enum(['online', 'offline_cash']),
+      }))],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const userId = (request as any).user.userId;
+      const { bookingId } = request.params as { bookingId: string };
+      const { paymentMethod } = request.body as { paymentMethod: 'online' | 'offline_cash' };
+
+      const result = await bookingService.choosePaymentMethod(bookingId, userId, paymentMethod);
 
       const response: ApiResponse = {
         success: true,

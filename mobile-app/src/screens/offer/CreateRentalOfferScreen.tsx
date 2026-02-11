@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import LottieView from 'lottie-react-native';
 import { Video, ResizeMode } from 'expo-av';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { ArrowLeft, MapPin, Calendar, Clock, Car, IndianRupee, FileText, Minus, Plus, ChevronDown } from 'lucide-react-native';
@@ -25,12 +26,27 @@ import { rentalApi, vehicleApi } from '@utils/apiClient';
 import LocationPicker, { LocationData } from '@components/common/LocationPicker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+const RENTAL_COMING_SOON = true; // V2 feature — flip to false to re-enable
+
 const CreateRentalOfferScreen = () => {
   const renderCount = useRef(0);
   renderCount.current += 1;
   console.log(`🚀 CreateRentalOfferScreen component rendered (render #${renderCount.current})`);
   
   const navigation = useNavigation();
+
+  if (RENTAL_COMING_SOON) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' }}>
+        <StatusBar barStyle="dark-content" />
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ position: 'absolute', top: Platform.OS === 'android' ? 40 : 54, left: 16, zIndex: 10, width: 40, height: 40, borderRadius: 20, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' }}>
+          <ArrowLeft size={22} color="#1E293B" />
+        </TouchableOpacity>
+        <LottieView source={require('../../../assets/videos/Coming soon.json')} autoPlay loop style={{ width: 300, height: 300 }} />
+      </View>
+    );
+  }
+
   const { t } = useLanguage();
   const videoRef = useRef<Video>(null);
   

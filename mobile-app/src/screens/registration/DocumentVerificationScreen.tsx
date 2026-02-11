@@ -1417,6 +1417,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   errorText: {
+    fontFamily: FONTS.regular,
     color: COLORS.white,
     fontSize: 14,
     fontWeight: 'bold',

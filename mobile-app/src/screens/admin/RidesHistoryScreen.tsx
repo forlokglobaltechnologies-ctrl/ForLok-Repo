@@ -1,704 +1,391 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   Dimensions,
   ImageBackground,
+  Platform,
+  StatusBar,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { BlurView } from 'expo-blur';
 import {
   ArrowLeft,
-  Search,
-  Filter,
-  Download,
   Clock,
   TrendingUp,
   DollarSign,
   Car,
   KeyRound,
-  FileText,
+  MapPin,
+  ChevronRight,
+  User,
+  Calendar,
+  Inbox,
+  CheckCircle,
 } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
-import { Card } from '@components/common/Card';
-import { useLanguage } from '@context/LanguageContext';
+import { adminApi, analyticsApi } from '@utils/apiClient';
 
-const { width } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const RidesHistoryScreen = () => {
   const navigation = useNavigation();
   const [activeFilter, setActiveFilter] = useState('All');
+  const [bookings, setBookings] = useState<any[]>([]);
+  const [summary, setSummary] = useState({
+    total: 0,
+    totalRevenue: 0,
+    pooling: { count: 0, revenue: 0 },
+    rentals: { count: 0, revenue: 0 },
+  });
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [page, setPage] = useState(1);
 
-  const transactions = [
-    {
-      id: 'YA20240115001',
-      userName: 'Rajesh K.',
-      service: 'Car Pool',
-      date: '15 Jan 2024',
-      route: 'Bangalore → Mumbai',
-      revenue: '₹450',
-      status: 'Completed',
-    },
-    {
-      id: 'YA20240115002',
-      userName: 'Priya M.',
-      service: 'Rental',
-      date: '15 Jan 2024',
-      route: 'Honda City, 4 hours',
-      revenue: '₹3,200',
-      status: 'Completed',
-    },
-    {
-      id: 'YA20240114001',
-      userName: 'Amit S.',
-      service: 'Bike Pool',
-      date: '14 Jan 2024',
-      route: 'Pune → Mumbai',
-      revenue: '₹300',
-      status: 'Completed',
-    },
-  ];
-
-  const summary = {
-    total: 123456,
-    totalRevenue: 24567890,
-    pooling: { count: 89234, revenue: 8945000 },
-    rentals: { count: 34222, revenue: 15622890 },
+  const safeNum = (val: any): number => {
+    if (val == null) return 0;
+    if (typeof val === 'number') return val;
+    if (typeof val === 'string') return parseFloat(val) || 0;
+    if (typeof val === 'object') return Number(val.amount ?? val.total ?? val.value ?? val.count ?? 0) || 0;
+    return 0;
   };
 
-  const stats = {
-    total: summary.total,
-    revenue: summary.totalRevenue,
-    pooling: summary.pooling.count,
-    rentals: summary.rentals.count,
+  const fetchData = useCallback(async (isRefresh = false) => {
+    try {
+      if (!isRefresh) setLoading(true);
+
+      const params: any = { page, limit: 20 };
+      if (activeFilter === 'Pooling') params.serviceType = 'pooling';
+      else if (activeFilter === 'Rental') params.serviceType = 'rental';
+
+      const [bookingsRes, dashRes, financialRes] = await Promise.all([
+        adminApi.getBookings(params),
+        adminApi.getDashboardStats(),
+        analyticsApi.getFinancialSummary('month'),
+      ]);
+
+      // Bookings list
+      if (bookingsRes.success && bookingsRes.data) {
+        const d = bookingsRes.data;
+        setBookings(d.bookings || d.data || (Array.isArray(d) ? d : []));
+      }
+
+      // Summary from dashboard stats + financial
+      const dash = dashRes.success ? dashRes.data : {};
+      const fin = financialRes.success ? financialRes.data : {};
+
+      const bookingsData = dash?.bookings || dash;
+      const revenueData = dash?.revenue || fin;
+      const breakdown = fin?.breakdown || {};
+
+      setSummary({
+        total: safeNum(bookingsData?.total ?? bookingsData?.totalBookings),
+        totalRevenue: safeNum(revenueData?.total ?? revenueData?.totalRevenue),
+        pooling: {
+          count: safeNum(bookingsData?.pooling ?? breakdown?.poolingCount),
+          revenue: safeNum(breakdown?.pooling ?? revenueData?.poolingRevenue),
+        },
+        rentals: {
+          count: safeNum(bookingsData?.rental ?? breakdown?.rentalCount),
+          revenue: safeNum(breakdown?.rental ?? revenueData?.rentalRevenue),
+        },
+      });
+    } catch (error) {
+      console.error('Error fetching rides data:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [activeFilter, page]);
+
+  useEffect(() => { setPage(1); }, [activeFilter]);
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  const onRefresh = () => { setRefreshing(true); fetchData(true); };
+
+  const formatCurrency = (amount: number) => {
+    if (amount >= 10000000) return `₹${(amount / 10000000).toFixed(1)}Cr`;
+    if (amount >= 100000) return `₹${(amount / 100000).toFixed(1)}L`;
+    if (amount >= 1000) return `₹${(amount / 1000).toFixed(0)}K`;
+    return `₹${amount}`;
+  };
+
+  const formatNumber = (num: number) => {
+    if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+    return num.toLocaleString();
+  };
+
+  const formatDate = (d: string) => {
+    if (!d) return 'N/A';
+    try { return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }); }
+    catch { return d; }
+  };
+
+  const FILTERS = [
+    { key: 'All', label: 'All', color: '#4A90D9' },
+    { key: 'Pooling', label: 'Pooling', color: '#00B894' },
+    { key: 'Rental', label: 'Rental', color: '#F39C12' },
+  ];
+
+  const getServiceConfig = (service: string) => {
+    const s = (service || '').toLowerCase();
+    if (s.includes('pool') || s === 'pooling') return { color: '#00B894', bg: '#00B894' + '15', icon: Car };
+    return { color: '#F39C12', bg: '#F39C12' + '15', icon: KeyRound };
+  };
+
+  const getStatusConfig = (status: string) => {
+    const s = (status || '').toLowerCase();
+    if (s === 'completed') return { color: '#00B894', bg: '#00B894' + '15' };
+    if (s === 'cancelled') return { color: '#E74C3C', bg: '#E74C3C' + '15' };
+    if (s === 'pending' || s === 'upcoming') return { color: '#F39C12', bg: '#F39C12' + '15' };
+    if (s === 'active' || s === 'in_progress') return { color: '#4A90D9', bg: '#4A90D9' + '15' };
+    return { color: '#64748B', bg: '#F1F5F9' };
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Blue Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <ArrowLeft size={24} color={COLORS.white} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('admin.ridesHistory.title')}</Text>
-        <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.iconButton}>
-            <Search size={20} color={COLORS.white} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
-            <Filter size={20} color={COLORS.white} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
-            <Download size={20} color={COLORS.white} />
-          </TouchableOpacity>
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+
+      {/* Hero Header */}
+      <ImageBackground source={require('../../../assets/rideshistory.png')} style={styles.heroHeader} resizeMode="cover">
+        <View style={styles.heroOverlay} />
+        <BlurView intensity={20} tint="dark" style={styles.heroBlur}>
+          <View style={styles.heroNav}>
+            <TouchableOpacity style={styles.heroBackBtn} onPress={() => navigation.goBack()}>
+              <ArrowLeft size={20} color="#fff" />
+            </TouchableOpacity>
+            <View style={styles.heroTitleWrap}>
+              <Text style={styles.heroTitle}>Rides History</Text>
+              <Text style={styles.heroSubtitle}>
+                {summary.total > 0 ? `${summary.total.toLocaleString()} total rides` : 'All bookings & transactions'}
+              </Text>
+            </View>
+            <View style={{ width: 38 }} />
+          </View>
+        </BlurView>
+      </ImageBackground>
+
+      {/* Stats Strip */}
+      <View style={styles.statsStrip}>
+        <View style={styles.statsStripItem}>
+          <View style={[styles.statsIcon, { backgroundColor: '#4A90D9' + '15' }]}><Clock size={16} color="#4A90D9" /></View>
+          <Text style={[styles.statsValue, { color: '#4A90D9' }]}>{formatNumber(summary.total)}</Text>
+          <Text style={styles.statsLabel}>Total</Text>
+        </View>
+        <View style={styles.statsStripItem}>
+          <View style={[styles.statsIcon, { backgroundColor: '#00B894' + '15' }]}><DollarSign size={16} color="#00B894" /></View>
+          <Text style={[styles.statsValue, { color: '#00B894' }]}>{formatCurrency(summary.totalRevenue)}</Text>
+          <Text style={styles.statsLabel}>Revenue</Text>
+        </View>
+        <View style={styles.statsStripItem}>
+          <View style={[styles.statsIcon, { backgroundColor: '#7B61FF' + '15' }]}><Car size={16} color="#7B61FF" /></View>
+          <Text style={[styles.statsValue, { color: '#7B61FF' }]}>{formatNumber(summary.pooling.count)}</Text>
+          <Text style={styles.statsLabel}>Pooling</Text>
+        </View>
+        <View style={styles.statsStripItem}>
+          <View style={[styles.statsIcon, { backgroundColor: '#F39C12' + '15' }]}><KeyRound size={16} color="#F39C12" /></View>
+          <Text style={[styles.statsValue, { color: '#F39C12' }]}>{formatNumber(summary.rentals.count)}</Text>
+          <Text style={styles.statsLabel}>Rentals</Text>
         </View>
       </View>
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {/* Image Background with Statistics Cards */}
-        <View style={styles.imageContainer}>
-          <ImageBackground
-            source={require('../../../assets/pooling.jpg')}
-            style={styles.backgroundImage}
-            resizeMode="cover"
-          >
-            <View style={styles.overlay} />
-            <BlurView intensity={50} style={styles.blurContainer}>
-              <View style={styles.statsContainer}>
-                <Card style={styles.statCard}>
-                  <View style={styles.statTrendTopRight}>
-                    <TrendingUp size={12} color={COLORS.success} />
-                    <Text style={styles.statTrendText}>+18%</Text>
-                  </View>
-                  <View style={styles.statIconContainer}>
-                    <Clock size={24} color={COLORS.white} />
-                  </View>
-                  <View style={styles.statContent}>
-                    <Text style={styles.statValue} numberOfLines={1}>{stats.total.toLocaleString()}</Text>
-                    <Text style={styles.statLabel} numberOfLines={1}>Total Rides</Text>
-                  </View>
-                </Card>
-
-                <Card style={styles.statCard}>
-                  <View style={styles.statTrendTopRight}>
-                    <TrendingUp size={12} color={COLORS.success} />
-                    <Text style={styles.statTrendText}>+22%</Text>
-                  </View>
-                  <View style={[styles.statIconContainer, { backgroundColor: COLORS.success + '30' }]}>
-                    <DollarSign size={24} color={COLORS.white} />
-                  </View>
-                  <View style={styles.statContent}>
-                    <Text style={styles.statValue} numberOfLines={1}>₹{(stats.revenue / 10000000).toFixed(1)}Cr</Text>
-                    <Text style={styles.statLabel} numberOfLines={1}>Total Revenue</Text>
-                  </View>
-                </Card>
-
-                <Card style={styles.statCard}>
-                  <View style={[styles.statIconContainer, { backgroundColor: COLORS.primary + '30' }]}>
-                    <Car size={24} color={COLORS.white} />
-                  </View>
-                  <View style={styles.statContent}>
-                    <Text style={styles.statValue} numberOfLines={1}>{stats.pooling.toLocaleString()}</Text>
-                    <Text style={styles.statLabel} numberOfLines={1}>Pooling</Text>
-                  </View>
-                </Card>
-
-                <Card style={styles.statCard}>
-                  <View style={[styles.statIconContainer, { backgroundColor: COLORS.warning + '30' }]}>
-                    <KeyRound size={24} color={COLORS.white} />
-                  </View>
-                  <View style={styles.statContent}>
-                    <Text style={styles.statValue} numberOfLines={1}>{stats.rentals.toLocaleString()}</Text>
-                    <Text style={styles.statLabel} numberOfLines={1}>Rentals</Text>
-                  </View>
-                </Card>
-              </View>
-            </BlurView>
-          </ImageBackground>
-        </View>
-
-        {/* Export Options - Moved to Top */}
-        <View style={styles.exportOptions}>
-          <TouchableOpacity style={styles.exportButton}>
-            <Download size={18} color={COLORS.white} />
-            <Text style={styles.exportButtonText}>{t('admin.ridesHistory.exportCSV')}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.exportButton}>
-            <FileText size={18} color={COLORS.white} />
-            <Text style={styles.exportButtonText}>{t('admin.ridesHistory.exportPDF')}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.exportButton}>
-            <FileText size={18} color={COLORS.white} />
-            <Text style={styles.exportButtonText}>{t('admin.ridesHistory.generateReport')}</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Filter Options */}
-        <Card style={styles.filterCard}>
-          <Text style={styles.filterTitle}>{t('admin.ridesHistory.filterOptions')}:</Text>
-          <View style={styles.filterRow}>
-            <Text style={styles.filterLabel}>{t('admin.ridesHistory.serviceType')}:</Text>
-            <View style={styles.filterButtons}>
-              <TouchableOpacity
-                style={[styles.filterButton, activeFilter === 'All' && styles.filterButtonActive]}
-                onPress={() => setActiveFilter('All')}
-              >
-                <Text style={[styles.filterButtonText, activeFilter === 'All' && styles.filterButtonTextActive]}>{t('common.all')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.filterButton, activeFilter === 'Pooling' && styles.filterButtonActive]}
-                onPress={() => setActiveFilter('Pooling')}
-              >
-                <Text style={[styles.filterButtonText, activeFilter === 'Pooling' && styles.filterButtonTextActive]}>{t('admin.ridesHistory.pooling')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.filterButton, activeFilter === 'Rental' && styles.filterButtonActive]}
-                onPress={() => setActiveFilter('Rental')}
-              >
-                <Text style={[styles.filterButtonText, activeFilter === 'Rental' && styles.filterButtonTextActive]}>{t('admin.ridesHistory.rentals')}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-          <View style={styles.filterActions}>
-            <TouchableOpacity style={styles.applyButton}>
-              <Text style={styles.applyButtonText}>{t('admin.ridesHistory.applyFilters')}</Text>
+      {/* Filter Tabs */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsScroll} contentContainerStyle={styles.tabsContent}>
+        {FILTERS.map((f) => {
+          const isActive = activeFilter === f.key;
+          return (
+            <TouchableOpacity key={f.key} style={[styles.tab, isActive && { backgroundColor: f.color, borderColor: f.color }]} activeOpacity={0.7} onPress={() => setActiveFilter(f.key)}>
+              <Text style={[styles.tabText, isActive && styles.tabTextActive]}>{f.label}</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.resetButton}>
-              <Text style={styles.resetButtonText}>{t('common.reset')}</Text>
-            </TouchableOpacity>
-          </View>
-        </Card>
+          );
+        })}
+      </ScrollView>
 
-        {/* Transaction Summary */}
-        <Card style={styles.summaryCard}>
-          <Text style={styles.summaryTitle}>{t('admin.ridesHistory.transactionSummary')}:</Text>
-          <View style={styles.summaryRow}>
-            <View style={styles.summaryItem}>
-              <Text style={styles.summaryValue}>{summary.total.toLocaleString()}</Text>
-              <Text style={styles.summaryLabel}>{t('admin.ridesHistory.totalTransactions')}</Text>
+      {/* Content */}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
+        {/* Revenue Summary */}
+        <View style={styles.summaryRow}>
+          <View style={styles.summaryCard}>
+            <View style={styles.summaryCardHeader}>
+              <Text style={styles.summaryCardLabel}>Pooling Revenue</Text>
             </View>
-            <View style={styles.summaryItem}>
-              <Text style={styles.summaryValue}>₹{(summary.totalRevenue / 10000000).toFixed(1)}Cr</Text>
-              <Text style={styles.summaryLabel}>{t('admin.ridesHistory.totalRevenue')}</Text>
+            <Text style={[styles.summaryCardValue, { color: '#00B894' }]}>{formatCurrency(summary.pooling.revenue)}</Text>
+            <Text style={styles.summaryCardSub}>{summary.pooling.count.toLocaleString()} rides</Text>
+          </View>
+          <View style={styles.summaryCard}>
+            <View style={styles.summaryCardHeader}>
+              <Text style={styles.summaryCardLabel}>Rental Revenue</Text>
             </View>
+            <Text style={[styles.summaryCardValue, { color: '#F39C12' }]}>{formatCurrency(summary.rentals.revenue)}</Text>
+            <Text style={styles.summaryCardSub}>{summary.rentals.count.toLocaleString()} rentals</Text>
           </View>
-          <View style={styles.summaryBreakdown}>
-            <Text style={styles.breakdownItem}>
-              • {t('admin.ridesHistory.pooling')}: {summary.pooling.count.toLocaleString()} (₹{(summary.pooling.revenue / 1000000).toFixed(1)}M)
-            </Text>
-            <Text style={styles.breakdownItem}>
-              • {t('admin.ridesHistory.rentals')}: {summary.rentals.count.toLocaleString()} (₹{(summary.rentals.revenue / 1000000).toFixed(1)}M)
-            </Text>
-          </View>
-        </Card>
+        </View>
 
         {/* Transaction List */}
-        <Text style={styles.sectionTitle}>{t('admin.ridesHistory.transactionList')}:</Text>
-        <View style={styles.transactionsSection}>
-        {transactions.map((transaction) => (
-          <Card key={transaction.id} style={styles.transactionCard}>
-            <View style={styles.transactionHeader}>
-              <Text style={styles.transactionId}>#{transaction.id}</Text>
-              <View style={[styles.statusBadge, styles.statusCompleted]}>
-                <Text style={styles.statusText}>{transaction.status}</Text>
-              </View>
-            </View>
-            <View style={styles.transactionDetails}>
-              <Text style={styles.transactionDetail}>
-                <Text style={styles.detailLabel}>User:</Text> {transaction.userName}
-              </Text>
-              <Text style={styles.transactionDetail}>
-                <Text style={styles.detailLabel}>Service:</Text> {transaction.service}
-              </Text>
-              <Text style={styles.transactionDetail}>
-                <Text style={styles.detailLabel}>Date:</Text> {transaction.date}
-              </Text>
-              <Text style={styles.transactionDetail}>
-                <Text style={styles.detailLabel}>Route:</Text> {transaction.route}
-              </Text>
-              <Text style={styles.transactionDetail}>
-                <Text style={styles.detailLabel}>Revenue:</Text> {transaction.revenue}
-              </Text>
-            </View>
-            <TouchableOpacity
-              style={styles.detailsButton}
-              onPress={() => navigation.navigate('TransactionDetails' as never, { transactionId: transaction.id } as never)}
-            >
-              <Text style={styles.detailsButtonText}>View Details</Text>
-            </TouchableOpacity>
-          </Card>
-        ))}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Recent Transactions</Text>
+          <Text style={styles.sectionCount}>{bookings.length} shown</Text>
         </View>
+
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={COLORS.primary} />
+            <Text style={styles.loadingText}>Loading rides...</Text>
+          </View>
+        ) : bookings.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <View style={styles.emptyIconWrap}><Inbox size={48} color="#CBD5E1" /></View>
+            <Text style={styles.emptyTitle}>No Rides Found</Text>
+            <Text style={styles.emptyText}>No transactions match your filter.</Text>
+          </View>
+        ) : (
+          bookings.map((tx: any) => {
+            const bookingId = tx.bookingId || tx._id || tx.id;
+            const service = tx.serviceType || tx.type || 'pooling';
+            const svcConf = getServiceConfig(service);
+            const SvcIcon = svcConf.icon;
+            const statusConf = getStatusConfig(tx.status);
+            const userName = tx.user?.name || tx.userName || tx.passenger?.name || 'User';
+            const fromCity = tx.from?.city || tx.from?.address || (tx.route?.from?.city) || (tx.route?.from?.address) || (typeof tx.from === 'string' ? tx.from : '');
+            const toCity = tx.to?.city || tx.to?.address || (tx.route?.to?.city) || (tx.route?.to?.address) || (typeof tx.to === 'string' ? tx.to : '');
+            const route = fromCity && toCity ? `${fromCity} → ${toCity}` : (typeof tx.route === 'string' ? tx.route : tx.description || 'N/A');
+            const rawRevenue = tx.totalAmount || tx.amount || tx.fare || tx.price || 0;
+            const revenue = typeof rawRevenue === 'object' ? safeNum(rawRevenue) : rawRevenue;
+
+            return (
+              <TouchableOpacity
+                key={bookingId}
+                style={styles.txCard}
+                activeOpacity={0.7}
+                onPress={() => navigation.navigate('TransactionDetails' as never, { transactionId: bookingId } as never)}
+              >
+                <View style={styles.txHeader}>
+                  <View style={[styles.txServiceIcon, { backgroundColor: svcConf.bg }]}>
+                    <SvcIcon size={18} color={svcConf.color} />
+                  </View>
+                  <View style={styles.txHeaderInfo}>
+                    <Text style={styles.txId} numberOfLines={1}>#{bookingId}</Text>
+                    <View style={styles.txServiceRow}>
+                      <View style={[styles.txServiceBadge, { backgroundColor: svcConf.bg }]}>
+                        <Text style={[styles.txServiceText, { color: svcConf.color }]}>{service.charAt(0).toUpperCase() + service.slice(1)}</Text>
+                      </View>
+                      <View style={[styles.txStatusBadge, { backgroundColor: statusConf.bg }]}>
+                        <CheckCircle size={10} color={statusConf.color} />
+                        <Text style={[styles.txStatusText, { color: statusConf.color }]}>{tx.status || 'N/A'}</Text>
+                      </View>
+                    </View>
+                  </View>
+                  <View style={styles.txRevenue}>
+                    <Text style={styles.txRevenueText} numberOfLines={1}>{typeof revenue === 'number' ? `₹${revenue}` : revenue}</Text>
+                    <ChevronRight size={16} color="#CBD5E1" />
+                  </View>
+                </View>
+
+                <View style={styles.txDetailsRow}>
+                  <View style={styles.txDetailItem}>
+                    <User size={12} color="#94A3B8" />
+                    <Text style={styles.txDetailText} numberOfLines={1}>{userName}</Text>
+                  </View>
+                  <View style={styles.txDetailItem}>
+                    <MapPin size={12} color="#94A3B8" />
+                    <Text style={styles.txDetailText} numberOfLines={1}>{route}</Text>
+                  </View>
+                  <View style={styles.txDetailItem}>
+                    <Calendar size={12} color="#94A3B8" />
+                    <Text style={styles.txDetailText}>{formatDate(tx.createdAt || tx.date)}</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            );
+          })
+        )}
 
         {/* Pagination */}
-        <View style={styles.pagination}>
-          <TouchableOpacity style={styles.pageButton}>
-            <Text style={styles.pageButtonText}>{t('admin.ridesHistory.previous')}</Text>
-          </TouchableOpacity>
-          <View style={styles.pageNumbers}>
-            <TouchableOpacity style={[styles.pageNumber, styles.pageNumberActive]}>
-              <Text style={[styles.pageNumberText, styles.pageNumberTextActive]}>1</Text>
+        {!loading && bookings.length > 0 && (
+          <View style={styles.paginationRow}>
+            <TouchableOpacity style={[styles.pageBtn, page === 1 && styles.pageBtnDisabled]} onPress={() => page > 1 && setPage(page - 1)} disabled={page === 1}>
+              <Text style={styles.pageBtnText}>Previous</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.pageNumber}>
-              <Text style={styles.pageNumberText}>2</Text>
+            <Text style={styles.paginationInfo}>Page {page}</Text>
+            <TouchableOpacity style={[styles.pageBtn, bookings.length < 20 && styles.pageBtnDisabled]} onPress={() => bookings.length >= 20 && setPage(page + 1)} disabled={bookings.length < 20}>
+              <Text style={styles.pageBtnText}>Next</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.pageNumber}>
-              <Text style={styles.pageNumberText}>3</Text>
-            </TouchableOpacity>
-            <Text style={styles.pageEllipsis}>...</Text>
           </View>
-          <TouchableOpacity style={styles.pageButton}>
-            <Text style={styles.pageButtonText}>{t('admin.ridesHistory.next')}</Text>
-          </TouchableOpacity>
-        </View>
+        )}
 
-        <Text style={styles.paginationInfo}>
-          {t('admin.ridesHistory.showing', { start: 1, end: 10, total: summary.total.toLocaleString() })}
-        </Text>
+        <View style={{ height: 40 }} />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  header: {
-    backgroundColor: COLORS.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.md,
-    paddingTop: SPACING.xl,
-  },
-  backButton: {
-    padding: SPACING.xs,
-  },
-  headerTitle: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xl,
-    color: COLORS.white,
-    fontWeight: 'bold',
-    flex: 1,
-    marginLeft: SPACING.sm,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    gap: SPACING.sm,
-  },
-  iconButton: {
-    padding: SPACING.xs,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: SPACING.xl,
-  },
-  imageContainer: {
-    width: '100%',
-    height: 280,
-    position: 'relative',
-    overflow: 'hidden',
-    marginBottom: SPACING.md,
-  },
-  backgroundImage: {
-    width: '100%',
-    height: '100%',
-  },
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(7, 25, 82, 0.75)',
-  },
-  blurContainer: {
-    flex: 1,
-    padding: SPACING.md,
-    justifyContent: 'center',
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.md,
-  },
-  statCard: {
-    width: (width - SPACING.md * 3) / 2,
-    height: 100,
-    padding: SPACING.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    ...SHADOWS.sm,
-    backgroundColor: COLORS.white + '95',
-    position: 'relative',
-  },
-  statTrendTopRight: {
-    position: 'absolute',
-    top: SPACING.sm,
-    right: SPACING.sm,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-    backgroundColor: COLORS.success + '20',
-    paddingHorizontal: SPACING.xs,
-    paddingVertical: 2,
-    borderRadius: BORDER_RADIUS.sm,
-  },
-  statIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: COLORS.primary + '30',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: SPACING.sm,
-  },
-  statContent: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  statValue: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xl,
-    color: COLORS.white,
-    fontWeight: 'bold',
-    marginBottom: SPACING.xs / 2,
-  },
-  statLabel: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.white + 'CC',
-  },
-  statTrendText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.success,
-    fontWeight: '600',
-  },
-  exportOptions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: SPACING.lg,
-    paddingHorizontal: SPACING.md,
-    gap: SPACING.sm,
-  },
-  exportButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: SPACING.sm,
-    borderRadius: BORDER_RADIUS.sm,
-    backgroundColor: COLORS.primary,
-    gap: SPACING.xs,
-  },
-  exportButtonText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.white,
-    fontWeight: '600',
-  },
-  filterCard: {
-    marginBottom: SPACING.md,
-    padding: SPACING.md,
-    paddingHorizontal: SPACING.md,
-  },
-  filterTitle: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
-    color: COLORS.text,
-    fontWeight: '600',
-    marginBottom: SPACING.sm,
-  },
-  filterRow: {
-    marginBottom: SPACING.sm,
-  },
-  filterLabel: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.text,
-    marginBottom: SPACING.xs,
-  },
-  filterButtons: {
-    flexDirection: 'row',
-    gap: SPACING.sm,
-  },
-  filterButton: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderRadius: BORDER_RADIUS.sm,
-    backgroundColor: COLORS.lightGray + '40',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  filterButtonActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  filterButtonText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.text,
-  },
-  filterButtonTextActive: {
-    color: COLORS.white,
-  },
-  filterActions: {
-    flexDirection: 'row',
-    gap: SPACING.sm,
-    marginTop: SPACING.md,
-  },
-  applyButton: {
-    flex: 1,
-    paddingVertical: SPACING.sm,
-    borderRadius: BORDER_RADIUS.sm,
-    backgroundColor: COLORS.primary,
-    alignItems: 'center',
-  },
-  applyButtonText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.white,
-    fontWeight: '600',
-  },
-  resetButton: {
-    flex: 1,
-    paddingVertical: SPACING.sm,
-    borderRadius: BORDER_RADIUS.sm,
-    backgroundColor: COLORS.lightGray,
-    alignItems: 'center',
-  },
-  resetButtonText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.text,
-    fontWeight: '600',
-  },
-  summaryCard: {
-    marginBottom: SPACING.md,
-    padding: SPACING.md,
-    paddingHorizontal: SPACING.md,
-  },
-  summaryTitle: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
-    color: COLORS.text,
-    fontWeight: '600',
-    marginBottom: SPACING.sm,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    gap: SPACING.md,
-    marginBottom: SPACING.sm,
-  },
-  summaryItem: {
-    flex: 1,
-    alignItems: 'center',
-    padding: SPACING.sm,
-    backgroundColor: COLORS.lightGray + '40',
-    borderRadius: BORDER_RADIUS.md,
-  },
-  summaryValue: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xl,
-    color: COLORS.primary,
-    fontWeight: 'bold',
-  },
-  summaryLabel: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.textSecondary,
-    marginTop: SPACING.xs,
-  },
-  summaryBreakdown: {
-    marginTop: SPACING.sm,
-    paddingTop: SPACING.sm,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-  },
-  breakdownItem: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.textSecondary,
-    marginBottom: SPACING.xs,
-  },
-  sectionTitle: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.lg,
-    color: COLORS.primary,
-    fontWeight: 'bold',
-    marginBottom: SPACING.md,
-    paddingHorizontal: SPACING.md,
-  },
-  transactionsSection: {
-    paddingHorizontal: SPACING.md,
-  },
-  transactionCard: {
-    marginBottom: SPACING.md,
-    padding: SPACING.md,
-    ...SHADOWS.sm,
-  },
-  transactionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: SPACING.sm,
-  },
-  transactionId: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
-    color: COLORS.primary,
-    fontWeight: 'bold',
-  },
-  statusBadge: {
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs,
-    borderRadius: BORDER_RADIUS.sm,
-  },
-  statusCompleted: {
-    backgroundColor: COLORS.success + '30',
-  },
-  statusText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.text,
-    fontWeight: '600',
-  },
-  transactionDetails: {
-    marginBottom: SPACING.sm,
-  },
-  transactionDetail: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.text,
-    marginBottom: SPACING.xs,
-  },
-  detailLabel: {
-    fontWeight: '600',
-    color: COLORS.text,
-  },
-  detailsButton: {
-    paddingVertical: SPACING.sm,
-    borderRadius: BORDER_RADIUS.sm,
-    backgroundColor: COLORS.primary,
-    alignItems: 'center',
-  },
-  detailsButtonText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.white,
-    fontWeight: '600',
-  },
-  pagination: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginVertical: SPACING.lg,
-    paddingHorizontal: SPACING.md,
-  },
-  pageButton: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderRadius: BORDER_RADIUS.sm,
-    backgroundColor: COLORS.white,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  pageButtonText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.text,
-    fontWeight: '600',
-  },
-  pageNumbers: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.xs,
-  },
-  pageNumber: {
-    width: 32,
-    height: 32,
-    borderRadius: BORDER_RADIUS.sm,
-    backgroundColor: COLORS.white,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  pageNumberActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  pageNumberText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.text,
-  },
-  pageNumberTextActive: {
-    color: COLORS.white,
-  },
-  pageEllipsis: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.textSecondary,
-  },
-  paginationInfo: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    marginBottom: SPACING.md,
-    paddingHorizontal: SPACING.md,
-  },
+  container: { flex: 1, backgroundColor: '#F5F7FA' },
+  heroHeader: { height: Platform.OS === 'android' ? 140 + (StatusBar.currentHeight || 0) : 160, width: '100%' },
+  heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(15, 52, 96, 0.5)' },
+  heroBlur: { flex: 1, justifyContent: 'flex-end', paddingBottom: SPACING.md, paddingHorizontal: SPACING.lg },
+  heroNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  heroBackBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center' },
+  heroTitleWrap: { alignItems: 'center' },
+  heroTitle: { fontFamily: FONTS.regular, fontSize: 20, color: '#fff', fontWeight: '700' },
+  heroSubtitle: { fontFamily: FONTS.regular, fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 2 },
+  statsStrip: { flexDirection: 'row', backgroundColor: '#fff', marginHorizontal: SPACING.lg, marginTop: -SPACING.md, borderRadius: 14, padding: SPACING.sm, ...SHADOWS.md, zIndex: 10 },
+  statsStripItem: { flex: 1, alignItems: 'center', paddingVertical: SPACING.xs },
+  statsIcon: { width: 32, height: 32, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginBottom: 4 },
+  statsValue: { fontFamily: FONTS.regular, fontSize: 16, fontWeight: '800' },
+  statsLabel: { fontFamily: FONTS.regular, fontSize: 10, color: '#94A3B8', fontWeight: '500', marginTop: 1 },
+  tabsScroll: { marginTop: SPACING.md, maxHeight: 48 },
+  tabsContent: { paddingHorizontal: SPACING.lg, gap: SPACING.xs },
+  tab: { paddingHorizontal: 20, paddingVertical: 9, borderRadius: 20, backgroundColor: '#fff', borderWidth: 1, borderColor: '#E2E8F0' },
+  tabText: { fontFamily: FONTS.regular, fontSize: 13, color: '#475569', fontWeight: '600' },
+  tabTextActive: { color: '#fff' },
+  scrollView: { flex: 1 },
+  scrollContent: { padding: SPACING.lg, paddingTop: SPACING.md },
+  summaryRow: { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.lg },
+  summaryCard: { flex: 1, backgroundColor: '#fff', borderRadius: 14, padding: SPACING.md, ...SHADOWS.sm },
+  summaryCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.xs },
+  summaryCardLabel: { fontFamily: FONTS.regular, fontSize: 11, color: '#94A3B8', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.3 },
+  summaryCardValue: { fontFamily: FONTS.regular, fontSize: 22, fontWeight: '800', marginBottom: 2 },
+  summaryCardSub: { fontFamily: FONTS.regular, fontSize: 11, color: '#94A3B8', fontWeight: '500' },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.md },
+  sectionTitle: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.lg, color: '#1E293B', fontWeight: '700' },
+  sectionCount: { fontFamily: FONTS.regular, fontSize: 12, color: '#94A3B8', fontWeight: '500' },
+  loadingContainer: { alignItems: 'center', paddingVertical: SPACING.xxl * 2 },
+  loadingText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: COLORS.textSecondary, marginTop: SPACING.md },
+  emptyContainer: { alignItems: 'center', paddingVertical: SPACING.xxl * 2 },
+  emptyIconWrap: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center', marginBottom: SPACING.lg },
+  emptyTitle: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.lg, fontWeight: '700', color: '#1E293B', marginBottom: SPACING.xs },
+  emptyText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: '#94A3B8' },
+  txCard: { backgroundColor: '#fff', borderRadius: 14, padding: SPACING.md, marginBottom: SPACING.sm, borderWidth: 1, borderColor: '#F1F5F9', overflow: 'hidden', ...SHADOWS.sm },
+  txHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.sm },
+  txServiceIcon: { width: 44, height: 44, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginRight: SPACING.sm, flexShrink: 0 },
+  txHeaderInfo: { flex: 1, marginRight: SPACING.sm },
+  txId: { fontFamily: FONTS.regular, fontSize: 12, color: '#94A3B8', fontWeight: '500', marginBottom: 4 },
+  txServiceRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  txServiceBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  txServiceText: { fontFamily: FONTS.regular, fontSize: 10, fontWeight: '700' },
+  txStatusBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  txStatusText: { fontFamily: FONTS.regular, fontSize: 10, fontWeight: '700' },
+  txRevenue: { flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 0 },
+  txRevenueText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.md, color: '#00B894', fontWeight: '700' },
+  txDetailsRow: { flexDirection: 'column', gap: 6, paddingTop: SPACING.sm, borderTopWidth: 1, borderTopColor: '#F8FAFC' },
+  txDetailItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  txDetailText: { fontFamily: FONTS.regular, fontSize: 11, color: '#64748B', fontWeight: '500', flex: 1 },
+  paginationRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: SPACING.lg },
+  pageBtn: { paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, borderRadius: BORDER_RADIUS.sm, backgroundColor: '#fff', borderWidth: 1, borderColor: '#F1F5F9' },
+  pageBtnDisabled: { opacity: 0.4 },
+  pageBtnText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, fontWeight: '600', color: COLORS.text },
+  paginationInfo: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: COLORS.textSecondary },
 });
 
 export default RidesHistoryScreen;

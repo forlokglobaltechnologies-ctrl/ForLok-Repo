@@ -20,8 +20,10 @@ export interface IUser extends Document {
   totalTrips: number;
   totalEarnings: number;
   totalSpent: number;
-  inflowAmount: number; // Money to be transferred to driver (from online payments)
-  outflowAmount: number; // Money driver owes to Yariyatra (from offline payments)
+  cancellationCount: number; // Total lifetime cancellations (1st is free, 2nd+ incurs fee)
+  referralCode?: string;
+  referredBy?: string;
+  badges: Array<{ name: string; earnedAt: Date; milestone: number }>;
   createdAt: Date;
   updatedAt: Date;
   lastLogin?: Date;
@@ -111,15 +113,29 @@ const userSchema = new Schema<IUser>(
       type: Number,
       default: 0,
     },
-    inflowAmount: {
+    cancellationCount: {
       type: Number,
       default: 0,
       min: 0,
     },
-    outflowAmount: {
-      type: Number,
-      default: 0,
-      min: 0,
+    referralCode: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
+    referredBy: {
+      type: String,
+      ref: 'User',
+    },
+    badges: {
+      type: [
+        {
+          name: { type: String, required: true },
+          earnedAt: { type: Date, default: Date.now },
+          milestone: { type: Number, required: true },
+        },
+      ],
+      default: [],
     },
     lastLogin: {
       type: Date,

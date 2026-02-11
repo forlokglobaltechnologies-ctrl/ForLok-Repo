@@ -75,6 +75,20 @@ export async function poolingRoutes(fastify: FastifyInstance) {
       const driverId = (request as any).user.userId;
       const data = request.body as any;
 
+      // Verify gender if creating Pink Pooling offer
+      if (data.isPinkPooling === true) {
+        const User = (await import('../../models/User')).default;
+        const driver = await User.findOne({ userId: driverId });
+        if (!driver || driver.gender !== 'Female') {
+          const response: ApiResponse = {
+            success: false,
+            message: 'Pink Pooling is only available for women and girls',
+            error: 'GENDER_RESTRICTION',
+          };
+          return reply.status(403).send(response);
+        }
+      }
+
       // Convert date string to Date
       if (data.date) {
         data.date = new Date(data.date);
@@ -164,6 +178,9 @@ export async function poolingRoutes(fastify: FastifyInstance) {
       if (query.maxDistance) filters.maxDistance = parseFloat(query.maxDistance);
       if (query.page) filters.page = parseInt(query.page);
       if (query.limit) filters.limit = parseInt(query.limit);
+      if (query.pinkOnly === 'true' || query.pinkOnly === true) {
+        filters.pinkOnly = true;
+      }
 
       const result = await poolingService.searchOffers(filters);
 

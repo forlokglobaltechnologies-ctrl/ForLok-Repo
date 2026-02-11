@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,9 @@ import {
   SafeAreaView,
   Dimensions,
   ImageBackground,
+  ActivityIndicator,
+  TextInput,
+  Alert,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { BlurView } from 'expo-blur';
@@ -21,67 +24,170 @@ import {
   User,
   Calendar,
   MessageSquare,
-  AlertCircle,
-  Download,
   Send,
+  Archive,
 } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { Card } from '@components/common/Card';
 import { Button } from '@components/common/Button';
 import { useLanguage } from '@context/LanguageContext';
+import { adminFeedbackApi } from '@utils/apiClient';
 
 const { width } = Dimensions.get('window');
 
 const FeedbackDetailsScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
+  const { t } = useLanguage();
   const { feedbackId } = route.params as { feedbackId: string };
 
-  // Mock feedback data - in real app, fetch based on feedbackId
-  const feedback = {
-    id: feedbackId || 'FB20240115001',
-    type: 'Payment Issue',
-    user: 'Rajesh K.',
-    userId: '12345',
-    email: 'rajesh.k@example.com',
-    phone: '+91 98765 43210',
-    submitted: '15 Jan 2024, 10:30 AM',
-    status: 'Pending',
-    priority: 'High',
-    subject: 'Payment not processed for ride booking',
-    description: 'I booked a ride on 14th January but the payment was not processed. I received a confirmation but the amount was not deducted from my account. Please investigate and resolve this issue.',
-    attachments: [],
-    responses: [],
-    icon: CreditCard,
+  const [feedback, setFeedback] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [responseText, setResponseText] = useState('');
+  const [showResponseInput, setShowResponseInput] = useState(false);
+
+  useEffect(() => {
+    fetchFeedback();
+  }, [feedbackId]);
+
+  const fetchFeedback = async () => {
+    try {
+      setLoading(true);
+      const res = await adminFeedbackApi.getById(feedbackId);
+      if (res.success && res.data) {
+        setFeedback(res.data);
+      } else {
+        Alert.alert('Error', 'Failed to load feedback details');
+        navigation.goBack();
+      }
+    } catch (error) {
+      console.error('Error fetching feedback:', error);
+      Alert.alert('Error', 'Failed to load feedback details');
+      navigation.goBack();
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const IconComponent = feedback.icon;
+  const handleUpdateStatus = async (status: string) => {
+    try {
+      setActionLoading(true);
+      const res = await adminFeedbackApi.updateStatus(feedbackId, status);
+      if (res.success) {
+        setFeedback(res.data);
+        Alert.alert('Success', `Feedback status updated to ${status}`);
+      } else {
+        Alert.alert('Error', res.error || 'Failed to update status');
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to update status');
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
-  const getStatusColor = () => {
-    switch (feedback.status) {
-      case 'Pending':
+  const handleSendResponse = async () => {
+    if (!responseText.trim()) {
+      Alert.alert('Error', 'Please enter a response');
+      return;
+    }
+
+    try {
+      setActionLoading(true);
+      const res = await adminFeedbackApi.respond(feedbackId, responseText.trim());
+      if (res.success) {
+        setFeedback(res.data);
+        setResponseText('');
+        setShowResponseInput(false);
+        Alert.alert('Success', 'Response sent successfully');
+      } else {
+        Alert.alert('Error', res.error || 'Failed to send response');
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to send response');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'issue':
+        return CreditCard;
+      case 'suggestion':
+        return Lightbulb;
+      case 'complaint':
+        return XCircle;
+      default:
+        return MessageSquare;
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending':
         return COLORS.warning;
-      case 'Acknowledged':
+      case 'acknowledged':
         return COLORS.primary;
-      case 'Resolved':
+      case 'resolved':
+        return COLORS.success;
+      case 'archived':
+        return COLORS.textSecondary;
+      default:
+        return COLORS.textSecondary;
+    }
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case 'high':
+        return COLORS.error;
+      case 'medium':
+        return COLORS.warning;
+      case 'low':
         return COLORS.success;
       default:
         return COLORS.textSecondary;
     }
   };
 
-  const getPriorityColor = () => {
-    switch (feedback.priority) {
-      case 'High':
-        return COLORS.error;
-      case 'Medium':
-        return COLORS.warning;
-      case 'Low':
-        return COLORS.success;
-      default:
-        return COLORS.textSecondary;
-    }
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   };
+
+  const capitalize = (str: string) => str.charAt(0).toUpperCase() + str.slice(1);
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <ArrowLeft size={24} color={COLORS.white} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Feedback Details</Text>
+          <View style={styles.headerRight} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={styles.loadingText}>Loading feedback...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!feedback) return null;
+
+  const IconComponent = getTypeIcon(feedback.type);
+  const statusColor = getStatusColor(feedback.status);
+  const priorityColor = getPriorityColor(feedback.priority);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -90,12 +196,8 @@ const FeedbackDetailsScreen = () => {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <ArrowLeft size={24} color={COLORS.white} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('admin.feedbackDetails.title')}</Text>
-        <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.iconButton}>
-            <Download size={20} color={COLORS.white} />
-          </TouchableOpacity>
-        </View>
+        <Text style={styles.headerTitle}>Feedback Details</Text>
+        <View style={styles.headerRight} />
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
@@ -112,9 +214,9 @@ const FeedbackDetailsScreen = () => {
                 <View style={styles.feedbackIconContainer}>
                   <IconComponent size={48} color={COLORS.white} />
                 </View>
-                <Text style={styles.feedbackTypeText}>{feedback.type}</Text>
+                <Text style={styles.feedbackTypeText}>{capitalize(feedback.type)}</Text>
                 <View style={styles.feedbackIdBadge}>
-                  <Text style={styles.feedbackIdText}>{feedback.id}</Text>
+                  <Text style={styles.feedbackIdText}>{feedback.feedbackId}</Text>
                 </View>
               </View>
             </BlurView>
@@ -123,11 +225,15 @@ const FeedbackDetailsScreen = () => {
 
         {/* Status and Priority */}
         <View style={styles.statusContainer}>
-          <View style={[styles.statusBadge, { backgroundColor: getStatusColor() + '20' }]}>
-            <Text style={[styles.statusText, { color: getStatusColor() }]}>{feedback.status === 'Pending' ? t('admin.feedbackDetails.pending') : feedback.status === 'Acknowledged' ? t('admin.feedbackDetails.acknowledged') : feedback.status === 'Resolved' ? t('admin.feedbackDetails.resolved') : feedback.status}</Text>
+          <View style={[styles.statusBadge, { backgroundColor: statusColor + '20' }]}>
+            <Text style={[styles.statusText, { color: statusColor }]}>
+              {capitalize(feedback.status)}
+            </Text>
           </View>
-          <View style={[styles.priorityBadge, { backgroundColor: getPriorityColor() + '20' }]}>
-            <Text style={[styles.priorityText, { color: getPriorityColor() }]}>{feedback.priority} Priority</Text>
+          <View style={[styles.priorityBadgeTop, { backgroundColor: priorityColor + '20' }]}>
+            <Text style={[styles.priorityTextTop, { color: priorityColor }]}>
+              {capitalize(feedback.priority)} Priority
+            </Text>
           </View>
         </View>
 
@@ -139,20 +245,24 @@ const FeedbackDetailsScreen = () => {
           </View>
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Name:</Text>
-            <Text style={styles.infoValue}>{feedback.user}</Text>
+            <Text style={styles.infoValue}>{feedback.user?.name || 'Unknown'}</Text>
           </View>
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>User ID:</Text>
-            <Text style={styles.infoValue}>{feedback.userId}</Text>
+            <Text style={styles.infoValue}>{feedback.user?.userId || feedback.userId}</Text>
           </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Email:</Text>
-            <Text style={styles.infoValue}>{feedback.email}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Phone:</Text>
-            <Text style={styles.infoValue}>{feedback.phone}</Text>
-          </View>
+          {feedback.user?.email && (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Email:</Text>
+              <Text style={styles.infoValue}>{feedback.user.email}</Text>
+            </View>
+          )}
+          {feedback.user?.phone && (
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Phone:</Text>
+              <Text style={styles.infoValue}>{feedback.user.phone}</Text>
+            </View>
+          )}
         </Card>
 
         {/* Feedback Details */}
@@ -174,71 +284,124 @@ const FeedbackDetailsScreen = () => {
               <Calendar size={16} color={COLORS.textSecondary} />
               <Text style={styles.infoLabel}>Submitted:</Text>
             </View>
-            <Text style={styles.infoValue}>{feedback.submitted}</Text>
+            <Text style={styles.infoValue}>{formatDate(feedback.createdAt)}</Text>
           </View>
+          {feedback.updatedAt && feedback.updatedAt !== feedback.createdAt && (
+            <View style={styles.infoRow}>
+              <View style={styles.infoIconRow}>
+                <Clock size={16} color={COLORS.textSecondary} />
+                <Text style={styles.infoLabel}>Updated:</Text>
+              </View>
+              <Text style={styles.infoValue}>{formatDate(feedback.updatedAt)}</Text>
+            </View>
+          )}
         </Card>
 
-        {/* Response Section */}
+        {/* Admin Response Section */}
         <Card style={styles.card}>
           <View style={styles.cardHeader}>
-            <MessageSquare size={20} color={COLORS.primary} />
-            <Text style={styles.cardTitle}>Response</Text>
+            <Send size={20} color={COLORS.primary} />
+            <Text style={styles.cardTitle}>Admin Response</Text>
           </View>
-          {feedback.responses && feedback.responses.length > 0 ? (
+          {feedback.adminResponse ? (
             <View style={styles.responseContainer}>
-              {feedback.responses.map((response: any, index: number) => (
-                <View key={index} style={styles.responseItem}>
-                  <Text style={styles.responseText}>{response.text}</Text>
-                  <Text style={styles.responseDate}>{response.date}</Text>
-                </View>
-              ))}
+              <View style={styles.responseItem}>
+                <Text style={styles.responseText}>{feedback.adminResponse}</Text>
+                {feedback.respondedAt && (
+                  <Text style={styles.responseDate}>
+                    Responded: {formatDate(feedback.respondedAt)}
+                  </Text>
+                )}
+              </View>
             </View>
           ) : (
             <View style={styles.noResponseContainer}>
               <Text style={styles.noResponseText}>No response yet</Text>
             </View>
           )}
+
+          {/* Response Input */}
+          {showResponseInput && (
+            <View style={styles.responseInputContainer}>
+              <TextInput
+                style={styles.responseInput}
+                value={responseText}
+                onChangeText={setResponseText}
+                placeholder="Type your response..."
+                placeholderTextColor={COLORS.textSecondary}
+                multiline
+                numberOfLines={4}
+                maxLength={1000}
+              />
+              <Text style={styles.charCount}>{responseText.length}/1000</Text>
+              <View style={styles.responseActions}>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={() => {
+                    setShowResponseInput(false);
+                    setResponseText('');
+                  }}
+                >
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+                <Button
+                  title={actionLoading ? 'Sending...' : 'Send Response'}
+                  onPress={handleSendResponse}
+                  variant="primary"
+                  size="small"
+                  disabled={actionLoading || !responseText.trim()}
+                  icon={<Send size={16} color={COLORS.white} />}
+                />
+              </View>
+            </View>
+          )}
         </Card>
 
         {/* Action Buttons */}
         <View style={styles.actionsContainer}>
-          {feedback.status === 'Pending' && (
+          {feedback.status === 'pending' && (
             <Button
-              title="ACKNOWLEDGE"
-              onPress={() => {}}
+              title={actionLoading ? 'Updating...' : 'ACKNOWLEDGE'}
+              onPress={() => handleUpdateStatus('acknowledged')}
               variant="primary"
               size="large"
               style={styles.actionButton}
               icon={<CheckCircle size={20} color={COLORS.white} />}
+              disabled={actionLoading}
             />
           )}
-          {feedback.status !== 'Resolved' && (
+          {feedback.status !== 'resolved' && feedback.status !== 'archived' && (
             <Button
-              title="RESOLVE"
-              onPress={() => {}}
+              title={actionLoading ? 'Updating...' : 'RESOLVE'}
+              onPress={() => handleUpdateStatus('resolved')}
               variant="outline"
               size="large"
               style={styles.actionButton}
               icon={<CheckCircle size={20} color={COLORS.success} />}
+              disabled={actionLoading}
             />
           )}
-          {feedback.status === 'Resolved' && (
+          {feedback.status === 'resolved' && (
             <Button
-              title="ARCHIVE"
-              onPress={() => {}}
+              title={actionLoading ? 'Updating...' : 'ARCHIVE'}
+              onPress={() => handleUpdateStatus('archived')}
               variant="outline"
               size="large"
               style={styles.actionButton}
+              icon={<Archive size={20} color={COLORS.textSecondary} />}
+              disabled={actionLoading}
             />
           )}
-          <Button
-            title="SEND RESPONSE"
-            onPress={() => {}}
-            variant="primary"
-            size="large"
-            style={styles.actionButton}
-            icon={<Send size={20} color={COLORS.white} />}
-          />
+          {!showResponseInput && (
+            <Button
+              title="SEND RESPONSE"
+              onPress={() => setShowResponseInput(true)}
+              variant="primary"
+              size="large"
+              style={styles.actionButton}
+              icon={<Send size={20} color={COLORS.white} />}
+            />
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -274,8 +437,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: SPACING.sm,
   },
-  iconButton: {
-    padding: SPACING.xs,
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.md,
+    color: COLORS.textSecondary,
+    marginTop: SPACING.md,
   },
   scrollView: {
     flex: 1,
@@ -355,12 +526,12 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sizes.sm,
     fontWeight: '600',
   },
-  priorityBadge: {
+  priorityBadgeTop: {
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
     borderRadius: BORDER_RADIUS.md,
   },
-  priorityText: {
+  priorityTextTop: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.sm,
     fontWeight: '600',
@@ -422,8 +593,10 @@ const styles = StyleSheet.create({
   },
   responseItem: {
     padding: SPACING.md,
-    backgroundColor: COLORS.lightGray + '40',
+    backgroundColor: COLORS.primary + '08',
     borderRadius: BORDER_RADIUS.md,
+    borderLeftWidth: 3,
+    borderLeftColor: COLORS.primary,
     marginBottom: SPACING.sm,
   },
   responseText: {
@@ -447,6 +620,48 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sizes.sm,
     color: COLORS.textSecondary,
     fontStyle: 'italic',
+  },
+  responseInputContainer: {
+    marginTop: SPACING.md,
+    paddingTop: SPACING.md,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  responseInput: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.md,
+    color: COLORS.text,
+    minHeight: 100,
+    padding: SPACING.md,
+    backgroundColor: COLORS.background,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    textAlignVertical: 'top',
+  },
+  charCount: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.xs,
+    color: COLORS.textSecondary,
+    textAlign: 'right',
+    marginTop: SPACING.xs,
+  },
+  responseActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: SPACING.md,
+    marginTop: SPACING.md,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+  },
+  cancelButtonText: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.sm,
+    color: COLORS.textSecondary,
+    fontWeight: '600',
   },
   actionsContainer: {
     paddingHorizontal: SPACING.md,

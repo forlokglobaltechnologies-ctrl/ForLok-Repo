@@ -16,3 +16,7 @@ export { default as Food, IFood } from './Food';
 export { default as FoodOrder, IFoodOrder } from './FoodOrder';
 export { default as Conversation, IConversation } from './Conversation';
 export { default as Message, IMessage } from './Message';
+export { default as Withdrawal, IWithdrawal } from './Withdrawal';
+export { default as Wallet, IWallet, IWalletTransaction } from './Wallet';
+export { default as Refund, IRefund } from './Refund';
+export { default as Block, IBlock } from './Block';

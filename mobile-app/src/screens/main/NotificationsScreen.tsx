@@ -1,200 +1,1188 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
-  Image,
+  ActivityIndicator,
+  RefreshControl,
+  ImageBackground,
+  Dimensions,
+  Modal,
+  Platform,
+  StatusBar,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { ArrowLeft, Bell, CheckCircle, Star, AlertCircle } from 'lucide-react-native';
-import { COLORS, FONTS, SPACING } from '@constants/theme';
-import { Card } from '@components/common/Card';
+import { BlurView } from 'expo-blur';
+import {
+  ArrowLeft,
+  Bell,
+  CheckCircle,
+  Star,
+  AlertCircle,
+  CreditCard,
+  XCircle,
+  FileText,
+  Trash2,
+  Coins,
+  Gift,
+  Trophy,
+  Users,
+  ShieldAlert,
+  MessageCircle,
+  Eye,
+  CheckCheck,
+  Archive,
+  ChevronRight,
+  X,
+  Clock,
+  BellOff,
+  Inbox,
+  Wallet,
+} from 'lucide-react-native';
+import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { Button } from '@components/common/Button';
-import { mockNotifications } from '@constants/mockData';
 import { useLanguage } from '@context/LanguageContext';
+import { useNotifications } from '@context/NotificationContext';
+import { notificationApi } from '@utils/apiClient';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const NotificationsScreen = () => {
   const navigation = useNavigation();
   const { t } = useLanguage();
-  const [notifications, setNotifications] = useState(mockNotifications);
+  const { markAllAsRead, refreshUnreadCount } = useNotifications();
 
-  const handleMarkAllRead = () => {
-    setNotifications(notifications.map((n) => ({ ...n, read: true })));
-  };
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
 
-  const handleAction = (notificationId: string, action: string) => {
-    // Handle notification actions
-    console.log('Action:', action, 'for notification:', notificationId);
-  };
+  // Response modal state
+  const [responseModal, setResponseModal] = useState(false);
+  const [selectedNotification, setSelectedNotification] = useState<any>(null);
 
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
-      case 'booking_request':
-        return <Bell size={24} color={COLORS.primary} />;
-      case 'booking_confirmed':
-        return <CheckCircle size={24} color={COLORS.success} />;
-      case 'rating_request':
-        return <Star size={24} color={COLORS.warning} />;
-      default:
-        return <AlertCircle size={24} color={COLORS.textSecondary} />;
+  useEffect(() => {
+    loadNotifications();
+  }, []);
+
+  const loadNotifications = async (pageNum: number = 1, append: boolean = false) => {
+    try {
+      if (pageNum === 1) setLoading(true);
+      const response = await notificationApi.getNotifications({ page: pageNum, limit: 20 });
+      if (response.success) {
+        const items = response.data?.notifications || response.data || [];
+        if (append) {
+          setNotifications((prev) => [...prev, ...items]);
+        } else {
+          setNotifications(items);
+        }
+        const total = response.data?.total || response.pagination?.total || items.length;
+        setHasMore(items.length === 20 && notifications.length + items.length < total);
+        setPage(pageNum);
+      }
+    } catch (error) {
+      console.error('Error loading notifications:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <ArrowLeft size={24} color={COLORS.white} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('notifications.title')}</Text>
-        <TouchableOpacity onPress={handleMarkAllRead}>
-          <Text style={styles.markAllText}>{t('notifications.markAllRead')}</Text>
-        </TouchableOpacity>
-      </View>
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    loadNotifications(1, false);
+    refreshUnreadCount();
+  }, [refreshUnreadCount]);
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {notifications.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Bell size={64} color={COLORS.textSecondary} />
-            <Text style={styles.emptyText}>{t('notifications.noNotifications')}</Text>
+  const handleMarkAllRead = async () => {
+    await markAllAsRead();
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  };
+
+  const handleMarkRead = async (notificationId: string) => {
+    try {
+      await notificationApi.markAsRead(notificationId);
+      setNotifications((prev) =>
+        prev.map((n) =>
+          (n.notificationId === notificationId || n._id === notificationId)
+            ? { ...n, read: true }
+            : n
+        )
+      );
+      refreshUnreadCount();
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
+
+  const handleDelete = async (notificationId: string) => {
+    try {
+      await notificationApi.deleteNotification(notificationId);
+      setNotifications((prev) =>
+        prev.filter((n) => n.notificationId !== notificationId && n._id !== notificationId)
+      );
+      refreshUnreadCount();
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+    }
+  };
+
+  // ── View admin response ─────────────────────────────────────
+  const handleViewResponse = (notification: any) => {
+    const id = notification.notificationId || notification._id;
+    if (!notification.read) handleMarkRead(id);
+    setSelectedNotification(notification);
+    setResponseModal(true);
+  };
+
+  const handleAction = (notification: any, action: string) => {
+    const bookingId = notification.data?.bookingId;
+    const id = notification.notificationId || notification._id;
+    handleMarkRead(id);
+
+    switch (action) {
+      case 'pay_online':
+      case 'pay_cash':
+        if (bookingId) navigation.navigate('TripTracking' as never, { bookingId } as never);
+        break;
+      case 'view_booking':
+        if (bookingId) navigation.navigate('BookingConfirmation' as never, { bookingId } as never);
+        break;
+      case 'rate':
+        if (bookingId) navigation.navigate('Rating' as never, { bookingId } as never);
+        break;
+      case 'view_wallet':
+        (navigation.navigate as any)('Wallet', { tab: 'coins' });
+        break;
+      case 'earn_coins':
+        navigation.navigate('EarnCoins' as never);
+        break;
+      default:
+        break;
+    }
+  };
+
+  // ── Notification icon mapping ────────────────────────────────
+  const getNotificationIcon = (type: string): { icon: React.ReactNode; color: string; bg: string } => {
+    const iconMap: Record<string, { Icon: any; color: string; bg: string }> = {
+      booking_request:     { Icon: Bell,         color: '#4A90D9', bg: '#EBF5FF' },
+      booking_confirmed:   { Icon: CheckCircle,  color: '#00B894', bg: '#E8FFF3' },
+      booking_cancelled:   { Icon: XCircle,      color: '#E74C3C', bg: '#FFEBEE' },
+      payment_required:    { Icon: CreditCard,   color: '#F39C12', bg: '#FFF8E1' },
+      payment_received:    { Icon: CheckCircle,  color: '#00B894', bg: '#E8FFF3' },
+      payment_completed:   { Icon: CheckCircle,  color: '#00B894', bg: '#E8FFF3' },
+      rating_request:      { Icon: Star,         color: '#F39C12', bg: '#FFF8E1' },
+      document_verified:   { Icon: FileText,     color: '#00B894', bg: '#E8FFF3' },
+      document_rejected:   { Icon: FileText,     color: '#E74C3C', bg: '#FFEBEE' },
+      coin_earned:         { Icon: Coins,        color: '#F5A623', bg: '#FFF8E1' },
+      coin_redeemed:       { Icon: Coins,        color: '#27AE60', bg: '#E8FFF3' },
+      referral_reward:     { Icon: Users,        color: '#4A90D9', bg: '#EBF5FF' },
+      milestone_achieved:  { Icon: Trophy,       color: '#F5A623', bg: '#FFF8E1' },
+      promo_approved:      { Icon: Gift,         color: '#00B894', bg: '#E8FFF3' },
+      promo_rejected:      { Icon: Gift,         color: '#E74C3C', bg: '#FFEBEE' },
+      sos_alert:           { Icon: ShieldAlert,  color: '#D32F2F', bg: '#FFEBEE' },
+      // ── Feedback notification types ──
+      feedback_acknowledged: { Icon: Eye,          color: '#4A90D9', bg: '#EBF5FF' },
+      feedback_resolved:     { Icon: CheckCheck,   color: '#00B894', bg: '#E8FFF3' },
+      feedback_response:     { Icon: MessageCircle, color: '#7B61FF', bg: '#F0EBFF' },
+      feedback_archived:     { Icon: Archive,       color: '#94A3B8', bg: '#F1F5F9' },
+    };
+
+    const entry = iconMap[type] || { Icon: AlertCircle, color: '#94A3B8', bg: '#F1F5F9' };
+    return {
+      icon: <entry.Icon size={20} color={entry.color} />,
+      color: entry.color,
+      bg: entry.bg,
+    };
+  };
+
+  const getTimeAgo = (dateStr: string) => {
+    try {
+      const now = new Date();
+      const date = new Date(dateStr);
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      if (diffMins < 1) return 'Just now';
+      if (diffMins < 60) return `${diffMins}m ago`;
+      const diffHours = Math.floor(diffMins / 60);
+      if (diffHours < 24) return `${diffHours}h ago`;
+      const diffDays = Math.floor(diffHours / 24);
+      if (diffDays < 7) return `${diffDays}d ago`;
+      return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+    } catch {
+      return '';
+    }
+  };
+
+  // ── Check if notification has admin response data ───────────
+  const hasAdminResponse = (notification: any): boolean => {
+    return !!(notification.data?.adminResponse);
+  };
+
+  // ── Render action buttons ───────────────────────────────────
+  const renderActionButtons = (notification: any) => {
+    const type = notification.type;
+
+    // ── Feedback types with response → show "View Response" button ──
+    if (
+      (type === 'feedback_response' ||
+        type === 'feedback_acknowledged' ||
+        type === 'feedback_resolved' ||
+        type === 'feedback_archived') &&
+      hasAdminResponse(notification)
+    ) {
+      return (
+        <TouchableOpacity
+          style={styles.responseButton}
+          activeOpacity={0.7}
+          onPress={() => handleViewResponse(notification)}
+        >
+          <MessageCircle size={14} color="#7B61FF" />
+          <Text style={styles.responseButtonText}>View Response</Text>
+          <ChevronRight size={14} color="#7B61FF" />
+        </TouchableOpacity>
+      );
+    }
+
+    // ── Feedback types without response → show status only ──
+    if (
+      type === 'feedback_acknowledged' ||
+      type === 'feedback_resolved' ||
+      type === 'feedback_archived'
+    ) {
+      return null; // just status, no action needed
+    }
+
+    if (type === 'payment_required') {
+      return (
+        <View style={styles.actionButtons}>
+          <TouchableOpacity
+            style={[styles.actionBtn, styles.actionBtnPrimary]}
+            onPress={() => handleAction(notification, 'pay_online')}
+          >
+            <Text style={styles.actionBtnPrimaryText}>Pay Online</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionBtn, styles.actionBtnOutline]}
+            onPress={() => handleAction(notification, 'pay_cash')}
+          >
+            <Text style={styles.actionBtnOutlineText}>Pay Cash</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    if (type === 'booking_request') {
+      return (
+        <View style={styles.actionButtons}>
+          <TouchableOpacity
+            style={[styles.actionBtn, styles.actionBtnPrimary]}
+            onPress={() => handleAction(notification, 'accept')}
+          >
+            <Text style={styles.actionBtnPrimaryText}>Accept</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionBtn, styles.actionBtnOutline]}
+            onPress={() => handleAction(notification, 'decline')}
+          >
+            <Text style={styles.actionBtnOutlineText}>Decline</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    if (type === 'rating_request') {
+      return (
+        <View style={styles.actionButtons}>
+          <TouchableOpacity
+            style={[styles.actionBtn, styles.actionBtnPrimary]}
+            onPress={() => handleAction(notification, 'rate')}
+          >
+            <Star size={14} color="#fff" />
+            <Text style={styles.actionBtnPrimaryText}>Rate Now</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    if (type === 'payment_completed' || type === 'payment_received' || type === 'booking_confirmed') {
+      return (
+        <View style={styles.actionButtons}>
+          <TouchableOpacity
+            style={[styles.actionBtn, styles.actionBtnOutline]}
+            onPress={() => handleAction(notification, 'view_booking')}
+          >
+            <Text style={styles.actionBtnOutlineText}>View Details</Text>
+            <ChevronRight size={14} color="#4A90D9" />
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    if (type === 'coin_earned' || type === 'coin_redeemed' || type === 'milestone_achieved') {
+      return (
+        <View style={styles.actionButtons}>
+          <TouchableOpacity
+            style={[styles.actionBtn, styles.actionBtnPrimary]}
+            onPress={() => handleAction(notification, 'view_wallet')}
+          >
+            <Wallet size={14} color="#fff" />
+            <Text style={styles.actionBtnPrimaryText}>View Wallet</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    if (type === 'referral_reward') {
+      return (
+        <View style={styles.actionButtons}>
+          <TouchableOpacity
+            style={[styles.actionBtn, styles.actionBtnPrimary]}
+            onPress={() => handleAction(notification, 'view_wallet')}
+          >
+            <Text style={styles.actionBtnPrimaryText}>View Wallet</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionBtn, styles.actionBtnOutline]}
+            onPress={() => handleAction(notification, 'earn_coins')}
+          >
+            <Text style={styles.actionBtnOutlineText}>Invite More</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    if (type === 'promo_approved' || type === 'promo_rejected') {
+      return (
+        <View style={styles.actionButtons}>
+          <TouchableOpacity
+            style={[styles.actionBtn, styles.actionBtnPrimary]}
+            onPress={() => handleAction(notification, type === 'promo_approved' ? 'view_wallet' : 'earn_coins')}
+          >
+            <Text style={styles.actionBtnPrimaryText}>
+              {type === 'promo_approved' ? 'View Wallet' : 'Try Again'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    return null;
+  };
+
+  // ── Render a notification card ──────────────────────────────
+  const renderNotification = (notification: any, index: number) => {
+    const id = notification.notificationId || notification._id || `notif-${index}`;
+    const isUnread = !notification.read;
+    const { icon, color, bg } = getNotificationIcon(notification.type);
+
+    return (
+      <TouchableOpacity
+        key={id}
+        activeOpacity={0.7}
+        onPress={() => {
+          if (isUnread) handleMarkRead(id);
+          // If it's a feedback response, open the response modal
+          if (hasAdminResponse(notification)) {
+            handleViewResponse(notification);
+          }
+        }}
+        style={[
+          styles.notifCard,
+          isUnread ? styles.notifCardUnread : styles.notifCardRead,
+        ]}
+      >
+        {/* Unread indicator strip */}
+        {isUnread && <View style={[styles.unreadStrip, { backgroundColor: color }]} />}
+
+        <View style={styles.notifRow}>
+          {/* Icon */}
+          <View style={[styles.notifIconWrap, { backgroundColor: bg }]}>
+            {icon}
           </View>
-        ) : (
-          notifications.map((notification) => (
-            <Card
-              key={notification.id}
-              style={[
-                styles.notificationCard,
-                !notification.read && styles.unreadCard,
-              ]}
-            >
-              <View style={styles.notificationHeader}>
-                {getNotificationIcon(notification.type)}
-                <View style={styles.notificationContent}>
-                  <Text style={styles.notificationTitle}>{notification.title}</Text>
-                  <Text style={styles.notificationMessage}>{notification.message}</Text>
-                  <Text style={styles.notificationTime}>{notification.time}</Text>
-                </View>
-              </View>
-              {notification.actionRequired && (
-                <View style={styles.actionButtons}>
-                  {notification.type === 'booking_request' && (
-                    <>
-                      <Button
-                        title="Accept"
-                        onPress={() => handleAction(notification.id, 'accept')}
-                        variant="primary"
-                        size="small"
-                        style={styles.actionButton}
-                      />
-                      <Button
-                        title="Decline"
-                        onPress={() => handleAction(notification.id, 'decline')}
-                        variant="outline"
-                        size="small"
-                        style={styles.actionButton}
-                      />
-                    </>
-                  )}
-                  {notification.type === 'rating_request' && (
-                    <Button
-                      title="Rate Now"
-                      onPress={() => {
-                        navigation.navigate('Rating' as never, { bookingId: 'booking1' } as never);
-                      }}
-                      variant="primary"
-                      size="small"
-                      style={styles.actionButton}
-                    />
-                  )}
+
+          {/* Content */}
+          <View style={styles.notifContent}>
+            <View style={styles.notifTitleRow}>
+              <Text
+                style={[styles.notifTitle, isUnread && styles.notifTitleUnread]}
+                numberOfLines={1}
+              >
+                {notification.title}
+              </Text>
+              <Text style={styles.notifTime}>
+                {getTimeAgo(notification.createdAt || notification.time)}
+              </Text>
+            </View>
+
+            <Text style={styles.notifMessage} numberOfLines={2}>
+              {notification.message}
+            </Text>
+
+            {/* Amount / Coins badges */}
+            <View style={styles.badgeRow}>
+              {notification.data?.amount && (
+                <View style={[styles.infoBadge, { backgroundColor: '#4A90D9' + '15' }]}>
+                  <CreditCard size={12} color="#4A90D9" />
+                  <Text style={[styles.infoBadgeText, { color: '#4A90D9' }]}>
+                    ₹{notification.data.amount}
+                  </Text>
                 </View>
               )}
-            </Card>
-          ))
-        )}
-      </ScrollView>
-    </SafeAreaView>
+              {notification.data?.coins && (
+                <View style={[styles.infoBadge, { backgroundColor: '#F5A623' + '15' }]}>
+                  <Coins size={12} color="#F5A623" />
+                  <Text style={[styles.infoBadgeText, { color: '#F5A623' }]}>
+                    +{notification.data.coins}
+                  </Text>
+                </View>
+              )}
+              {notification.data?.status && (
+                <View style={[styles.infoBadge, { backgroundColor: color + '15' }]}>
+                  <Text style={[styles.infoBadgeText, { color }]}>
+                    {notification.data.status}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            {/* Action buttons */}
+            {renderActionButtons(notification)}
+          </View>
+
+          {/* Delete button */}
+          <TouchableOpacity
+            style={styles.deleteBtn}
+            onPress={() => handleDelete(id)}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Trash2 size={14} color="#CBD5E1" />
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  // ── Unread count ────────────────────────────────────────────
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  return (
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+
+      {/* ─── Hero Header ──────────────────────────────────────── */}
+      <ImageBackground
+        source={require('../../../assets/notification.png')}
+        style={styles.heroHeader}
+        resizeMode="cover"
+      >
+        <View style={styles.heroOverlay} />
+        <BlurView intensity={20} tint="dark" style={styles.heroBlur}>
+          <View style={styles.heroContent}>
+            <TouchableOpacity
+              style={styles.heroBackBtn}
+              onPress={() => navigation.goBack()}
+            >
+              <ArrowLeft size={20} color="#fff" />
+            </TouchableOpacity>
+
+            <View style={styles.heroCenter}>
+              <Text style={styles.heroTitle}>Notifications</Text>
+              {unreadCount > 0 && (
+                <View style={styles.heroBadge}>
+                  <Text style={styles.heroBadgeText}>{unreadCount} new</Text>
+                </View>
+              )}
+            </View>
+
+            <TouchableOpacity
+              style={styles.heroActionBtn}
+              onPress={handleMarkAllRead}
+            >
+              <CheckCheck size={18} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        </BlurView>
+      </ImageBackground>
+
+      {/* ─── Content ──────────────────────────────────────────── */}
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#4A90D9" />
+          <Text style={styles.loadingText}>Loading notifications...</Text>
+        </View>
+      ) : (
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#4A90D9" />
+          }
+          showsVerticalScrollIndicator={false}
+        >
+          {notifications.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <View style={styles.emptyIconWrap}>
+                <Inbox size={48} color="#CBD5E1" />
+              </View>
+              <Text style={styles.emptyTitle}>All Caught Up!</Text>
+              <Text style={styles.emptyText}>
+                No new notifications. We'll let you know when something important happens.
+              </Text>
+            </View>
+          ) : (
+            <>
+              {/* Filter pills */}
+              <View style={styles.filterRow}>
+                <View style={styles.filterPill}>
+                  <Bell size={12} color="#4A90D9" />
+                  <Text style={styles.filterPillText}>All ({notifications.length})</Text>
+                </View>
+                {unreadCount > 0 && (
+                  <View style={[styles.filterPill, styles.filterPillActive]}>
+                    <View style={styles.filterDot} />
+                    <Text style={[styles.filterPillText, styles.filterPillActiveText]}>
+                      Unread ({unreadCount})
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Notification cards */}
+              {notifications.map((notification, index) =>
+                renderNotification(notification, index)
+              )}
+
+              {hasMore && (
+                <TouchableOpacity
+                  style={styles.loadMoreBtn}
+                  onPress={() => loadNotifications(page + 1, true)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.loadMoreText}>Load More</Text>
+                  <ChevronRight size={14} color="#4A90D9" />
+                </TouchableOpacity>
+              )}
+            </>
+          )}
+
+          <View style={{ height: 40 }} />
+        </ScrollView>
+      )}
+
+      {/* ─── Response Modal ───────────────────────────────────── */}
+      <Modal
+        visible={responseModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setResponseModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={styles.modalDismiss}
+            activeOpacity={1}
+            onPress={() => setResponseModal(false)}
+          />
+          <View style={styles.modalSheet}>
+            {/* Handle */}
+            <View style={styles.modalHandle} />
+
+            {/* Modal Header */}
+            <View style={styles.modalHeader}>
+              <View style={[styles.modalIconWrap, { backgroundColor: '#7B61FF' + '15' }]}>
+                <MessageCircle size={22} color="#7B61FF" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.modalTitle}>Admin Response</Text>
+                <Text style={styles.modalSubtitle}>
+                  {selectedNotification?.data?.feedbackType || 'Feedback'} — {selectedNotification?.data?.status || ''}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.modalCloseBtn}
+                onPress={() => setResponseModal(false)}
+              >
+                <X size={18} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Original feedback info */}
+            {selectedNotification && (
+              <View style={styles.modalFeedbackInfo}>
+                <Text style={styles.modalFeedbackLabel}>Your Feedback</Text>
+                <Text style={styles.modalFeedbackSubject}>
+                  {selectedNotification.message || selectedNotification.title}
+                </Text>
+              </View>
+            )}
+
+            {/* The admin response */}
+            <View style={styles.modalResponseWrap}>
+              <View style={styles.modalResponseHeader}>
+                <View style={styles.modalResponseDot} />
+                <Text style={styles.modalResponseLabel}>Team Response</Text>
+                {selectedNotification?.data?.respondedAt && (
+                  <Text style={styles.modalResponseDate}>
+                    {getTimeAgo(selectedNotification.data.respondedAt)}
+                  </Text>
+                )}
+              </View>
+              <Text style={styles.modalResponseText}>
+                {selectedNotification?.data?.adminResponse || 'No response available.'}
+              </Text>
+            </View>
+
+            {/* Status pill */}
+            {selectedNotification?.data?.status && (
+              <View style={styles.modalStatusRow}>
+                <Text style={styles.modalStatusLabel}>Status:</Text>
+                <View
+                  style={[
+                    styles.modalStatusPill,
+                    {
+                      backgroundColor:
+                        selectedNotification.data.status === 'resolved'
+                          ? '#00B894' + '15'
+                          : selectedNotification.data.status === 'acknowledged'
+                          ? '#4A90D9' + '15'
+                          : '#94A3B8' + '15',
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.modalStatusText,
+                      {
+                        color:
+                          selectedNotification.data.status === 'resolved'
+                            ? '#00B894'
+                            : selectedNotification.data.status === 'acknowledged'
+                            ? '#4A90D9'
+                            : '#94A3B8',
+                      },
+                    ]}
+                  >
+                    {selectedNotification.data.status.charAt(0).toUpperCase() +
+                      selectedNotification.data.status.slice(1)}
+                  </Text>
+                </View>
+              </View>
+            )}
+
+            {/* Close button */}
+            <TouchableOpacity
+              style={styles.modalDoneBtn}
+              activeOpacity={0.8}
+              onPress={() => setResponseModal(false)}
+            >
+              <Text style={styles.modalDoneBtnText}>Got It</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </View>
   );
 };
 
+// ═══════════════════════════════════════════════════════════════════
+// STYLES
+// ═══════════════════════════════════════════════════════════════════
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  header: {
-    backgroundColor: COLORS.primary,
+  container: {
+    flex: 1,
+    backgroundColor: '#F5F7FA',
+  },
+
+  /* ── Hero Header ────────────────────────────────────────────── */
+  heroHeader: {
+    height: Platform.OS === 'android' ? 140 + (StatusBar.currentHeight || 0) : 160,
+    width: '100%',
+  },
+  heroOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(15, 52, 96, 0.55)',
+  },
+  heroBlur: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    paddingBottom: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+  },
+  heroContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.md,
-    paddingTop: SPACING.xl,
   },
-  headerTitle: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xl,
-    color: COLORS.white,
-    fontWeight: 'bold',
+  heroBackBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  markAllText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.white,
-  },
-  scrollContent: { padding: SPACING.md },
-  notificationCard: {
-    padding: SPACING.md,
-    marginBottom: SPACING.md,
-  },
-  unreadCard: {
-    backgroundColor: COLORS.primary + '10',
-    borderLeftWidth: 4,
-    borderLeftColor: COLORS.primary,
-  },
-  notificationHeader: {
+  heroCenter: {
     flexDirection: 'row',
-    gap: SPACING.md,
-  },
-  notificationContent: {
-    flex: 1,
-  },
-  notificationTitle: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
-    color: COLORS.text,
-    fontWeight: 'bold',
-    marginBottom: SPACING.xs,
-  },
-  notificationMessage: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.textSecondary,
-    marginBottom: SPACING.xs,
-  },
-  notificationTime: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.textSecondary,
-  },
-  actionButtons: {
-    flexDirection: 'row',
+    alignItems: 'center',
     gap: SPACING.sm,
-    marginTop: SPACING.md,
   },
-  actionButton: {
-    flex: 1,
+  heroTitle: {
+    fontFamily: FONTS.regular,
+    fontSize: 22,
+    color: '#fff',
+    fontWeight: '700',
   },
-  emptyContainer: {
+  heroBadge: {
+    backgroundColor: '#E74C3C',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 12,
+  },
+  heroBadgeText: {
+    fontFamily: FONTS.regular,
+    fontSize: 11,
+    color: '#fff',
+    fontWeight: '700',
+  },
+  heroActionBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  /* ── Loading ────────────────────────────────────────────────── */
+  loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: SPACING.xxl,
+  },
+  loadingText: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.sm,
+    color: '#94A3B8',
+    marginTop: SPACING.md,
+  },
+
+  /* ── Scroll ─────────────────────────────────────────────────── */
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: SPACING.lg,
+    paddingTop: SPACING.md,
+  },
+
+  /* ── Filter pills ───────────────────────────────────────────── */
+  filterRow: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    marginBottom: SPACING.md,
+  },
+  filterPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#fff',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    ...SHADOWS.sm,
+  },
+  filterPillActive: {
+    backgroundColor: '#4A90D9',
+  },
+  filterPillText: {
+    fontFamily: FONTS.regular,
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  filterPillActiveText: {
+    color: '#fff',
+  },
+  filterDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#fff',
+  },
+
+  /* ── Notification Card ──────────────────────────────────────── */
+  notifCard: {
+    borderRadius: 14,
+    padding: SPACING.md,
+    marginBottom: SPACING.sm,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  notifCardUnread: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#4A90D9' + '30',
+    ...SHADOWS.md,
+  },
+  notifCardRead: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    ...SHADOWS.sm,
+  },
+  unreadStrip: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
+    borderTopLeftRadius: 14,
+    borderBottomLeftRadius: 14,
+  },
+  notifRow: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+  },
+  notifIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  notifContent: {
+    flex: 1,
+  },
+  notifTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 3,
+  },
+  notifTitle: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.md,
+    color: '#334155',
+    fontWeight: '500',
+    flex: 1,
+    marginRight: SPACING.sm,
+  },
+  notifTitleUnread: {
+    color: '#1E293B',
+    fontWeight: '700',
+  },
+  notifTime: {
+    fontFamily: FONTS.regular,
+    fontSize: 10,
+    color: '#94A3B8',
+    fontWeight: '500',
+  },
+  notifMessage: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.sm,
+    color: '#64748B',
+    lineHeight: 19,
+    marginBottom: 6,
+  },
+  deleteBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#F8FAFC',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+
+  /* ── Badge Row ──────────────────────────────────────────────── */
+  badgeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 4,
+  },
+  infoBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  infoBadgeText: {
+    fontFamily: FONTS.regular,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+
+  /* ── Action Buttons ─────────────────────────────────────────── */
+  actionButtons: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    marginTop: SPACING.sm,
+    paddingTop: SPACING.sm,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  actionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  actionBtnPrimary: {
+    backgroundColor: '#4A90D9',
+  },
+  actionBtnPrimaryText: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.sm,
+    color: '#fff',
+    fontWeight: '600',
+  },
+  actionBtnOutline: {
+    backgroundColor: '#4A90D9' + '10',
+    borderWidth: 1,
+    borderColor: '#4A90D9' + '30',
+  },
+  actionBtnOutlineText: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.sm,
+    color: '#4A90D9',
+    fontWeight: '600',
+  },
+
+  /* ── Response Button (for feedback) ─────────────────────────── */
+  responseButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: SPACING.sm,
+    paddingTop: SPACING.sm,
+    paddingBottom: 2,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  responseButtonText: {
+    flex: 1,
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.sm,
+    color: '#7B61FF',
+    fontWeight: '600',
+  },
+
+  /* ── Empty State ────────────────────────────────────────────── */
+  emptyContainer: {
+    alignItems: 'center',
+    paddingVertical: SPACING.xxl * 2,
+  },
+  emptyIconWrap: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: SPACING.lg,
+  },
+  emptyTitle: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.lg,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: SPACING.xs,
   },
   emptyText: {
     fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.sm,
+    color: '#94A3B8',
+    textAlign: 'center',
+    paddingHorizontal: SPACING.xl,
+    lineHeight: 20,
+  },
+
+  /* ── Load More ──────────────────────────────────────────────── */
+  loadMoreBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: SPACING.md,
+  },
+  loadMoreText: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.sm,
+    color: '#4A90D9',
+    fontWeight: '600',
+  },
+
+  /* ── Modal ──────────────────────────────────────────────────── */
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+  modalDismiss: {
+    flex: 1,
+  },
+  modalSheet: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: Platform.OS === 'ios' ? 40 : SPACING.xl,
+    maxHeight: '80%',
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#E2E8F0',
+    alignSelf: 'center',
+    marginTop: SPACING.sm,
+    marginBottom: SPACING.md,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    marginBottom: SPACING.lg,
+  },
+  modalIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.lg,
+    color: '#1E293B',
+    fontWeight: '700',
+  },
+  modalSubtitle: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.xs,
+    color: '#94A3B8',
+    marginTop: 2,
+    textTransform: 'capitalize',
+  },
+  modalCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  /* ── Modal feedback info ────────────────────────────────────── */
+  modalFeedbackInfo: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+  },
+  modalFeedbackLabel: {
+    fontFamily: FONTS.regular,
+    fontSize: 11,
+    color: '#94A3B8',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  modalFeedbackSubject: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.sm,
+    color: '#475569',
+    lineHeight: 20,
+  },
+
+  /* ── Modal response ─────────────────────────────────────────── */
+  modalResponseWrap: {
+    backgroundColor: '#7B61FF' + '08',
+    borderRadius: 12,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+    borderLeftWidth: 3,
+    borderLeftColor: '#7B61FF',
+  },
+  modalResponseHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: SPACING.sm,
+  },
+  modalResponseDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#7B61FF',
+  },
+  modalResponseLabel: {
+    fontFamily: FONTS.regular,
+    fontSize: 11,
+    color: '#7B61FF',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    flex: 1,
+  },
+  modalResponseDate: {
+    fontFamily: FONTS.regular,
+    fontSize: 10,
+    color: '#94A3B8',
+  },
+  modalResponseText: {
+    fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.md,
-    color: COLORS.textSecondary,
-    marginTop: SPACING.md,
+    color: '#1E293B',
+    lineHeight: 22,
+  },
+
+  /* ── Modal status ───────────────────────────────────────────── */
+  modalStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    marginBottom: SPACING.lg,
+  },
+  modalStatusLabel: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.sm,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  modalStatusPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 12,
+  },
+  modalStatusText: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.sm,
+    fontWeight: '700',
+  },
+
+  /* ── Modal Done Button ──────────────────────────────────────── */
+  modalDoneBtn: {
+    backgroundColor: '#4A90D9',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  modalDoneBtnText: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.md,
+    color: '#fff',
+    fontWeight: '700',
   },
 });
 

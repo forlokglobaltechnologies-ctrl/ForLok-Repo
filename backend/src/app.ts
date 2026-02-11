@@ -67,7 +67,7 @@ app.get('/health', async (_request, _reply) => {
 // Root route
 app.get('/', async (_request, _reply) => {
   return {
-    message: 'YAARYATRA Backend API',
+    message: 'FORLOK Backend API',
     version: '1.0.0',
     status: 'running',
   };
@@ -77,7 +77,7 @@ app.get('/', async (_request, _reply) => {
 async function start() {
   try {
     // Initialize services
-    logger.info('🚀 Starting YAARYATRA Backend...');
+    logger.info('🚀 Starting FORLOK Backend...');
 
     // Connect to database
     await database.connect();
@@ -110,6 +110,48 @@ async function start() {
 
     // Register plugins
     await registerPlugins();
+
+    // Initialize admin user (hardcoded credentials)
+    try {
+      const Admin = (await import('./models/Admin')).default;
+      const adminEmail = 'forlok@gmail.com';
+      const adminUsername = 'forlok';
+      const adminPassword = 'forlok123';
+      const adminName = 'FORLOK Admin';
+
+      let admin = await Admin.findOne({
+        $or: [
+          { email: adminEmail },
+          { username: adminUsername },
+        ],
+      });
+
+      if (admin) {
+        // Update existing admin to ensure correct credentials
+        admin.password = adminPassword; // Will be hashed by pre-save hook
+        admin.email = adminEmail;
+        admin.username = adminUsername;
+        admin.name = adminName;
+        admin.isActive = true;
+        admin.role = 'super_admin';
+        await admin.save();
+        logger.info(`✅ Admin user updated: ${adminUsername}`);
+      } else {
+        // Create new admin
+        admin = await Admin.create({
+          username: adminUsername,
+          email: adminEmail,
+          password: adminPassword, // Will be hashed by pre-save hook
+          name: adminName,
+          role: 'super_admin',
+          permissions: ['*'],
+          isActive: true,
+        });
+        logger.info(`✅ Admin user created: ${adminUsername}`);
+      }
+    } catch (error) {
+      logger.warn('Could not initialize admin user:', error);
+    }
 
     // Initialize sample food data (development only)
     // Always initialize to ensure data is available

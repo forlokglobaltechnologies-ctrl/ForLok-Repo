@@ -168,7 +168,7 @@ class VehicleService {
       }
 
       // Upload photo
-      const uploadResult: any = await uploadFromBuffer(file, `yaaryatra/vehicles/${vehicleId}`, {
+      const uploadResult: any = await uploadFromBuffer(file, `forlok/vehicles/${vehicleId}`, {
         public_id: `${photoType}_${Date.now()}`,
       });
 
@@ -207,7 +207,7 @@ class VehicleService {
       }
 
       // Upload document
-      const uploadResult: any = await uploadFromBuffer(file, `yaaryatra/vehicles/${vehicleId}/documents`, {
+      const uploadResult: any = await uploadFromBuffer(file, `forlok/vehicles/${vehicleId}/documents`, {
         public_id: `${documentType}_${Date.now()}`,
       });
 

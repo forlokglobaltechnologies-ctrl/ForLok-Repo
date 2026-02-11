@@ -1,16 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Image, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import LottieView from 'lottie-react-native';
 import { ArrowLeft, Heart, Share2, Star, Minus, Plus, Tag, Car, Fuel, Settings, MapPin, IndianRupee, Clock, User } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, SHADOWS, BORDER_RADIUS } from '@constants/theme';
 import { Button } from '@components/common/Button';
 import { Card } from '@components/common/Card';
 import TimeSlotSelector from '@components/common/TimeSlotSelector';
 import { useLanguage } from '@context/LanguageContext';
-import { rentalApi } from '@utils/apiClient';
+import { rentalApi, bookingApi, walletApi } from '@utils/apiClient';
+
+const RENTAL_COMING_SOON = true; // V2 feature — flip to false to re-enable
 
 const RentalDetailsScreen = () => {
   const navigation = useNavigation();
+
+  if (RENTAL_COMING_SOON) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' }}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ position: 'absolute', top: 50, left: 16, zIndex: 10, width: 40, height: 40, borderRadius: 20, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' }}>
+          <ArrowLeft size={22} color="#1E293B" />
+        </TouchableOpacity>
+        <LottieView source={require('../../../assets/videos/Coming soon.json')} autoPlay loop style={{ width: 300, height: 300 }} />
+      </View>
+    );
+  }
+
   const route = useRoute();
   const { t } = useLanguage();
   const params = route.params as any;
@@ -25,6 +40,7 @@ const RentalDetailsScreen = () => {
   const [duration, setDuration] = useState<number>(0);
   const [availableSlots, setAvailableSlots] = useState<any>(null);
   const [loadingSlots, setLoadingSlots] = useState(false);
+  const [bookingLoading, setBookingLoading] = useState(false);
 
   useEffect(() => {
     if (offerId && !passedRental) {
@@ -338,40 +354,77 @@ const RentalDetailsScreen = () => {
 
         {/* Action Buttons */}
         <Button 
-          title={t('rentalDetails.bookNow')} 
-          onPress={() => {
+          title={bookingLoading ? 'Booking...' : t('rentalDetails.bookNow')} 
+          onPress={async () => {
+            if (bookingLoading) return;
+
+            let bookingData: any = {
+              rentalOfferId: rental.offerId,
+            };
+
             if (startTime && endTime) {
-              navigation.navigate('Payment' as never, {
-                type: 'rental',
-                offer: rental,
-                startTime,
-                endTime,
-                duration: calculatedDuration,
-                priceBreakdown: {
-                  finalPrice: totalAmount - (totalAmount * 0.05), // Assuming 5% platform fee
-                  platformFee: totalAmount * 0.05,
-                  totalAmount: totalAmount,
-                },
-              } as never);
+              bookingData.startTime = startTime;
+              bookingData.endTime = endTime;
+              bookingData.duration = calculatedDuration;
             } else if (hours >= rental.minimumHours) {
-              navigation.navigate('Payment' as never, {
-                type: 'rental',
-                offer: rental,
-                duration: hours,
-                priceBreakdown: {
-                  finalPrice: totalAmount - (totalAmount * 0.05),
-                  platformFee: totalAmount * 0.05,
-                  totalAmount: totalAmount,
-                },
-              } as never);
+              bookingData.duration = hours;
             } else {
               Alert.alert('Error', 'Please select a valid time slot or duration');
+              return;
+            }
+
+            try {
+              setBookingLoading(true);
+
+              // Check wallet balance — passengers need ₹100 minimum
+              const walletCheck = await walletApi.canBookRide();
+              if (walletCheck.success && walletCheck.data && !walletCheck.data.canBook) {
+                const shortfall = walletCheck.data.shortfall || 0;
+                Alert.alert(
+                  'Insufficient Wallet Balance',
+                  `You need minimum ₹${walletCheck.data.requiredBalance || 100} to book. Please recharge ₹${shortfall} to continue.`,
+                  [
+                    { text: 'Recharge Now', onPress: () => navigation.navigate('Wallet' as never) },
+                    { text: 'Cancel', style: 'cancel' },
+                  ]
+                );
+                setBookingLoading(false);
+                return;
+              }
+
+              const response = await bookingApi.createRentalBooking(bookingData);
+
+              if (response.success && response.data) {
+                const bookingId = response.data.bookingId || response.data._id;
+                Alert.alert(
+                  'Booking Confirmed!',
+                  'Your rental has been booked. Payment will be collected at the end of the trip.',
+                  [
+                    {
+                      text: 'View Booking',
+                      onPress: () => {
+                        navigation.navigate('BookingConfirmation' as never, {
+                          bookingId,
+                          booking: response.data,
+                        } as never);
+                      },
+                    },
+                    { text: 'OK', onPress: () => navigation.navigate('MainDashboard' as never) },
+                  ]
+                );
+              } else {
+                Alert.alert('Booking Failed', response.error || 'Failed to create booking.');
+              }
+            } catch (error: any) {
+              Alert.alert('Error', error.message || 'Something went wrong.');
+            } finally {
+              setBookingLoading(false);
             }
           }} 
           variant="primary" 
           size="large" 
           style={styles.bookButton}
-          disabled={!startTime && !endTime && hours < rental.minimumHours}
+          disabled={bookingLoading || (!startTime && !endTime && hours < rental.minimumHours)}
         />
         <Button title={t('rentalDetails.messageOwner')} onPress={() => navigation.navigate('Chat' as never)} variant="outline" size="large" style={styles.messageButton} />
       </ScrollView>

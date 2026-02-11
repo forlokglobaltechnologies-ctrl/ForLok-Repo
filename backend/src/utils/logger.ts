@@ -23,7 +23,7 @@ const consoleFormat = winston.format.combine(
 const logger = winston.createLogger({
   level: config.server.nodeEnv === 'production' ? 'info' : 'debug',
   format: logFormat,
-  defaultMeta: { service: 'yaaryatra-backend' },
+  defaultMeta: { service: 'forlok-backend' },
   transports: [
     // Write all logs to console
     new winston.transports.Console({

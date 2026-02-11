@@ -6,21 +6,47 @@ import { NotFoundError, ConflictError } from '../utils/errors';
 import logger from '../utils/logger';
 import { ServiceType } from '../types';
 
+// Available rating tags
+export const RATING_TAGS = {
+  driver: [
+    'safe_driving',
+    'polite',
+    'on_time',
+    'clean_vehicle',
+    'good_music',
+    'comfortable_ride',
+    'professional',
+    'helpful',
+  ],
+  passenger: [
+    'polite',
+    'on_time',
+    'respectful',
+    'good_communication',
+    'friendly',
+    'clean',
+  ],
+};
+
 class RatingService {
   /**
-   * Create rating
+   * Create rating (supports bi-directional)
    */
   async createRating(data: {
     bookingId: string;
     userId: string;
     ratedUserId: string;
     serviceType: ServiceType;
+    ratingType: 'passenger_to_driver' | 'driver_to_passenger';
     overallRating: number;
     punctuality?: number;
     vehicleCondition?: number;
     driving?: number;
+    behavior?: number;
+    communication?: number;
     service?: number;
     comment?: string;
+    tags?: string[];
   }): Promise<any> {
     try {
       // Check if booking exists
@@ -34,14 +60,30 @@ class RatingService {
         throw new ConflictError('Can only rate completed bookings');
       }
 
-      // Check if rating already exists
+      // Validate user is part of the booking
+      const isPassenger = booking.userId === data.userId;
+      const isDriver = booking.driver?.userId === data.userId || booking.owner?.userId === data.userId;
+
+      if (!isPassenger && !isDriver) {
+        throw new ConflictError('You are not part of this booking');
+      }
+
+      // Validate rating type matches user role
+      if (isPassenger && data.ratingType !== 'passenger_to_driver') {
+        throw new ConflictError('Passengers can only rate drivers');
+      }
+      if (isDriver && data.ratingType !== 'driver_to_passenger') {
+        throw new ConflictError('Drivers can only rate passengers');
+      }
+
+      // Check if rating already exists from this user for this booking
       const existingRating = await Rating.findOne({
         bookingId: data.bookingId,
         userId: data.userId,
       });
 
       if (existingRating) {
-        throw new ConflictError('Rating already exists for this booking');
+        throw new ConflictError('You have already rated this trip');
       }
 
       // Create rating
@@ -49,16 +91,76 @@ class RatingService {
       const rating = await Rating.create({
         ratingId,
         ...data,
+        isVisible: true,
       });
 
       // Update user rating (aggregate)
-      await this.updateUserRating(data.ratedUserId, data.serviceType);
+      await this.updateUserRating(data.ratedUserId);
 
-      logger.info(`Rating created: ${ratingId}`);
+      logger.info(`Rating created: ${ratingId} (${data.ratingType})`);
 
       return rating.toJSON();
     } catch (error) {
       logger.error('Error creating rating:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Check if user can rate a booking
+   */
+  async canRateBooking(bookingId: string, userId: string): Promise<{
+    canRate: boolean;
+    reason?: string;
+    ratingType?: 'passenger_to_driver' | 'driver_to_passenger';
+    ratedUserId?: string;
+    ratedUserName?: string;
+  }> {
+    try {
+      const booking = await Booking.findOne({ bookingId });
+      if (!booking) {
+        return { canRate: false, reason: 'Booking not found' };
+      }
+
+      if (booking.status !== 'completed') {
+        return { canRate: false, reason: 'Booking not completed' };
+      }
+
+      // Check if already rated
+      const existingRating = await Rating.findOne({ bookingId, userId });
+      if (existingRating) {
+        return { canRate: false, reason: 'Already rated' };
+      }
+
+      // Determine rating type
+      const isPassenger = booking.userId === userId;
+      const isDriver = booking.driver?.userId === userId || booking.owner?.userId === userId;
+
+      if (isPassenger) {
+        const driverId = booking.driver?.userId || booking.owner?.userId;
+        const driverName = booking.driver?.name || booking.owner?.name;
+        return {
+          canRate: true,
+          ratingType: 'passenger_to_driver',
+          ratedUserId: driverId,
+          ratedUserName: driverName,
+        };
+      }
+
+      if (isDriver) {
+        const passengerId = booking.userId;
+        const passengerName = booking.passengers?.[0]?.name;
+        return {
+          canRate: true,
+          ratingType: 'driver_to_passenger',
+          ratedUserId: passengerId,
+          ratedUserName: passengerName,
+        };
+      }
+
+      return { canRate: false, reason: 'Not part of this booking' };
+    } catch (error) {
+      logger.error('Error checking can rate:', error);
       throw error;
     }
   }
@@ -145,7 +247,7 @@ class RatingService {
       await rating.save();
 
       // Update user rating (aggregate)
-      await this.updateUserRating(rating.ratedUserId, rating.serviceType);
+      await this.updateUserRating(rating.ratedUserId);
 
       logger.info(`Rating updated: ${ratingId}`);
 
@@ -167,12 +269,11 @@ class RatingService {
       }
 
       const ratedUserId = rating.ratedUserId;
-      const serviceType = rating.serviceType;
 
       await Rating.deleteOne({ ratingId });
 
       // Update user rating (aggregate)
-      await this.updateUserRating(ratedUserId, serviceType);
+      await this.updateUserRating(ratedUserId);
 
       logger.info(`Rating deleted: ${ratingId}`);
     } catch (error) {
@@ -182,11 +283,120 @@ class RatingService {
   }
 
   /**
+   * Get rating breakdown for a user
+   */
+  async getUserRatingBreakdown(ratedUserId: string): Promise<{
+    average: number;
+    total: number;
+    breakdown: { 5: number; 4: number; 3: number; 2: number; 1: number };
+    asDriver: { average: number; count: number };
+    asPassenger: { average: number; count: number };
+  }> {
+    try {
+      const ratings = await Rating.find({ ratedUserId, isVisible: true });
+
+      const breakdown = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+      let totalRating = 0;
+      let driverRatingSum = 0;
+      let driverRatingCount = 0;
+      let passengerRatingSum = 0;
+      let passengerRatingCount = 0;
+
+      ratings.forEach((r) => {
+        const rounded = Math.round(r.overallRating) as 1 | 2 | 3 | 4 | 5;
+        breakdown[rounded]++;
+        totalRating += r.overallRating;
+
+        if (r.ratingType === 'passenger_to_driver') {
+          driverRatingSum += r.overallRating;
+          driverRatingCount++;
+        } else {
+          passengerRatingSum += r.overallRating;
+          passengerRatingCount++;
+        }
+      });
+
+      return {
+        average: ratings.length > 0 ? parseFloat((totalRating / ratings.length).toFixed(2)) : 0,
+        total: ratings.length,
+        breakdown,
+        asDriver: {
+          average: driverRatingCount > 0 
+            ? parseFloat((driverRatingSum / driverRatingCount).toFixed(2)) 
+            : 0,
+          count: driverRatingCount,
+        },
+        asPassenger: {
+          average: passengerRatingCount > 0 
+            ? parseFloat((passengerRatingSum / passengerRatingCount).toFixed(2)) 
+            : 0,
+          count: passengerRatingCount,
+        },
+      };
+    } catch (error) {
+      logger.error('Error getting rating breakdown:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get ratings with user details
+   */
+  async getUserRatingsWithDetails(
+    ratedUserId: string,
+    options?: { page?: number; limit?: number; ratingType?: string }
+  ): Promise<{
+    ratings: any[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
+    try {
+      const page = options?.page || 1;
+      const limit = options?.limit || 20;
+      const skip = (page - 1) * limit;
+
+      const query: any = { ratedUserId, isVisible: true };
+      if (options?.ratingType) {
+        query.ratingType = options.ratingType;
+      }
+
+      const total = await Rating.countDocuments(query);
+      const ratings = await Rating.find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit);
+
+      // Get user details for each rating
+      const userIds = ratings.map((r) => r.userId);
+      const users = await User.find({ userId: { $in: userIds } }).select(
+        'userId name profilePhoto'
+      );
+      const userMap = new Map(users.map((u) => [u.userId, u]));
+
+      const ratingsWithUser = ratings.map((r) => {
+        const user = userMap.get(r.userId);
+        return {
+          ...r.toJSON(),
+          rater: user
+            ? { userId: user.userId, name: user.name, photo: user.profilePhoto }
+            : null,
+        };
+      });
+
+      return { ratings: ratingsWithUser, total, page, limit };
+    } catch (error) {
+      logger.error('Error getting ratings with details:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Update user rating aggregate
    */
-  private async updateUserRating(ratedUserId: string, serviceType: ServiceType): Promise<void> {
+  private async updateUserRating(ratedUserId: string): Promise<void> {
     try {
-      const ratings = await Rating.find({ ratedUserId, serviceType });
+      const ratings = await Rating.find({ ratedUserId, isVisible: true });
       
       if (ratings.length === 0) {
         return;
@@ -204,6 +414,13 @@ class RatingService {
     } catch (error) {
       logger.error('Error updating user rating:', error);
     }
+  }
+
+  /**
+   * Get available rating tags
+   */
+  getRatingTags(ratingType: 'passenger_to_driver' | 'driver_to_passenger'): string[] {
+    return ratingType === 'passenger_to_driver' ? RATING_TAGS.driver : RATING_TAGS.passenger;
   }
 }
 

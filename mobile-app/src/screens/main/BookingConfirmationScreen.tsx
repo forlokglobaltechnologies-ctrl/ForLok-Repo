@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, ActivityIndicator, Alert, Image } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { ArrowLeft, CheckCircle, Calendar, Clock, MapPin, User, IndianRupee, CreditCard, Share2, FileText, Check, Car, MessageCircle } from 'lucide-react-native';
+import { ArrowLeft, CheckCircle, Calendar, Clock, MapPin, User, IndianRupee, CreditCard, Share2, FileText, Check, Car, MessageCircle, XCircle } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, SHADOWS, BORDER_RADIUS } from '@constants/theme';
 import { Button } from '@components/common/Button';
 import { useLanguage } from '@context/LanguageContext';
@@ -17,6 +17,7 @@ const BookingConfirmationScreen = () => {
 
   const [booking, setBooking] = useState<any>(passedBooking || null);
   const [loading, setLoading] = useState(!!bookingId && !passedBooking);
+  const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
     if (bookingId && !passedBooking) {
@@ -47,6 +48,63 @@ const BookingConfirmationScreen = () => {
     }
   };
 
+  const handleCancelBooking = async () => {
+    const bId = booking?.bookingId || bookingId;
+    if (!bId) return;
+
+    setCancelling(true);
+    try {
+      // First fetch preview
+      const preview = await bookingApi.previewCancellationFee(bId);
+      if (!preview.success) {
+        Alert.alert('Error', preview.message || 'Could not load cancellation details');
+        setCancelling(false);
+        return;
+      }
+
+      const info = preview.data;
+      const title = info.isFirstCancellation
+        ? 'Cancel Booking (Free)'
+        : `Cancel Booking (Fee: ₹${info.cancellationFee})`;
+      const message = info.isFirstCancellation
+        ? 'This is your first cancellation — no charges will apply.\n\nAre you sure you want to cancel?'
+        : `Cancellation fee: ₹${info.cancellationFee} (${info.feePercentage}% of ₹${info.rideAmount})\n\nThis amount will be deducted from your wallet.\n\nAre you sure?`;
+
+      setCancelling(false);
+
+      Alert.alert(title, message, [
+        { text: 'No, Keep Booking', style: 'cancel' },
+        {
+          text: info.cancellationFee > 0 ? `Yes, Pay ₹${info.cancellationFee} & Cancel` : 'Yes, Cancel',
+          style: 'destructive',
+          onPress: async () => {
+            setCancelling(true);
+            try {
+              const result = await bookingApi.cancelBooking(bId, 'Cancelled by user');
+              if (result.success) {
+                const details = result.data?.cancellationDetails;
+                Alert.alert(
+                  'Booking Cancelled',
+                  details?.message || 'Your booking has been cancelled.',
+                  [{ text: 'OK', onPress: () => navigation.navigate('MainDashboard' as never) }]
+                );
+              } else {
+                Alert.alert('Error', result.message || 'Failed to cancel booking');
+              }
+            } catch (err: any) {
+              Alert.alert('Error', err.message || 'Failed to cancel booking');
+            } finally {
+              setCancelling(false);
+            }
+          },
+        },
+      ]);
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to load cancellation details');
+      setCancelling(false);
+    }
+  };
+
   const formatTime = (timeStr?: string): string => {
     if (!timeStr) return 'N/A';
     // Handle both HH:mm and 12-hour formats
@@ -71,9 +129,7 @@ const BookingConfirmationScreen = () => {
     if (booking?.paymentStatus === 'paid') {
       return { text: t('bookingConfirmation.paymentSuccessful'), color: COLORS.success };
     } else if (booking?.paymentStatus === 'pending') {
-      if (booking?.paymentMethod === 'offline_cash') {
-        return { text: 'Payment Pending - Pay at vehicle return', color: COLORS.warning };
-      }
+      return { text: 'Payment at trip end', color: COLORS.warning };
       return { text: 'Payment Pending', color: COLORS.warning };
     } else if (booking?.paymentStatus === 'failed') {
       return { text: 'Payment Failed', color: COLORS.error };
@@ -318,13 +374,15 @@ const BookingConfirmationScreen = () => {
             <View style={styles.paymentMethodContainer}>
               <CreditCard size={16} color={COLORS.primary} />
               <Text style={styles.paymentMethodText}>
-                {booking.paymentMethod === 'offline_cash' 
-                  ? 'Cash' 
-                  : booking.paymentMethod === 'upi'
+                {booking.paymentMethod === 'upi'
                   ? 'UPI'
                   : booking.paymentMethod === 'card'
                   ? 'Card'
-                  : booking.paymentMethod || 'N/A'}
+                  : booking.paymentMethod === 'offline_cash'
+                  ? 'Cash'
+                  : booking.paymentMethod === 'net_banking'
+                  ? 'Net Banking'
+                  : 'Pay at trip end'}
               </Text>
             </View>
           </View>
@@ -415,6 +473,24 @@ const BookingConfirmationScreen = () => {
               <Text style={styles.secondaryButtonText}>{t('bookingConfirmation.goToHome')}</Text>
             </TouchableOpacity>
           </View>
+
+          {/* Cancel Booking Button */}
+          {booking?.status !== 'cancelled' && booking?.status !== 'completed' && booking?.status !== 'in_progress' && (
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={handleCancelBooking}
+              disabled={cancelling}
+            >
+              {cancelling ? (
+                <ActivityIndicator size="small" color="#DC2626" />
+              ) : (
+                <>
+                  <XCircle size={18} color="#DC2626" />
+                  <Text style={styles.cancelButtonText}>Cancel Booking</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
       </SafeAreaView>
@@ -686,6 +762,25 @@ const styles = StyleSheet.create({
   },
   driverDetails: {
     flex: 1,
+  },
+  cancelButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    marginTop: SPACING.lg,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1.5,
+    borderColor: '#DC2626',
+    backgroundColor: '#FEF2F2',
+  },
+  cancelButtonText: {
+    fontFamily: FONTS.medium,
+    fontSize: FONTS.sizes.md,
+    color: '#DC2626',
+    fontWeight: '600',
+    marginLeft: SPACING.sm,
   },
 });
 

@@ -27,7 +27,7 @@ const PaymentScreen = () => {
   const { t } = useLanguage();
   const params = (route.params as RouteParams) || {};
   
-  const [paymentMethod, setPaymentMethod] = useState<'upi' | 'card' | 'wallet' | 'net_banking' | 'offline_cash'>('upi');
+  const [paymentMethod, setPaymentMethod] = useState<'upi' | 'card' | 'wallet' | 'net_banking'>('upi');
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [showWebView, setShowWebView] = useState(false);
@@ -139,42 +139,9 @@ const PaymentScreen = () => {
     // Update activeBookingId state
     setActiveBookingId(currentBookingId);
 
-    // Handle offline cash payment
-    if (paymentMethod === 'offline_cash') {
-      // Booking should already be created above if needed
-      if (currentBookingId) {
-        const isRental = params.type === 'rental';
-        Alert.alert(
-          'Booking Confirmed!',
-          isRental 
-            ? 'Your rental booking is confirmed. Please pay the owner in cash when you return the vehicle.'
-            : 'You have joined the pool. Please pay the driver in cash at the end of the trip.',
-          [
-            {
-              text: isRental ? 'View Booking' : 'Join Pool',
-              onPress: () => {
-                navigation.navigate('BookingConfirmation' as never, {
-                  bookingId: currentBookingId,
-                  booking: booking,
-                } as never);
-              },
-            },
-            {
-              text: 'OK',
-              onPress: () => {
-                navigation.reset({
-                  index: 0,
-                  routes: [{ name: 'MainDashboard' as never }],
-                });
-              },
-            },
-          ]
-        );
-      } else {
-        Alert.alert('Error', 'Booking information is missing. Please try again.');
-      }
-      return;
-    }
+    // Payment is now processed at trip end (after OTP verification)
+    // At booking time, we just confirm the booking
+    // Razorpay checkout opens after "Get Out" + OTP at trip end
 
     try {
       setLoading(true);
@@ -190,8 +157,51 @@ const PaymentScreen = () => {
         const { razorpayOrder, payment } = paymentResponse.data;
         console.log('✅ Payment order created:', razorpayOrder);
 
-        // Create Razorpay Checkout HTML page
-        const htmlContent = `
+        // TEST MODE: Simulate payment success directly instead of opening Razorpay checkout
+        // This is used because test keys are configured
+        const razorpayOrderId = razorpayOrder?.id || razorpayOrder?.orderId || payment?.razorpayOrderId;
+        
+        if (razorpayOrderId) {
+          setProcessing(true);
+          try {
+            console.log('🧪 Simulating test payment for order:', razorpayOrderId);
+            const simulateRes = await paymentApi.simulateTestPayment(razorpayOrderId);
+            
+            if (simulateRes.success) {
+              setPaymentSuccess(true);
+              const totalAmt = razorpayOrder?.amount ? (razorpayOrder.amount / 100).toFixed(2) : payment?.totalAmount || '';
+              const isRental = params.type === 'rental';
+              Alert.alert(
+                'Payment Successful!',
+                `₹${totalAmt} paid successfully.\n\n${isRental ? 'Your rental booking has been confirmed.' : 'Your booking has been confirmed. You can now join the pool.'}`,
+                [
+                  {
+                    text: isRental ? 'View Booking' : 'Join Pool',
+                    onPress: () => {
+                      const bookingId = activeBookingId || params.bookingId || booking?.bookingId || booking?._id;
+                      navigation.navigate('BookingConfirmation' as never, {
+                        bookingId: bookingId,
+                        booking: booking,
+                      } as never);
+                    },
+                  },
+                  {
+                    text: 'OK',
+                  },
+                ]
+              );
+            } else {
+              Alert.alert('Payment Failed', simulateRes.error || 'Payment simulation failed. Please try again.');
+            }
+          } catch (simError: any) {
+            console.error('❌ Test payment simulation error:', simError);
+            Alert.alert('Payment Error', simError.message || 'Failed to process payment. Please try again.');
+          } finally {
+            setProcessing(false);
+          }
+        } else {
+          // Fallback: open Razorpay WebView checkout
+          const htmlContent = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -240,7 +250,7 @@ const PaymentScreen = () => {
         amount: ${razorpayOrder.amount},
         currency: "${razorpayOrder.currency}",
         order_id: "${razorpayOrder.id}",
-        name: "Yaaryatra",
+        name: "Forlok",
         description: "Pooling Booking Payment",
         handler: function (response) {
           window.ReactNativeWebView.postMessage(JSON.stringify({
@@ -273,10 +283,11 @@ const PaymentScreen = () => {
   </script>
 </body>
 </html>
-        `;
-        
-        setCheckoutHTML(htmlContent);
-        setShowWebView(true);
+          `;
+          
+          setCheckoutHTML(htmlContent);
+          setShowWebView(true);
+        }
       } else {
         Alert.alert('Error', paymentResponse.error || 'Failed to create payment order');
       }
@@ -482,7 +493,7 @@ const PaymentScreen = () => {
         )}
 
         <Text style={styles.methodLabel}>{t('payment.selectPaymentMethod')}</Text>
-        {(['upi', 'card', 'wallet', 'net_banking', 'offline_cash'] as const).map((method) => (
+        {(['upi', 'card', 'wallet', 'net_banking'] as const).map((method) => (
           <TouchableOpacity
             key={method}
             style={[styles.methodCard, paymentMethod === method && styles.methodSelected]}
@@ -492,7 +503,7 @@ const PaymentScreen = () => {
             {method === 'upi' && <Phone size={24} color={paymentMethod === method ? COLORS.primary : COLORS.textSecondary} />}
             {method === 'net_banking' && <Building size={24} color={paymentMethod === method ? COLORS.primary : COLORS.textSecondary} />}
             {method === 'wallet' && <Wallet size={24} color={paymentMethod === method ? COLORS.primary : COLORS.textSecondary} />}
-            {method === 'offline_cash' && <Banknote size={24} color={paymentMethod === method ? COLORS.primary : COLORS.textSecondary} />}
+            
             <Text style={[styles.methodText, paymentMethod === method && styles.methodTextSelected]}>
               {method === 'card' ? t('payment.creditDebitCard') : method === 'upi' ? t('payment.upi') : method === 'net_banking' ? t('payment.netBanking') : method === 'wallet' ? t('payment.wallet') : 'Offline Cash'}
             </Text>
@@ -500,8 +511,8 @@ const PaymentScreen = () => {
           </TouchableOpacity>
         ))}
 
-        {/* Show different buttons based on payment method and status */}
-        {paymentMethod === 'offline_cash' || paymentSuccess ? (
+        {/* Show different buttons based on payment status */}
+        {paymentSuccess ? (
           <Button 
             title={loading ? 'Creating Booking...' : (params.type === 'rental' ? 'View Booking' : 'Join Pool')} 
             onPress={() => {

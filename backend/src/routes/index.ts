@@ -18,6 +18,15 @@ import { adminRoutes } from './admin/admin.routes';
 import { trackingRoutes } from './tracking/tracking.routes';
 import { dashboardRoutes } from './dashboard/dashboard.routes';
 import { chatRoutes } from './chat/index';
+import { withdrawalRoutes } from './withdrawals/withdrawal.routes';
+import { walletRoutes } from './wallet/wallet.routes';
+import { blockRoutes } from './block/block.routes';
+import { refundRoutes } from './refund/refund.routes';
+import { analyticsRoutes } from './admin/analytics.routes';
+import { coinRoutes } from './coins/coin.routes';
+import { referralRoutes } from './referrals/referral.routes';
+import { promoRoutes } from './promos/promo.routes';
+import { sosRoutes } from './sos/sos.routes';
 
 export async function registerRoutes(app: FastifyInstance) {
   // Auth routes
@@ -73,6 +82,33 @@ export async function registerRoutes(app: FastifyInstance) {
 
   // Chat routes
   await app.register(chatRoutes, { prefix: '/api/chat' });
+
+  // Withdrawal routes
+  await app.register(withdrawalRoutes, { prefix: '/api/withdrawals' });
+
+  // Wallet routes
+  await app.register(walletRoutes, { prefix: '/api/wallet' });
+
+  // Block routes
+  await app.register(blockRoutes, { prefix: '/api/blocks' });
+
+  // Refund routes
+  await app.register(refundRoutes, { prefix: '/api/refunds' });
+
+  // Analytics routes (admin)
+  await app.register(analyticsRoutes, { prefix: '/api/admin/analytics' });
+
+  // Coin routes
+  await app.register(coinRoutes, { prefix: '/api/coins' });
+
+  // Referral routes
+  await app.register(referralRoutes, { prefix: '/api/referrals' });
+
+  // Promo routes
+  await app.register(promoRoutes, { prefix: '/api/promos' });
+
+  // SOS routes
+  await app.register(sosRoutes, { prefix: '/api/sos' });
 
   // Other routes will be registered here as we implement them
   // await app.register(userRoutes, { prefix: '/api/users' });

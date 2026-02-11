@@ -9,6 +9,7 @@ import {
   Platform,
   ImageBackground,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { BlurView } from 'expo-blur';
@@ -17,6 +18,7 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme
 import { Button } from '@components/common/Button';
 import { Input } from '@components/common/Input';
 import { useLanguage } from '@context/LanguageContext';
+import { adminApi } from '@utils/apiClient';
 
 const AdminLoginScreen = () => {
   const navigation = useNavigation();
@@ -29,14 +31,29 @@ const AdminLoginScreen = () => {
 
   const handleLogin = async () => {
     if (!adminId || !password) {
+      Alert.alert('Error', 'Please enter both username and password');
       return;
     }
+
     setIsLoading(true);
-    // In real app, authenticate with backend
-    setTimeout(() => {
+    try {
+      const response = await adminApi.login(adminId.trim(), password);
+      
+      if (response.success) {
+        // Tokens are automatically saved by apiService
+        navigation.navigate('AdminDashboard' as never);
+      } else {
+        Alert.alert('Login Failed', response.error || 'Invalid credentials. Please try again.');
+      }
+    } catch (error: any) {
+      console.error('Admin login error:', error);
+      Alert.alert(
+        'Login Error',
+        error.message || 'Failed to connect to server. Please check your connection and try again.'
+      );
+    } finally {
       setIsLoading(false);
-      navigation.navigate('AdminDashboard' as never);
-    }, 1500);
+    }
   };
 
   return (

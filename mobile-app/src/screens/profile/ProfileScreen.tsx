@@ -1,19 +1,72 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Image, ActivityIndicator, Alert, Linking } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  SafeAreaView,
+  Image,
+  ActivityIndicator,
+  Alert,
+  Linking,
+  ImageBackground,
+  Dimensions,
+  Modal,
+} from 'react-native';
 import { useNavigation, CommonActions } from '@react-navigation/native';
-import { ArrowLeft, Settings, Star, CheckCircle, Car, Bike, Edit, Eye, Mail, Phone, Calendar, User, Cake, CreditCard, BarChart, DollarSign, LogOut, ChevronRight, FileText, Shield, Hash } from 'lucide-react-native';
+import LottieView from 'lottie-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  ArrowLeft,
+  Settings,
+  Star,
+  CheckCircle,
+  Car,
+  Bike,
+  Edit,
+  Eye,
+  Mail,
+  Phone,
+  Calendar,
+  User,
+  Cake,
+  CreditCard,
+  BarChart,
+  DollarSign,
+  LogOut,
+  ChevronRight,
+  FileText,
+  Shield,
+  Hash,
+  Wallet,
+  MessageSquare,
+  Info,
+  Coins,
+  Gift,
+  Trophy,
+  MapPin,
+  TrendingUp,
+} from 'lucide-react-native';
+import { BlurView } from 'expo-blur';
 import { COLORS, FONTS, SPACING, SHADOWS, BORDER_RADIUS } from '@constants/theme';
 import { Card } from '@components/common/Card';
 import { useLanguage } from '@context/LanguageContext';
+import { useTheme } from '@context/ThemeContext';
 import { userApi, documentApi, uploadFile, vehicleApi } from '@utils/apiClient';
 import { apiService } from '@services/api.service';
-import { websocketService } from '@services/websocket.service';
 import * as ImagePicker from 'expo-image-picker';
 import { BottomTabNavigator } from '@components/navigation/BottomTabNavigator';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const HEADER_HEIGHT = 200;
+const AVATAR_SIZE = 110;
+const AVATAR_OVERLAP = AVATAR_SIZE / 2;
 
 const ProfileScreen = () => {
   const navigation = useNavigation();
   const { t } = useLanguage();
+  const { theme } = useTheme();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [documents, setDocuments] = useState<any[]>([]);
@@ -21,6 +74,44 @@ const ProfileScreen = () => {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [loadingVehicles, setLoadingVehicles] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const lottieRef = useRef<LottieView>(null);
+
+  const handleLogout = () => {
+    setShowLogoutModal(true);
+  };
+
+  const confirmLogout = async () => {
+    setLoggingOut(true);
+    // Play lottie animation, then logout after a short delay
+    lottieRef.current?.play();
+    setTimeout(async () => {
+      try {
+        // Clear tokens and storage
+        await apiService.clearTokens();
+        await AsyncStorage.removeItem('userId');
+        await AsyncStorage.removeItem('userRole');
+        await AsyncStorage.removeItem('userName');
+
+        setShowLogoutModal(false);
+        setLoggingOut(false);
+
+        // Reset navigation to Sign In
+        navigation.dispatch(
+          CommonActions.reset({
+            index: 0,
+            routes: [{ name: 'SignIn' }],
+          })
+        );
+      } catch (error) {
+        console.error('Logout error:', error);
+        setLoggingOut(false);
+        setShowLogoutModal(false);
+        Alert.alert('Error', 'Failed to logout. Please try again.');
+      }
+    }, 2000);
+  };
 
   useEffect(() => {
     loadUserProfile();
@@ -34,28 +125,22 @@ const ProfileScreen = () => {
       const response = await vehicleApi.getVehicles();
       if (response.success && response.data) {
         setVehicles(response.data);
-        console.log(`✅ Loaded ${response.data.length} vehicles`);
       } else {
-        console.warn('⚠️ No vehicles found or API error:', response.error);
         setVehicles([]);
       }
     } catch (error: any) {
-      console.error('❌ Error loading vehicles:', error);
+      console.error('Error loading vehicles:', error);
       setVehicles([]);
     } finally {
       setLoadingVehicles(false);
     }
   };
 
-  // Update profile photo when documents are loaded
   useEffect(() => {
     if (documents.length > 0 && user && !user.profilePhoto) {
       const userPhotoDoc = documents.find((d: any) => d.type === 'user_photo' && d.url);
       if (userPhotoDoc && userPhotoDoc.url) {
-        setUser((prev: any) => ({
-          ...prev,
-          profilePhoto: userPhotoDoc.url,
-        }));
+        setUser((prev: any) => ({ ...prev, profilePhoto: userPhotoDoc.url }));
       }
     }
   }, [documents, user]);
@@ -66,16 +151,10 @@ const ProfileScreen = () => {
       const response = await userApi.getProfile();
       if (response.success && response.data) {
         setUser(response.data);
-        
-        // If no profile photo, check for user_photo document
         if (!response.data.profilePhoto && documents.length > 0) {
           const userPhotoDoc = documents.find((d: any) => d.type === 'user_photo' && d.url);
           if (userPhotoDoc && userPhotoDoc.url) {
-            // Update user with photo from document
-            setUser((prev: any) => ({
-              ...prev,
-              profilePhoto: userPhotoDoc.url,
-            }));
+            setUser((prev: any) => ({ ...prev, profilePhoto: userPhotoDoc.url }));
           }
         }
       } else {
@@ -91,32 +170,18 @@ const ProfileScreen = () => {
   const loadDocuments = async () => {
     try {
       setDocumentsLoading(true);
-      console.log('📥 Loading documents from backend...');
       const response = await documentApi.getUserDocuments();
-      console.log('📥 Documents API response:', {
-        success: response.success,
-        dataLength: response.data?.length || 0,
-        data: response.data,
-        error: response.error,
-      });
-      
       if (response.success && response.data) {
-        console.log(`✅ Loaded ${response.data.length} documents`);
         setDocuments(response.data);
-        
-        // Check if there's a user_photo document and update user profile photo if needed
         const userPhotoDoc = response.data.find((d: any) => d.type === 'user_photo' && d.url);
         if (userPhotoDoc && userPhotoDoc.url && (!user?.profilePhoto || user.profilePhoto !== userPhotoDoc.url)) {
-          // Reload user profile to get updated profilePhoto
           await loadUserProfile();
         }
       } else {
-        console.warn('⚠️ No documents found or API error:', response.error || 'Unknown error');
         setDocuments([]);
       }
     } catch (error: any) {
-      console.error('❌ Error loading documents:', error);
-      Alert.alert('Error', `Failed to load documents: ${error.message || 'Unknown error'}`);
+      console.error('Error loading documents:', error);
       setDocuments([]);
     } finally {
       setDocumentsLoading(false);
@@ -125,51 +190,42 @@ const ProfileScreen = () => {
 
   const handleChangePhoto = async () => {
     try {
-      // Request permissions
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('Permission Required', 'Please grant camera roll permissions to upload photos');
         return;
       }
-
-      // Show options
-      Alert.alert(
-        'Change Profile Photo',
-        'Choose an option',
-        [
-          {
-            text: 'Camera',
-            onPress: async () => {
-              const result = await ImagePicker.launchCameraAsync({
-                mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                allowsEditing: true,
-                quality: 0.8,
-                aspect: [1, 1],
-              });
-
-              if (!result.canceled && result.assets[0]) {
-                await uploadProfilePhoto(result.assets[0].uri);
-              }
-            },
+      Alert.alert('Change Profile Photo', 'Choose an option', [
+        {
+          text: 'Camera',
+          onPress: async () => {
+            const result = await ImagePicker.launchCameraAsync({
+              mediaTypes: ImagePicker.MediaTypeOptions.Images,
+              allowsEditing: true,
+              quality: 0.8,
+              aspect: [1, 1],
+            });
+            if (!result.canceled && result.assets[0]) {
+              await uploadProfilePhoto(result.assets[0].uri);
+            }
           },
-          {
-            text: 'Gallery',
-            onPress: async () => {
-              const result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                allowsEditing: true,
-                quality: 0.8,
-                aspect: [1, 1],
-              });
-
-              if (!result.canceled && result.assets[0]) {
-                await uploadProfilePhoto(result.assets[0].uri);
-              }
-            },
+        },
+        {
+          text: 'Gallery',
+          onPress: async () => {
+            const result = await ImagePicker.launchImageLibraryAsync({
+              mediaTypes: ImagePicker.MediaTypeOptions.Images,
+              allowsEditing: true,
+              quality: 0.8,
+              aspect: [1, 1],
+            });
+            if (!result.canceled && result.assets[0]) {
+              await uploadProfilePhoto(result.assets[0].uri);
+            }
           },
-          { text: 'Cancel', style: 'cancel' },
-        ]
-      );
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to open image picker');
     }
@@ -178,80 +234,68 @@ const ProfileScreen = () => {
   const uploadProfilePhoto = async (uri: string) => {
     try {
       setUploadingPhoto(true);
-      
-      // Upload to profile photo endpoint
       const response = await userApi.uploadPhoto({
         uri,
         type: 'image/jpeg',
         name: `profile_photo_${Date.now()}.jpg`,
       });
-
       if (response.success && response.data?.profilePhoto) {
-        // Update local state
-        setUser((prev: any) => ({
-          ...prev,
-          profilePhoto: response.data.profilePhoto,
-        }));
-        Alert.alert('✅ Success', 'Profile photo updated successfully!');
+        setUser((prev: any) => ({ ...prev, profilePhoto: response.data.profilePhoto }));
+        Alert.alert('Success', 'Profile photo updated successfully!');
       } else {
-        Alert.alert('❌ Upload Failed', response.error || 'Failed to upload profile photo');
+        Alert.alert('Upload Failed', response.error || 'Failed to upload profile photo');
       }
     } catch (error: any) {
-      Alert.alert('❌ Upload Failed', error.message || 'Failed to upload profile photo');
+      Alert.alert('Upload Failed', error.message || 'Failed to upload profile photo');
     } finally {
       setUploadingPhoto(false);
     }
   };
 
-  const handleLogout = () => {
-    Alert.alert(
-      t('profile.logout'),
-      'Are you sure you want to logout?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: t('profile.logout'),
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              // Clear all stored tokens
-              await apiService.clearTokens();
-              
-              // Disconnect websocket
-              websocketService.disconnect();
-              
-              // Reset navigation to SignIn screen and clear history
-              navigation.dispatch(
-                CommonActions.reset({
-                  index: 0,
-                  routes: [{ name: 'SignIn' }],
-                })
-              );
-            } catch (error) {
-              console.error('Logout error:', error);
-              // Even if there's an error, navigate to SignIn
-              navigation.dispatch(
-                CommonActions.reset({
-                  index: 0,
-                  routes: [{ name: 'SignIn' }],
-                })
-              );
-            }
-          },
-        },
-      ]
-    );
+  const getDocStatusStyle = (status: string) => {
+    if (status === 'verified') return { bg: '#4CAF50' + '15', color: '#4CAF50', label: 'Verified' };
+    if (status === 'pending') return { bg: '#FF9800' + '15', color: '#FF9800', label: 'Pending' };
+    return { bg: '#F44336' + '15', color: '#F44336', label: 'Rejected' };
   };
 
+  const getDocLabel = (type: string) => {
+    const labels: { [key: string]: string } = {
+      aadhar_front: 'Aadhaar Card',
+      aadhar_back: 'Aadhaar Card',
+      driving_license_front: 'Driving License',
+      driving_license_back: 'Driving License',
+      vehicle_registration: 'Registration Certificate (RC)',
+      vehicle_insurance: 'Insurance Certificate',
+      vehicle_pollution: 'Pollution Certificate (PUC)',
+      taxi_service_papers: 'Taxi Service Papers',
+      user_photo: 'User Photo',
+    };
+    return labels[type] || type.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+  };
+
+  // ── Loading State ──
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>Loading profile...</Text>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <ImageBackground
+          source={require('../../../assets/profile.png')}
+          style={styles.headerImage}
+          resizeMode="cover"
+        >
+          <View style={[styles.headerOverlay, { backgroundColor: theme.colors.primary }]} />
+          <BlurView intensity={40} style={styles.blurContainer}>
+            <View style={styles.headerNav}>
+              <TouchableOpacity onPress={() => navigation.goBack()} style={styles.navButton}>
+                <ArrowLeft size={22} color="#FFF" />
+              </TouchableOpacity>
+              <Text style={styles.navTitle}>Profile</Text>
+              <View style={styles.navPlaceholder} />
+            </View>
+          </BlurView>
+        </ImageBackground>
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={[styles.loadingLabel, { color: theme.colors.textSecondary }]}>Loading profile...</Text>
         </View>
       </SafeAreaView>
     );
@@ -259,512 +303,471 @@ const ProfileScreen = () => {
 
   if (!user) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>No profile data available</Text>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <View style={styles.loadingWrap}>
+          <Text style={[styles.loadingLabel, { color: theme.colors.textSecondary }]}>No profile data available</Text>
         </View>
       </SafeAreaView>
     );
   }
 
+  const menuItems = [
+    { icon: Wallet, label: 'Wallet', screen: 'Wallet', color: theme.colors.primary },
+    { icon: Coins, label: 'Earn Coins', screen: 'EarnCoins', color: '#F5A623' },
+    { icon: MessageSquare, label: 'My Reviews', screen: 'Reviews', params: { userId: user?.userId, userName: user?.name }, color: theme.colors.primary },
+    { icon: Car, label: 'My Offers', screen: 'MyOffers', color: theme.colors.primary },
+    { icon: CreditCard, label: 'Payment Methods', screen: 'Payment', color: theme.colors.primary },
+    { icon: Shield, label: 'Help & Support', screen: 'HelpSupport', color: theme.colors.primary },
+    { icon: Info, label: 'About', screen: 'About', color: theme.colors.primary },
+  ];
+
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <ArrowLeft size={24} color={COLORS.white} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Profile</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('Settings' as never)}>
-          <Settings size={24} color={COLORS.white} />
-        </TouchableOpacity>
-      </View>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Profile Header Card */}
-        <View style={styles.profileHeaderCard}>
-          <View style={styles.profileImageContainer}>
-            {user.profilePhoto ? (
-              <Image 
-                source={{ uri: user.profilePhoto }} 
-                style={styles.profilePhoto}
-                onError={() => {
-                  // If image fails to load, try to get from documents
-                  const userPhotoDoc = documents.find((d: any) => d.type === 'user_photo' && d.url);
-                  if (userPhotoDoc && userPhotoDoc.url && userPhotoDoc.url !== user.profilePhoto) {
-                    setUser((prev: any) => ({
-                      ...prev,
-                      profilePhoto: userPhotoDoc.url,
-                    }));
-                  }
-                }}
-              />
-            ) : (
-              <View style={[styles.profilePhoto, { backgroundColor: COLORS.primary + '20', justifyContent: 'center', alignItems: 'center' }]}>
-                <User size={48} color={COLORS.primary} />
-              </View>
-            )}
-            <TouchableOpacity
-              style={styles.editIconButton}
-              onPress={handleChangePhoto}
-              disabled={uploadingPhoto}
-            >
-              {uploadingPhoto ? (
-                <ActivityIndicator size={16} color={COLORS.white} />
+        {/* ── Hero Header with Image ── */}
+        <ImageBackground
+          source={require('../../../assets/profile.png')}
+          style={styles.headerImage}
+          resizeMode="cover"
+        >
+          <View style={[styles.headerOverlay, { backgroundColor: theme.colors.primary }]} />
+          <BlurView intensity={40} style={styles.blurContainer}>
+            <View style={styles.headerNav}>
+              <TouchableOpacity onPress={() => navigation.goBack()} style={styles.navButton}>
+                <ArrowLeft size={22} color="#FFF" />
+              </TouchableOpacity>
+              <Text style={styles.navTitle}>My Profile</Text>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('Settings' as never)}
+                style={styles.navButton}
+              >
+                <Settings size={22} color="#FFF" />
+              </TouchableOpacity>
+            </View>
+          </BlurView>
+        </ImageBackground>
+
+        {/* ── Profile Card (overlapping header) ── */}
+        <View style={[styles.profileCard, { backgroundColor: theme.colors.surface }]}>
+          {/* Avatar */}
+          <View style={styles.avatarSection}>
+            <View style={styles.avatarWrap}>
+              {user.profilePhoto ? (
+                <Image
+                  source={{ uri: user.profilePhoto }}
+                  style={[styles.avatar, { borderColor: theme.colors.surface }]}
+                  onError={() => {
+                    const userPhotoDoc = documents.find((d: any) => d.type === 'user_photo' && d.url);
+                    if (userPhotoDoc && userPhotoDoc.url && userPhotoDoc.url !== user.profilePhoto) {
+                      setUser((prev: any) => ({ ...prev, profilePhoto: userPhotoDoc.url }));
+                    }
+                  }}
+                />
               ) : (
-                <Edit size={16} color={COLORS.white} />
+                <View style={[styles.avatar, styles.avatarPlaceholder, { borderColor: theme.colors.surface, backgroundColor: theme.colors.primary + '20' }]}>
+                  <User size={44} color={theme.colors.primary} />
+                </View>
               )}
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.editAvatarBtn, { backgroundColor: theme.colors.primary, borderColor: theme.colors.surface }]}
+                onPress={handleChangePhoto}
+                disabled={uploadingPhoto}
+              >
+                {uploadingPhoto ? (
+                  <ActivityIndicator size={14} color="#FFF" />
+                ) : (
+                  <Edit size={14} color="#FFF" />
+                )}
+              </TouchableOpacity>
+            </View>
+
+            {/* Name & ID */}
+            <Text style={[styles.userName, { color: theme.colors.text }]}>{user.name || 'User'}</Text>
+            <View style={styles.userIdRow}>
+              <Hash size={12} color={theme.colors.primary} />
+              <Text style={[styles.userIdText, { color: theme.colors.textSecondary }]}>{user.userId || 'N/A'}</Text>
+            </View>
           </View>
-          <Text style={styles.profileName}>{user.name || 'User'}</Text>
-          <View style={styles.userIdContainer}>
-            <Hash size={14} color={COLORS.primary} />
-            <Text style={styles.userIdText}>ID: {user.userId || 'N/A'}</Text>
-          </View>
-          {/* Verification Status Badge */}
-          <View style={[
-            styles.verificationBadge,
-            user.isVerified 
-              ? { backgroundColor: COLORS.success + '15', borderColor: COLORS.success }
-              : { backgroundColor: COLORS.warning + '15', borderColor: COLORS.warning }
-          ]}>
-            <Shield 
-              size={14} 
-              color={user.isVerified ? COLORS.success : COLORS.warning} 
-              fill={user.isVerified ? COLORS.success : 'none'}
-            />
-            <Text style={[
-              styles.verificationText,
-              { color: user.isVerified ? COLORS.success : COLORS.warning }
+
+          {/* Badges Row */}
+          <View style={styles.badgesRow}>
+            {/* Verification */}
+            <View style={[
+              styles.profileBadge,
+              { backgroundColor: user.isVerified ? '#4CAF50' + '12' : '#FF9800' + '12' },
             ]}>
-              {user.isVerified ? 'Verified' : 'Unverified'}
-            </Text>
+              <Shield
+                size={13}
+                color={user.isVerified ? '#4CAF50' : '#FF9800'}
+                fill={user.isVerified ? '#4CAF50' : 'none'}
+              />
+              <Text style={[styles.profileBadgeText, { color: user.isVerified ? '#4CAF50' : '#FF9800' }]}>
+                {user.isVerified ? 'Verified' : 'Unverified'}
+              </Text>
+            </View>
+            {/* Rating */}
+            <View style={[styles.profileBadge, { backgroundColor: '#FFB800' + '12' }]}>
+              <Star size={13} color="#FFB800" fill="#FFB800" />
+              <Text style={[styles.profileBadgeText, { color: '#8B6914' }]}>
+                {Number(user.rating || 0).toFixed(1)} ({user.totalReviews || 0})
+              </Text>
+            </View>
           </View>
-          <View style={styles.ratingContainer}>
-            <Star size={18} color={COLORS.warning} fill={COLORS.warning} />
-            <Text style={styles.ratingText}>{user.rating || 0} {t('profile.averageRating')}</Text>
+
+          {/* Quick Stats */}
+          <View style={[styles.quickStats, { borderTopColor: theme.colors.border }]}>
+            <View style={styles.quickStatItem}>
+              <Text style={[styles.quickStatValue, { color: theme.colors.text }]}>{user.totalTrips || 0}</Text>
+              <Text style={[styles.quickStatLabel, { color: theme.colors.textSecondary }]}>Trips</Text>
+            </View>
+            <View style={[styles.quickStatDivider, { backgroundColor: theme.colors.border }]} />
+            <View style={styles.quickStatItem}>
+              <Text style={[styles.quickStatValue, { color: theme.colors.text }]}>
+                {Number(user.rating || 0).toFixed(1)}
+              </Text>
+              <Text style={[styles.quickStatLabel, { color: theme.colors.textSecondary }]}>Rating</Text>
+            </View>
+            <View style={[styles.quickStatDivider, { backgroundColor: theme.colors.border }]} />
+            <View style={styles.quickStatItem}>
+              <Text style={[styles.quickStatValue, { color: theme.colors.text }]}>
+                ₹{user.totalEarnings || 0}
+              </Text>
+              <Text style={[styles.quickStatLabel, { color: theme.colors.textSecondary }]}>Earned</Text>
+            </View>
           </View>
         </View>
 
-        {/* Personal Information Card */}
-        <View style={styles.sectionCard}>
+        {/* ── My Badges ── */}
+        {user?.badges && user.badges.length > 0 && (
+          <View style={[styles.sectionCard, { backgroundColor: theme.colors.surface }]}>
+            <View style={styles.sectionHeader}>
+              <Trophy size={18} color="#F5A623" />
+              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>My Badges</Text>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.badgesScroll}>
+              {user.badges.map((badge: any, idx: number) => (
+                <View key={idx} style={styles.badgeChip}>
+                  <Star size={13} color="#F5A623" fill="#F5A623" />
+                  <Text style={styles.badgeChipText}>{badge.name}</Text>
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* ── Personal Information ── */}
+        <View style={[styles.sectionCard, { backgroundColor: theme.colors.surface }]}>
           <View style={styles.sectionHeader}>
-            <User size={20} color={COLORS.primary} />
-            <Text style={styles.sectionTitle}>{t('profile.personalInformation')}</Text>
+            <User size={18} color={theme.colors.primary} />
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t('profile.personalInformation')}</Text>
           </View>
-          <View style={styles.divider} />
-          <View style={styles.infoRow}>
-            <View style={styles.infoIconContainer}>
-              <Hash size={18} color={COLORS.primary} />
-            </View>
-            <Text style={styles.infoLabel}>User ID</Text>
-            <Text style={styles.infoValue}>{user.userId || 'N/A'}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <View style={styles.infoIconContainer}>
-              <Mail size={18} color={COLORS.primary} />
-            </View>
-            <Text style={styles.infoLabel}>{t('common.email')}</Text>
-            <Text style={styles.infoValue}>{user.email || 'N/A'}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <View style={styles.infoIconContainer}>
-              <Phone size={18} color={COLORS.primary} />
-            </View>
-            <Text style={styles.infoLabel}>{t('common.phone')}</Text>
-            <Text style={styles.infoValue}>{user.phone || 'N/A'}</Text>
-          </View>
-          {user.dateOfBirth && (
-            <View style={styles.infoRow}>
-              <View style={styles.infoIconContainer}>
-                <Cake size={18} color={COLORS.primary} />
+          <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
+          {[
+            { icon: Hash, label: 'User ID', value: user.userId || 'N/A' },
+            { icon: Mail, label: t('common.email'), value: user.email || 'N/A' },
+            { icon: Phone, label: t('common.phone'), value: user.phone || 'N/A' },
+            ...(user.dateOfBirth ? [{ icon: Cake, label: t('common.dateOfBirth'), value: new Date(user.dateOfBirth).toLocaleDateString() }] : []),
+            ...(user.gender ? [{ icon: User, label: t('common.gender'), value: user.gender }] : []),
+          ].map((item, idx) => (
+            <View key={idx} style={styles.infoRow}>
+              <View style={[styles.infoIcon, { backgroundColor: theme.colors.primary + '10' }]}>
+                <item.icon size={16} color={theme.colors.primary} />
               </View>
-              <Text style={styles.infoLabel}>{t('common.dateOfBirth')}</Text>
-              <Text style={styles.infoValue}>{new Date(user.dateOfBirth).toLocaleDateString()}</Text>
-            </View>
-          )}
-          {user.gender && (
-            <View style={styles.infoRow}>
-              <View style={styles.infoIconContainer}>
-                <User size={18} color={COLORS.primary} />
+              <View style={styles.infoContent}>
+                <Text style={[styles.infoLabel, { color: theme.colors.textSecondary }]}>{item.label}</Text>
+                <Text style={[styles.infoValue, { color: theme.colors.text }]} numberOfLines={1}>{item.value}</Text>
               </View>
-              <Text style={styles.infoLabel}>{t('common.gender')}</Text>
-              <Text style={styles.infoValue}>{user.gender}</Text>
             </View>
-          )}
+          ))}
         </View>
 
-        {/* Documents Card */}
-        <View style={styles.sectionCard}>
+        {/* ── Documents ── */}
+        <View style={[styles.sectionCard, { backgroundColor: theme.colors.surface }]}>
           <View style={styles.sectionHeader}>
-            <FileText size={20} color={COLORS.primary} />
-            <Text style={styles.sectionTitle}>{t('profile.documents')}</Text>
+            <FileText size={18} color={theme.colors.primary} />
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t('profile.documents')}</Text>
           </View>
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
           {documentsLoading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="small" color={COLORS.primary} />
-              <Text style={styles.loadingText}>Loading documents...</Text>
+            <View style={styles.miniLoadingWrap}>
+              <ActivityIndicator size="small" color={theme.colors.primary} />
+              <Text style={[styles.loadingLabel, { color: theme.colors.textSecondary, fontSize: 12 }]}>Loading documents...</Text>
             </View>
           ) : documents.length > 0 ? (
             <>
-              {/* Display image documents (photos) - Only user photo, vehicle photos shown in VehicleDetailsScreen */}
+              {/* User Photo */}
               {documents
-                .filter((doc: any) => {
-                  // Only show user_photo here, vehicle photos are shown in VehicleDetailsScreen
-                  return doc.url && doc.type === 'user_photo' && !doc.url.toLowerCase().endsWith('.pdf');
-                })
-                .map((doc: any) => (
-                  <View key={doc.documentId || doc._id} style={styles.documentItem}>
-                    <View style={styles.documentImageContainer}>
-                      <Image source={{ uri: doc.url }} style={styles.documentImage} />
-                    </View>
-                    <View style={styles.documentInfo}>
-                      <Text style={styles.documentText}>User Photo</Text>
-                      <View style={[
-                        styles.verifiedBadge,
-                        doc.status === 'verified' ? { backgroundColor: COLORS.success + '15' } :
-                        doc.status === 'pending' ? { backgroundColor: COLORS.warning + '15' } :
-                        { backgroundColor: COLORS.error + '15' }
-                      ]}>
-                        <Text style={[
-                          styles.verifiedText,
-                          doc.status === 'verified' ? { color: COLORS.success } :
-                          doc.status === 'pending' ? { color: COLORS.warning } :
-                          { color: COLORS.error }
-                        ]}>
-                          {doc.status === 'verified' ? 'Verified' :
-                           doc.status === 'pending' ? 'Pending' : 'Rejected'}
-                        </Text>
+                .filter((doc: any) => doc.url && doc.type === 'user_photo' && !doc.url.toLowerCase().endsWith('.pdf'))
+                .map((doc: any) => {
+                  const s = getDocStatusStyle(doc.status);
+                  return (
+                    <View key={doc.documentId || doc._id} style={[styles.docItem, { borderBottomColor: theme.colors.border }]}>
+                      <View style={styles.docThumbWrap}>
+                        <Image source={{ uri: doc.url }} style={styles.docThumb} />
+                      </View>
+                      <View style={styles.docInfo}>
+                        <Text style={[styles.docName, { color: theme.colors.text }]}>User Photo</Text>
+                        <View style={[styles.docStatusPill, { backgroundColor: s.bg }]}>
+                          <Text style={[styles.docStatusText, { color: s.color }]}>{s.label}</Text>
+                        </View>
                       </View>
                     </View>
-                  </View>
-                ))}
+                  );
+                })}
 
               {/* Vehicle Documents Section */}
-              {documents.some((doc: any) => 
+              {documents.some((doc: any) =>
                 ['vehicle_registration', 'vehicle_insurance', 'vehicle_pollution', 'taxi_service_papers'].includes(doc.type)
               ) && (
-                <View style={styles.vehicleDocumentsSection}>
-                  <Text style={styles.sectionSubtitle}>Vehicle Documents</Text>
+                <View style={[styles.docSubSection, { borderTopColor: theme.colors.border }]}>
+                  <Text style={[styles.docSubTitle, { color: theme.colors.textSecondary }]}>Vehicle Documents</Text>
                   {documents
-                    .filter((doc: any) => 
+                    .filter((doc: any) =>
                       ['vehicle_registration', 'vehicle_insurance', 'vehicle_pollution', 'taxi_service_papers'].includes(doc.type)
                     )
                     .map((doc: any) => {
                       const isPDF = doc.url && doc.url.toLowerCase().endsWith('.pdf');
                       const isImage = doc.url && !isPDF;
-                      
+                      const s = getDocStatusStyle(doc.status);
                       return (
                         <TouchableOpacity
                           key={doc.documentId || doc._id}
-                          style={styles.documentItem}
-                          onPress={() => {
-                            if (doc.url) {
-                              Linking.openURL(doc.url).catch((err) => {
-                                Alert.alert('Error', 'Could not open document');
-                              });
-                            }
-                          }}
+                          style={[styles.docItem, { borderBottomColor: theme.colors.border }]}
+                          onPress={() => doc.url && Linking.openURL(doc.url).catch(() => Alert.alert('Error', 'Could not open document'))}
                         >
                           {isImage ? (
-                            <View style={styles.documentImageContainer}>
-                              <Image source={{ uri: doc.url }} style={styles.documentImage} />
+                            <View style={styles.docThumbWrap}>
+                              <Image source={{ uri: doc.url }} style={styles.docThumb} />
                             </View>
                           ) : (
-                            <View style={styles.documentIconContainer}>
+                            <View style={[styles.docIconWrap, { backgroundColor: theme.colors.primary + '10' }]}>
                               {doc.status === 'verified' ? (
-                                <CheckCircle size={20} color={COLORS.success} />
+                                <CheckCircle size={18} color="#4CAF50" />
                               ) : doc.status === 'pending' ? (
-                                <ActivityIndicator size={20} color={COLORS.warning} />
+                                <ActivityIndicator size={16} color="#FF9800" />
                               ) : (
-                                <FileText size={20} color={isPDF ? COLORS.primary : COLORS.error} />
+                                <FileText size={18} color={theme.colors.primary} />
                               )}
                             </View>
                           )}
-                    <View style={styles.documentInfo}>
-                      <Text style={styles.documentText}>
-                              {doc.type === 'vehicle_registration' ? 'Registration Certificate (RC)' :
-                               doc.type === 'vehicle_insurance' ? 'Insurance Certificate' :
-                               doc.type === 'vehicle_pollution' ? 'Pollution Certificate (PUC)' :
-                               doc.type === 'taxi_service_papers' ? 'Taxi Service Papers' : doc.type}
-                              {isPDF && ' (PDF)'}
-                      </Text>
-                      <View style={[
-                        styles.verifiedBadge,
-                        doc.status === 'verified' ? { backgroundColor: COLORS.success + '15' } :
-                        doc.status === 'pending' ? { backgroundColor: COLORS.warning + '15' } :
-                        { backgroundColor: COLORS.error + '15' }
-                      ]}>
-                        <Text style={[
-                          styles.verifiedText,
-                          doc.status === 'verified' ? { color: COLORS.success } :
-                          doc.status === 'pending' ? { color: COLORS.warning } :
-                          { color: COLORS.error }
-                        ]}>
-                          {doc.status === 'verified' ? 'Verified' :
-                           doc.status === 'pending' ? 'Pending' : 'Rejected'}
-                        </Text>
-                      </View>
-                    </View>
-                          {doc.url && (
-                            <ChevronRight size={20} color={COLORS.textSecondary} />
-                          )}
+                          <View style={styles.docInfo}>
+                            <Text style={[styles.docName, { color: theme.colors.text }]}>
+                              {getDocLabel(doc.type)}{isPDF ? ' (PDF)' : ''}
+                            </Text>
+                            <View style={[styles.docStatusPill, { backgroundColor: s.bg }]}>
+                              <Text style={[styles.docStatusText, { color: s.color }]}>{s.label}</Text>
+                            </View>
+                          </View>
+                          {doc.url && <ChevronRight size={18} color={theme.colors.textSecondary} />}
                         </TouchableOpacity>
                       );
                     })}
-                  </View>
+                </View>
               )}
 
-              {/* Display other documents (Aadhaar, DL, etc.) */}
+              {/* Other documents (Aadhaar, DL, etc.) */}
               {documents
                 .filter((doc: any) => {
-                  // Exclude business documents (only for company profiles)
                   const businessDocTypes = ['business_license', 'gst_certificate', 'company_registration'];
-                  if (businessDocTypes.includes(doc.type)) {
-                    return false;
-                  }
-                  // Exclude image-only documents (shown separately above) - Only user_photo, vehicle photos shown in VehicleDetailsScreen
-                  if (doc.type === 'user_photo' && doc.url && !doc.url.toLowerCase().endsWith('.pdf')) {
-                    return false;
-                  }
-                  // Exclude vehicle documents (shown in separate section above)
+                  if (businessDocTypes.includes(doc.type)) return false;
+                  if (doc.type === 'user_photo' && doc.url && !doc.url.toLowerCase().endsWith('.pdf')) return false;
                   const vehicleDocTypes = ['vehicle_registration', 'vehicle_insurance', 'vehicle_pollution', 'taxi_service_papers'];
-                  if (vehicleDocTypes.includes(doc.type)) {
-                    return false;
-                  }
+                  if (vehicleDocTypes.includes(doc.type)) return false;
                   return true;
                 })
                 .map((doc: any) => {
                   const isPDF = doc.url && doc.url.toLowerCase().endsWith('.pdf');
-                  const isImage = doc.url && !isPDF && ['vehicle_insurance', 'vehicle_registration', 'vehicle_pollution', 'taxi_service_papers'].includes(doc.type);
-                  
+                  const s = getDocStatusStyle(doc.status);
                   return (
                     <TouchableOpacity
                       key={doc.documentId || doc._id}
-                      style={styles.documentItem}
-                      onPress={() => {
-                        if (doc.url) {
-                          // Open document in browser/viewer
-                          Linking.openURL(doc.url).catch((err) => {
-                            Alert.alert('Error', 'Could not open document');
-                          });
-                        }
-                      }}
+                      style={[styles.docItem, { borderBottomColor: theme.colors.border }]}
+                      onPress={() => doc.url && Linking.openURL(doc.url).catch(() => Alert.alert('Error', 'Could not open document'))}
                     >
-                      {isImage ? (
-                        <View style={styles.documentImageContainer}>
-                          <Image source={{ uri: doc.url }} style={styles.documentImage} />
+                      <View style={[styles.docIconWrap, { backgroundColor: theme.colors.primary + '10' }]}>
+                        {doc.status === 'verified' ? (
+                          <CheckCircle size={18} color="#4CAF50" />
+                        ) : doc.status === 'pending' ? (
+                          <ActivityIndicator size={16} color="#FF9800" />
+                        ) : (
+                          <FileText size={18} color={isPDF ? theme.colors.primary : '#F44336'} />
+                        )}
+                      </View>
+                      <View style={styles.docInfo}>
+                        <Text style={[styles.docName, { color: theme.colors.text }]}>
+                          {getDocLabel(doc.type)}{isPDF ? ' (PDF)' : ''}
+                        </Text>
+                        <View style={[styles.docStatusPill, { backgroundColor: s.bg }]}>
+                          <Text style={[styles.docStatusText, { color: s.color }]}>{s.label}</Text>
                         </View>
-                      ) : (
-                    <View style={styles.documentIconContainer}>
-                      {doc.status === 'verified' ? (
-                        <CheckCircle size={20} color={COLORS.success} />
-                      ) : doc.status === 'pending' ? (
-                        <ActivityIndicator size={20} color={COLORS.warning} />
-                      ) : (
-                            <FileText size={20} color={isPDF ? COLORS.primary : COLORS.error} />
-                      )}
-                    </View>
-                      )}
-                      <View style={styles.documentInfo}>
-                    <Text style={styles.documentText}>
-                      {doc.type === 'aadhar_front' || doc.type === 'aadhar_back' ? 'Aadhaar Card' :
-                       doc.type === 'driving_license_front' || doc.type === 'driving_license_back' ? 'Driving License' :
-                           doc.type === 'vehicle_insurance' ? 'Vehicle Insurance' :
-                           doc.type === 'vehicle_registration' ? 'Registration Certificate (RC)' :
-                           doc.type === 'vehicle_pollution' ? 'Pollution Certificate (PUC)' :
-                           doc.type === 'taxi_service_papers' ? 'Taxi Service Papers' :
-                       doc.type}
-                          {isPDF && ' (PDF)'}
-                    </Text>
-                    <View style={[
-                      styles.verifiedBadge,
-                      doc.status === 'verified' ? { backgroundColor: COLORS.success + '15' } :
-                      doc.status === 'pending' ? { backgroundColor: COLORS.warning + '15' } :
-                      { backgroundColor: COLORS.error + '15' }
-                    ]}>
-                      <Text style={[
-                        styles.verifiedText,
-                        doc.status === 'verified' ? { color: COLORS.success } :
-                        doc.status === 'pending' ? { color: COLORS.warning } :
-                        { color: COLORS.error }
-                      ]}>
-                        {doc.status === 'verified' ? 'Verified' :
-                         doc.status === 'pending' ? 'Pending' : 'Rejected'}
-                      </Text>
-                    </View>
-                  </View>
-                      {doc.url && (
-                        <ChevronRight size={20} color={COLORS.textSecondary} />
-                      )}
+                      </View>
+                      {doc.url && <ChevronRight size={18} color={theme.colors.textSecondary} />}
                     </TouchableOpacity>
                   );
                 })}
             </>
           ) : (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyStateText}>No documents uploaded yet</Text>
+              <FileText size={36} color={theme.colors.textSecondary} />
+              <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>No documents uploaded yet</Text>
             </View>
           )}
         </View>
 
-        {/* Vehicles Card */}
-        <View style={styles.sectionCard}>
+        {/* ── Vehicles ── */}
+        <View style={[styles.sectionCard, { backgroundColor: theme.colors.surface }]}>
           <View style={styles.sectionHeader}>
-            <Car size={20} color={COLORS.primary} />
-            <Text style={styles.sectionTitle}>{t('profile.myVehicles')}</Text>
+            <Car size={18} color={theme.colors.primary} />
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t('profile.myVehicles')}</Text>
             <TouchableOpacity
               onPress={() => navigation.navigate('AddVehicle' as never)}
-              style={styles.addButton}
+              style={[styles.addBtn, { backgroundColor: theme.colors.primary }]}
             >
-              <Text style={styles.addButtonText}>+ Add</Text>
+              <Text style={styles.addBtnText}>+ Add</Text>
             </TouchableOpacity>
           </View>
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
           {loadingVehicles ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="small" color={COLORS.primary} />
-              <Text style={styles.loadingText}>Loading vehicles...</Text>
+            <View style={styles.miniLoadingWrap}>
+              <ActivityIndicator size="small" color={theme.colors.primary} />
             </View>
           ) : vehicles.length > 0 ? (
             vehicles.map((vehicle: any, index: number) => (
-              <View key={vehicle.vehicleId || vehicle._id || index} style={styles.vehicleItem}>
-                <View style={styles.vehicleIconContainer}>
+              <View key={vehicle.vehicleId || vehicle._id || index} style={[styles.vehicleItem, { backgroundColor: theme.colors.background }]}>
+                <View style={[styles.vehicleIconWrap, { backgroundColor: theme.colors.primary + '12' }]}>
                   {vehicle.type?.toLowerCase() === 'car' ? (
-                    <Car size={24} color={COLORS.primary} />
+                    <Car size={22} color={theme.colors.primary} />
                   ) : (
-                    <Bike size={24} color={COLORS.primary} />
+                    <Bike size={22} color={theme.colors.primary} />
                   )}
                 </View>
                 <View style={styles.vehicleInfo}>
-                  <Text style={styles.vehicleName}>
+                  <Text style={[styles.vehicleName, { color: theme.colors.text }]}>
                     {vehicle.brand || 'Unknown'} {vehicle.vehicleModel || vehicle.model || ''}
                   </Text>
-                  <Text style={styles.vehicleNumber}>{vehicle.number || 'N/A'}</Text>
+                  <Text style={[styles.vehicleNumber, { color: theme.colors.textSecondary }]}>{vehicle.number || 'N/A'}</Text>
                   {vehicle.seats && (
-                    <Text style={styles.vehicleDetails}>{vehicle.seats} seats • {vehicle.fuelType || 'N/A'}</Text>
+                    <Text style={[styles.vehicleDetails, { color: theme.colors.textSecondary }]}>
+                      {vehicle.seats} seats  {vehicle.fuelType || 'N/A'}
+                    </Text>
                   )}
                 </View>
                 <View style={styles.vehicleActions}>
-                  <TouchableOpacity 
-                    style={styles.vehicleActionButton}
+                  <TouchableOpacity
+                    style={[styles.vehicleActionBtn, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}
                     onPress={() => navigation.navigate('EditVehicle' as never, { vehicleId: vehicle.vehicleId } as never)}
                   >
-                    <Edit size={18} color={COLORS.primary} />
+                    <Edit size={16} color={theme.colors.primary} />
                   </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={styles.vehicleActionButton}
+                  <TouchableOpacity
+                    style={[styles.vehicleActionBtn, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}
                     onPress={() => navigation.navigate('VehicleDetails' as never, { vehicleId: vehicle.vehicleId } as never)}
                   >
-                    <Eye size={18} color={COLORS.primary} />
+                    <Eye size={16} color={theme.colors.primary} />
                   </TouchableOpacity>
                 </View>
               </View>
             ))
           ) : (
             <View style={styles.emptyState}>
-              <Car size={48} color={COLORS.textSecondary} />
-              <Text style={styles.emptyStateText}>No vehicles added yet</Text>
+              <Car size={36} color={theme.colors.textSecondary} />
+              <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>No vehicles added yet</Text>
               <TouchableOpacity
-                style={styles.addVehicleButton}
+                style={[styles.addVehicleBtn, { backgroundColor: theme.colors.primary }]}
                 onPress={() => navigation.navigate('AddVehicle' as never)}
               >
-                <Text style={styles.addVehicleButtonText}>+ Add Vehicle</Text>
+                <Text style={styles.addVehicleBtnText}>+ Add Vehicle</Text>
               </TouchableOpacity>
             </View>
           )}
         </View>
 
-        {/* Statistics Card */}
-        <View style={styles.statsCard}>
-          <View style={styles.sectionHeader}>
-            <BarChart size={20} color={COLORS.primary} />
-            <Text style={styles.sectionTitle}>{t('profile.statistics')}</Text>
+        {/* ── Quick Menu ── */}
+        <View style={[styles.sectionCard, { backgroundColor: theme.colors.surface, paddingHorizontal: 0, paddingBottom: 0 }]}>
+          <View style={[styles.sectionHeader, { paddingHorizontal: SPACING.md }]}>
+            <Settings size={18} color={theme.colors.primary} />
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Quick Menu</Text>
           </View>
-          <View style={styles.divider} />
-          <View style={styles.statsGrid}>
-            <View style={styles.statItem}>
-              <View style={styles.statIconContainer}>
-                <BarChart size={20} color={COLORS.primary} />
+          <View style={[styles.divider, { backgroundColor: theme.colors.border, marginHorizontal: SPACING.md }]} />
+          {menuItems.map((item, idx) => (
+            <TouchableOpacity
+              key={idx}
+              style={[styles.menuItem, idx < menuItems.length - 1 && { borderBottomWidth: 1, borderBottomColor: theme.colors.border + '60' }]}
+              onPress={() => navigation.navigate(item.screen as never, (item as any).params as never)}
+              activeOpacity={0.6}
+            >
+              <View style={[styles.menuIconWrap, { backgroundColor: item.color + '12' }]}>
+                <item.icon size={20} color={item.color} />
               </View>
-              <Text style={styles.statValue}>{user.totalTrips}</Text>
-              <Text style={styles.statLabel}>{t('profile.totalTrips')}</Text>
+              <Text style={[styles.menuLabel, { color: theme.colors.text }]}>{item.label}</Text>
+              <ChevronRight size={18} color={theme.colors.textSecondary} />
+            </TouchableOpacity>
+          ))}
+          {/* Logout */}
+          <TouchableOpacity style={[styles.menuItem, styles.logoutMenuItem]} onPress={handleLogout}>
+            <View style={[styles.menuIconWrap, { backgroundColor: '#F44336' + '12' }]}>
+              <LogOut size={20} color="#F44336" />
             </View>
-            <View style={styles.statItem}>
-              <View style={styles.statIconContainer}>
-                <Star size={20} color={COLORS.warning} />
-              </View>
-              <Text style={styles.statValue}>{user.rating}</Text>
-              <Text style={styles.statLabel}>{t('profile.averageRating')}</Text>
-            </View>
-            <View style={styles.statItem}>
-              <View style={styles.statIconContainer}>
-                <DollarSign size={20} color={COLORS.success} />
-              </View>
-              <Text style={styles.statValue}>₹{user.totalEarnings}</Text>
-              <Text style={styles.statLabel}>{t('profile.totalEarnings')}</Text>
-            </View>
-          </View>
+            <Text style={[styles.menuLabel, { color: '#F44336', fontWeight: '600' }]}>{t('profile.logout')}</Text>
+            <ChevronRight size={18} color="#F44336" />
+          </TouchableOpacity>
         </View>
 
-        {/* Menu Items */}
-        <View style={styles.menuContainer}>
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => navigation.navigate('MyOffers' as never)}
-          >
-            <View style={styles.menuItemLeft}>
-              <View style={styles.menuIconContainer}>
-                <Car size={20} color={COLORS.primary} />
-              </View>
-            <Text style={styles.menuText}>My Offers</Text>
-            </View>
-            <ChevronRight size={20} color={COLORS.textSecondary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => navigation.navigate('Payment' as never)}
-          >
-            <View style={styles.menuItemLeft}>
-              <View style={styles.menuIconContainer}>
-                <CreditCard size={20} color={COLORS.primary} />
-              </View>
-            <Text style={styles.menuText}>Payment Methods</Text>
-            </View>
-            <ChevronRight size={20} color={COLORS.textSecondary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => navigation.navigate('HelpSupport' as never)}
-          >
-            <View style={styles.menuItemLeft}>
-              <View style={styles.menuIconContainer}>
-                <Shield size={20} color={COLORS.primary} />
-              </View>
-            <Text style={styles.menuText}>Help & Support</Text>
-            </View>
-            <ChevronRight size={20} color={COLORS.textSecondary} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.menuItem}>
-            <View style={styles.menuItemLeft}>
-              <View style={styles.menuIconContainer}>
-                <FileText size={20} color={COLORS.primary} />
-              </View>
-            <Text style={styles.menuText}>About</Text>
-            </View>
-            <ChevronRight size={20} color={COLORS.textSecondary} />
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.menuItem, styles.logoutItem]} onPress={handleLogout}>
-            <View style={styles.menuItemLeft}>
-              <View style={[styles.menuIconContainer, styles.logoutIconContainer]}>
-                <LogOut size={20} color={COLORS.error} />
-              </View>
-            <Text style={[styles.menuText, styles.logoutText]}>{t('profile.logout')}</Text>
-            </View>
-            <ChevronRight size={20} color={COLORS.error} />
-          </TouchableOpacity>
-        </View>
+        {/* Bottom spacing */}
+        <View style={{ height: SPACING.xl }} />
       </ScrollView>
       <BottomTabNavigator />
+
+      {/* ── Logout Modal ── */}
+      <Modal
+        visible={showLogoutModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {
+          if (!loggingOut) setShowLogoutModal(false);
+        }}
+      >
+        <View style={styles.logoutOverlay}>
+          <View style={[styles.logoutModal, { backgroundColor: theme.colors.surface }]}>
+            <LottieView
+              ref={lottieRef}
+              source={require('../../../assets/videos/logout.json')}
+              style={styles.logoutLottie}
+              autoPlay={true}
+              loop={true}
+            />
+
+            {loggingOut ? (
+              <>
+                <Text style={[styles.logoutTitle, { color: theme.colors.text }]}>Logging out...</Text>
+                <Text style={[styles.logoutSubtitle, { color: theme.colors.textSecondary }]}>See you soon!</Text>
+              </>
+            ) : (
+              <>
+                <Text style={[styles.logoutTitle, { color: theme.colors.text }]}>Logout</Text>
+                <Text style={[styles.logoutSubtitle, { color: theme.colors.textSecondary }]}>
+                  Are you sure you want to logout?
+                </Text>
+                <View style={styles.logoutActions}>
+                  <TouchableOpacity
+                    style={[styles.logoutCancelBtn, { borderColor: theme.colors.border }]}
+                    onPress={() => setShowLogoutModal(false)}
+                  >
+                    <Text style={[styles.logoutCancelText, { color: theme.colors.textSecondary }]}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.logoutConfirmBtn}
+                    onPress={confirmLogout}
+                  >
+                    <LogOut size={16} color="#FFF" />
+                    <Text style={styles.logoutConfirmText}>Yes, Logout</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -772,123 +775,161 @@ const ProfileScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
   },
-  header: {
-    backgroundColor: COLORS.primary,
+
+  // ── Header ──
+  headerImage: {
+    width: '100%',
+    height: HEADER_HEIGHT,
+  },
+  headerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.65,
+  },
+  blurContainer: {
+    flex: 1,
+    overflow: 'hidden',
+  },
+  headerNav: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.md,
     paddingTop: SPACING.xl,
   },
-  headerTitle: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xl,
-    color: COLORS.white,
-    fontWeight: 'bold',
-  },
-  scrollContent: {
-    padding: SPACING.md,
-    paddingBottom: SPACING.xl,
-  },
-  // Profile Header Card
-  profileHeaderCard: {
-    backgroundColor: COLORS.white,
-    borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.lg,
+  navButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: SPACING.md,
+  },
+  navTitle: {
+    fontFamily: FONTS.regular,
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#FFF',
+  },
+  navPlaceholder: {
+    width: 40,
+  },
+
+  // ── Scroll ──
+  scrollContent: {
+    paddingBottom: SPACING.md,
+  },
+
+  // ── Profile Card ──
+  profileCard: {
+    borderRadius: BORDER_RADIUS.lg,
+    marginHorizontal: SPACING.md,
+    marginTop: -40,
+    paddingTop: SPACING.md,
     ...SHADOWS.md,
   },
-  profileImageContainer: {
+  avatarSection: {
+    alignItems: 'center',
+    paddingBottom: SPACING.sm,
+  },
+  avatarWrap: {
     position: 'relative',
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.sm,
   },
-  profilePhoto: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+  avatar: {
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
+    borderRadius: AVATAR_SIZE / 2,
     borderWidth: 4,
-    borderColor: COLORS.primary + '20',
   },
-  editIconButton: {
+  avatarPlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  editAvatarBtn: {
     position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.primary,
+    bottom: 2,
+    right: 2,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 3,
-    borderColor: COLORS.white,
     ...SHADOWS.sm,
   },
-  profileName: {
+  userName: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xxl,
-    color: COLORS.text,
+    fontSize: 22,
     fontWeight: 'bold',
-    marginBottom: SPACING.xs,
+    marginBottom: 2,
   },
-  profileUsername: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
-    color: COLORS.textSecondary,
-    marginBottom: SPACING.sm,
-  },
-  userIdContainer: {
+  userIdRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.xs,
-    marginBottom: SPACING.xs,
+    gap: 4,
+    marginBottom: SPACING.sm,
   },
   userIdText: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.primary,
+    fontSize: 12,
   },
-  verificationBadge: {
+
+  // ── Badges Row ──
+  badgesRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+    marginBottom: SPACING.md,
+  },
+  profileBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.xs,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs,
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1,
-    marginTop: SPACING.xs,
-    alignSelf: 'center',
-  },
-  verificationText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
-    fontWeight: '600',
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.xs,
-    backgroundColor: COLORS.warning + '15',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.xs,
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: BORDER_RADIUS.round,
   },
-  ratingText: {
+  profileBadgeText: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
-    color: COLORS.text,
+    fontSize: 11,
     fontWeight: '600',
   },
-  // Section Cards
+
+  // ── Quick Stats ──
+  quickStats: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.md,
+  },
+  quickStatItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  quickStatValue: {
+    fontFamily: FONTS.regular,
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  quickStatLabel: {
+    fontFamily: FONTS.regular,
+    fontSize: 11,
+    marginTop: 2,
+  },
+  quickStatDivider: {
+    width: 1,
+    height: '80%',
+    alignSelf: 'center',
+  },
+
+  // ── Section Card ──
   sectionCard: {
-    backgroundColor: COLORS.white,
     borderRadius: BORDER_RADIUS.lg,
+    marginHorizontal: SPACING.md,
+    marginTop: SPACING.md,
     padding: SPACING.md,
-    marginBottom: SPACING.md,
-    ...SHADOWS.md,
+    ...SHADOWS.sm,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -899,141 +940,140 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.lg,
-    color: COLORS.text,
     fontWeight: 'bold',
+    flex: 1,
   },
   divider: {
     height: 1,
-    backgroundColor: COLORS.lightGray,
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.sm,
   },
-  // Personal Information
+
+  // ── Badges Scroll ──
+  badgesScroll: {
+    marginTop: 4,
+  },
+  badgeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#FFF8E7',
+    borderRadius: BORDER_RADIUS.round,
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    marginRight: SPACING.sm,
+    borderWidth: 1,
+    borderColor: '#F5A623' + '30',
+  },
+  badgeChipText: {
+    fontFamily: FONTS.regular,
+    fontSize: 12,
+    color: '#8B5E00',
+    fontWeight: '600',
+  },
+
+  // ── Personal Info ──
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: SPACING.sm,
-    gap: SPACING.md,
+    paddingVertical: 8,
+    gap: SPACING.sm,
   },
-  infoIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.primary + '15',
+  infoIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  infoContent: {
+    flex: 1,
+  },
   infoLabel: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.textSecondary,
-    width: 100,
+    fontSize: 11,
+    marginBottom: 1,
   },
   infoValue: {
-    flex: 1,
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.sm,
-    color: COLORS.text,
-    textAlign: 'right',
+    fontWeight: '500',
   },
-  // Documents
-  documentItem: {
+
+  // ── Documents ──
+  docItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: SPACING.sm,
-    gap: SPACING.md,
+    paddingVertical: 10,
+    gap: SPACING.sm,
+    borderBottomWidth: 1,
   },
-  documentIconContainer: {
-    width: 40,
-    alignItems: 'center',
-  },
-  documentText: {
-    flex: 1,
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
-    color: COLORS.text,
-  },
-  verifiedBadge: {
-    backgroundColor: COLORS.success + '15',
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 4,
-    borderRadius: BORDER_RADIUS.sm,
-  },
-  verifiedText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.success,
-    fontWeight: '600',
-  },
-  documentImageContainer: {
-    width: 60,
-    height: 60,
+  docThumbWrap: {
+    width: 44,
+    height: 44,
     borderRadius: BORDER_RADIUS.md,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: COLORS.lightGray,
+    borderColor: '#E0E0E0',
   },
-  documentImage: {
+  docThumb: {
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
   },
-  documentInfo: {
-    flex: 1,
-    marginLeft: SPACING.md,
-  },
-  emptyState: {
-    padding: SPACING.lg,
-    alignItems: 'center',
+  docIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: BORDER_RADIUS.md,
     justifyContent: 'center',
+    alignItems: 'center',
   },
-  emptyStateText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
-    color: COLORS.textSecondary,
+  docInfo: {
+    flex: 1,
   },
-  vehicleDocumentsSection: {
-    marginTop: SPACING.md,
-    marginBottom: SPACING.md,
-    paddingTop: SPACING.md,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-  },
-  sectionSubtitle: {
+  docName: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.sm,
-    color: COLORS.textSecondary,
+    fontWeight: '500',
+    marginBottom: 3,
+  },
+  docStatusPill: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: BORDER_RADIUS.round,
+  },
+  docStatusText: {
+    fontFamily: FONTS.regular,
+    fontSize: 10,
     fontWeight: '600',
-    marginBottom: SPACING.sm,
+  },
+  docSubSection: {
+    marginTop: SPACING.sm,
+    paddingTop: SPACING.sm,
+    borderTopWidth: 1,
+  },
+  docSubTitle: {
+    fontFamily: FONTS.regular,
+    fontSize: 11,
+    fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+    marginBottom: SPACING.xs,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: SPACING.xl,
-  },
-  loadingText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
-    color: COLORS.textSecondary,
-    marginTop: SPACING.md,
-  },
-  // Vehicles
+
+  // ── Vehicles ──
   vehicleItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: SPACING.sm,
-    backgroundColor: COLORS.background,
     borderRadius: BORDER_RADIUS.md,
     marginBottom: SPACING.sm,
-    gap: SPACING.md,
+    gap: SPACING.sm,
   },
-  vehicleIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: COLORS.primary + '15',
+  vehicleIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1043,145 +1083,177 @@ const styles = StyleSheet.create({
   vehicleName: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.md,
-    color: COLORS.text,
     fontWeight: '600',
-    marginBottom: 2,
   },
   vehicleNumber: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.sm,
-    color: COLORS.textSecondary,
-    marginTop: 2,
+    marginTop: 1,
   },
   vehicleDetails: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.textSecondary,
-    marginTop: 2,
-  },
-  addButton: {
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs,
-    backgroundColor: COLORS.primary,
-    borderRadius: BORDER_RADIUS.sm,
-  },
-  addButtonText: {
-    color: COLORS.white,
-    fontSize: FONTS.sizes.sm,
-    fontFamily: FONTS.medium,
-  },
-  addVehicleButton: {
-    marginTop: SPACING.md,
-    padding: SPACING.md,
-    backgroundColor: COLORS.primary,
-    borderRadius: BORDER_RADIUS.md,
-    alignItems: 'center',
-  },
-  addVehicleButtonText: {
-    color: COLORS.white,
-    fontSize: FONTS.sizes.md,
-    fontFamily: FONTS.medium,
+    fontSize: 11,
+    marginTop: 1,
   },
   vehicleActions: {
     flexDirection: 'row',
+    gap: 6,
+  },
+  vehicleActionBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+  },
+  addBtn: {
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 5,
+    borderRadius: BORDER_RADIUS.round,
+  },
+  addBtnText: {
+    fontFamily: FONTS.regular,
+    fontSize: 12,
+    color: '#FFF',
+    fontWeight: '700',
+  },
+  addVehicleBtn: {
+    marginTop: SPACING.sm,
+    paddingVertical: 10,
+    paddingHorizontal: SPACING.lg,
+    borderRadius: BORDER_RADIUS.md,
+  },
+  addVehicleBtnText: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.sm,
+    color: '#FFF',
+    fontWeight: '700',
+  },
+
+  // ── Empty State ──
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: SPACING.lg,
     gap: SPACING.xs,
   },
-  vehicleActionButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.white,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.lightGray,
-  },
-  // Statistics
-  statsCard: {
-    backgroundColor: COLORS.white,
-    borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.md,
-    marginBottom: SPACING.md,
-    ...SHADOWS.md,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: SPACING.sm,
-  },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-    padding: SPACING.sm,
-    backgroundColor: COLORS.background,
-    borderRadius: BORDER_RADIUS.md,
-  },
-  statIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.primary + '15',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: SPACING.xs,
-  },
-  statValue: {
+  emptyText: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.lg,
-    color: COLORS.text,
-    fontWeight: 'bold',
-    marginBottom: 2,
+    fontSize: FONTS.sizes.sm,
   },
-  statLabel: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.textSecondary,
-  },
-  // Menu
-  menuContainer: {
-    marginTop: SPACING.sm,
-  },
+
+  // ── Menu ──
   menuItem: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: SPACING.md,
-    backgroundColor: COLORS.white,
-    borderRadius: BORDER_RADIUS.md,
-    marginBottom: SPACING.sm,
-    ...SHADOWS.sm,
+    paddingVertical: 12,
+    paddingHorizontal: SPACING.md,
+    gap: SPACING.sm,
   },
-  menuItemLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.md,
-    flex: 1,
-  },
-  menuIconContainer: {
+  menuIconWrap: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: COLORS.primary + '15',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  menuText: {
+  menuLabel: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.md,
-    color: COLORS.text,
+    flex: 1,
   },
-  logoutItem: {
-    borderWidth: 1,
-    borderColor: COLORS.error + '30',
+  logoutMenuItem: {
+    borderTopWidth: 1,
+    borderTopColor: '#F44336' + '20',
+    marginTop: SPACING.xs,
   },
-  logoutIconContainer: {
-    backgroundColor: COLORS.error + '15',
+
+  // ── Logout Modal ──
+  logoutOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: SPACING.lg,
   },
-  logoutText: {
-    color: COLORS.error,
+  logoutModal: {
+    width: '100%',
+    maxWidth: 360,
+    borderRadius: 24,
+    padding: SPACING.xl,
+    alignItems: 'center',
+    ...SHADOWS.lg,
+  },
+  logoutLottie: {
+    width: 150,
+    height: 150,
+    marginBottom: SPACING.sm,
+  },
+  logoutTitle: {
+    fontFamily: FONTS.regular,
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  logoutSubtitle: {
+    fontFamily: FONTS.regular,
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: SPACING.lg,
+  },
+  logoutActions: {
+    flexDirection: 'row',
+    gap: SPACING.md,
+    width: '100%',
+  },
+  logoutCancelBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoutCancelText: {
+    fontFamily: FONTS.regular,
+    fontSize: 15,
     fontWeight: '600',
+  },
+  logoutConfirmBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    paddingVertical: 14,
+    borderRadius: 14,
+    backgroundColor: '#F44336',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  logoutConfirmText: {
+    fontFamily: FONTS.regular,
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFF',
+  },
+
+  // ── Loading ──
+  loadingWrap: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  loadingLabel: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.sm,
+  },
+  miniLoadingWrap: {
+    alignItems: 'center',
+    paddingVertical: SPACING.md,
+    gap: SPACING.xs,
   },
 });
 
 export default ProfileScreen;
-

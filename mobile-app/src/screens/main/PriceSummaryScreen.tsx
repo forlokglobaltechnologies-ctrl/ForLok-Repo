@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Alert, ActivityIndicator } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ArrowLeft, IndianRupee, CheckCircle, Info } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { Button } from '@components/common/Button';
 import { Card } from '@components/common/Card';
 import { useLanguage } from '@context/LanguageContext';
+import { bookingApi, walletApi } from '@utils/apiClient';
 
 interface RouteParams {
   offerId: string;
@@ -45,15 +46,66 @@ const PriceSummaryScreen = () => {
   const route = useRoute();
   const { t } = useLanguage();
   const params = (route.params as RouteParams) || {};
+  const [bookingLoading, setBookingLoading] = useState(false);
 
-  const handleProceedToPayment = () => {
-    navigation.navigate('Payment' as never, {
-      bookingId: null, // Will be created after payment
-      offer: params.offer,
-      passengerRoute: params.passengerRoute,
-      priceBreakdown: params.priceBreakdown,
-      type: 'pooling',
-    } as never);
+  const handleConfirmBooking = async () => {
+    if (bookingLoading) return;
+
+    try {
+      setBookingLoading(true);
+
+      // Check wallet balance — passengers need ₹100 minimum
+      const walletCheck = await walletApi.canBookRide();
+      if (walletCheck.success && walletCheck.data && !walletCheck.data.canBook) {
+        const shortfall = walletCheck.data.shortfall || 0;
+        Alert.alert(
+          'Insufficient Wallet Balance',
+          `You need minimum ₹${walletCheck.data.requiredBalance || 100} to book a ride. Please recharge ₹${shortfall} to continue.`,
+          [
+            { text: 'Recharge Now', onPress: () => navigation.navigate('Wallet' as never) },
+            { text: 'Cancel', style: 'cancel' },
+          ]
+        );
+        setBookingLoading(false);
+        return;
+      }
+
+      const response = await bookingApi.createPoolingBooking({
+        poolingOfferId: params.offer?.offerId || params.offerId,
+        passengerRoute: params.passengerRoute,
+        calculatedPrice: {
+          finalPrice: params.priceBreakdown.finalPrice,
+          platformFee: params.priceBreakdown.platformFee,
+          totalAmount: params.priceBreakdown.totalAmount,
+        },
+      });
+
+      if (response.success && response.data) {
+        const bookingId = response.data.bookingId || response.data._id;
+        Alert.alert(
+          'Booking Confirmed!',
+          'Your ride has been booked. Payment will be collected at the end of the trip.',
+          [
+            {
+              text: 'View Booking',
+              onPress: () => {
+                navigation.navigate('BookingConfirmation' as never, {
+                  bookingId,
+                  booking: response.data,
+                } as never);
+              },
+            },
+            { text: 'OK', onPress: () => navigation.navigate('MainDashboard' as never) },
+          ]
+        );
+      } else {
+        Alert.alert('Booking Failed', response.error || 'Failed to create booking. Please try again.');
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Something went wrong. Please try again.');
+    } finally {
+      setBookingLoading(false);
+    }
   };
 
   const { priceBreakdown, passengerRoute } = params;
@@ -170,17 +222,25 @@ const PriceSummaryScreen = () => {
         <View style={styles.infoCard}>
           <Info size={20} color={COLORS.primary} />
           <Text style={styles.infoText}>
-            Price is calculated based on distance, time of day, and market supply/demand.
+            Price is calculated based on distance, time of day, and market supply/demand. You can pay online or cash at trip end.
+          </Text>
+        </View>
+
+        <View style={styles.payInfoCard}>
+          <Info size={18} color={COLORS.success} />
+          <Text style={styles.payInfoText}>
+            No payment now. You pay at the end of the trip (online or cash).
           </Text>
         </View>
 
         <Button
-          title="Proceed to Payment"
-          onPress={handleProceedToPayment}
+          title={bookingLoading ? "Booking..." : "Confirm Booking"}
+          onPress={handleConfirmBooking}
           variant="primary"
           size="large"
           style={styles.proceedButton}
-          icon={<CheckCircle size={20} color={COLORS.white} />}
+          icon={bookingLoading ? undefined : <CheckCircle size={20} color={COLORS.white} />}
+          disabled={bookingLoading}
         />
       </ScrollView>
     </SafeAreaView>
@@ -311,6 +371,24 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     flex: 1,
     lineHeight: 20,
+  },
+  payInfoCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: `${COLORS.success}15`,
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    marginBottom: SPACING.md,
+    gap: SPACING.sm,
+    borderWidth: 1,
+    borderColor: `${COLORS.success}30`,
+  },
+  payInfoText: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.sm,
+    color: COLORS.text,
+    flex: 1,
+    fontWeight: '500',
   },
   proceedButton: {
     marginBottom: SPACING.xl,

@@ -35,9 +35,20 @@ export const userRegistrationSchema = z.object({
   email: emailSchema.optional(),
   password: passwordSchema,
   confirmPassword: z.string().min(1, 'Please confirm your password'),
+  gender: z.enum(['Male', 'Female', 'Other']).optional(),
+  referralCode: z.string().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: 'Passwords do not match',
   path: ['confirmPassword'],
+}).refine((data) => {
+  // Gender is required for individual users
+  if (data.userType === 'individual' && !data.gender) {
+    return false;
+  }
+  return true;
+}, {
+  message: 'Gender is required for individual users',
+  path: ['gender'],
 });
 
 // OTP verification schema

@@ -8,7 +8,8 @@ import {
   TextStyle,
   View,
 } from 'react-native';
-import { COLORS, FONTS, BORDER_RADIUS } from '@constants/theme';
+import { FONTS, BORDER_RADIUS } from '@constants/theme';
+import { useTheme } from '@context/ThemeContext';
 
 interface ButtonProps {
   title: string;
@@ -33,6 +34,11 @@ export const Button: React.FC<ButtonProps> = ({
   textStyle,
   icon,
 }) => {
+  const { theme } = useTheme();
+  
+  // Always use theme colors
+  const colors = theme.colors;
+
   const getButtonStyle = (): ViewStyle => {
     const baseStyle: ViewStyle = {
       borderRadius: BORDER_RADIUS.md,
@@ -58,15 +64,15 @@ export const Button: React.FC<ButtonProps> = ({
 
     switch (variant) {
       case 'primary':
-        baseStyle.backgroundColor = COLORS.primary;
+        baseStyle.backgroundColor = colors.primary;
         break;
       case 'secondary':
-        baseStyle.backgroundColor = COLORS.secondary;
+        baseStyle.backgroundColor = colors.secondary;
         break;
       case 'outline':
         baseStyle.backgroundColor = 'transparent';
         baseStyle.borderWidth = 1;
-        baseStyle.borderColor = COLORS.primary;
+        baseStyle.borderColor = colors.primary;
         break;
       case 'text':
         baseStyle.backgroundColor = 'transparent';
@@ -100,11 +106,11 @@ export const Button: React.FC<ButtonProps> = ({
     switch (variant) {
       case 'primary':
       case 'secondary':
-        baseStyle.color = COLORS.white;
+        baseStyle.color = colors.white;
         break;
       case 'outline':
       case 'text':
-        baseStyle.color = COLORS.primary;
+        baseStyle.color = colors.primary;
         break;
     }
 
@@ -120,7 +126,7 @@ export const Button: React.FC<ButtonProps> = ({
     >
       {loading ? (
         <ActivityIndicator
-          color={variant === 'primary' || variant === 'secondary' ? COLORS.white : COLORS.primary}
+          color={variant === 'primary' || variant === 'secondary' ? colors.white : colors.primary}
           size="small"
         />
       ) : (

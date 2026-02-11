@@ -5,35 +5,44 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   SafeAreaView,
   Dimensions,
   Image,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Video, ResizeMode } from 'expo-av';
-import { Menu, Bell, User, Clock, MapPin, Calendar, TrendingUp, TrendingDown, IndianRupee } from 'lucide-react-native';
-import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '@constants/theme';
+import { Menu, Bell, User, Clock, MapPin, Calendar, TrendingUp, TrendingDown, IndianRupee, Heart, Plus, Coins } from 'lucide-react-native';
+import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { Button } from '@components/common/Button';
 import { Input } from '@components/common/Input';
 import { Card } from '@components/common/Card';
+import { LocationData } from '@components/common/LocationPicker';
 import { BottomTabNavigator } from '@components/navigation/BottomTabNavigator';
 import { useLanguage } from '@context/LanguageContext';
+import { useTheme } from '@context/ThemeContext';
 import { dashboardApi } from '@utils/apiClient';
+import { useNotifications } from '@context/NotificationContext';
+import { Alert } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
 const MainDashboardScreen = () => {
   const navigation = useNavigation();
   const { t } = useLanguage();
+  const { theme, isPinkMode, setPinkMode } = useTheme();
+  const { unreadCount } = useNotifications();
   const videoRef = useRef<Video>(null);
-  const [fromLocation, setFromLocation] = useState('');
-  const [toLocation, setToLocation] = useState('');
+  const [fromLocation, setFromLocation] = useState<LocationData | null>(null);
+  const [toLocation, setToLocation] = useState<LocationData | null>(null);
   const [date, setDate] = useState('Today, 15 Jan 2024');
   const [vehicleType, setVehicleType] = useState<'Car' | 'Bike' | null>(null);
   const [passengers, setPassengers] = useState(1);
   const [dashboardStats, setDashboardStats] = useState<any>(null);
   const [financialData, setFinancialData] = useState<any>(null);
   const [loadingStats, setLoadingStats] = useState(true);
+  const [userGender, setUserGender] = useState<string | null>(null);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
 
   const recentSearches = [
     { from: 'Bangalore', to: 'Mumbai' },
@@ -47,16 +56,15 @@ const MainDashboardScreen = () => {
   const loadDashboardData = async () => {
     try {
       setLoadingStats(true);
-      const [statsResponse, financialResponse] = await Promise.all([
-        dashboardApi.getStats(),
-        dashboardApi.getFinancial(),
-      ]);
+      // Single API call — stats includes user info, financial data, and gender
+      const statsResponse = await dashboardApi.getStats();
 
-      if (statsResponse.success) {
+      if (statsResponse.success && statsResponse.data) {
         setDashboardStats(statsResponse.data);
-      }
-      if (financialResponse.success) {
-        setFinancialData(financialResponse.data);
+        // Financial data is inside stats response
+        setFinancialData(statsResponse.data.financial);
+        // Gender is also returned in user data
+        setUserGender(statsResponse.data.user?.gender || null);
       }
     } catch (error: any) {
       console.error('Error loading dashboard data:', error);
@@ -66,27 +74,71 @@ const MainDashboardScreen = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.menuButton}>
-          <Menu size={24} color={COLORS.white} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Dashboard</Text>
-        <View style={styles.headerRight}>
-          <TouchableOpacity
-            style={styles.iconButton}
-            onPress={() => navigation.navigate('Notifications' as never)}
-          >
-            <Bell size={24} color={COLORS.white} />
+    <TouchableWithoutFeedback onPress={() => setShowProfileDropdown(false)}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <View style={[styles.header, { backgroundColor: theme.colors.primary }]}>
+          <TouchableOpacity style={styles.menuButton}>
+            <Menu size={24} color={theme.colors.white} />
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.iconButton}
-            onPress={() => navigation.navigate('Profile' as never)}
-          >
-            <User size={24} color={COLORS.white} />
-          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: theme.colors.white }]}>Dashboard</Text>
+          <View style={styles.headerRight}>
+            <TouchableOpacity
+              style={styles.iconButton}
+              onPress={() => navigation.navigate('Notifications' as never)}
+            >
+              <Bell size={24} color={theme.colors.white} />
+              {unreadCount > 0 && (
+                <View style={styles.notifBadge}>
+                  <Text style={styles.notifBadgeText}>{unreadCount > 99 ? '99+' : unreadCount}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            <View style={styles.profileIconContainer}>
+              <TouchableOpacity
+                style={styles.iconButton}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  setShowProfileDropdown(!showProfileDropdown);
+                }}
+              >
+                <User size={24} color={theme.colors.white} />
+              </TouchableOpacity>
+              {showProfileDropdown && (
+                <TouchableWithoutFeedback onPress={() => setShowProfileDropdown(false)}>
+                  <View style={[styles.dropdown, { backgroundColor: theme.colors.surface }]}>
+                    <TouchableOpacity
+                      style={styles.dropdownItem}
+                      onPress={() => {
+                        setShowProfileDropdown(false);
+                        navigation.navigate('Profile' as never);
+                      }}
+                    >
+                      <User size={18} color={theme.colors.text} />
+                      <Text style={[styles.dropdownText, { color: theme.colors.text }]}>View Profile</Text>
+                    </TouchableOpacity>
+                    <View style={[styles.dropdownDivider, { backgroundColor: theme.colors.border }]} />
+                    <TouchableOpacity
+                      style={styles.dropdownItem}
+                      onPress={() => {
+                        setShowProfileDropdown(false);
+                        if (isPinkMode) {
+                          setPinkMode(false);
+                        } else {
+                          navigation.navigate('PinkPoolingSplash' as never);
+                        }
+                      }}
+                    >
+                      <Heart size={18} color={isPinkMode ? theme.colors.primary : theme.colors.text} />
+                      <Text style={[styles.dropdownText, { color: theme.colors.text }]}>
+                        {isPinkMode ? 'Exit Pink Pooling' : 'Enter Pink Pooling'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </TouchableWithoutFeedback>
+              )}
+            </View>
+          </View>
         </View>
-      </View>
 
       <ScrollView
         style={styles.scrollView}
@@ -94,43 +146,94 @@ const MainDashboardScreen = () => {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.welcomeContainer}>
-          <Text style={styles.welcomeText}>
+          <Text style={[styles.welcomeText, { color: theme.colors.primary }]}>
             {t('dashboard.welcomeBack')}, {dashboardStats?.user?.name || 'User'}
           </Text>
-          <Text style={styles.welcomeQuote}>{t('dashboard.startRide')}</Text>
+          <Text style={[styles.welcomeQuote, { color: theme.colors.textSecondary }]}>{t('dashboard.startRide')}</Text>
         </View>
+
+        {/* Pink Pooling Button - Only visible for Female users */}
+        {userGender === 'Female' && (
+          <Card style={styles.pinkPoolingCard}>
+            <TouchableOpacity
+              style={styles.pinkPoolingButton}
+              onPress={() => {
+                // Gender is already verified, proceed to Pink Pooling
+                navigation.navigate('PinkPoolingSplash' as never);
+              }}
+            >
+              <View style={styles.pinkPoolingContent}>
+                <View style={styles.pinkPoolingIconContainer}>
+                  <Heart size={32} color="#FF6B9D" fill="#FF6B9D" />
+                </View>
+                <View style={styles.pinkPoolingTextContainer}>
+                  <Text style={styles.pinkPoolingTitle}>Pink Pooling</Text>
+                  <Text style={styles.pinkPoolingSubtitle}>Safe rides for women & girls</Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+          </Card>
+        )}
 
         {/* Financial Cards */}
         {financialData && (
           <View style={styles.financialCardsContainer}>
-            <Card style={styles.financialCard}>
+            <Card style={[styles.financialCard, { backgroundColor: theme.colors.surface }]}>
               <View style={styles.financialCardHeader}>
-                <TrendingUp size={24} color={COLORS.success} />
-                <Text style={styles.financialCardTitle}>Inflow</Text>
+                <TrendingUp size={24} color={financialData.walletBalance >= 0 ? theme.colors.success : theme.colors.error} />
+                <Text style={[styles.financialCardTitle, { color: theme.colors.textSecondary }]}>Wallet Balance</Text>
               </View>
               <View style={styles.financialCardAmount}>
-                <IndianRupee size={28} color={COLORS.success} />
-                <Text style={[styles.financialCardValue, { color: COLORS.success }]}>
-                  {financialData.inflowAmount || 0}
+                <IndianRupee size={28} color={financialData.walletBalance >= 0 ? theme.colors.success : theme.colors.error} />
+                <Text style={[styles.financialCardValue, { color: financialData.walletBalance >= 0 ? theme.colors.success : theme.colors.error }]}>
+                  {financialData.walletBalance || 0}
                 </Text>
               </View>
-              <Text style={styles.financialCardSubtitle}>Money to be received</Text>
-            </Card>
-
-            <Card style={styles.financialCard}>
-              <View style={styles.financialCardHeader}>
-                <TrendingDown size={24} color={COLORS.error} />
-                <Text style={styles.financialCardTitle}>Outflow</Text>
+              <Text style={[styles.financialCardSubtitle, { color: theme.colors.textSecondary }]}>
+                {financialData.canBookRide
+                  ? (financialData.canGiveRide !== false ? 'Ready to ride' : 'Ready to book rides')
+                  : (financialData.walletBalance >= 0
+                    ? `Recharge to ₹${financialData.minimumRequired || 100} to take rides`
+                    : 'Recharge wallet to continue')}
+              </Text>
+              <View style={styles.walletButtonsRow}>
+                <TouchableOpacity
+                  style={[styles.rechargeButton, { backgroundColor: theme.colors.success }]}
+                  onPress={() => (navigation.navigate as any)('Wallet', {})}
+                >
+                  <Plus size={16} color={theme.colors.white} />
+                  <Text style={[styles.withdrawButtonText, { color: theme.colors.white }]}>Recharge</Text>
+                </TouchableOpacity>
+                {(financialData.walletBalance || 0) > 0 && (
+                  <TouchableOpacity
+                    style={[styles.withdrawButton, { backgroundColor: theme.colors.primary }]}
+                    onPress={() => (navigation.navigate as any)('Withdrawal', {})}
+                  >
+                    <Text style={[styles.withdrawButtonText, { color: theme.colors.white }]}>Withdraw</Text>
+                  </TouchableOpacity>
+                )}
               </View>
-              <View style={styles.financialCardAmount}>
-                <IndianRupee size={28} color={COLORS.error} />
-                <Text style={[styles.financialCardValue, { color: COLORS.error }]}>
-                  {financialData.outflowAmount || 0}
-                </Text>
-              </View>
-              <Text style={styles.financialCardSubtitle}>Money to be paid</Text>
             </Card>
           </View>
+        )}
+
+        {/* Coin Balance Badge */}
+        {dashboardStats?.coins && (
+          <TouchableOpacity
+            style={styles.coinBadgeCard}
+            onPress={() => (navigation.navigate as any)('Wallet', { tab: 'coins' })}
+          >
+            <View style={styles.coinBadgeLeft}>
+              <View style={styles.coinIconContainer}>
+                <Coins size={22} color="#F5A623" />
+              </View>
+              <View>
+                <Text style={styles.coinBadgeBalance}>{dashboardStats.coins.balance} coins</Text>
+                <Text style={styles.coinBadgeWorth}>Worth ₹{dashboardStats.coins.worthInRupees}</Text>
+              </View>
+            </View>
+            <Text style={styles.coinBadgeArrow}>→</Text>
+          </TouchableOpacity>
         )}
 
         <View style={styles.videoContainer}>
@@ -143,15 +246,18 @@ const MainDashboardScreen = () => {
             isMuted
             shouldPlay
           />
-          <View style={styles.blurOverlay}>
+          <View style={[styles.blurOverlay, { backgroundColor: 'rgba(255, 255, 255, 0.67)' }]}>
             <View style={styles.locationFieldsContainer}>
               <TouchableOpacity
-                onPress={() => (navigation.navigate as any)('LocationPicker', { type: 'from' })}
+                onPress={() => (navigation.navigate as any)('LocationPicker', {
+                  title: 'Select From Location',
+                  onLocationSelect: (location: LocationData) => setFromLocation(location),
+                })}
                 style={styles.locationFieldWrapper}
               >
                 <Input
                   label={t('dashboard.from')}
-                  value={fromLocation}
+                  value={fromLocation?.address || ''}
                   placeholder={t('dashboard.selectLocation')}
                   editable={false}
                   containerStyle={styles.locationInput}
@@ -159,12 +265,15 @@ const MainDashboardScreen = () => {
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={() => (navigation.navigate as any)('LocationPicker', { type: 'to' })}
+                onPress={() => (navigation.navigate as any)('LocationPicker', {
+                  title: 'Select To Location',
+                  onLocationSelect: (location: LocationData) => setToLocation(location),
+                })}
                 style={styles.locationFieldWrapper}
               >
                 <Input
                   label={t('dashboard.to')}
-                  value={toLocation}
+                  value={toLocation?.address || ''}
                   placeholder={t('dashboard.selectLocation')}
                   editable={false}
                   containerStyle={styles.locationInput}
@@ -185,14 +294,15 @@ const MainDashboardScreen = () => {
               containerStyle={styles.locationInput}
             />
           </TouchableOpacity>
-
           <View style={styles.vehicleTypeContainer}>
-            <Text style={styles.label}>{t('dashboard.selectYourVehicle')}</Text>
+            <Text style={[styles.label, { color: theme.colors.text }]}>{t('dashboard.vehicleType')}</Text>
+
             <View style={styles.vehicleTypeOptions}>
               <TouchableOpacity
                 style={[
                   styles.vehicleTypeButton,
-                  vehicleType === 'Car' && styles.vehicleTypeSelected,
+                  { borderColor: theme.colors.border },
+                  vehicleType === 'Car' && [styles.vehicleTypeSelected, { borderColor: theme.colors.primary, borderWidth: 3 }],
                 ]}
                 onPress={() => {
                   setVehicleType('Car');
@@ -208,7 +318,8 @@ const MainDashboardScreen = () => {
               <TouchableOpacity
                 style={[
                   styles.vehicleTypeButton,
-                  vehicleType === 'Bike' && styles.vehicleTypeSelected,
+                  { borderColor: theme.colors.border },
+                  vehicleType === 'Bike' && [styles.vehicleTypeSelected, { borderColor: theme.colors.primary, borderWidth: 3 }],
                 ]}
                 onPress={() => {
                   setVehicleType('Bike');
@@ -225,7 +336,7 @@ const MainDashboardScreen = () => {
           </View>
 
           <View style={styles.passengerContainer}>
-            <Text style={styles.label}>{t('dashboard.passengers')}</Text>
+            <Text style={[styles.label, { color: theme.colors.text }]}>{t('dashboard.passengers')}</Text>
             <View style={styles.passengerRangeContainer}>
               <View style={styles.passengerRangeRow}>
                 {[1, 2, 3, 4, 5, 6].map((num) => (
@@ -233,7 +344,8 @@ const MainDashboardScreen = () => {
                     key={num}
                     style={[
                       styles.passengerRangeButton,
-                      passengers === num && styles.passengerRangeSelected,
+                      { borderColor: theme.colors.border, backgroundColor: theme.colors.surface },
+                      passengers === num && [styles.passengerRangeSelected, { borderColor: theme.colors.primary, backgroundColor: theme.colors.primary + '15' }],
                       vehicleType === 'Bike' && styles.passengerRangeDisabled,
                     ]}
                     onPress={() => vehicleType === 'Car' && setPassengers(num)}
@@ -242,8 +354,9 @@ const MainDashboardScreen = () => {
                     <Text
                       style={[
                         styles.passengerRangeText,
-                        passengers === num && styles.passengerRangeTextSelected,
-                        vehicleType === 'Bike' && styles.passengerRangeTextDisabled,
+                        { color: theme.colors.text },
+                        passengers === num && [styles.passengerRangeTextSelected, { color: theme.colors.primary }],
+                        vehicleType === 'Bike' && [styles.passengerRangeTextDisabled, { color: theme.colors.textSecondary }],
                       ]}
                     >
                       {num}
@@ -252,14 +365,20 @@ const MainDashboardScreen = () => {
                 ))}
               </View>
               {vehicleType === 'Bike' && (
-                <Text style={styles.disabledHint}>Not available for Bike</Text>
+                <Text style={[styles.disabledHint, { color: theme.colors.textSecondary }]}>Not available for Bike</Text>
               )}
             </View>
           </View>
 
           <Button
             title={t('dashboard.searchPools')}
-            onPress={() => navigation.navigate('SearchPooling' as never)}
+            onPress={() => (navigation.navigate as any)('SearchPooling', {
+              from: fromLocation || undefined,
+              to: toLocation || undefined,
+              date,
+              vehicleType: vehicleType || undefined,
+              passengers,
+            })}
             variant="primary"
             size="large"
             style={styles.searchButton}
@@ -267,18 +386,18 @@ const MainDashboardScreen = () => {
         </View>
 
         <View style={styles.recentSearches}>
-          <Text style={styles.recentTitle}>{t('dashboard.recentSearches')}:</Text>
+          <Text style={[styles.recentTitle, { color: theme.colors.text }]}>{t('dashboard.recentSearches')}:</Text>
           {recentSearches.map((search, index) => (
             <TouchableOpacity
               key={index}
               style={styles.recentItem}
               onPress={() => {
-                setFromLocation(search.from);
-                setToLocation(search.to);
+                setFromLocation({ address: search.from, lat: 0, lng: 0 });
+                setToLocation({ address: search.to, lat: 0, lng: 0 });
               }}
             >
-              <Clock size={16} color={COLORS.textSecondary} />
-              <Text style={styles.recentText}>
+              <Clock size={16} color={theme.colors.textSecondary} />
+              <Text style={[styles.recentText, { color: theme.colors.textSecondary }]}>
                 {search.from} → {search.to}
               </Text>
             </TouchableOpacity>
@@ -286,18 +405,17 @@ const MainDashboardScreen = () => {
         </View>
       </ScrollView>
 
-      <BottomTabNavigator />
-    </SafeAreaView>
+        <BottomTabNavigator />
+      </SafeAreaView>
+    </TouchableWithoutFeedback>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
   },
   header: {
-    backgroundColor: COLORS.primary,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -308,7 +426,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.xl,
-    color: COLORS.white,
     fontWeight: 'bold',
     position: 'absolute',
     left: 0,
@@ -325,6 +442,55 @@ const styles = StyleSheet.create({
   },
   iconButton: {
     padding: SPACING.xs,
+    position: 'relative' as const,
+  },
+  notifBadge: {
+    position: 'absolute' as const,
+    top: -4,
+    right: -6,
+    backgroundColor: '#FF3B30',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: COLORS.white,
+  },
+  notifBadgeText: {
+    color: COLORS.white,
+    fontSize: 10,
+    fontWeight: 'bold' as const,
+    fontFamily: FONTS.regular,
+  },
+  profileIconContainer: {
+    position: 'relative',
+  },
+  dropdown: {
+    position: 'absolute',
+    top: 45,
+    right: 0,
+    minWidth: 180,
+    borderRadius: BORDER_RADIUS.md,
+    paddingVertical: SPACING.xs,
+    ...SHADOWS.lg,
+    zIndex: 1000,
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+  },
+  dropdownText: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.md,
+  },
+  dropdownDivider: {
+    height: 1,
+    marginVertical: SPACING.xs,
   },
   scrollView: {
     flex: 1,
@@ -352,14 +518,12 @@ const styles = StyleSheet.create({
   welcomeText: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.xxl,
-    color: COLORS.primary,
     marginBottom: SPACING.xs / 2,
     textAlign: 'left',
   },
   welcomeQuote: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.md,
-    color: COLORS.textSecondary,
     textAlign: 'left',
   },
   blurOverlay: {
@@ -370,7 +534,6 @@ const styles = StyleSheet.create({
     bottom: 0,
     justifyContent: 'center',
     padding: SPACING.md,
-    backgroundColor: 'rgba(255, 255, 255, 0.67)',
   },
   locationFieldsContainer: {
     gap: SPACING.md,
@@ -391,7 +554,6 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.sm,
-    color: COLORS.text,
     marginBottom: SPACING.xs,
   },
   vehicleTypeOptions: {
@@ -403,14 +565,12 @@ const styles = StyleSheet.create({
     height: 140,
     borderRadius: BORDER_RADIUS.lg,
     borderWidth: 2,
-    borderColor: COLORS.border,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
   },
   vehicleTypeSelected: {
-    borderColor: COLORS.primary,
-    borderWidth: 3,
+    // Border color applied inline
   },
   vehicleImage: {
     width: '100%',
@@ -432,14 +592,11 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: BORDER_RADIUS.md,
     borderWidth: 2,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.white,
     justifyContent: 'center',
     alignItems: 'center',
   },
   passengerRangeSelected: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.primary + '15',
+    // Colors applied inline
   },
   passengerRangeDisabled: {
     opacity: 0.5,
@@ -447,19 +604,16 @@ const styles = StyleSheet.create({
   passengerRangeText: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.md,
-    color: COLORS.text,
   },
   passengerRangeTextSelected: {
-    color: COLORS.primary,
     fontWeight: 'bold',
   },
   passengerRangeTextDisabled: {
-    color: COLORS.textSecondary,
+    // Color applied inline
   },
   disabledHint: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.xs,
-    color: COLORS.textSecondary,
     marginTop: SPACING.sm,
     fontStyle: 'italic',
     textAlign: 'center',
@@ -473,7 +627,6 @@ const styles = StyleSheet.create({
   recentTitle: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.md,
-    color: COLORS.text,
     marginBottom: SPACING.sm,
   },
   recentItem: {
@@ -485,8 +638,44 @@ const styles = StyleSheet.create({
   recentText: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.sm,
-    color: COLORS.textSecondary,
     marginLeft: SPACING.sm,
+  },
+  pinkPoolingCard: {
+    marginBottom: SPACING.lg,
+    backgroundColor: '#FFF5F8',
+    borderWidth: 2,
+    borderColor: '#FFDEE7',
+  },
+  pinkPoolingButton: {
+    width: '100%',
+  },
+  pinkPoolingContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: SPACING.md,
+  },
+  pinkPoolingIconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#FFDEE7',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: SPACING.md,
+  },
+  pinkPoolingTextContainer: {
+    flex: 1,
+  },
+  pinkPoolingTitle: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.xl,
+    color: '#FF6B9D',
+    fontWeight: 'bold',
+    marginBottom: SPACING.xs,
+  },
+  pinkPoolingSubtitle: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.sm,
   },
   financialCardsContainer: {
     flexDirection: 'row',
@@ -497,7 +686,6 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: SPACING.md,
     borderRadius: BORDER_RADIUS.lg,
-    backgroundColor: COLORS.white,
   },
   financialCardHeader: {
     flexDirection: 'row',
@@ -508,7 +696,6 @@ const styles = StyleSheet.create({
   financialCardTitle: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.sm,
-    color: COLORS.textSecondary,
     fontWeight: '600',
   },
   financialCardAmount: {
@@ -525,7 +712,74 @@ const styles = StyleSheet.create({
   financialCardSubtitle: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.xs,
-    color: COLORS.textSecondary,
+  },
+  walletButtonsRow: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    marginTop: SPACING.sm,
+  },
+  rechargeButton: {
+    flex: 1,
+    flexDirection: 'row',
+    paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  withdrawButton: {
+    flex: 1,
+    paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+  },
+  withdrawButtonText: {
+    fontFamily: FONTS.medium,
+    fontSize: FONTS.sizes.sm,
+    fontWeight: '600',
+  },
+  coinBadgeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFF8E7',
+    borderWidth: 1,
+    borderColor: '#F5A623' + '40',
+    borderRadius: BORDER_RADIUS.lg,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    marginBottom: SPACING.lg,
+  },
+  coinBadgeLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  coinIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F5A623' + '20',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  coinBadgeBalance: {
+    fontFamily: FONTS.medium,
+    fontSize: FONTS.sizes.md,
+    fontWeight: 'bold',
+    color: '#8B5E00',
+  },
+  coinBadgeWorth: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.xs,
+    color: '#A0763D',
+  },
+  coinBadgeArrow: {
+    fontSize: 18,
+    color: '#F5A623',
+    fontWeight: 'bold',
   },
 });
 

@@ -1,707 +1,358 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
-  Dimensions,
   ImageBackground,
+  Platform,
+  StatusBar,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { BlurView } from 'expo-blur';
 import {
   ArrowLeft,
-  Search,
-  Filter,
-  BarChart3,
   Car,
   CheckCircle,
-  XCircle,
-  AlertCircle,
+  Clock,
+  Shield,
   MapPin,
   Calendar,
   Users,
-  IndianRupee,
-  TrendingUp,
-  Clock,
-  Shield,
-  Download,
+  ChevronRight,
+  Inbox,
+  AlertCircle,
 } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
-import { Card } from '@components/common/Card';
-import { Input } from '@components/common/Input';
-import { useLanguage } from '@context/LanguageContext';
+import { adminApi, analyticsApi } from '@utils/apiClient';
 
-const { width } = Dimensions.get('window');
+const formatNumber = (n: number) => {
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
+  return n.toString();
+};
 
 const PoolingManagementScreen = () => {
   const navigation = useNavigation();
-  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState('All');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [offers, setOffers] = useState<any[]>([]);
+  const [stats, setStats] = useState({ total: 0, active: 0, pending: 0, suspended: 0 });
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [page, setPage] = useState(1);
+  const [totalOffers, setTotalOffers] = useState(0);
 
   const tabs = [
-    t('common.all'),
-    t('admin.poolingManagement.active'),
-    t('admin.poolingManagement.pending'),
-    t('admin.poolingManagement.expired'),
-    t('admin.poolingManagement.suspended'),
-    t('admin.poolingManagement.flagged'),
+    { key: 'All', label: 'All', icon: Inbox, color: '#4A90D9' },
+    { key: 'active', label: 'Active', icon: CheckCircle, color: '#00B894' },
+    { key: 'pending', label: 'Pending', icon: Clock, color: '#F39C12' },
+    { key: 'expired', label: 'Expired', icon: AlertCircle, color: '#94A3B8' },
+    { key: 'suspended', label: 'Suspended', icon: Shield, color: '#E74C3C' },
   ];
 
-  // Mock data
-  const offers = [
-    {
-      id: 'POOL20240115001',
-      driver: 'Rajesh K.',
-      driverId: '12345',
-      route: 'Bangalore → Mumbai',
-      date: '15 Jan 2024, 9:00 AM',
-      vehicle: 'Car (Honda City)',
-      seats: '2/4',
-      price: '₹450',
-      status: 'Active',
-    },
-    {
-      id: 'POOL20240115002',
-      driver: 'Priya M.',
-      driverId: '67890',
-      route: 'Delhi → Jaipur',
-      date: '16 Jan 2024, 10:30 AM',
-      vehicle: 'Car (Maruti Swift)',
-      seats: '1/3',
-      price: '₹500',
-      status: 'Active',
-    },
-    {
-      id: 'POOL20240115003',
-      driver: 'Amit S.',
-      driverId: '11111',
-      route: 'Pune → Mumbai',
-      date: '17 Jan 2024, 11:00 AM',
-      vehicle: 'Bike (Royal Enfield)',
-      seats: '0/1',
-      price: '₹300',
-      status: 'Pending',
-    },
-  ];
+  const fetchData = useCallback(async (isRefresh = false) => {
+    try {
+      if (!isRefresh) setLoading(true);
 
-  const stats = {
-    total: 12345,
-    active: 8234,
-    pending: 456,
-    suspended: 23,
+      const params: any = { page, limit: 20 };
+      if (activeTab !== 'All') params.status = activeTab;
+
+      const [offersRes, statsRes] = await Promise.all([
+        adminApi.getPoolingOffers(params),
+        analyticsApi.getPoolingStats(),
+      ]);
+
+      if (offersRes.success && offersRes.data) {
+        const d = offersRes.data;
+        setOffers(d.offers || d.data || (Array.isArray(d) ? d : []));
+        setTotalOffers(d.total || d.totalCount || 0);
+      }
+
+      if (statsRes.success && statsRes.data) {
+        const s = statsRes.data;
+        setStats({
+          total: s.totalTrips || s.total || 0,
+          active: s.activeOffers || s.active || 0,
+          pending: s.pendingOffers || s.pending || 0,
+          suspended: s.suspendedOffers || s.suspended || 0,
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching pooling data:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [activeTab, page]);
+
+  useEffect(() => { setPage(1); }, [activeTab]);
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  const onRefresh = () => { setRefreshing(true); fetchData(true); };
+
+  const handleApprove = async (offerId: string) => {
+    try {
+      await adminApi.approvePoolingOffer(offerId);
+      fetchData(true);
+    } catch (e) { console.error('Approve error:', e); }
   };
 
+  const handleSuspend = async (offerId: string) => {
+    try {
+      await adminApi.suspendPoolingOffer(offerId);
+      fetchData(true);
+    } catch (e) { console.error('Suspend error:', e); }
+  };
+
+  const formatDate = (d: string) => {
+    if (!d) return 'N/A';
+    try { return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }); }
+    catch { return d; }
+  };
+
+  const statItems = [
+    { label: 'Total', value: stats.total, color: '#4A90D9', icon: Car },
+    { label: 'Active', value: stats.active, color: '#00B894', icon: CheckCircle },
+    { label: 'Pending', value: stats.pending, color: '#F39C12', icon: Clock },
+    { label: 'Suspended', value: stats.suspended, color: '#E74C3C', icon: Shield },
+  ];
+
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Blue Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <ArrowLeft size={24} color={COLORS.white} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('admin.poolingManagement.title')}</Text>
-        <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.iconButton}>
-            <Search size={20} color={COLORS.white} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
-            <Filter size={20} color={COLORS.white} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
-            <BarChart3 size={20} color={COLORS.white} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton}>
-            <Download size={20} color={COLORS.white} />
-          </TouchableOpacity>
-        </View>
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+
+      {/* Hero Header */}
+      <ImageBackground source={require('../../../assets/poolingm.png')} style={styles.heroHeader} resizeMode="cover">
+        <View style={styles.heroOverlay} />
+        <BlurView intensity={20} tint="dark" style={styles.heroBlur}>
+          <View style={styles.heroNav}>
+            <TouchableOpacity style={styles.heroBackBtn} onPress={() => navigation.goBack()}>
+              <ArrowLeft size={20} color="#fff" />
+            </TouchableOpacity>
+            <View style={styles.heroTitleWrap}>
+              <Text style={styles.heroTitle}>Pooling Management</Text>
+              <Text style={styles.heroSubtitle}>
+                {totalOffers > 0 ? `${totalOffers.toLocaleString()} total offers` : 'Manage pooling offers'}
+              </Text>
+            </View>
+            <View style={{ width: 38 }} />
+          </View>
+        </BlurView>
+      </ImageBackground>
+
+      {/* Floating Stats Strip */}
+      <View style={styles.statsStrip}>
+        {statItems.map((item, idx) => {
+          const Icon = item.icon;
+          return (
+            <View key={idx} style={styles.statsStripItem}>
+              <View style={[styles.statsStripIcon, { backgroundColor: item.color + '15' }]}>
+                <Icon size={16} color={item.color} />
+              </View>
+              <Text style={[styles.statsStripValue, { color: item.color }]}>{formatNumber(item.value)}</Text>
+              <Text style={styles.statsStripLabel}>{item.label}</Text>
+            </View>
+          );
+        })}
       </View>
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {/* Image Background with Statistics Cards */}
-        <View style={styles.imageContainer}>
-          <ImageBackground
-            source={require('../../../assets/pooling.jpg')}
-            style={styles.backgroundImage}
-            resizeMode="cover"
-          >
-            <View style={styles.overlay} />
-            <BlurView intensity={50} style={styles.blurContainer}>
-              <View style={styles.statsContainer}>
-                <Card style={styles.statCard}>
-                  <View style={styles.statTrendTopRight}>
-                    <TrendingUp size={12} color={COLORS.success} />
-                    <Text style={styles.statTrendText}>+12%</Text>
-                  </View>
-                  <View style={styles.statIconContainer}>
-                    <Car size={24} color={COLORS.white} />
-                  </View>
-                  <View style={styles.statContent}>
-                    <Text style={styles.statValue} numberOfLines={1}>{stats.total.toLocaleString()}</Text>
-                    <Text style={styles.statLabel} numberOfLines={1}>{t('admin.poolingManagement.totalOffers')}</Text>
-                  </View>
-                </Card>
-
-                <Card style={styles.statCard}>
-                  <View style={styles.statTrendTopRight}>
-                    <TrendingUp size={12} color={COLORS.success} />
-                    <Text style={styles.statTrendText}>+8%</Text>
-                  </View>
-                  <View style={[styles.statIconContainer, { backgroundColor: COLORS.success + '30' }]}>
-                    <CheckCircle size={24} color={COLORS.white} />
-                  </View>
-                  <View style={styles.statContent}>
-                    <Text style={styles.statValue} numberOfLines={1}>{stats.active.toLocaleString()}</Text>
-                    <Text style={styles.statLabel} numberOfLines={1}>{t('admin.poolingManagement.active')}</Text>
-                  </View>
-                </Card>
-
-                <Card style={styles.statCard}>
-                  <View style={[styles.statIconContainer, { backgroundColor: COLORS.warning + '30' }]}>
-                    <Clock size={24} color={COLORS.white} />
-                  </View>
-                  <View style={styles.statContent}>
-                    <Text style={styles.statValue} numberOfLines={1}>{stats.pending.toLocaleString()}</Text>
-                    <Text style={styles.statLabel} numberOfLines={1}>{t('admin.poolingManagement.pending')}</Text>
-                  </View>
-                </Card>
-
-                <Card style={styles.statCard}>
-                  <View style={[styles.statIconContainer, { backgroundColor: COLORS.error + '30' }]}>
-                    <Shield size={24} color={COLORS.white} />
-                  </View>
-                  <View style={styles.statContent}>
-                    <Text style={styles.statValue} numberOfLines={1}>{stats.suspended}</Text>
-                    <Text style={styles.statLabel} numberOfLines={1}>{t('admin.poolingManagement.suspended')}</Text>
-                  </View>
-                </Card>
-              </View>
-            </BlurView>
-          </ImageBackground>
-        </View>
-
-        {/* Filter Tabs */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsContainer}>
-          {tabs.map((tab) => (
-            <TouchableOpacity
-              key={tab}
-              style={[styles.tab, activeTab === tab && styles.tabActive]}
-              onPress={() => setActiveTab(tab)}
-            >
-              <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
-                {tab}
-              </Text>
+      {/* Filter Tabs */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsScroll} contentContainerStyle={styles.tabsContent}>
+        {tabs.map((tab) => {
+          const isActive = activeTab === tab.key;
+          const Icon = tab.icon;
+          return (
+            <TouchableOpacity key={tab.key} style={[styles.tab, isActive && { backgroundColor: tab.color }]} activeOpacity={0.7} onPress={() => setActiveTab(tab.key)}>
+              <Icon size={14} color={isActive ? '#fff' : tab.color} />
+              <Text style={[styles.tabText, isActive && styles.tabTextActive]}>{tab.label}</Text>
             </TouchableOpacity>
-          ))}
-        </ScrollView>
-
-        {/* Offers List */}
-        <View style={styles.offersSection}>
-        {offers.map((offer) => (
-          <Card key={offer.id} style={styles.offerCard}>
-            <View style={styles.offerHeader}>
-              <View style={styles.offerHeaderLeft}>
-                <View style={styles.offerIdContainer}>
-                  <Text style={styles.offerId}>{offer.id}</Text>
-                  <View
-                    style={[
-                      styles.statusBadge,
-                      offer.status === 'Active' && styles.statusActive,
-                      offer.status === 'Pending' && styles.statusPending,
-                    ]}
-                  >
-                    <Text style={styles.statusText}>{offer.status}</Text>
-                  </View>
-                </View>
-                <View style={styles.driverInfo}>
-                  <Text style={styles.driverName}>{offer.driver}</Text>
-                  <Text style={styles.driverId}>ID: {offer.driverId}</Text>
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.offerDetails}>
-              <View style={styles.detailRow}>
-                <View style={styles.detailIconContainer}>
-                  <MapPin size={18} color={COLORS.primary} />
-                </View>
-                <View style={styles.detailContent}>
-                  <Text style={styles.detailLabel}>{t('admin.poolingManagement.route')}</Text>
-                  <Text style={styles.detailValue}>{offer.route}</Text>
-                </View>
-              </View>
-
-              <View style={styles.detailRow}>
-                <View style={styles.detailIconContainer}>
-                  <Calendar size={18} color={COLORS.primary} />
-                </View>
-                <View style={styles.detailContent}>
-                  <Text style={styles.detailLabel}>{t('admin.poolingManagement.dateTime')}</Text>
-                  <Text style={styles.detailValue}>{offer.date}</Text>
-                </View>
-              </View>
-
-              <View style={styles.detailRow}>
-                <View style={styles.detailIconContainer}>
-                  <Car size={18} color={COLORS.primary} />
-                </View>
-                <View style={styles.detailContent}>
-                  <Text style={styles.detailLabel}>{t('admin.poolingManagement.vehicle')}</Text>
-                  <Text style={styles.detailValue}>{offer.vehicle}</Text>
-                </View>
-              </View>
-
-              <View style={styles.offerMetrics}>
-                <View style={styles.metricItem}>
-                  <View style={styles.metricIconContainer}>
-                    <Users size={16} color={COLORS.textSecondary} />
-                  </View>
-                  <Text style={styles.metricValue}>{offer.seats}</Text>
-                  <Text style={styles.metricLabel}>{t('admin.poolingManagement.seats')}</Text>
-                </View>
-                <View style={styles.metricItem}>
-                  <View style={styles.metricIconContainer}>
-                    <IndianRupee size={16} color={COLORS.textSecondary} />
-                  </View>
-                  <Text style={styles.metricValue}>{offer.price}</Text>
-                  <Text style={styles.metricLabel}>{t('admin.poolingManagement.perPerson')}</Text>
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.offerActions}>
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={() => navigation.navigate('PoolingOfferDetails' as never, { offerId: offer.id } as never)}
-              >
-                <Text style={styles.actionButtonText}>{t('admin.poolingManagement.viewDetails')}</Text>
-              </TouchableOpacity>
-              {offer.status === 'Pending' && (
-                <TouchableOpacity style={[styles.actionButton, styles.approveButton]}>
-                  <CheckCircle size={16} color={COLORS.white} />
-                  <Text style={[styles.actionButtonText, styles.approveButtonText]}>{t('admin.poolingManagement.approve')}</Text>
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity style={[styles.actionButton, styles.suspendButton]}>
-                <AlertCircle size={16} color={COLORS.error} />
-                <Text style={[styles.actionButtonText, styles.suspendButtonText]}>{t('admin.poolingManagement.suspend')}</Text>
-              </TouchableOpacity>
-            </View>
-          </Card>
-        ))}
-        </View>
-
-        {/* Pagination */}
-        <View style={styles.pagination}>
-          <TouchableOpacity style={styles.pageButton}>
-            <Text style={styles.pageButtonText}>{t('admin.poolingManagement.previous')}</Text>
-          </TouchableOpacity>
-          <View style={styles.pageNumbers}>
-            <TouchableOpacity style={[styles.pageNumber, styles.pageNumberActive]}>
-              <Text style={[styles.pageNumberText, styles.pageNumberTextActive]}>1</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.pageNumber}>
-              <Text style={styles.pageNumberText}>2</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.pageNumber}>
-              <Text style={styles.pageNumberText}>3</Text>
-            </TouchableOpacity>
-            <Text style={styles.pageEllipsis}>...</Text>
-          </View>
-          <TouchableOpacity style={styles.pageButton}>
-            <Text style={styles.pageButtonText}>{t('admin.poolingManagement.next')}</Text>
-          </TouchableOpacity>
-        </View>
-
-        <Text style={styles.paginationInfo}>{t('admin.poolingManagement.showing', { start: 1, end: 10, total: stats.total.toLocaleString() })}</Text>
+          );
+        })}
       </ScrollView>
-    </SafeAreaView>
+
+      {/* Offer Cards */}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={COLORS.primary} />
+            <Text style={styles.loadingText}>Loading offers...</Text>
+          </View>
+        ) : offers.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <View style={styles.emptyIconWrap}><Inbox size={48} color="#CBD5E1" /></View>
+            <Text style={styles.emptyTitle}>No Offers Found</Text>
+            <Text style={styles.emptyText}>No pooling offers match the selected filter.</Text>
+          </View>
+        ) : (
+          offers.map((offer: any) => {
+            const offerId = offer.offerId || offer._id || offer.id;
+            const driverName = offer.driverName || offer.user?.name || offer.driver?.name || 'Unknown';
+            const fromObj = offer.from || offer.route?.from || offer.fromLocation;
+            const toObj = offer.to || offer.route?.to || offer.toLocation;
+            const fromCity = typeof fromObj === 'string' ? fromObj : (fromObj?.city || fromObj?.address || '');
+            const toCity = typeof toObj === 'string' ? toObj : (toObj?.city || toObj?.address || '');
+            const route = fromCity && toCity
+              ? `${fromCity} → ${toCity}`
+              : (typeof offer.route === 'string' ? offer.route : offer.description || 'N/A');
+            const veh = offer.vehicle;
+            const vehicle = typeof veh === 'string'
+              ? veh
+              : veh?.model || veh?.brand
+                ? `${veh.type || veh.brand || 'Vehicle'}${veh.model ? ` ${veh.model}` : ''}${veh.year ? ` (${veh.year})` : ''}`
+                : offer.vehicleType || 'N/A';
+            const seatsAvailable = offer.seatsAvailable ?? offer.availableSeats ?? '?';
+            const totalSeats = offer.totalSeats ?? offer.seats ?? '?';
+            const rawPrice = offer.pricePerSeat || offer.price || 0;
+            const price = typeof rawPrice === 'object' ? (rawPrice.amount || rawPrice.value || 0) : rawPrice;
+            const status = offer.status || 'active';
+            const date = offer.departureDate || offer.departureTime || offer.createdAt;
+
+            return (
+              <View key={offerId} style={styles.offerCard}>
+                <View style={styles.cardHeaderRow}>
+                  <View style={[styles.cardServiceIcon, { backgroundColor: '#4A90D9' + '15' }]}>
+                    <Car size={20} color="#4A90D9" />
+                  </View>
+                  <View style={styles.cardHeaderInfo}>
+                    <Text style={styles.cardDriverName}>{driverName}</Text>
+                    <Text style={styles.cardOfferId}>{offerId}</Text>
+                  </View>
+                  <View style={[styles.statusBadge, status === 'active' && styles.statusActive, status === 'pending' && styles.statusPending]}>
+                    <Text style={styles.statusText}>{status.charAt(0).toUpperCase() + status.slice(1)}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.detailsRow}>
+                  <View style={styles.detailItem}>
+                    <MapPin size={14} color="#64748B" />
+                    <Text style={styles.detailText} numberOfLines={1}>{route}</Text>
+                  </View>
+                  <View style={styles.detailItem}>
+                    <Calendar size={14} color="#64748B" />
+                    <Text style={styles.detailText} numberOfLines={1}>{formatDate(date)}</Text>
+                  </View>
+                  <View style={styles.detailItem}>
+                    <Car size={14} color="#64748B" />
+                    <Text style={styles.detailText} numberOfLines={1}>{vehicle}</Text>
+                  </View>
+                  <View style={styles.detailMeta}>
+                    <View style={styles.detailMetaItem}>
+                      <Users size={12} color="#94A3B8" />
+                      <Text style={styles.detailMetaText}>{seatsAvailable}/{totalSeats}</Text>
+                    </View>
+                    <Text style={styles.priceText}>{typeof price === 'number' ? `₹${price}` : price}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.actionRow}>
+                  <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('PoolingOfferDetails' as never, { offerId } as never)}>
+                    <Text style={styles.actionButtonText}>View Details</Text>
+                    <ChevronRight size={14} color="#4A90D9" />
+                  </TouchableOpacity>
+                  {status === 'pending' && (
+                    <TouchableOpacity style={[styles.actionButton, styles.approveButton]} onPress={() => handleApprove(offerId)}>
+                      <CheckCircle size={14} color="#fff" />
+                      <Text style={styles.approveButtonText}>Approve</Text>
+                    </TouchableOpacity>
+                  )}
+                  {status !== 'suspended' && (
+                    <TouchableOpacity style={[styles.actionButton, styles.suspendButton]} onPress={() => handleSuspend(offerId)}>
+                      <AlertCircle size={14} color="#E74C3C" />
+                      <Text style={styles.suspendButtonText}>Suspend</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+            );
+          })
+        )}
+
+        {!loading && offers.length > 0 && (
+          <>
+            <View style={styles.paginationRow}>
+              <TouchableOpacity style={[styles.pageBtn, page === 1 && styles.pageBtnDisabled]} onPress={() => page > 1 && setPage(page - 1)} disabled={page === 1}>
+                <Text style={styles.pageBtnText}>Previous</Text>
+              </TouchableOpacity>
+              <Text style={styles.paginationInfo}>Page {page}</Text>
+              <TouchableOpacity style={[styles.pageBtn, offers.length < 20 && styles.pageBtnDisabled]} onPress={() => offers.length >= 20 && setPage(page + 1)} disabled={offers.length < 20}>
+                <Text style={styles.pageBtnText}>Next</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.totalInfo}>{totalOffers > 0 ? `${totalOffers.toLocaleString()} total offers` : `${offers.length} offers shown`}</Text>
+          </>
+        )}
+
+        <View style={{ height: 40 }} />
+      </ScrollView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  header: {
-    backgroundColor: COLORS.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.md,
-    paddingTop: SPACING.xl,
-  },
-  backButton: {
-    padding: SPACING.xs,
-  },
-  headerTitle: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xl,
-    color: COLORS.white,
-    fontWeight: 'bold',
-    flex: 1,
-    marginLeft: SPACING.sm,
-  },
-  headerRight: {
-    flexDirection: 'row',
-    gap: SPACING.sm,
-  },
-  iconButton: {
-    padding: SPACING.xs,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: SPACING.xl,
-  },
-  imageContainer: {
-    width: '100%',
-    height: 280,
-    position: 'relative',
-    overflow: 'hidden',
-    marginBottom: SPACING.md,
-  },
-  backgroundImage: {
-    width: '100%',
-    height: '100%',
-  },
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(7, 25, 82, 0.75)',
-  },
-  blurContainer: {
-    flex: 1,
-    padding: SPACING.md,
-    justifyContent: 'center',
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.md,
-  },
-  statCard: {
-    width: (width - SPACING.md * 3) / 2,
-    height: 100,
-    padding: SPACING.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    ...SHADOWS.sm,
-    backgroundColor: COLORS.white + '95',
-    position: 'relative',
-  },
-  statTrendTopRight: {
-    position: 'absolute',
-    top: SPACING.sm,
-    right: SPACING.sm,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-    backgroundColor: COLORS.success + '20',
-    paddingHorizontal: SPACING.xs,
-    paddingVertical: 2,
-    borderRadius: BORDER_RADIUS.sm,
-  },
-  statIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: COLORS.primary + '30',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: SPACING.sm,
-  },
-  statContent: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  statValue: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xl,
-    color: COLORS.white,
-    fontWeight: 'bold',
-    marginBottom: SPACING.xs / 2,
-  },
-  statLabel: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.white + 'CC',
-  },
-  statTrendText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.success,
-    fontWeight: '600',
-  },
-  tabsContainer: {
-    marginBottom: SPACING.md,
-    paddingHorizontal: SPACING.md,
-  },
-  tab: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    marginRight: SPACING.sm,
-    borderRadius: BORDER_RADIUS.md,
-    backgroundColor: COLORS.white,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  tabActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  tabText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.text,
-    fontWeight: '600',
-  },
-  tabTextActive: {
-    color: COLORS.white,
-  },
-  offerCard: {
-    marginBottom: SPACING.md,
-    padding: SPACING.md,
-    ...SHADOWS.sm,
-  },
-  offerHeader: {
-    marginBottom: SPACING.md,
-    paddingBottom: SPACING.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  offerHeaderLeft: {
-    flex: 1,
-  },
-  offerIdContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: SPACING.sm,
-  },
-  offerId: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.textSecondary,
-    fontWeight: '600',
-  },
-  statusBadge: {
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs / 2,
-    borderRadius: BORDER_RADIUS.sm,
-    backgroundColor: COLORS.lightGray,
-  },
-  statusActive: {
-    backgroundColor: COLORS.success + '20',
-  },
-  statusPending: {
-    backgroundColor: COLORS.warning + '20',
-  },
-  statusText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.text,
-    fontWeight: '600',
-  },
-  driverInfo: {
-    marginTop: SPACING.xs,
-  },
-  driverName: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
-    color: COLORS.text,
-    fontWeight: '600',
-  },
-  driverId: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.textSecondary,
-    marginTop: 2,
-  },
-  offerDetails: {
-    marginBottom: SPACING.md,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: SPACING.md,
-  },
-  detailIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: COLORS.primary + '10',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: SPACING.sm,
-  },
-  detailContent: {
-    flex: 1,
-  },
-  detailLabel: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.textSecondary,
-    marginBottom: 2,
-  },
-  detailValue: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.text,
-    fontWeight: '600',
-  },
-  offerMetrics: {
-    flexDirection: 'row',
-    gap: SPACING.md,
-    marginTop: SPACING.sm,
-    paddingTop: SPACING.md,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-  },
-  metricItem: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.lightGray + '40',
-    padding: SPACING.sm,
-    borderRadius: BORDER_RADIUS.sm,
-    gap: SPACING.xs,
-  },
-  metricIconContainer: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: COLORS.white,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  metricValue: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.text,
-    fontWeight: '600',
-  },
-  metricLabel: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.textSecondary,
-  },
-  offerActions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.sm,
-    marginTop: SPACING.sm,
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderRadius: BORDER_RADIUS.sm,
-    backgroundColor: COLORS.primary + '20',
-    gap: SPACING.xs,
-  },
-  actionButtonText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.primary,
-    fontWeight: '600',
-  },
-  approveButton: {
-    backgroundColor: COLORS.success,
-  },
-  approveButtonText: {
-    color: COLORS.white,
-  },
-  suspendButton: {
-    backgroundColor: COLORS.error + '20',
-  },
-  suspendButtonText: {
-    color: COLORS.error,
-  },
-  flagButton: {
-    backgroundColor: COLORS.warning + '20',
-  },
-  flagButtonText: {
-    color: COLORS.warning,
-  },
-  offersSection: {
-    paddingHorizontal: SPACING.md,
-  },
-  pagination: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginVertical: SPACING.lg,
-    paddingHorizontal: SPACING.md,
-  },
-  pageButton: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderRadius: BORDER_RADIUS.sm,
-    backgroundColor: COLORS.white,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  pageButtonText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.text,
-    fontWeight: '600',
-  },
-  pageNumbers: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.xs,
-  },
-  pageNumber: {
-    width: 32,
-    height: 32,
-    borderRadius: BORDER_RADIUS.sm,
-    backgroundColor: COLORS.white,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  pageNumberActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  pageNumberText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.text,
-  },
-  pageNumberTextActive: {
-    color: COLORS.white,
-  },
-  pageEllipsis: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.textSecondary,
-  },
-  paginationInfo: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    marginBottom: SPACING.md,
-  },
-  bulkActions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.sm,
-    marginTop: SPACING.md,
-  },
+  container: { flex: 1, backgroundColor: '#F5F7FA' },
+  heroHeader: { height: Platform.OS === 'android' ? 140 + (StatusBar.currentHeight || 0) : 160, width: '100%' },
+  heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(15, 52, 96, 0.5)' },
+  heroBlur: { flex: 1, justifyContent: 'flex-end', paddingBottom: SPACING.md, paddingHorizontal: SPACING.lg },
+  heroNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  heroBackBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center' },
+  heroTitleWrap: { alignItems: 'center' },
+  heroTitle: { fontFamily: FONTS.regular, fontSize: 20, color: '#fff', fontWeight: '700' },
+  heroSubtitle: { fontFamily: FONTS.regular, fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 2 },
+  statsStrip: { flexDirection: 'row', backgroundColor: '#fff', marginHorizontal: SPACING.lg, marginTop: -SPACING.md, borderRadius: 14, padding: SPACING.sm, ...SHADOWS.sm, zIndex: 10 },
+  statsStripItem: { flex: 1, alignItems: 'center', paddingVertical: SPACING.xs },
+  statsStripIcon: { width: 32, height: 32, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginBottom: 4 },
+  statsStripValue: { fontFamily: FONTS.regular, fontSize: 18, fontWeight: '800' },
+  statsStripLabel: { fontFamily: FONTS.regular, fontSize: 10, color: '#94A3B8', fontWeight: '500', marginTop: 1 },
+  tabsScroll: { marginTop: SPACING.md, maxHeight: 48 },
+  tabsContent: { paddingHorizontal: SPACING.lg, gap: SPACING.xs },
+  tab: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: '#fff', borderWidth: 1, borderColor: '#E2E8F0' },
+  tabText: { fontFamily: FONTS.regular, fontSize: 12, color: '#475569', fontWeight: '600' },
+  tabTextActive: { color: '#fff' },
+  scrollView: { flex: 1 },
+  scrollContent: { padding: SPACING.lg, paddingTop: SPACING.md },
+  loadingContainer: { alignItems: 'center', paddingVertical: SPACING.xxl * 2 },
+  loadingText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: COLORS.textSecondary, marginTop: SPACING.md },
+  emptyContainer: { alignItems: 'center', paddingVertical: SPACING.xxl * 2 },
+  emptyIconWrap: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center', marginBottom: SPACING.lg },
+  emptyTitle: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.lg, fontWeight: '700', color: '#1E293B', marginBottom: SPACING.xs },
+  emptyText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: '#94A3B8' },
+  offerCard: { backgroundColor: '#fff', borderRadius: 14, padding: SPACING.md, marginBottom: SPACING.sm, borderWidth: 1, borderColor: '#F1F5F9', ...SHADOWS.sm },
+  cardHeaderRow: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.md },
+  cardServiceIcon: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: SPACING.sm },
+  cardHeaderInfo: { flex: 1 },
+  cardDriverName: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.md, color: '#1E293B', fontWeight: '600', marginBottom: 2 },
+  cardOfferId: { fontFamily: FONTS.regular, fontSize: 11, color: '#94A3B8', fontWeight: '500' },
+  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, backgroundColor: '#F1F5F9' },
+  statusActive: { backgroundColor: '#00B894' + '15' },
+  statusPending: { backgroundColor: '#F39C12' + '15' },
+  statusText: { fontFamily: FONTS.regular, fontSize: 10, color: '#64748B', fontWeight: '700' },
+  detailsRow: { marginBottom: SPACING.md },
+  detailItem: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
+  detailText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: '#64748B', flex: 1 },
+  detailMeta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: SPACING.xs, paddingTop: SPACING.sm, borderTopWidth: 1, borderTopColor: '#F8FAFC' },
+  detailMetaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  detailMetaText: { fontFamily: FONTS.regular, fontSize: 12, color: '#94A3B8', fontWeight: '500' },
+  priceText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: '#1E293B', fontWeight: '700' },
+  actionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
+  actionButton: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, borderRadius: BORDER_RADIUS.md, backgroundColor: '#4A90D9' + '15', gap: 6 },
+  actionButtonText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: '#4A90D9', fontWeight: '600' },
+  approveButton: { backgroundColor: '#00B894' },
+  approveButtonText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: '#fff', fontWeight: '600' },
+  suspendButton: { backgroundColor: '#E74C3C' + '15' },
+  suspendButtonText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: '#E74C3C', fontWeight: '600' },
+  paginationRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: SPACING.lg },
+  pageBtn: { paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, borderRadius: BORDER_RADIUS.sm, backgroundColor: '#fff', borderWidth: 1, borderColor: '#F1F5F9' },
+  pageBtnDisabled: { opacity: 0.4 },
+  pageBtnText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, fontWeight: '600', color: COLORS.text },
+  paginationInfo: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: COLORS.textSecondary },
+  totalInfo: { fontFamily: FONTS.regular, fontSize: 12, color: '#94A3B8', textAlign: 'center', marginTop: SPACING.sm, marginBottom: SPACING.xs },
 });
 
 export default PoolingManagementScreen;

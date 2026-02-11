@@ -31,7 +31,8 @@ const PoolingDetailsScreen = () => {
   });
 
   useEffect(() => {
-    if (offerId && !passedOffer) {
+    if (offerId) {
+      // Always load fresh offer data to get enriched driver/passenger ratings
       loadOffer();
     }
   }, [offerId]);
@@ -218,13 +219,15 @@ const PoolingDetailsScreen = () => {
           </View>
           <View style={styles.divider} />
           <Image 
-            source={{ uri: offer.driverPhoto || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400' }} 
+            source={{ uri: offer.driver?.photo || offer.driverPhoto || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400' }} 
             style={styles.driverPhoto} 
           />
-          <Text style={styles.driverName}>{offer.driverName || 'Driver'}</Text>
+          <Text style={styles.driverName}>{offer.driver?.name || offer.driverName || 'Driver'}</Text>
           <View style={styles.ratingContainer}>
             <Star size={18} color={COLORS.warning} fill={COLORS.warning} />
-            <Text style={styles.ratingText}>{offer.rating || 0} ({offer.totalReviews || 0} reviews)</Text>
+            <Text style={styles.ratingText}>
+              {Number(offer.driver?.rating ?? offer.rating ?? 0).toFixed(1)} ({offer.driver?.totalReviews ?? offer.totalReviews ?? 0} reviews)
+            </Text>
           </View>
           <Button title="View Profile" onPress={() => {}} variant="outline" size="small" style={styles.profileButton} />
         </View>
@@ -356,17 +359,50 @@ const PoolingDetailsScreen = () => {
             <Text style={styles.sectionTitle}>{t('poolingDetails.otherPassengers')}</Text>
           </View>
           <View style={styles.divider} />
-          {(offer.passengers || []).map((p: any) => (
-            <View key={p.id} style={styles.passengerItem}>
-              <View style={styles.passengerIconContainer}>
-                <User size={18} color={COLORS.primary} />
+          {(offer.passengers || []).length === 0 ? (
+            <Text style={styles.noPassengersText}>No passengers yet</Text>
+          ) : (
+            (offer.passengers || []).map((p: any, index: number) => (
+              <View key={p.userId || p.id || index} style={styles.passengerItem}>
+                {p.photo ? (
+                  <Image source={{ uri: p.photo }} style={styles.passengerAvatar} />
+                ) : (
+                  <View style={styles.passengerIconContainer}>
+                    <User size={18} color={COLORS.primary} />
+                  </View>
+                )}
+                <View style={styles.passengerInfo}>
+                  <Text style={styles.passengerName}>{p.name}</Text>
+                  <View style={styles.passengerMeta}>
+                    <View style={styles.passengerRatingBadge}>
+                      <Star size={12} color={COLORS.warning} fill={COLORS.warning} />
+                      <Text style={styles.passengerRatingText}>
+                        {Number(p.rating ?? 0).toFixed(1)}
+                      </Text>
+                      {(p.totalReviews ?? 0) > 0 && (
+                        <Text style={styles.passengerReviewCount}>
+                          ({p.totalReviews})
+                        </Text>
+                      )}
+                    </View>
+                    <View style={[styles.statusBadge, { 
+                      backgroundColor: p.status === 'confirmed' ? COLORS.success + '20' : 
+                                       p.status === 'cancelled' ? COLORS.error + '20' : 
+                                       COLORS.warning + '20' 
+                    }]}>
+                      <Text style={[styles.statusBadgeText, { 
+                        color: p.status === 'confirmed' ? COLORS.success : 
+                               p.status === 'cancelled' ? COLORS.error : 
+                               COLORS.warning 
+                      }]}>
+                        {p.status?.charAt(0).toUpperCase() + p.status?.slice(1)}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
               </View>
-              <View style={styles.passengerInfo}>
-                <Text style={styles.passengerName}>{p.name}</Text>
-                <Text style={styles.passengerStatus}>{p.status}</Text>
-              </View>
-            </View>
-          ))}
+            ))
+          )}
         </View>
 
         {/* Passenger Route Display/Selection */}
@@ -728,6 +764,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  passengerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: COLORS.primary + '20',
+  },
   passengerInfo: {
     flex: 1,
   },
@@ -736,12 +779,49 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sizes.md,
     color: COLORS.text,
     fontWeight: '600',
-    marginBottom: 2,
+    marginBottom: 4,
   },
-  passengerStatus: {
+  passengerMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  passengerRatingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: COLORS.warning + '15',
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 2,
+    borderRadius: BORDER_RADIUS.round,
+  },
+  passengerRatingText: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.xs,
+    color: COLORS.text,
+    fontWeight: '600',
+  },
+  passengerReviewCount: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.xs,
     color: COLORS.textSecondary,
+  },
+  statusBadge: {
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 2,
+    borderRadius: BORDER_RADIUS.round,
+  },
+  statusBadgeText: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.xs,
+    fontWeight: '600',
+  },
+  noPassengersText: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.sm,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    paddingVertical: SPACING.md,
   },
   joinButton: {
     marginBottom: SPACING.md,

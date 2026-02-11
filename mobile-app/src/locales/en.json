@@ -41,7 +41,7 @@
     "details": "Details"
   },
   "splash": {
-    "appName": "YAARYATRA",
+    "appName": "FORLOK",
     "tagline": "COLLAB YOUR TRAVEL, SAVE YOUR MONEY"
   },
   "onboarding": {
@@ -53,7 +53,7 @@
   },
   "signUp": {
     "title": "Create Your Account",
-    "subtitle": "Choose how you want to use YAARYATRA",
+    "subtitle": "Choose how you want to use FORLOK",
     "selectLanguage": "Select Language",
     "english": "English",
     "telugu": "Telugu",
@@ -523,7 +523,18 @@
     "rateService": "Rate Service",
     "addComment": "Add Comment (Optional)",
     "submitRating": "SUBMIT RATING",
-    "thankYou": "Thank you for your feedback!"
+    "thankYou": "Thank you for your feedback!",
+    "howWasTrip": "How was your trip?",
+    "tapToRate": "Tap a star to rate",
+    "writeReview": "Write a Review",
+    "shareExperience": "Share your experience with the community...",
+    "rateSpecificAspects": "Rate Specific Aspects",
+    "punctuality": "Punctuality",
+    "vehicleCondition": "Vehicle Condition",
+    "driving": "Driving",
+    "submitReview": "Submit Review",
+    "quickTags": "Quick Tags",
+    "selectTags": "Select tags that apply..."
   },
   "profile": {
     "title": "Profile",
@@ -724,7 +735,7 @@
   },
   "admin": {
     "login": {
-      "title": "YAARYATRA ADMIN",
+      "title": "FORLOK ADMIN",
       "restrictedArea": "Restricted Access Area",
       "adminId": "Admin ID *",
       "enterAdminId": "Enter admin ID",
@@ -737,7 +748,7 @@
       "securityNotice": "Security Notice:\nThis is a restricted admin area.\nUnauthorized access is prohibited."
     },
     "dashboard": {
-      "title": "YAARYATRA ADMIN",
+      "title": "FORLOK ADMIN",
       "activeUsers": "Active Users",
       "live": "Live",
       "totalUsers": "Total Users",

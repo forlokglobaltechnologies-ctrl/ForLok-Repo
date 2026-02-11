@@ -303,6 +303,8 @@ class AuthService {
     email?: string;
     password: string;
     confirmPassword?: string; // For validation only, not stored
+    gender?: 'Male' | 'Female' | 'Other';
+    referralCode?: string;
   }): Promise<{ user: any; tokens: { accessToken: string; refreshToken: string } }> {
     try {
       console.log('🔐 [AUTH SERVICE] registerUser called with userType:', data.userType);
@@ -332,6 +334,7 @@ class AuthService {
         userType: data.userType, // Explicitly set userType
         email: data.email,
         password: data.password, // Pass plain password, pre-save hook will hash it
+        gender: data.gender, // Set gender if provided
         isVerified: false,
         isActive: true,
       });
@@ -352,6 +355,47 @@ class AuthService {
 
       logger.info(`User registered: ${user.userId}`);
 
+      // --- Coin Reward System integration ---
+      try {
+        const { coinService } = await import('./coin.service');
+        const { referralService } = await import('./referral.service');
+
+        // 1. Award signup bonus coins
+        const signupCoins = await coinService.awardSignupBonus(user.userId);
+        logger.info(`🪙 Signup bonus: ${signupCoins} coins awarded to new user ${user.userId}`);
+
+        // Send coin_earned notification for signup bonus
+        try {
+          const { notificationService } = await import('./notification.service');
+          await notificationService.createNotification({
+            userId: user.userId,
+            type: 'coin_earned',
+            title: 'Welcome Bonus!',
+            message: `You earned ${signupCoins} coins as a signup bonus! Start your FORLOK journey.`,
+            data: { coins: signupCoins, reason: 'signup_bonus' },
+          });
+        } catch (notifErr) {
+          logger.error('Failed to send signup bonus notification:', notifErr);
+        }
+
+        // 2. Generate referral code for the new user
+        await referralService.generateReferralCode(user.userId);
+
+        // 3. If referred by someone, apply the referral
+        if (data.referralCode) {
+          const referralResult = await referralService.validateAndApplyReferral(
+            data.referralCode,
+            user.userId
+          );
+          if (referralResult.valid) {
+            logger.info(`🔗 Referral applied for user ${user.userId}: referrer earned ${referralResult.coinsAwarded} coins`);
+          }
+        }
+      } catch (coinError) {
+        // Don't fail registration if coin system has issues
+        logger.error('🪙 Coin system error during registration (non-fatal):', coinError);
+      }
+
       return {
         user: user.toJSON(),
         tokens: {
@@ -366,7 +410,7 @@ class AuthService {
   }
 
   /**
-   * Login user - accepts phone, email, or username
+   * Login user - accepts phone, email, userId, or name (username)
    */
   async loginUser(username: string, password: string): Promise<{
     user: any;
@@ -377,27 +421,47 @@ class AuthService {
         throw new AuthenticationError('Password is required');
       }
 
-      // Try to find user by phone, email, or name (username)
+      // Try to find user by phone, email, userId, or name (username)
       let user = null;
       
+      // First, try userId (if it matches the pattern like LKU123456 or U123456)
+      if (/^[A-Z]{2,3}\d+[A-Z0-9]*$/.test(username.toUpperCase())) {
+        user = await User.findOne({ userId: username.toUpperCase() }).select('+password');
+        if (user) {
+          logger.info(`User found by userId: ${username}`);
+        }
+      }
+      
       // Check if it's a phone number
-      if (/^[\d\s\+\-\(\)]+$/.test(username)) {
+      if (!user && /^[\d\s\+\-\(\)]+$/.test(username)) {
         const formattedPhone = formatPhoneNumber(username);
         user = await User.findOne({ phone: formattedPhone }).select('+password');
+        if (user) {
+          logger.info(`User found by phone: ${formattedPhone}`);
+        }
       }
       
       // If not found, try email
       if (!user && username.includes('@')) {
         user = await User.findOne({ email: username.toLowerCase() }).select('+password');
+        if (user) {
+          logger.info(`User found by email: ${username.toLowerCase()}`);
+        }
       }
       
-      // If still not found, try by name (username)
+      // If still not found, try by name (username) - case insensitive
       if (!user) {
-        user = await User.findOne({ name: username }).select('+password');
+        user = await User.findOne({ 
+          name: { $regex: new RegExp(`^${username}$`, 'i') } 
+        }).select('+password');
+        if (user) {
+          logger.info(`User found by name: ${username}`);
+        }
       }
 
       if (!user) {
-        throw new NotFoundError('User not found');
+        logger.warn(`Login attempt failed - User not found for: ${username}`);
+        throw new NotFoundError('User not found. Please check your username/phone/email and try again.');
       }
 
       if (!user.isActive) {
