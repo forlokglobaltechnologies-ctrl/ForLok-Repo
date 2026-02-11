@@ -60,6 +60,12 @@ const envSchema = z.object({
   GOOGLE_MAPS_API_KEY: z.string().optional(),
   GOOGLE_MAPS_GEOCODING_API_KEY: z.string().optional(),
 
+  // OSRM - Open Source Routing Machine
+  OSRM_BASE_URL: z.string().url().default('http://router.project-osrm.org'),
+  OSRM_TIMEOUT_MS: z.string().default('10000'),
+  OSRM_RETRY_ATTEMPTS: z.string().default('2'),
+  OSRM_RETRY_DELAY_MS: z.string().default('1000'),
+
   // Admin
   ADMIN_USERNAME: z.string().default('admin'),
   ADMIN_PASSWORD: z.string().min(8).optional(),
@@ -200,6 +206,12 @@ export const config = {
       apiKey: env.GOOGLE_MAPS_API_KEY,
       geocodingApiKey: env.GOOGLE_MAPS_GEOCODING_API_KEY,
     },
+  },
+  osrm: {
+    baseUrl: env.OSRM_BASE_URL,
+    timeoutMs: parseInt(env.OSRM_TIMEOUT_MS, 10),
+    retryAttempts: parseInt(env.OSRM_RETRY_ATTEMPTS, 10),
+    retryDelayMs: parseInt(env.OSRM_RETRY_DELAY_MS, 10),
   },
   admin: {
     username: env.ADMIN_USERNAME,

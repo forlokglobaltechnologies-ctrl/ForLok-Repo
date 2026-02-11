@@ -57,7 +57,7 @@ class RouteDeviationService {
 
       // Extract road IDs from matched points
       const detectedRoadIds = matchedPoints.map((p) => p.roadId);
-      const originalRoadIds = offer.route.roadSegments.map((s) => s.roadId);
+      const originalRoadIds = offer.route.roadSegments.map((s: any) => s.roadId);
 
       // Calculate deviation percentage
       const deviationPercentage = this.calculateDeviationPercentage(

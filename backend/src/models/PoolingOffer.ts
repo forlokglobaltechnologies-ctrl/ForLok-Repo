@@ -92,6 +92,17 @@ const poolingOfferSchema = new Schema<IPoolingOffer>(
         lng: Number,
         index: Number, // Sequential index in the polyline
       }], // Polyline coordinates for route matching
+      roadSegments: [{
+        roadId: String,
+        roadName: String,
+        roadRef: String,
+        direction: { type: String, enum: ['forward', 'backward', 'bidirectional'] },
+        estimatedTime: Date,
+        lat: Number,
+        lng: Number,
+        segmentIndex: Number,
+        distance: Number,
+      }], // Road segments for road-aware matching
     },
     date: {
       type: Date,
