@@ -86,6 +86,17 @@ const poolingOfferSchema = new Schema<IPoolingOffer>(
         lng: Number,
         index: Number, // Sequential index in the polyline
       }], // Polyline coordinates for route matching
+      roadSegments: [{
+        roadId: String,           // OSRM way_id or hash-based road identifier
+        roadName: String,         // Actual road name from OSRM (e.g., "Kaleswara Rao Flyover", "NH-65")
+        roadRef: String,          // Road reference number (e.g., "NH16", "SH255", "MDR0105")
+        direction: String,        // 'forward' | 'backward' | 'bidirectional'
+        estimatedTime: Date,      // Expected arrival time at this segment
+        lat: Number,              // Segment start coordinate
+        lng: Number,
+        segmentIndex: Number,     // Order in route (0, 1, 2...)
+        distance: Number,         // Distance of this segment in meters
+      }], // Road-aware segments for advanced matching (includes road names for flyover vs service road handling)
     },
     date: {
       type: Date,

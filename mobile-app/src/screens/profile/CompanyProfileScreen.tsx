@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Image, ActivityIndicator, Alert, Linking } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, CommonActions } from '@react-navigation/native';
 import { ArrowLeft, Settings, CheckCircle, Car, Bike, Edit, Mail, Phone, MapPin, Building, FileText, CreditCard, BarChart, DollarSign, LogOut, ChevronRight, Shield, Hash } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, SHADOWS, BORDER_RADIUS } from '@constants/theme';
 import { Card } from '@components/common/Card';
 import { useLanguage } from '@context/LanguageContext';
 import { companyApi, documentApi, vehicleApi } from '@utils/apiClient';
+import { apiService } from '@services/api.service';
+import { websocketService } from '@services/websocket.service';
 
 const CompanyProfileScreen = () => {
   const navigation = useNavigation();
@@ -193,6 +195,49 @@ const CompanyProfileScreen = () => {
     if (doc.status === 'pending') return 'Pending';
     if (doc.status === 'rejected') return 'Rejected';
     return 'Unknown';
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      t('profile.logout'),
+      'Are you sure you want to logout?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: t('profile.logout'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // Clear all stored tokens
+              await apiService.clearTokens();
+              
+              // Disconnect websocket
+              websocketService.disconnect();
+              
+              // Reset navigation to SignIn screen and clear history
+              navigation.dispatch(
+                CommonActions.reset({
+                  index: 0,
+                  routes: [{ name: 'SignIn' }],
+                })
+              );
+            } catch (error) {
+              console.error('Logout error:', error);
+              // Even if there's an error, navigate to SignIn
+              navigation.dispatch(
+                CommonActions.reset({
+                  index: 0,
+                  routes: [{ name: 'SignIn' }],
+                })
+              );
+            }
+          },
+        },
+      ]
+    );
   };
 
   if (loading) {
@@ -479,7 +524,7 @@ const CompanyProfileScreen = () => {
             </View>
             <ChevronRight size={20} color={COLORS.textSecondary} />
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.menuItem, styles.logoutItem]}>
+          <TouchableOpacity style={[styles.menuItem, styles.logoutItem]} onPress={handleLogout}>
             <View style={styles.menuItemLeft}>
               <View style={[styles.menuIconContainer, styles.logoutIconContainer]}>
                 <LogOut size={20} color={COLORS.error} />

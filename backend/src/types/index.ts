@@ -77,6 +77,14 @@ export interface Route {
   distance?: number; // in km
   duration?: number; // in minutes
   polyline?: Array<{ lat: number; lng: number; index: number }>; // Polyline coordinates with indices for route matching
+  roadSegments?: Array<{
+    roadId: string;
+    direction: 'forward' | 'backward' | 'bidirectional';
+    estimatedTime: Date;
+    lat: number;
+    lng: number;
+    segmentIndex: number;
+  }>;
 }
 
 // JWT Payload

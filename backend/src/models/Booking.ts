@@ -58,6 +58,22 @@ export interface IBooking extends Document {
   settlementRejectedReason?: string;
   tripStartedAt?: Date; // When trip actually started
   tripCompletedAt?: Date; // When passenger reached destination
+  // Road-aware matching fields
+  passengerPickupSegment?: {
+    roadId: string;
+    direction: string;
+    lat: number;
+    lng: number;
+    estimatedTime: Date;
+  };
+  passengerDropSegment?: {
+    roadId: string;
+    direction: string;
+    lat: number;
+    lng: number;
+    estimatedTime: Date;
+  };
+  matchingConfidence?: number; // 0.0 - 1.0
   createdAt: Date;
   updatedAt: Date;
 }
@@ -253,6 +269,26 @@ const bookingSchema = new Schema<IBooking>(
     tripCompletedAt: {
       type: Date,
     },
+    // Road-aware matching fields
+    passengerPickupSegment: {
+      roadId: String,
+      direction: String,
+      lat: Number,
+      lng: Number,
+      estimatedTime: Date,
+    },
+    passengerDropSegment: {
+      roadId: String,
+      direction: String,
+      lat: Number,
+      lng: Number,
+      estimatedTime: Date,
+    },
+    matchingConfidence: {
+      type: Number,
+      min: 0,
+      max: 1,
+    }, // 0.0 - 1.0
   },
   {
     timestamps: true,

@@ -9,8 +9,9 @@ import {
   RefreshControl,
   ImageBackground,
   Dimensions,
+  Alert,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, CommonActions } from '@react-navigation/native';
 import { BlurView } from 'expo-blur';
 import {
   Menu,
@@ -36,6 +37,9 @@ import {
 } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { Card } from '@components/common/Card';
+import { useLanguage } from '@context/LanguageContext';
+import { apiService } from '@services/api.service';
+import { websocketService } from '@services/websocket.service';
 
 const { width } = Dimensions.get('window');
 
@@ -66,6 +70,49 @@ const AdminDashboardScreen = () => {
   const goToNext = () => {
     setCurrentImageIndex((prev) => 
       prev === carouselImages.length - 1 ? 0 : prev + 1
+    );
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      t('profile.logout'),
+      'Are you sure you want to logout?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: t('profile.logout'),
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // Clear all stored tokens
+              await apiService.clearTokens();
+              
+              // Disconnect websocket
+              websocketService.disconnect();
+              
+              // Reset navigation to SignIn screen and clear history
+              navigation.dispatch(
+                CommonActions.reset({
+                  index: 0,
+                  routes: [{ name: 'SignIn' }],
+                })
+              );
+            } catch (error) {
+              console.error('Logout error:', error);
+              // Even if there's an error, navigate to SignIn
+              navigation.dispatch(
+                CommonActions.reset({
+                  index: 0,
+                  routes: [{ name: 'SignIn' }],
+                })
+              );
+            }
+          },
+        },
+      ]
     );
   };
 
@@ -114,7 +161,7 @@ const AdminDashboardScreen = () => {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.iconButton}
-            onPress={() => navigation.navigate('SignIn' as never)}
+            onPress={handleLogout}
           >
             <LogOut size={24} color={COLORS.white} />
           </TouchableOpacity>

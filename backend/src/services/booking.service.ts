@@ -8,6 +8,8 @@ import { calculatePlatformFee, timeSlotsOverlap, timeToMinutes, calculateDuratio
 import { BookingStatus, ServiceType, PaymentMethod, Route } from '../types';
 import { priceCalculationService } from './price-calculation.service';
 import { conversationService } from './conversation.service';
+import { snapToRoad } from '../utils/maps';
+import { roadMatchingService } from './road-matching.service';
 
 class BookingService {
   /**
@@ -85,6 +87,110 @@ class BookingService {
       // Use passenger route (required for dynamic pricing)
       const bookingRoute = data.passengerRoute;
 
+      // Snap passenger coordinates to roads and store segment references (NEW - road-aware)
+      interface PassengerSegment {
+        roadId: string;
+        direction: 'forward' | 'backward' | 'bidirectional';
+        lat: number;
+        lng: number;
+        estimatedTime: Date;
+      }
+      let passengerPickupSegment: PassengerSegment | undefined = undefined;
+      let passengerDropSegment: PassengerSegment | undefined = undefined;
+      let matchingConfidence: number | undefined = undefined;
+
+      try {
+        // Snap pickup and drop coordinates to roads
+        const pickupMatch = await snapToRoad(
+          data.passengerRoute.from.lat,
+          data.passengerRoute.from.lng
+        );
+        const dropMatch = await snapToRoad(
+          data.passengerRoute.to.lat,
+          data.passengerRoute.to.lng
+        );
+
+        if (pickupMatch && dropMatch && offer.route.roadSegments && offer.route.roadSegments.length > 0) {
+          // Calculate estimated times based on offer date/time
+          const offerDateTime = new Date(offer.date);
+          const timeMatch = offer.time.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+          if (timeMatch) {
+            let hour = parseInt(timeMatch[1]);
+            const minute = parseInt(timeMatch[2]);
+            const ampm = timeMatch[3]?.toUpperCase();
+            
+            if (ampm === 'PM' && hour !== 12) {
+              hour += 12;
+            } else if (ampm === 'AM' && hour === 12) {
+              hour = 0;
+            }
+            
+            offerDateTime.setHours(hour, minute, 0, 0);
+          }
+
+          // Validate road-aware match and get confidence score
+          const roadMatch = await roadMatchingService.validateRoadAwareMatch(
+            offer.route.roadSegments,
+            data.passengerRoute.from.lat,
+            data.passengerRoute.from.lng,
+            data.passengerRoute.to.lat,
+            data.passengerRoute.to.lng,
+            false // hasRecentDeviation
+          );
+
+          matchingConfidence = roadMatch.confidence;
+
+          // Store segment references if match is valid
+          // Validate array bounds before accessing segments
+          if (
+            roadMatch.isValid &&
+            roadMatch.pickupSegmentIndex !== undefined &&
+            roadMatch.dropSegmentIndex !== undefined &&
+            roadMatch.pickupSegmentIndex >= 0 &&
+            roadMatch.dropSegmentIndex >= 0 &&
+            roadMatch.pickupSegmentIndex < offer.route.roadSegments.length &&
+            roadMatch.dropSegmentIndex < offer.route.roadSegments.length
+          ) {
+            const pickupSeg = offer.route.roadSegments[roadMatch.pickupSegmentIndex];
+            const dropSeg = offer.route.roadSegments[roadMatch.dropSegmentIndex];
+
+            passengerPickupSegment = {
+              roadId: pickupMatch.roadId,
+              direction: pickupMatch.direction,
+              lat: pickupMatch.lat,
+              lng: pickupMatch.lng,
+              estimatedTime: pickupSeg.estimatedTime,
+            };
+
+            passengerDropSegment = {
+              roadId: dropMatch.roadId,
+              direction: dropMatch.direction,
+              lat: dropMatch.lat,
+              lng: dropMatch.lng,
+              estimatedTime: dropSeg.estimatedTime,
+            };
+
+            logger.info(
+              `Stored road segments for booking: pickup=${pickupMatch.roadId}, drop=${dropMatch.roadId}, confidence=${matchingConfidence.toFixed(2)}`
+            );
+          } else {
+            logger.warn(
+              `Road match validation failed or invalid segment indices: isValid=${roadMatch.isValid}, ` +
+              `pickupIndex=${roadMatch.pickupSegmentIndex}, dropIndex=${roadMatch.dropSegmentIndex}, ` +
+              `reason=${roadMatch.reason || 'unknown'}`
+            );
+          }
+        } else {
+          logger.warn(
+            `Cannot store road segments: pickupMatch=${!!pickupMatch}, dropMatch=${!!dropMatch}, ` +
+            `roadSegmentsAvailable=${!!(offer.route.roadSegments && offer.route.roadSegments.length > 0)}`
+          );
+        }
+      } catch (error) {
+        logger.warn('Failed to snap passenger coordinates to roads, continuing without road segments:', error);
+        // Continue without road segments - booking will still be created
+      }
+
       // Create booking
       const booking = await Booking.create({
         userId: data.userId,
@@ -118,6 +224,10 @@ class BookingService {
             status: 'confirmed',
           },
         ],
+        // Road-aware matching fields
+        passengerPickupSegment,
+        passengerDropSegment,
+        matchingConfidence,
       });
 
       // Update offer
