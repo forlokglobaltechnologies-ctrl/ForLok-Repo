@@ -83,6 +83,19 @@ export interface Location {
   pincode?: string;
 }
 
+// Road Segment Type (for road-aware matching)
+export interface RouteRoadSegment {
+  roadId: string;
+  roadName?: string;
+  roadRef?: string;
+  direction: 'forward' | 'backward' | 'bidirectional';
+  estimatedTime: Date;
+  lat: number;
+  lng: number;
+  segmentIndex: number;
+  distance?: number;
+}
+
 // Route Types
 export interface Route {
   from: Location;
@@ -90,6 +103,7 @@ export interface Route {
   distance?: number; // in km
   duration?: number; // in minutes
   polyline?: Array<{ lat: number; lng: number; index: number }>; // Polyline coordinates with indices for route matching
+  roadSegments?: RouteRoadSegment[]; // Road segments for road-aware matching
 }
 
 // JWT Payload

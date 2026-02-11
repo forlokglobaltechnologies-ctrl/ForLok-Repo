@@ -19,9 +19,9 @@ async function registerPlugins() {
   // WebSocket support
   await app.register(websocketPlugin);
 
-  // CORS
+  // CORS - allow all origins in development (Expo Go, different IPs, etc.)
   await app.register(cors, {
-    origin: config.server.frontendUrl,
+    origin: config.server.nodeEnv === 'development' ? true : config.server.frontendUrl,
     credentials: true,
   });
 

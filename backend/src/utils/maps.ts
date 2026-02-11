@@ -5,6 +5,7 @@
 
 import { config } from '../config/env';
 import logger from './logger';
+import { osrmService } from '../services/osrm.service';
 
 export interface GeocodeResult {
   address: string;
@@ -632,4 +633,129 @@ export function isRouteOnPath(
   );
 
   return isMatch;
+}
+
+/**
+ * Get route with road segments from OSRM
+ * Returns road segments for road-aware matching
+ * Returns empty array on failure (doesn't throw) to allow graceful fallback
+ */
+export async function getRouteWithRoadSegments(
+  fromLat: number,
+  fromLng: number,
+  toLat: number,
+  toLng: number,
+  startTime?: Date
+): Promise<Array<{
+  roadId: string;
+  roadName?: string;
+  roadRef?: string;
+  direction: 'forward' | 'backward' | 'bidirectional';
+  estimatedTime: Date;
+  lat: number;
+  lng: number;
+  segmentIndex: number;
+  distance?: number;
+}>> {
+  logger.error('[DEBUG] ENTERED getRouteWithRoadSegments');
+  
+  try {
+    // Validate coordinates before making API call
+    if (
+      !Number.isFinite(fromLat) || !Number.isFinite(fromLng) ||
+      !Number.isFinite(toLat) || !Number.isFinite(toLng)
+    ) {
+      logger.warn(
+        `Invalid coordinates for road segments: from(${fromLat}, ${fromLng}), to(${toLat}, ${toLng})`
+      );
+      return [];
+    }
+
+    logger.error(`[DEBUG] Calling osrmService.getRouteWithSegments from(${fromLat}, ${fromLng}) to(${toLat}, ${toLng}), startTime=${startTime?.toISOString() || 'undefined'}`);
+    
+    const segments = await osrmService.getRouteWithSegments(fromLat, fromLng, toLat, toLng, startTime);
+    
+    logger.error(`[DEBUG] getRouteWithSegments returned ${segments?.length || 0} segments`);
+    
+    // Validate segments
+    if (!segments || segments.length === 0) {
+      logger.error('[DEBUG] OSRM returned empty segments array');
+      logger.warn('OSRM returned empty segments array');
+      return [];
+    }
+
+    logger.info(`Successfully retrieved ${segments.length} segments from OSRM`);
+
+    // Validate segment structure
+    const invalidSegments = segments.filter(seg => 
+      !seg.roadId || 
+      !seg.direction || 
+      !Number.isFinite(seg.lat) || 
+      !Number.isFinite(seg.lng) ||
+      !seg.estimatedTime ||
+      typeof seg.segmentIndex !== 'number'
+    );
+
+    if (invalidSegments.length > 0) {
+      logger.warn(`Found ${invalidSegments.length} invalid segments, filtering them out`);
+      const validSegments = segments.filter(seg => 
+        seg.roadId && 
+        seg.direction && 
+        Number.isFinite(seg.lat) && 
+        Number.isFinite(seg.lng) &&
+        seg.estimatedTime &&
+        typeof seg.segmentIndex === 'number'
+      );
+      
+      if (validSegments.length === 0) {
+        logger.error('[DEBUG] All segments were invalid after filtering');
+        return [];
+      }
+      
+      logger.error(`[DEBUG] Returning ${validSegments.length} valid segments after filtering`);
+      return validSegments;
+    }
+
+    logger.error(`[DEBUG] Returning ${segments.length} segments from getRouteWithRoadSegments`);
+    return segments;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    logger.error(
+      `[DEBUG] ERROR in getRouteWithRoadSegments: ${errorMessage}. fromLat=${fromLat}, fromLng=${fromLng}, toLat=${toLat}, toLng=${toLng}`
+    );
+    if (errorStack) {
+      logger.error(`Stack trace: ${errorStack}`);
+    }
+    return [];
+  }
+}
+
+/**
+ * Snap GPS coordinate to nearest road using OSRM Nearest API
+ * Returns snapped coordinates with road name for matching
+ */
+export async function snapToRoad(
+  lat: number,
+  lng: number
+): Promise<{
+  lat: number;
+  lng: number;
+  roadId: string;
+  roadName?: string;
+  roadRef?: string;
+  direction: 'forward' | 'backward' | 'bidirectional';
+  confidence: number;
+  distanceFromOriginal?: number;
+} | null> {
+  try {
+    if (Math.abs(lat) > 90 || Math.abs(lng) > 180) {
+      logger.error(`Invalid coordinates provided for snapToRoad: (${lat},${lng})`);
+      return null;
+    }
+    return await osrmService.snapToRoad(lat, lng);
+  } catch (error) {
+    logger.error('Error snapping coordinate to road:', error);
+    return null;
+  }
 }

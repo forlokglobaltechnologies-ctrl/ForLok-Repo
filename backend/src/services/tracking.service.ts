@@ -3,6 +3,7 @@ import Booking from '../models/Booking';
 import { NotFoundError, ConflictError } from '../utils/errors';
 import logger from '../utils/logger';
 import { reverseGeocode } from '../utils/maps';
+import { routeDeviationService } from './route-deviation.service';
 
 class TrackingService {
   /**
@@ -32,9 +33,12 @@ class TrackingService {
         throw new ConflictError('You are not authorized to update location for this booking');
       }
 
-      // Check if booking is in progress
+      // Check if booking is in progress or confirmed
       if (booking.status !== 'in_progress' && booking.status !== 'confirmed') {
-        throw new ConflictError('Booking is not in progress');
+        throw new ConflictError(
+          `Booking is not in a trackable status. Current status: ${booking.status}. ` +
+          `Please start the trip (update status to 'in_progress') or confirm the booking (status: 'confirmed') before sending location updates.`
+        );
       }
 
       // Reverse geocode to get address
@@ -66,6 +70,16 @@ class TrackingService {
       });
 
       logger.info(`Location updated for booking ${data.bookingId}: ${data.lat}, ${data.lng}`);
+
+      // Check for route deviation if this is a pooling booking (NEW - real-time deviation handling)
+      if (booking.serviceType === 'pooling' && booking.poolingOfferId) {
+        try {
+          await this.checkAndHandleRouteDeviation(booking.poolingOfferId, data.bookingId);
+        } catch (error) {
+          logger.warn('Error checking route deviation, continuing:', error);
+          // Don't fail location update if deviation check fails
+        }
+      }
 
       return location.toJSON();
     } catch (error) {
@@ -223,6 +237,70 @@ class TrackingService {
 
   private toRad(degrees: number): number {
     return (degrees * Math.PI) / 180;
+  }
+
+  /**
+   * Check for route deviation and adapt route if needed (NEW - Phase 8)
+   */
+  private async checkAndHandleRouteDeviation(
+    offerId: string,
+    bookingId: string
+  ): Promise<void> {
+    try {
+      // Get recent GPS locations (batch of 10 points)
+      const recentLocations = await routeDeviationService.getRecentGPSLocations(
+        bookingId,
+        10
+      );
+
+      if (recentLocations.length < 5) {
+        // Need at least 5 points to detect deviation
+        return;
+      }
+
+      // Get all bookings for this offer
+      const bookings = await Booking.find({
+        poolingOfferId: offerId,
+        status: { $in: ['in_progress', 'confirmed'] },
+      });
+
+      const bookingIds = bookings.map((b) => b.bookingId);
+
+      // Detect deviation
+      const deviationResult = await routeDeviationService.detectRouteDeviation(
+        offerId,
+        bookingIds,
+        recentLocations
+      );
+
+      if (deviationResult.hasDeviation && deviationResult.matchedSegments) {
+        logger.info(
+          `Route deviation detected for offer ${offerId}: ${(deviationResult.deviationPercentage! * 100).toFixed(1)}% deviation`
+        );
+
+        // Update route segments dynamically
+        await routeDeviationService.updateRouteSegments(
+          offerId,
+          deviationResult.matchedSegments
+        );
+
+        // Recalculate ETAs for all passenger pickups
+        const newETAs = await routeDeviationService.recalculateETAs(
+          offerId,
+          bookingIds,
+          deviationResult.matchedSegments
+        );
+
+        logger.info(
+          `Route adapted for offer ${offerId}: ${newETAs.size} ETAs recalculated`
+        );
+
+        // Note: We do NOT cancel trips automatically - we adapt instead
+      }
+    } catch (error) {
+      logger.error('Error in route deviation check:', error);
+      // Don't throw - this is a background process
+    }
   }
 }
 
