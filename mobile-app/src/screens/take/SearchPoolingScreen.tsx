@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, ImageBackground, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, ImageBackground, ActivityIndicator, Alert, Platform } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { ArrowLeft, Search, Filter, Car, Bike, Star, MapPin, Calendar, ArrowRight } from 'lucide-react-native';
+import { ArrowLeft, Search, Filter, Car, Bike, Star, MapPin, Calendar, Clock, ArrowRight, X } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { COLORS, FONTS, SPACING, SHADOWS, BORDER_RADIUS } from '@constants/theme';
 import { Card } from '@components/common/Card';
 import { Button as CustomButton } from '@components/common/Button';
@@ -31,10 +32,72 @@ const SearchPoolingScreen = () => {
   const [loading, setLoading] = useState(false);
   const [fromLocation, setFromLocation] = useState<LocationData | null>(params.from || null);
   const [toLocation, setToLocation] = useState<LocationData | null>(params.to || null);
-  const [date, setDate] = useState(params.date || new Date().toISOString().split('T')[0]);
+
+  // Date state: parse from params or default to today
+  const initDate = (): Date => {
+    if (params.date) {
+      const parsed = new Date(params.date + 'T00:00:00');
+      if (!isNaN(parsed.getTime())) return parsed;
+    }
+    return new Date();
+  };
+  const [date, setDate] = useState<Date>(initDate);
+  const [anyDate, setAnyDate] = useState(false); // "Any Date" mode = skip date filter
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  // Time state: null = "Any time" (default)
+  const [time, setTime] = useState<Date | null>(null);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+
   const [vehicleType, setVehicleType] = useState<'Car' | 'Bike' | null>(params.vehicleType || null);
   const [passengers, setPassengers] = useState<number>(params.passengers || 1);
   const [hasAutoSearched, setHasAutoSearched] = useState(false);
+
+  // Format helpers
+  const formatDateDisplay = (d: Date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dateOnly = new Date(d);
+    dateOnly.setHours(0, 0, 0, 0);
+    const isToday = dateOnly.getTime() === today.getTime();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const isTomorrow = dateOnly.getTime() === tomorrow.getTime();
+
+    const formatted = d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    if (isToday) return `Today, ${formatted}`;
+    if (isTomorrow) return `Tomorrow, ${formatted}`;
+    return d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+  };
+
+  const formatTimeDisplay = (t: Date) => {
+    let hours = t.getHours();
+    const minutes = t.getMinutes();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    const minutesStr = minutes < 10 ? '0' + minutes : String(minutes);
+    return `${hours}:${minutesStr} ${ampm}`;
+  };
+
+  const onDateChange = (_event: any, selectedDate?: Date) => {
+    setShowDatePicker(Platform.OS === 'ios');
+    if (selectedDate) {
+      setDate(selectedDate);
+      setAnyDate(false);
+      setOffers([]); // Clear stale results
+      console.log('📅 [SearchPooling] Date changed to:', selectedDate.toISOString().split('T')[0]);
+    }
+  };
+
+  const onTimeChange = (_event: any, selectedTime?: Date) => {
+    setShowTimePicker(Platform.OS === 'ios');
+    if (selectedTime) {
+      setTime(selectedTime);
+      setOffers([]); // Clear stale results
+      console.log('🕐 [SearchPooling] Time changed to:', formatTimeDisplay(selectedTime));
+    }
+  };
 
   const loadOffers = async () => {
     if (!fromLocation || !toLocation) {
@@ -45,7 +108,7 @@ const SearchPoolingScreen = () => {
     // Validate coordinates are present
     if (!fromLocation.lat || !fromLocation.lng || !toLocation.lat || !toLocation.lng) {
       Alert.alert('Invalid Location', 'Please select valid locations with coordinates');
-      console.error('❌ Missing coordinates:', { fromLocation, toLocation });
+      console.error('❌ [SearchPooling] Missing coordinates:', { fromLocation, toLocation });
       return;
     }
 
@@ -60,14 +123,22 @@ const SearchPoolingScreen = () => {
 
       if (isNaN(fromLat) || isNaN(fromLng) || isNaN(toLat) || isNaN(toLng)) {
         Alert.alert('Invalid Coordinates', 'Location coordinates are invalid. Please reselect locations.');
-        console.error('❌ Invalid coordinates:', { fromLat, fromLng, toLat, toLng });
+        console.error('❌ [SearchPooling] Invalid coordinates:', { fromLat, fromLng, toLat, toLng });
         return;
       }
 
-      console.log('🔍 Searching pools with coordinates:', {
+      // Build date string: only send if not in "Any Date" mode
+      const dateStr = anyDate ? undefined : date.toISOString().split('T')[0];
+      // Build time string: only send if user explicitly selected a time
+      const timeStr = time ? formatTimeDisplay(time) : undefined;
+
+      console.log('🔍 [SearchPooling] Searching pools:', {
         from: { address: fromLocation.address, lat: fromLat, lng: fromLng },
         to: { address: toLocation.address, lat: toLat, lng: toLng },
-        date,
+        date: dateStr || 'ANY',
+        time: timeStr || 'ANY',
+        vehicleType: vehicleType || 'ALL',
+        pinkOnly: isPinkMode,
       });
 
       const searchParams: any = {
@@ -75,7 +146,8 @@ const SearchPoolingScreen = () => {
         fromLng,
         toLat,
         toLng,
-        date: date || undefined,
+        date: dateStr,
+        time: timeStr,
         pinkOnly: isPinkMode,
       };
       if (vehicleType) {
@@ -91,14 +163,13 @@ const SearchPoolingScreen = () => {
           offersData = offersData.filter((offer: any) => (offer.availableSeats || 0) >= passengers);
         }
         setOffers(offersData);
-        console.log(`✅ Loaded ${offersData.length} pooling offers (filtered for ${passengers} passenger(s))`);
+        console.log(`✅ [SearchPooling] Loaded ${offersData.length} pooling offers (filtered for ${passengers} passenger(s))`);
       } else {
-        console.warn('⚠️ No offers found:', response.error);
+        console.warn('⚠️ [SearchPooling] No offers found:', response.error);
         setOffers([]);
-        Alert.alert('No Results', 'No pooling offers found for this route. Try different locations.');
       }
     } catch (error: any) {
-      console.error('❌ Error loading offers:', error);
+      console.error('❌ [SearchPooling] Error loading offers:', error);
       Alert.alert('Error', `Failed to load offers: ${error.message || 'Unknown error'}`);
       setOffers([]);
     } finally {
@@ -195,16 +266,91 @@ const SearchPoolingScreen = () => {
             />
           </TouchableOpacity>
 
-          <View style={[styles.dateContainer, { borderTopColor: theme.colors.border }]}>
-            <Calendar size={18} color={theme.colors.textSecondary} />
-            <Text style={[styles.dateText, { color: theme.colors.textSecondary }]}>
-              {new Date(date).toLocaleDateString('en-IN', { 
-                weekday: 'short',
-                day: 'numeric', 
-                month: 'short', 
-                year: 'numeric' 
-              })}
-            </Text>
+          {/* Date Selection */}
+          <View style={[styles.dateTimeSection, { borderTopColor: theme.colors.border }]}>
+            <Text style={[styles.filterLabel, { color: theme.colors.text }]}>Date</Text>
+            <View style={styles.chipRow}>
+              <TouchableOpacity
+                style={[
+                  styles.chip,
+                  { borderColor: theme.colors.border },
+                  anyDate && { borderColor: theme.colors.primary, backgroundColor: `${theme.colors.primary}15` },
+                ]}
+                onPress={() => { setAnyDate(true); setOffers([]); }}
+              >
+                <Text style={[styles.chipText, { color: anyDate ? theme.colors.primary : theme.colors.textSecondary }]}>Any Date</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.chip,
+                  { borderColor: theme.colors.border, flex: 1 },
+                  !anyDate && { borderColor: theme.colors.primary, backgroundColor: `${theme.colors.primary}15` },
+                ]}
+                onPress={() => { setAnyDate(false); setShowDatePicker(true); }}
+              >
+                <Calendar size={16} color={!anyDate ? theme.colors.primary : theme.colors.textSecondary} />
+                <Text style={[styles.chipText, { color: !anyDate ? theme.colors.primary : theme.colors.textSecondary }]} numberOfLines={1}>
+                  {!anyDate ? formatDateDisplay(date) : 'Select Date'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            {showDatePicker && (
+              <DateTimePicker
+                value={date}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={onDateChange}
+                minimumDate={new Date()}
+              />
+            )}
+          </View>
+
+          {/* Time Selection */}
+          <View style={styles.dateTimeSection}>
+            <Text style={[styles.filterLabel, { color: theme.colors.text }]}>Time</Text>
+            <View style={styles.chipRow}>
+              <TouchableOpacity
+                style={[
+                  styles.chip,
+                  { borderColor: theme.colors.border },
+                  !time && { borderColor: theme.colors.primary, backgroundColor: `${theme.colors.primary}15` },
+                ]}
+                onPress={() => { setTime(null); setOffers([]); }}
+              >
+                <Text style={[styles.chipText, { color: !time ? theme.colors.primary : theme.colors.textSecondary }]}>Any Time</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.chip,
+                  { borderColor: theme.colors.border, flex: 1 },
+                  time != null && { borderColor: theme.colors.primary, backgroundColor: `${theme.colors.primary}15` },
+                ]}
+                onPress={() => setShowTimePicker(true)}
+              >
+                <Clock size={16} color={time ? theme.colors.primary : theme.colors.textSecondary} />
+                <Text style={[styles.chipText, { color: time ? theme.colors.primary : theme.colors.textSecondary }]}>
+                  {time ? formatTimeDisplay(time) : 'Select Time'}
+                </Text>
+                {time && (
+                  <TouchableOpacity onPress={() => { setTime(null); setOffers([]); }} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <X size={14} color={theme.colors.textSecondary} />
+                  </TouchableOpacity>
+                )}
+              </TouchableOpacity>
+            </View>
+            {showTimePicker && (
+              <DateTimePicker
+                value={time || new Date()}
+                mode="time"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={onTimeChange}
+              />
+            )}
+            {time && (
+              <Text style={{ fontSize: 11, color: theme.colors.textSecondary, marginTop: 2 }}>
+                Showing rides within 1 hour of selected time
+              </Text>
+            )}
           </View>
 
           {/* Vehicle Type Filter */}
@@ -458,17 +604,28 @@ const styles = StyleSheet.create({
     marginVertical: SPACING.xs,
     marginLeft: SPACING.md,
   },
-  dateContainer: {
+  dateTimeSection: {
+    marginTop: SPACING.sm,
+    marginBottom: SPACING.sm,
+    borderTopWidth: 1,
+    paddingTop: SPACING.sm,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    alignItems: 'center',
+  },
+  chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.sm,
+    gap: SPACING.xs,
+    paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
-    marginTop: SPACING.xs,
-    marginBottom: SPACING.md,
-    borderTopWidth: 1,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
   },
-  dateText: {
-    fontFamily: FONTS.regular,
+  chipText: {
+    fontFamily: FONTS.medium,
     fontSize: FONTS.sizes.sm,
   },
   filterSection: {
