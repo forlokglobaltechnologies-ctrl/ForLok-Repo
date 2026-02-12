@@ -422,7 +422,7 @@ class AuthService {
       }
 
       // Try to find user by phone, email, userId, or name (username)
-      let user = null;
+      let user: any = null;
       
       // First, try userId (if it matches the pattern like LKU123456 or U123456)
       if (/^[A-Z]{2,3}\d+[A-Z0-9]*$/.test(username.toUpperCase())) {

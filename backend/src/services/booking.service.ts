@@ -1627,7 +1627,7 @@ class BookingService {
       }
 
       // Update bookings to in_progress and set tripStartedAt
-      const updatedBookings = [];
+      const updatedBookings: any[] = [];
       for (const booking of bookingsToUpdate) {
         booking.status = 'in_progress';
         booking.tripStartedAt = now;
@@ -1687,7 +1687,7 @@ class BookingService {
       }
 
       // Mark all bookings as completed
-      const completedBookings = [];
+      const completedBookings: any[] = [];
       for (const booking of bookings) {
         booking.status = 'completed';
         booking.tripCompletedAt = new Date();

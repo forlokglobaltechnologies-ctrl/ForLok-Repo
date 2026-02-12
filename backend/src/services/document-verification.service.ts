@@ -63,7 +63,7 @@ class DocumentVerificationService {
       }
 
       // Create/update document records
-      const documents = [];
+      const documents: any[] = [];
       const taskId = verificationResult.data?.task_id || verificationResult.data?.taskId;
 
       for (const docType of documentTypes) {

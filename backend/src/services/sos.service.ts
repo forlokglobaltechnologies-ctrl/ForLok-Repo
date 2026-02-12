@@ -37,13 +37,13 @@ class SOSService {
       }
 
       // 2. Fetch booking details ONLY if bookingId is explicitly provided (user is in a trip)
-      let booking = null;
+      let booking: any = null;
       if (data.bookingId) {
         booking = await Booking.findOne({ bookingId: data.bookingId });
       }
 
       // 3. Get driver location from tracking if booking exists
-      let driverLocation = null;
+      let driverLocation: { lat: number; lng: number } | null = null;
       if (booking?.driver?.userId) {
         try {
           const TripLocation = (await import('../models/TripLocation')).default;
