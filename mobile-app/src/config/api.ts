@@ -14,7 +14,7 @@
 // For physical device, change to your computer's IP address
 const API_BASE_URL = __DEV__
   ? 'http://10.165.34.16:3000' // Local dev: your computer's IP
-  : 'https://for-lok-repo.vercel.app'; // Production: Vercel deployment
+  : 'https://forlok-repo.onrender.com'; // Production: Render deployment
 
 export const API_CONFIG = {
   BASE_URL: API_BASE_URL,
