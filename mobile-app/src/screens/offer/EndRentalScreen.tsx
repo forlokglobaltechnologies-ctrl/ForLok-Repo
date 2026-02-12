@@ -26,6 +26,7 @@ import {
   Info,
   Shield,
 } from 'lucide-react-native';
+import { normalize, wp, hp } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { Card } from '@components/common/Card';
 import { Button } from '@components/common/Button';
@@ -36,20 +37,20 @@ const RENTAL_COMING_SOON = true; // V2 feature — flip to false to re-enable
 
 const EndRentalScreen = () => {
   const navigation = useNavigation();
+  const route = useRoute();
+  const { t } = useLanguage();
 
   if (RENTAL_COMING_SOON) {
     return (
       <View style={{ flex: 1, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' }}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ position: 'absolute', top: 50, left: 16, zIndex: 10, width: 40, height: 40, borderRadius: 20, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' }}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ position: 'absolute', top: normalize(50), left: normalize(16), zIndex: 10, width: normalize(40), height: normalize(40), borderRadius: normalize(20), backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' }}>
           <ArrowLeft size={22} color="#1E293B" />
         </TouchableOpacity>
-        <LottieView source={require('../../../assets/videos/Coming soon.json')} autoPlay loop style={{ width: 300, height: 300 }} />
+        <LottieView source={require('../../../assets/videos/Coming soon.json')} autoPlay loop style={{ width: wp(75), height: wp(75) }} />
+        <Text style={{ marginTop: 8, fontSize: 14, color: '#64748B', textAlign: 'center', paddingHorizontal: 24 }}>{t('endRental.featureInProgress')}</Text>
       </View>
     );
   }
-
-  const route = useRoute();
-  const { t } = useLanguage();
   const params = route.params as any;
   const booking = params?.booking;
   const offer = params?.offer;
@@ -94,12 +95,12 @@ const EndRentalScreen = () => {
   const handleCompleteRental = async () => {
     try {
       Alert.alert(
-        'Complete Rental',
-        'Have you received the vehicle back from the renter? Please verify the vehicle condition before completing.',
+        t('endRental.confirmEnd'),
+        t('endRental.endConfirmMessage'),
         [
-          { text: 'Cancel', style: 'cancel' },
+          { text: t('common.cancel'), style: 'cancel' },
           {
-            text: 'Yes, Complete Rental',
+            text: t('endRental.endNow'),
             onPress: async () => {
               try {
                 setLoading(true);
@@ -112,13 +113,13 @@ const EndRentalScreen = () => {
                 if (response.success) {
                   const isPending = booking.paymentStatus === 'pending';
                   Alert.alert(
-                    '✅ Rental Completed Successfully',
+                    t('endRental.endSuccess'),
                     isOfflineCash
                       ? `Rental completed!\n\n💵 Collect ₹${totalAmount.toFixed(2)} from renter in cash.\n\n⚠️ Platform fee (₹${platformFee.toFixed(2)}) has been deducted from your wallet.`
                       : `Rental completed!\n\n✅ Earnings (₹${ownerSettlement.toFixed(2)}) credited to your wallet.\n\n💰 You can request withdrawal from your dashboard.`,
                     [
                       {
-                        text: 'OK',
+                        text: t('common.ok'),
                         onPress: () => {
                           navigation.goBack();
                         },
@@ -126,10 +127,10 @@ const EndRentalScreen = () => {
                     ]
                   );
                 } else {
-                  Alert.alert('Error', response.error || 'Failed to complete rental');
+                  Alert.alert(t('common.error'), response.error || t('endRental.endFailed'));
                 }
               } catch (error: any) {
-                Alert.alert('Error', error.message || 'Failed to complete rental');
+                Alert.alert(t('common.error'), error.message || t('endRental.endFailed'));
               } finally {
                 setLoading(false);
               }
@@ -371,7 +372,7 @@ const EndRentalScreen = () => {
 
         {/* Action Button */}
         <Button
-          title={loading ? 'Processing...' : 'Complete Rental'}
+          title={loading ? t('common.loading') : t('endRental.endNow')}
           onPress={handleCompleteRental}
           variant="primary"
           size="large"
@@ -410,7 +411,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   headerRight: {
-    width: 40,
+    width: normalize(40),
   },
   scrollContent: {
     padding: SPACING.md,
@@ -425,9 +426,9 @@ const styles = StyleSheet.create({
     ...SHADOWS.md,
   },
   bannerIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: normalize(64),
+    height: normalize(64),
+    borderRadius: normalize(32),
     backgroundColor: `${COLORS.success}15`,
     justifyContent: 'center',
     alignItems: 'center',
@@ -461,9 +462,9 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
   },
   iconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: normalize(36),
+    height: normalize(36),
+    borderRadius: normalize(18),
     backgroundColor: `${COLORS.primary}15`,
     justifyContent: 'center',
     alignItems: 'center',
@@ -485,9 +486,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   renterPhoto: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: normalize(56),
+    height: normalize(56),
+    borderRadius: normalize(28),
     marginRight: SPACING.md,
     borderWidth: 2,
     borderColor: `${COLORS.primary}20`,
@@ -545,9 +546,9 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.md,
   },
   paymentIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: normalize(40),
+    height: normalize(40),
+    borderRadius: normalize(20),
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: SPACING.sm,
@@ -687,7 +688,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.sm,
     color: COLORS.text,
-    lineHeight: 22,
+    lineHeight: normalize(22),
   },
   completeButton: {
     marginTop: SPACING.lg,

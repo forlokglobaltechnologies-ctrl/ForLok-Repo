@@ -15,6 +15,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { ArrowLeft, Camera, Car, Bike, CheckCircle, X, FileText } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '@constants/theme';
+import { normalize, wp, hp } from '@utils/responsive';
 import { Button } from '@components/common/Button';
 import { Input } from '@components/common/Input';
 import { Card } from '@components/common/Card';
@@ -939,7 +940,7 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontWeight: 'bold',
   },
-  placeholder: { width: 40 },
+  placeholder: { width: normalize(40) },
   keyboardView: { flex: 1 },
   scrollContent: { padding: SPACING.md },
   vehicleTypeContainer: { marginBottom: SPACING.md },
@@ -1015,7 +1016,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
     backgroundColor: COLORS.white,
-    minWidth: 50,
+    minWidth: normalize(50),
     alignItems: 'center',
   },
   seatButtonSelected: {

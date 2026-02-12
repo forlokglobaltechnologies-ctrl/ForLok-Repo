@@ -17,6 +17,7 @@ import {
   UserX,
 } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '@constants/theme';
+import { normalize } from '@utils/responsive';
 import { blockApi } from '@utils/apiClient';
 
 interface BlockUserModalProps {
@@ -285,7 +286,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.sm,
     color: COLORS.text,
-    lineHeight: 20,
+    lineHeight: normalize(20),
   },
   section: {
     marginBottom: SPACING.lg,
@@ -311,9 +312,9 @@ const styles = StyleSheet.create({
     borderColor: COLORS.error + '30',
   },
   categoryIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: normalize(36),
+    height: normalize(36),
+    borderRadius: normalize(18),
     backgroundColor: COLORS.white,
     justifyContent: 'center',
     alignItems: 'center',
@@ -333,9 +334,9 @@ const styles = StyleSheet.create({
     color: COLORS.error,
   },
   radioButton: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: normalize(20),
+    height: normalize(20),
+    borderRadius: normalize(10),
     borderWidth: 2,
     borderColor: COLORS.border,
     justifyContent: 'center',
@@ -345,9 +346,9 @@ const styles = StyleSheet.create({
     borderColor: COLORS.error,
   },
   radioButtonInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: normalize(10),
+    height: normalize(10),
+    borderRadius: normalize(5),
     backgroundColor: COLORS.error,
   },
   reasonInput: {
@@ -358,7 +359,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.md,
     color: COLORS.text,
-    minHeight: 100,
+    minHeight: normalize(100),
   },
   charCount: {
     fontFamily: FONTS.regular,

@@ -14,6 +14,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { ArrowLeft } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
+import { normalize, wp } from '@utils/responsive';
 import { Button } from '@components/common/Button';
 import { Input } from '@components/common/Input';
 import { PhoneInput } from '@components/common/PhoneInput';
@@ -441,7 +442,7 @@ const IndividualRegistrationScreen = () => {
           onChangeText={setReferralCode}
           autoCapitalize="characters"
         />
-        <Text style={[styles.infoText, { marginTop: 4 }]}>
+        <Text style={[styles.infoText, { marginTop: normalize(4) }]}>
           Have a friend's referral code? Enter it to earn bonus coins!
         </Text>
       </View>
@@ -597,7 +598,7 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sizes.md,
     color: COLORS.textSecondary,
     marginBottom: SPACING.lg,
-    lineHeight: 22,
+    lineHeight: normalize(22),
   },
   input: {
     marginBottom: SPACING.md,
@@ -633,7 +634,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.sm,
     color: COLORS.textSecondary,
-    lineHeight: 20,
+    lineHeight: normalize(20),
   },
   buttonContainer: {
     position: 'absolute',
@@ -688,9 +689,9 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary + '10',
   },
   radioButton: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: normalize(20),
+    height: normalize(20),
+    borderRadius: normalize(10),
     borderWidth: 2,
     borderColor: COLORS.border,
     marginRight: SPACING.sm,
@@ -701,9 +702,9 @@ const styles = StyleSheet.create({
     borderColor: COLORS.primary,
   },
   radioButtonInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: normalize(10),
+    height: normalize(10),
+    borderRadius: normalize(5),
     backgroundColor: COLORS.primary,
   },
   genderOptionText: {
@@ -724,11 +725,11 @@ const styles = StyleSheet.create({
   },
   celebrationContent: {
     backgroundColor: COLORS.white,
-    borderRadius: 24,
+    borderRadius: normalize(24),
     padding: SPACING.xl,
     alignItems: 'center',
     width: '85%',
-    maxWidth: 340,
+    maxWidth: wp(90),
     elevation: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -736,12 +737,12 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
   },
   celebrationLottie: {
-    width: 200,
-    height: 200,
+    width: wp(75),
+    height: wp(75),
   },
   celebrationTitle: {
     fontFamily: FONTS.regular,
-    fontSize: 24,
+    fontSize: normalize(24),
     fontWeight: 'bold' as const,
     color: '#F5A623',
     marginTop: SPACING.sm,

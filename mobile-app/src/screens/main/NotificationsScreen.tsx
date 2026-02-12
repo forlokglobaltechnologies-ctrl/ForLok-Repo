@@ -8,11 +8,11 @@ import {
   ActivityIndicator,
   RefreshControl,
   ImageBackground,
-  Dimensions,
   Modal,
   Platform,
   StatusBar,
 } from 'react-native';
+import { normalize, hp } from '@utils/responsive';
 import { useNavigation } from '@react-navigation/native';
 import { BlurView } from 'expo-blur';
 import {
@@ -46,8 +46,6 @@ import { Button } from '@components/common/Button';
 import { useLanguage } from '@context/LanguageContext';
 import { useNotifications } from '@context/NotificationContext';
 import { notificationApi } from '@utils/apiClient';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const NotificationsScreen = () => {
   const navigation = useNavigation();
@@ -698,7 +696,7 @@ const styles = StyleSheet.create({
 
   /* ── Hero Header ────────────────────────────────────────────── */
   heroHeader: {
-    height: Platform.OS === 'android' ? 140 + (StatusBar.currentHeight || 0) : 160,
+    height: Platform.OS === 'android' ? hp(17) + (StatusBar.currentHeight || 0) : hp(20),
     width: '100%',
   },
   heroOverlay: {
@@ -717,9 +715,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   heroBackBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: normalize(38),
+    height: normalize(38),
+    borderRadius: normalize(19),
     backgroundColor: 'rgba(255,255,255,0.15)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -731,26 +729,26 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     fontFamily: FONTS.regular,
-    fontSize: 22,
+    fontSize: normalize(22),
     color: '#fff',
     fontWeight: '700',
   },
   heroBadge: {
     backgroundColor: '#E74C3C',
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 12,
+    paddingHorizontal: normalize(10),
+    paddingVertical: normalize(3),
+    borderRadius: normalize(12),
   },
   heroBadgeText: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
+    fontSize: normalize(11),
     color: '#fff',
     fontWeight: '700',
   },
   heroActionBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: normalize(38),
+    height: normalize(38),
+    borderRadius: normalize(19),
     backgroundColor: 'rgba(255,255,255,0.15)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -787,11 +785,11 @@ const styles = StyleSheet.create({
   filterPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: normalize(6),
     backgroundColor: '#fff',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingHorizontal: normalize(14),
+    paddingVertical: normalize(8),
+    borderRadius: normalize(20),
     ...SHADOWS.sm,
   },
   filterPillActive: {
@@ -807,15 +805,15 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   filterDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: normalize(6),
+    height: normalize(6),
+    borderRadius: normalize(3),
     backgroundColor: '#fff',
   },
 
   /* ── Notification Card ──────────────────────────────────────── */
   notifCard: {
-    borderRadius: 14,
+    borderRadius: normalize(14),
     padding: SPACING.md,
     marginBottom: SPACING.sm,
     position: 'relative',
@@ -838,18 +836,18 @@ const styles = StyleSheet.create({
     left: 0,
     top: 0,
     bottom: 0,
-    width: 4,
-    borderTopLeftRadius: 14,
-    borderBottomLeftRadius: 14,
+    width: normalize(4),
+    borderTopLeftRadius: normalize(14),
+    borderBottomLeftRadius: normalize(14),
   },
   notifRow: {
     flexDirection: 'row',
     gap: SPACING.sm,
   },
   notifIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: normalize(44),
+    height: normalize(44),
+    borderRadius: normalize(14),
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -876,7 +874,7 @@ const styles = StyleSheet.create({
   },
   notifTime: {
     fontFamily: FONTS.regular,
-    fontSize: 10,
+    fontSize: normalize(10),
     color: '#94A3B8',
     fontWeight: '500',
   },
@@ -884,13 +882,13 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.sm,
     color: '#64748B',
-    lineHeight: 19,
-    marginBottom: 6,
+    lineHeight: normalize(19),
+    marginBottom: normalize(6),
   },
   deleteBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: normalize(28),
+    height: normalize(28),
+    borderRadius: normalize(14),
     backgroundColor: '#F8FAFC',
     justifyContent: 'center',
     alignItems: 'center',
@@ -907,14 +905,14 @@ const styles = StyleSheet.create({
   infoBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
+    gap: normalize(4),
+    paddingHorizontal: normalize(8),
+    paddingVertical: normalize(3),
+    borderRadius: normalize(10),
   },
   infoBadgeText: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
+    fontSize: normalize(11),
     fontWeight: '700',
   },
 
@@ -932,9 +930,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 10,
+    gap: normalize(6),
+    paddingVertical: normalize(10),
+    borderRadius: normalize(10),
   },
   actionBtnPrimary: {
     backgroundColor: '#4A90D9',
@@ -982,9 +980,9 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.xxl * 2,
   },
   emptyIconWrap: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: normalize(80),
+    height: normalize(80),
+    borderRadius: normalize(40),
     backgroundColor: '#F1F5F9',
     justifyContent: 'center',
     alignItems: 'center',
@@ -1032,16 +1030,16 @@ const styles = StyleSheet.create({
   },
   modalSheet: {
     backgroundColor: '#fff',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: normalize(24),
+    borderTopRightRadius: normalize(24),
     paddingHorizontal: SPACING.lg,
-    paddingBottom: Platform.OS === 'ios' ? 40 : SPACING.xl,
+    paddingBottom: Platform.OS === 'ios' ? normalize(40) : SPACING.xl,
     maxHeight: '80%',
   },
   modalHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
+    width: normalize(40),
+    height: normalize(4),
+    borderRadius: normalize(2),
     backgroundColor: '#E2E8F0',
     alignSelf: 'center',
     marginTop: SPACING.sm,
@@ -1054,9 +1052,9 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.lg,
   },
   modalIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: normalize(44),
+    height: normalize(44),
+    borderRadius: normalize(14),
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1074,9 +1072,9 @@ const styles = StyleSheet.create({
     textTransform: 'capitalize',
   },
   modalCloseBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: normalize(32),
+    height: normalize(32),
+    borderRadius: normalize(16),
     backgroundColor: '#F1F5F9',
     justifyContent: 'center',
     alignItems: 'center',
@@ -1085,7 +1083,7 @@ const styles = StyleSheet.create({
   /* ── Modal feedback info ────────────────────────────────────── */
   modalFeedbackInfo: {
     backgroundColor: '#F8FAFC',
-    borderRadius: 12,
+    borderRadius: normalize(12),
     padding: SPACING.md,
     marginBottom: SPACING.md,
   },
@@ -1108,7 +1106,7 @@ const styles = StyleSheet.create({
   /* ── Modal response ─────────────────────────────────────────── */
   modalResponseWrap: {
     backgroundColor: '#7B61FF' + '08',
-    borderRadius: 12,
+    borderRadius: normalize(12),
     padding: SPACING.md,
     marginBottom: SPACING.md,
     borderLeftWidth: 3,
@@ -1117,18 +1115,18 @@ const styles = StyleSheet.create({
   modalResponseHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: normalize(6),
     marginBottom: SPACING.sm,
   },
   modalResponseDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: normalize(8),
+    height: normalize(8),
+    borderRadius: normalize(4),
     backgroundColor: '#7B61FF',
   },
   modalResponseLabel: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
+    fontSize: normalize(11),
     color: '#7B61FF',
     fontWeight: '700',
     textTransform: 'uppercase',
@@ -1137,7 +1135,7 @@ const styles = StyleSheet.create({
   },
   modalResponseDate: {
     fontFamily: FONTS.regular,
-    fontSize: 10,
+    fontSize: normalize(10),
     color: '#94A3B8',
   },
   modalResponseText: {

@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { ArrowLeft, IndianRupee, Building2, Smartphone, CheckCircle, XCircle, Clock } from 'lucide-react-native';
+import { normalize, hp } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { Button } from '@components/common/Button';
 import { Input } from '@components/common/Input';
@@ -419,7 +420,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   placeholder: {
-    width: 24,
+    width: normalize(24),
   },
   scrollContent: {
     padding: SPACING.md,
@@ -428,7 +429,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    minHeight: 400,
+    minHeight: hp(50),
   },
   balanceCard: {
     padding: SPACING.lg,

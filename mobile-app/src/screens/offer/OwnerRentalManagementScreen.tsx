@@ -13,6 +13,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import LottieView from 'lottie-react-native';
 import { ArrowLeft, Clock, User, Car, MapPin, IndianRupee, CheckCircle, XCircle, Play, Square } from 'lucide-react-native';
+import { normalize, wp, hp } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { Card } from '@components/common/Card';
 import { Button } from '@components/common/Button';
@@ -27,10 +28,10 @@ const OwnerRentalManagementScreen = () => {
   if (RENTAL_COMING_SOON) {
     return (
       <View style={{ flex: 1, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' }}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ position: 'absolute', top: 50, left: 16, zIndex: 10, width: 40, height: 40, borderRadius: 20, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' }}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ position: 'absolute', top: normalize(50), left: normalize(16), zIndex: 10, width: normalize(40), height: normalize(40), borderRadius: normalize(20), backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' }}>
           <ArrowLeft size={22} color="#1E293B" />
         </TouchableOpacity>
-        <LottieView source={require('../../../assets/videos/Coming soon.json')} autoPlay loop style={{ width: 300, height: 300 }} />
+        <LottieView source={require('../../../assets/videos/Coming soon.json')} autoPlay loop style={{ width: wp(75), height: wp(75) }} />
       </View>
     );
   }
@@ -449,7 +450,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   headerRight: {
-    width: 40,
+    width: normalize(40),
   },
   scrollContent: {
     padding: SPACING.md,
@@ -474,8 +475,8 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   vehicleImage: {
-    width: 80,
-    height: 80,
+    width: normalize(80),
+    height: normalize(80),
     borderRadius: BORDER_RADIUS.md,
   },
   offerInfo: {

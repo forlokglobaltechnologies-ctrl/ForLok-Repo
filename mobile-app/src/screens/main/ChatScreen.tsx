@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { ArrowLeft, Send, MapPin, Loader } from 'lucide-react-native';
+import { normalize } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '@constants/theme';
 import { chatApi } from '@utils/apiClient';
 import { websocketService } from '@services/websocket.service';
@@ -589,9 +590,9 @@ const styles = StyleSheet.create({
     marginLeft: SPACING.xs,
   },
   headerAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: normalize(40),
+    height: normalize(40),
+    borderRadius: normalize(20),
     marginRight: SPACING.sm,
   },
   headerUserInfo: {
@@ -649,9 +650,9 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   messageAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: normalize(32),
+    height: normalize(32),
+    borderRadius: normalize(16),
     marginRight: SPACING.xs,
     marginBottom: 2,
   },
@@ -684,7 +685,7 @@ const styles = StyleSheet.create({
   messageText: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.md,
-    lineHeight: 20,
+    lineHeight: normalize(20),
   },
   myMessageText: {
     color: COLORS.white,
@@ -739,7 +740,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.background,
-    borderRadius: 24,
+    borderRadius: normalize(24),
     paddingHorizontal: SPACING.xs,
     paddingVertical: SPACING.xs / 2,
   },
@@ -751,15 +752,15 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.md,
     color: COLORS.text,
-    maxHeight: 100,
+    maxHeight: normalize(100),
     paddingHorizontal: SPACING.sm,
     paddingVertical: SPACING.xs,
-    minHeight: 36,
+    minHeight: normalize(36),
   },
   sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: normalize(44),
+    height: normalize(44),
+    borderRadius: normalize(22),
     backgroundColor: COLORS.primary,
     justifyContent: 'center',
     alignItems: 'center',

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Image, ActivityIndicator, Alert, Linking } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { ArrowLeft, Settings, CheckCircle, Car, Bike, Edit, Mail, Phone, MapPin, Building, FileText, CreditCard, BarChart, DollarSign, LogOut, ChevronRight, Shield, Hash } from 'lucide-react-native';
+import { normalize, wp, hp } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, SHADOWS, BORDER_RADIUS } from '@constants/theme';
 import { Card } from '@components/common/Card';
 import { useLanguage } from '@context/LanguageContext';
@@ -631,9 +632,9 @@ const styles = StyleSheet.create({
     gap: SPACING.md,
   },
   infoIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: normalize(36),
+    height: normalize(36),
+    borderRadius: normalize(18),
     backgroundColor: COLORS.primary + '15',
     justifyContent: 'center',
     alignItems: 'center',
@@ -642,7 +643,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.sm,
     color: COLORS.textSecondary,
-    width: 120,
+    width: normalize(120),
   },
   infoValue: {
     flex: 1,
@@ -670,7 +671,7 @@ const styles = StyleSheet.create({
   verifiedBadge: {
     backgroundColor: COLORS.success + '15',
     paddingHorizontal: SPACING.sm,
-    paddingVertical: 4,
+    paddingVertical: normalize(4),
     borderRadius: BORDER_RADIUS.sm,
   },
   verifiedText: {
@@ -724,9 +725,9 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.md,
   },
   statIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: normalize(40),
+    height: normalize(40),
+    borderRadius: normalize(20),
     backgroundColor: COLORS.primary + '15',
     justifyContent: 'center',
     alignItems: 'center',
@@ -737,7 +738,7 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sizes.lg,
     color: COLORS.text,
     fontWeight: 'bold',
-    marginBottom: 2,
+    marginBottom: normalize(2),
   },
   statLabel: {
     fontFamily: FONTS.regular,
@@ -764,9 +765,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   menuIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: normalize(40),
+    height: normalize(40),
+    borderRadius: normalize(20),
     backgroundColor: COLORS.primary + '15',
     justifyContent: 'center',
     alignItems: 'center',

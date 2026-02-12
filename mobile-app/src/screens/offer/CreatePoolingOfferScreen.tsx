@@ -17,6 +17,7 @@ import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/nativ
 import { Video, ResizeMode } from 'expo-av';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { ArrowLeft, MapPin, Calendar, Clock, CheckCircle, IndianRupee, FileText, ChevronDown } from 'lucide-react-native';
+import { normalize, wp, hp } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { Button } from '@components/common/Button';
 import { Input } from '@components/common/Input';
@@ -582,7 +583,7 @@ const styles = StyleSheet.create({
   },
   videoContainer: {
     width: '100%',
-    height: 240,
+    height: hp(30),
     position: 'relative',
     overflow: 'hidden',
   },
@@ -600,22 +601,22 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: SPACING.lg,
-    paddingTop: 40,
+    paddingTop: normalize(40),
   },
   backButton: {
     position: 'absolute',
-    top: 40,
+    top: normalize(40),
     left: SPACING.md,
     padding: SPACING.xs,
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    borderRadius: 20,
+    borderRadius: normalize(20),
   },
   quote: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.lg,
     color: COLORS.white,
     textAlign: 'center',
-    lineHeight: 26,
+    lineHeight: normalize(26),
     fontWeight: '500',
     letterSpacing: 0.3,
     paddingHorizontal: SPACING.sm,
@@ -654,7 +655,7 @@ const styles = StyleSheet.create({
   },
   vehicleImage: {
     width: '100%',
-    height: 140,
+    height: hp(17),
   },
   seatsContainer: {
     marginBottom: SPACING.md,
@@ -668,8 +669,8 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
   },
   seatRangeButton: {
-    width: 50,
-    height: 50,
+    width: normalize(50),
+    height: normalize(50),
     borderRadius: BORDER_RADIUS.md,
     borderWidth: 1,
     borderColor: COLORS.border,
@@ -709,7 +710,7 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   notesInput: {
-    minHeight: 100,
+    minHeight: normalize(100),
   },
   createButton: {
     marginTop: SPACING.md,
@@ -741,7 +742,7 @@ const styles = StyleSheet.create({
     marginTop: SPACING.sm,
   },
   vehicleDropdownText: {
-    fontSize: 16,
+    fontSize: normalize(16),
     fontFamily: FONTS.regular,
     color: COLORS.text,
     flex: 1,
@@ -755,7 +756,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     borderRadius: BORDER_RADIUS.md,
     marginTop: SPACING.xs,
-    maxHeight: 200,
+    maxHeight: normalize(200),
   },
   vehicleDropdownItem: {
     padding: SPACING.md,
@@ -763,15 +764,15 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.border,
   },
   vehicleDropdownItemText: {
-    fontSize: 16,
+    fontSize: normalize(16),
     fontFamily: FONTS.medium,
     color: COLORS.text,
   },
   vehicleDropdownItemSubtext: {
-    fontSize: 14,
+    fontSize: normalize(14),
     fontFamily: FONTS.regular,
     color: COLORS.textSecondary,
-    marginTop: 2,
+    marginTop: normalize(2),
   },
   addVehicleButton: {
     backgroundColor: COLORS.primary,
@@ -782,7 +783,7 @@ const styles = StyleSheet.create({
   },
   addVehicleText: {
     color: COLORS.white,
-    fontSize: 16,
+    fontSize: normalize(16),
     fontFamily: FONTS.medium,
   },
 });

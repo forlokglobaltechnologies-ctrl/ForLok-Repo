@@ -351,7 +351,7 @@ export const poolingApi = {
     fromLng: number; // Required for polyline matching
     toLat: number; // Required for polyline matching
     toLng: number; // Required for polyline matching
-    pinkOnly?: boolean; // Filter for Pink Pooling (women only)
+    pinkOnly?: boolean; // Filter for HerPooling (women only)
   }) => {
     // Validate coordinates are present
     if (params.fromLat === undefined || params.fromLng === undefined || 

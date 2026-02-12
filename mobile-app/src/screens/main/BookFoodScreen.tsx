@@ -13,6 +13,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ArrowLeft, MapPin, Clock, Star, Phone, Utensils } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
+import { normalize, wp, hp } from '@utils/responsive';
 import { Card } from '@components/common/Card';
 import { useLanguage } from '@context/LanguageContext';
 import { foodApi } from '@utils/apiClient';
@@ -450,7 +451,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   placeholder: {
-    width: 40,
+    width: normalize(40),
   },
   routeInfoCard: {
     backgroundColor: COLORS.white,
@@ -476,9 +477,9 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
   },
   routeIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: normalize(32),
+    height: normalize(32),
+    borderRadius: normalize(16),
     backgroundColor: COLORS.primary,
     justifyContent: 'center',
     alignItems: 'center',
@@ -496,8 +497,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.sm,
   },
   routeArrowLine: {
-    width: 20,
-    height: 2,
+    width: normalize(20),
+    height: normalize(2),
     backgroundColor: COLORS.primary,
   },
   routeArrow: {
@@ -505,7 +506,7 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sizes.lg,
     color: COLORS.primary,
     fontWeight: 'bold',
-    marginHorizontal: 4,
+    marginHorizontal: normalize(4),
   },
   filterContainer: {
     padding: SPACING.md,
@@ -584,9 +585,9 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   locationIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: normalize(40),
+    height: normalize(40),
+    borderRadius: normalize(20),
     backgroundColor: `${COLORS.white}20`,
     justifyContent: 'center',
     alignItems: 'center',
@@ -644,9 +645,9 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   shopIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: normalize(48),
+    height: normalize(48),
+    borderRadius: normalize(24),
     backgroundColor: COLORS.primary,
     justifyContent: 'center',
     alignItems: 'center',
@@ -719,7 +720,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.sm,
     color: COLORS.textSecondary,
-    lineHeight: 20,
+    lineHeight: normalize(20),
   },
   callButton: {
     flexDirection: 'row',

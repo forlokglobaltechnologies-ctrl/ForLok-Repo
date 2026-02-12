@@ -27,6 +27,9 @@
       "@types/*": [
         "./src/types/*"
       ],
+      "@context/*": [
+        "./src/context/*"
+      ],
       "@assets/*": [
         "./assets/*"
       ]

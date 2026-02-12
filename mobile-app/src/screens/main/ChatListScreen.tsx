@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { ArrowLeft, MessageCircle, Search } from 'lucide-react-native';
+import { normalize } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { chatApi } from '@utils/apiClient';
 import { useLanguage } from '@context/LanguageContext';
@@ -275,7 +276,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     flex: 1,
     textAlign: 'center',
-    marginRight: 40, // Balance the back button
+    marginRight: normalize(40),
   },
   searchButton: {
     padding: SPACING.xs,
@@ -302,19 +303,19 @@ const styles = StyleSheet.create({
     marginRight: SPACING.md,
   },
   avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: normalize(56),
+    height: normalize(56),
+    borderRadius: normalize(28),
     backgroundColor: COLORS.lightGray,
   },
   unreadBadge: {
     position: 'absolute',
-    top: -2,
-    right: -2,
+    top: normalize(-2),
+    right: normalize(-2),
     backgroundColor: COLORS.error,
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
+    borderRadius: normalize(10),
+    minWidth: normalize(20),
+    height: normalize(20),
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 4,
@@ -366,9 +367,9 @@ const styles = StyleSheet.create({
   },
   groupBadge: {
     backgroundColor: COLORS.primary + '20',
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    borderRadius: normalize(12),
+    paddingHorizontal: normalize(8),
+    paddingVertical: normalize(2),
     marginLeft: SPACING.xs,
   },
   groupBadgeText: {

@@ -150,6 +150,7 @@ import { LanguageProvider } from './src/context/LanguageContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { NotificationProvider } from './src/context/NotificationContext';
 import { SOSProvider, useSOS } from './src/context/SOSContext';
+import { AuthProvider } from './src/context/AuthContext';
 import SOSButton from './src/components/common/SOSButton';
 import { websocketService } from './src/services/websocket.service';
 
@@ -313,9 +314,7 @@ export default function App() {
   useEffect(() => {
     loadFonts();
     
-    // Initialize WebSocket connection when app starts
-    websocketService.connect();
-    
+    // WebSocket is now connected after auth (not on app start)
     // Cleanup on unmount
     return () => {
       websocketService.disconnect();
@@ -346,17 +345,19 @@ export default function App() {
   }
 
   return (
-    <ThemeProvider>
-      <LanguageProvider>
-        <NotificationProvider>
-          <SOSProvider>
-            <SafeAreaProvider>
-              <AppNavigator />
-            </SafeAreaProvider>
-          </SOSProvider>
-        </NotificationProvider>
-      </LanguageProvider>
-    </ThemeProvider>
+    <AuthProvider>
+      <ThemeProvider>
+        <LanguageProvider>
+          <NotificationProvider>
+            <SOSProvider>
+              <SafeAreaProvider>
+                <AppNavigator />
+              </SafeAreaProvider>
+            </SOSProvider>
+          </NotificationProvider>
+        </LanguageProvider>
+      </ThemeProvider>
+    </AuthProvider>
   );
 }
 

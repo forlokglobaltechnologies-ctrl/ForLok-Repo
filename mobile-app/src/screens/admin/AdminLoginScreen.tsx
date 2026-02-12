@@ -19,6 +19,7 @@ import { Button } from '@components/common/Button';
 import { Input } from '@components/common/Input';
 import { useLanguage } from '@context/LanguageContext';
 import { adminApi } from '@utils/apiClient';
+import { normalize } from '@utils/responsive';
 
 const AdminLoginScreen = () => {
   const navigation = useNavigation();
@@ -31,7 +32,10 @@ const AdminLoginScreen = () => {
 
   const handleLogin = async () => {
     if (!adminId || !password) {
-      Alert.alert('Error', 'Please enter both username and password');
+      Alert.alert(
+        t('common.error'),
+        !adminId ? t('admin.login.enterAdminIdError') : t('admin.login.enterPasswordError')
+      );
       return;
     }
 
@@ -43,14 +47,11 @@ const AdminLoginScreen = () => {
         // Tokens are automatically saved by apiService
         navigation.navigate('AdminDashboard' as never);
       } else {
-        Alert.alert('Login Failed', response.error || 'Invalid credentials. Please try again.');
+        Alert.alert(t('common.error'), response.error || t('admin.login.invalidCredentials'));
       }
     } catch (error: any) {
       console.error('Admin login error:', error);
-      Alert.alert(
-        'Login Error',
-        error.message || 'Failed to connect to server. Please check your connection and try again.'
-      );
+      Alert.alert(t('common.error'), error.message || t('admin.login.loginError'));
     } finally {
       setIsLoading(false);
     }
@@ -187,9 +188,9 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.xl,
   },
   logoCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: normalize(100),
+    height: normalize(100),
+    borderRadius: normalize(50),
     backgroundColor: COLORS.white,
     justifyContent: 'center',
     alignItems: 'center',
@@ -223,8 +224,8 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.lg,
   },
   checkbox: {
-    width: 24,
-    height: 24,
+    width: normalize(24),
+    height: normalize(24),
     borderRadius: BORDER_RADIUS.sm,
     borderWidth: 2,
     borderColor: COLORS.white,
@@ -286,7 +287,7 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sizes.sm,
     color: COLORS.white,
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: normalize(20),
   },
 });
 

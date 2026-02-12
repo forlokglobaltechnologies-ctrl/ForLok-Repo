@@ -19,6 +19,7 @@ import {
   ChevronRight,
 } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '@constants/theme';
+import { normalize } from '@utils/responsive';
 import { refundApi, bookingsApi } from '@utils/apiClient';
 
 interface CancellationModalProps {
@@ -389,9 +390,9 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.xs,
   },
   refundIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: normalize(28),
+    height: normalize(28),
+    borderRadius: normalize(14),
     backgroundColor: COLORS.white,
     justifyContent: 'center',
     alignItems: 'center',
@@ -455,9 +456,9 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary + '10',
   },
   radioButton: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: normalize(20),
+    height: normalize(20),
+    borderRadius: normalize(10),
     borderWidth: 2,
     borderColor: COLORS.border,
     marginRight: SPACING.sm,
@@ -468,9 +469,9 @@ const styles = StyleSheet.create({
     borderColor: COLORS.primary,
   },
   radioButtonInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: normalize(10),
+    height: normalize(10),
+    borderRadius: normalize(5),
     backgroundColor: COLORS.primary,
   },
   reasonText: {
@@ -490,7 +491,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.md,
     color: COLORS.text,
-    minHeight: 80,
+    minHeight: normalize(80),
     marginTop: SPACING.sm,
   },
   footer: {

@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { ArrowLeft, IndianRupee, TrendingUp, Calendar, CheckCircle, Clock } from 'lucide-react-native';
+import { normalize } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { Card } from '@components/common/Card';
 import { companyApi } from '@utils/apiClient';
@@ -128,7 +129,7 @@ const CompanyEarningsScreen = () => {
           </View>
         ) : filteredEarnings.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <IndianRupee size={64} color={COLORS.textSecondary} />
+            <IndianRupee size={normalize(64)} color={COLORS.textSecondary} />
             <Text style={styles.emptyText}>No earnings found</Text>
           </View>
         ) : (
@@ -232,7 +233,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   headerRight: {
-    width: 40,
+    width: normalize(40),
   },
   summaryCard: {
     margin: SPACING.md,

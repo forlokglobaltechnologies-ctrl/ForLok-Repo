@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ArrowLeft, Car, MapPin, Calendar, Clock, MessageCircle, User, IndianRupee, Star } from 'lucide-react-native';
+import { normalize, wp, hp } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, SHADOWS, BORDER_RADIUS } from '@constants/theme';
 import { Card } from '@components/common/Card';
 import { Button } from '@components/common/Button';
@@ -332,7 +333,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.lg,
-    paddingTop: SPACING.xl + 8,
+    paddingTop: SPACING.xl + normalize(8),
     backgroundColor: COLORS.primary,
     ...SHADOWS.md,
   },
@@ -347,7 +348,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   headerRight: {
-    width: 40,
+    width: normalize(40),
   },
   scrollView: {
     flex: 1,

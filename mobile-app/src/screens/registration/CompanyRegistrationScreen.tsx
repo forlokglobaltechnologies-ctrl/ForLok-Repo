@@ -21,6 +21,7 @@ import { Input } from '@components/common/Input';
 import { PhoneInput } from '@components/common/PhoneInput';
 import { useLanguage } from '@context/LanguageContext';
 import { authApi, companyApi, uploadFile } from '@utils/apiClient';
+import { normalize, wp, hp } from '@utils/responsive';
 
 const CompanyRegistrationScreen = () => {
   const navigation = useNavigation();
@@ -1031,13 +1032,13 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
   },
   header: {
-    paddingTop: 50,
+    paddingTop: hp(6),
     paddingHorizontal: SPACING.md,
     backgroundColor: COLORS.white,
   },
   backButton: {
     padding: SPACING.sm,
-    width: 40,
+    width: normalize(40),
   },
   progressContainer: {
     paddingHorizontal: SPACING.lg,
@@ -1052,15 +1053,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   progressBar: {
-    height: 6,
+    height: normalize(6),
     backgroundColor: COLORS.lightGray,
-    borderRadius: 3,
+    borderRadius: normalize(3),
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
     backgroundColor: COLORS.primary,
-    borderRadius: 3,
+    borderRadius: normalize(3),
   },
   scrollView: {
     flex: 1,
@@ -1068,7 +1069,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: SPACING.lg,
-    paddingBottom: SPACING.xxl + 80,
+    paddingBottom: SPACING.xxl + normalize(80),
   },
   stepTitle: {
     fontFamily: FONTS.regular,
@@ -1165,7 +1166,7 @@ const styles = StyleSheet.create({
   },
   imagePreview: {
     width: '100%',
-    height: 200,
+    height: normalize(200),
     borderRadius: BORDER_RADIUS.md,
     resizeMode: 'cover',
   },
@@ -1192,9 +1193,9 @@ const styles = StyleSheet.create({
     top: SPACING.xs,
     left: SPACING.xs,
     backgroundColor: COLORS.success,
-    borderRadius: 20,
-    width: 32,
-    height: 32,
+    borderRadius: normalize(16),
+    width: normalize(32),
+    height: normalize(32),
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
@@ -1205,9 +1206,9 @@ const styles = StyleSheet.create({
     top: SPACING.xs,
     left: SPACING.xs,
     backgroundColor: COLORS.error,
-    borderRadius: 20,
-    width: 32,
-    height: 32,
+    borderRadius: normalize(16),
+    width: normalize(32),
+    height: normalize(32),
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
@@ -1218,9 +1219,9 @@ const styles = StyleSheet.create({
     top: SPACING.xs,
     right: SPACING.xs,
     backgroundColor: COLORS.error,
-    borderRadius: 20,
-    width: 32,
-    height: 32,
+    borderRadius: normalize(16),
+    width: normalize(32),
+    height: normalize(32),
     justifyContent: 'center',
     alignItems: 'center',
     ...SHADOWS.sm,

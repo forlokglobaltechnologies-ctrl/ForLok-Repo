@@ -38,6 +38,7 @@ import {
   Link2,
 } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
+import { normalize, hp } from '@utils/responsive';
 import apiCall from '@utils/apiClient';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -234,7 +235,7 @@ const AdminPromoReviewScreen = () => {
                 {submissions.length} submission{submissions.length !== 1 ? 's' : ''}
               </Text>
             </View>
-            <View style={{ width: 38 }} />
+            <View style={{ width: normalize(38) }} />
           </View>
         </BlurView>
       </ImageBackground>
@@ -395,7 +396,7 @@ const AdminPromoReviewScreen = () => {
               );
             })
           )}
-          <View style={{ height: 40 }} />
+          <View style={{ height: normalize(40) }} />
         </ScrollView>
       )}
 
@@ -498,7 +499,7 @@ const styles = StyleSheet.create({
 
   /* ── Hero Header ────────────────────────────────────────────── */
   heroHeader: {
-    height: Platform.OS === 'android' ? 140 + (StatusBar.currentHeight || 0) : 160,
+    height: Platform.OS === 'android' ? hp(17) + (StatusBar.currentHeight || 0) : hp(20),
     width: '100%',
   },
   heroOverlay: {
@@ -598,9 +599,9 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.xxl * 2,
   },
   emptyIconWrap: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: normalize(80),
+    height: normalize(80),
+    borderRadius: normalize(40),
     backgroundColor: '#F1F5F9',
     justifyContent: 'center',
     alignItems: 'center',
@@ -623,7 +624,7 @@ const styles = StyleSheet.create({
   /* ── Submission Card ────────────────────────────────────────── */
   card: {
     backgroundColor: '#fff',
-    borderRadius: 14,
+    borderRadius: normalize(14),
     padding: SPACING.md,
     marginBottom: SPACING.sm,
     borderWidth: 1,
@@ -638,9 +639,9 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
   },
   cardPlatformIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: normalize(44),
+    height: normalize(44),
+    borderRadius: normalize(14),
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: SPACING.sm,
@@ -653,24 +654,24 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sizes.md,
     color: '#1E293B',
     fontWeight: '600',
-    marginBottom: 2,
+    marginBottom: normalize(2),
   },
   cardPlatformLabel: {
     fontFamily: FONTS.regular,
-    fontSize: 12,
+    fontSize: normalize(12),
     fontWeight: '600',
   },
   cardStatusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
+    gap: normalize(4),
+    paddingHorizontal: normalize(10),
+    paddingVertical: normalize(5),
+    borderRadius: normalize(12),
   },
   cardStatusText: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
+    fontSize: normalize(11),
     fontWeight: '700',
   },
 
@@ -678,17 +679,17 @@ const styles = StyleSheet.create({
   cardProofRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: normalize(8),
     backgroundColor: '#4A90D9' + '08',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 10,
+    paddingVertical: normalize(10),
+    paddingHorizontal: normalize(12),
+    borderRadius: normalize(10),
     marginBottom: SPACING.sm,
   },
   cardProofIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
+    width: normalize(28),
+    height: normalize(28),
+    borderRadius: normalize(8),
     backgroundColor: '#4A90D9' + '15',
     justifyContent: 'center',
     alignItems: 'center',
@@ -696,7 +697,7 @@ const styles = StyleSheet.create({
   cardProofUrl: {
     flex: 1,
     fontFamily: FONTS.regular,
-    fontSize: 12,
+    fontSize: normalize(12),
     color: '#4A90D9',
   },
 
@@ -704,33 +705,33 @@ const styles = StyleSheet.create({
   cardMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: normalize(12),
     marginBottom: SPACING.xs,
   },
   cardMetaItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: normalize(4),
   },
   cardMetaText: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
+    fontSize: normalize(11),
     color: '#94A3B8',
     fontWeight: '500',
   },
   cardCoinsBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: normalize(4),
     backgroundColor: '#F5A623' + '15',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
+    paddingHorizontal: normalize(8),
+    paddingVertical: normalize(3),
+    borderRadius: normalize(10),
     marginLeft: 'auto',
   },
   cardCoinsText: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
+    fontSize: normalize(11),
     color: '#F5A623',
     fontWeight: '700',
   },
@@ -739,20 +740,20 @@ const styles = StyleSheet.create({
   cardReviewNote: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 6,
+    gap: normalize(6),
     backgroundColor: '#F8FAFC',
-    padding: 10,
-    borderRadius: 10,
+    padding: normalize(10),
+    borderRadius: normalize(10),
     marginTop: SPACING.xs,
     marginBottom: SPACING.xs,
   },
   cardReviewNoteText: {
     flex: 1,
     fontFamily: FONTS.regular,
-    fontSize: 12,
+    fontSize: normalize(12),
     color: '#64748B',
     fontStyle: 'italic',
-    lineHeight: 18,
+    lineHeight: normalize(18),
   },
 
   /* Action buttons */
@@ -769,9 +770,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 11,
-    borderRadius: 10,
+    gap: normalize(6),
+    paddingVertical: normalize(11),
+    borderRadius: normalize(10),
   },
   cardApproveBtn: {
     backgroundColor: '#00B894',
@@ -797,15 +798,15 @@ const styles = StyleSheet.create({
   },
   modalSheet: {
     backgroundColor: '#fff',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: normalize(24),
+    borderTopRightRadius: normalize(24),
     paddingHorizontal: SPACING.lg,
     paddingBottom: Platform.OS === 'ios' ? 40 : SPACING.xl,
   },
   modalHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
+    width: normalize(40),
+    height: normalize(4),
+    borderRadius: normalize(2),
     backgroundColor: '#E2E8F0',
     alignSelf: 'center',
     marginTop: SPACING.sm,
@@ -818,9 +819,9 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.lg,
   },
   modalIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: normalize(44),
+    height: normalize(44),
+    borderRadius: normalize(14),
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -832,38 +833,38 @@ const styles = StyleSheet.create({
   },
   modalSubtitle: {
     fontFamily: FONTS.regular,
-    fontSize: 12,
+    fontSize: normalize(12),
     color: '#94A3B8',
-    marginTop: 2,
+    marginTop: normalize(2),
   },
   modalCloseBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: normalize(32),
+    height: normalize(32),
+    borderRadius: normalize(16),
     backgroundColor: '#F1F5F9',
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalLabel: {
     fontFamily: FONTS.regular,
-    fontSize: 12,
+    fontSize: normalize(12),
     color: '#64748B',
     fontWeight: '600',
     marginBottom: SPACING.xs,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: normalize(0.5),
   },
   modalInput: {
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    borderRadius: 12,
+    borderRadius: normalize(12),
     paddingHorizontal: SPACING.md,
-    paddingVertical: 12,
+    paddingVertical: normalize(12),
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.md,
     color: '#1E293B',
     marginBottom: SPACING.lg,
-    minHeight: 100,
+    minHeight: normalize(100),
     backgroundColor: '#F8FAFC',
   },
   modalBtnRow: {
@@ -875,9 +876,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 14,
-    borderRadius: 12,
+    gap: normalize(6),
+    paddingVertical: normalize(14),
+    borderRadius: normalize(12),
   },
   modalCancelBtn: {
     backgroundColor: '#F1F5F9',

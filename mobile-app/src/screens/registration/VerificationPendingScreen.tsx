@@ -6,6 +6,7 @@ import { BlurView } from 'expo-blur';
 import { COLORS, FONTS, SPACING, SHADOWS, BORDER_RADIUS } from '@constants/theme';
 import { Button } from '@components/common/Button';
 import { useLanguage } from '@context/LanguageContext';
+import { normalize, wp, hp } from '@utils/responsive';
 
 const VerificationPendingScreen = () => {
   const navigation = useNavigation();
@@ -104,15 +105,15 @@ const styles = StyleSheet.create({
     marginTop: -SPACING.xl,
   },
   successIconWrapper: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: normalize(120),
+    height: normalize(120),
+    borderRadius: normalize(60),
     justifyContent: 'center',
     alignItems: 'center',
   },
   checkIconContainer: {
-    marginTop: -SPACING.xs,borderRadius:40,
-
+    marginTop: -SPACING.xs,
+    borderRadius: normalize(40),
   },
   title: {
     fontFamily: FONTS.regular,
@@ -126,7 +127,7 @@ const styles = StyleSheet.create({
     textShadowRadius: 4,
   },
   button: {
-    minWidth: 250,
+    minWidth: wp(70),
     ...SHADOWS.md,
   },
   // Modal Styles
@@ -143,7 +144,7 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.xl,
     padding: SPACING.xl,
     width: '100%',
-    maxWidth: 400,
+    maxWidth: wp(90),
     marginTop: SPACING.xl,
     ...SHADOWS.lg,
   },
@@ -151,9 +152,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: SPACING.md,
     right: SPACING.md,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: normalize(32),
+    height: normalize(32),
+    borderRadius: normalize(16),
     backgroundColor: COLORS.lightGray,
     justifyContent: 'center',
     alignItems: 'center',
@@ -173,7 +174,7 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sizes.md,
     color: COLORS.text,
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: normalize(24),
     marginBottom: SPACING.md,
   },
   modalInfo: {
@@ -181,7 +182,7 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sizes.sm,
     color: COLORS.textSecondary,
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: normalize(20),
   },
 });
 

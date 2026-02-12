@@ -4,6 +4,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import LottieView from 'lottie-react-native';
 import { ArrowLeft, Search, Filter, Star, MapPin, Calendar, Clock } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
+import { normalize, wp, hp } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, SHADOWS } from '@constants/theme';
 import { Card } from '@components/common/Card';
 import { Button } from '@components/common/Button';
@@ -20,6 +21,8 @@ const RENTAL_COMING_SOON = true; // V2 feature — flip to false to re-enable
 
 const SearchRentalScreen = () => {
   const navigation = useNavigation();
+  const route = useRoute();
+  const { t } = useLanguage();
 
   if (RENTAL_COMING_SOON) {
     return (
@@ -28,12 +31,10 @@ const SearchRentalScreen = () => {
           <ArrowLeft size={22} color="#1E293B" />
         </TouchableOpacity>
         <LottieView source={require('../../../assets/videos/Coming soon.json')} autoPlay loop style={{ width: 300, height: 300 }} />
+        <Text style={{ marginTop: 8, fontSize: 14, color: '#64748B', textAlign: 'center', paddingHorizontal: 24 }}>{t('searchRental.featureInProgress')}</Text>
       </View>
     );
   }
-
-  const route = useRoute();
-  const { t } = useLanguage();
   const params = (route.params as RouteParams) || {};
   
   const [offers, setOffers] = useState<any[]>([]);
@@ -67,7 +68,7 @@ const SearchRentalScreen = () => {
       }
     } catch (error: any) {
       console.error('❌ Error loading offers:', error);
-      Alert.alert('Error', `Failed to load offers: ${error.message || 'Unknown error'}`);
+      Alert.alert(t('common.error'), error.message || t('searchRental.searchError'));
       setOffers([]);
     } finally {
       setLoading(false);
@@ -105,7 +106,7 @@ const SearchRentalScreen = () => {
               <View style={styles.locationItem}>
                 <MapPin size={20} color={COLORS.primary} />
                 <View style={styles.locationTextContainer}>
-                  <Text style={styles.locationLabel}>Location</Text>
+                  <Text style={styles.locationLabel}>{t('searchRental.location')}</Text>
                   <Text style={styles.locationName}>{searchParams.location}</Text>
                 </View>
               </View>
@@ -118,13 +119,13 @@ const SearchRentalScreen = () => {
             </View>
             <View style={styles.durationRow}>
               <Clock size={18} color={COLORS.textSecondary} />
-              <Text style={styles.durationText}>Duration: {searchParams.duration}</Text>
+              <Text style={styles.durationText}>{t('searchRental.duration')}: {searchParams.duration}</Text>
             </View>
           </View>
         </View>
         <View style={styles.countRow}>
           <Text style={styles.countText}>
-            {loading ? 'Loading...' : `Found ${offers.length} rentals`}
+            {loading ? t('common.loading') : t('searchRental.foundRentals', { count: offers.length })}
           </Text>
           <View style={styles.actionIcons}>
             <TouchableOpacity style={styles.actionIconButton} onPress={loadOffers}>
@@ -141,12 +142,12 @@ const SearchRentalScreen = () => {
         {loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={COLORS.primary} />
-            <Text style={styles.loadingText}>Loading offers...</Text>
+            <Text style={styles.loadingText}>{t('common.loading')}</Text>
           </View>
         ) : offers.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No rental offers found</Text>
-            <Text style={styles.emptySubtext}>Try adjusting your search criteria</Text>
+            <Text style={styles.emptyText}>{t('searchRental.noRentalsAvailable')}</Text>
+            <Text style={styles.emptySubtext}>{t('searchRental.noResults')}</Text>
           </View>
         ) : (
           offers.map((rental) => {
@@ -257,7 +258,7 @@ const styles = StyleSheet.create({
   },
   headerImage: {
     width: '100%',
-    height: 200,
+    height: hp(25),
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
@@ -277,9 +278,9 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   iconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: normalize(40),
+    height: normalize(40),
+    borderRadius: normalize(20),
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -300,13 +301,13 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sizes.md,
     color: COLORS.white,
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: normalize(22),
     maxWidth: '100%',
   },
   scrollContent: { padding: SPACING.md },
   routeCard: {
     backgroundColor: COLORS.white,
-    borderRadius: 12,
+    borderRadius: normalize(12),
     padding: SPACING.md,
     marginBottom: SPACING.md,
     ...SHADOWS.md,
@@ -332,7 +333,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.xs,
     color: COLORS.textSecondary,
-    marginBottom: 2,
+    marginBottom: normalize(2),
   },
   locationName: {
     fontFamily: FONTS.regular,
@@ -374,9 +375,9 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
   },
   actionIconButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: normalize(36),
+    height: normalize(36),
+    borderRadius: normalize(18),
     backgroundColor: COLORS.primary + '15',
     justifyContent: 'center',
     alignItems: 'center',
@@ -386,10 +387,10 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sizes.sm, 
     color: COLORS.textSecondary, 
     marginBottom: SPACING.lg,
-    paddingTop: 2,
+    paddingTop: normalize(2),
   },
   rentalCard: { marginBottom: SPACING.md, padding: SPACING.md },
-  vehicleImage: { width: '100%', height: 150, borderRadius: 8, marginBottom: SPACING.sm },
+  vehicleImage: { width: '100%', height: hp(18), borderRadius: normalize(8), marginBottom: SPACING.sm },
   vehicleName: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.md, color: COLORS.text, marginBottom: SPACING.xs, fontWeight: 'bold' },
   ownerContainer: { 
     flexDirection: 'row', 

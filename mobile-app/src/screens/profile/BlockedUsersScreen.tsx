@@ -21,6 +21,7 @@ import {
   Clock,
   AlertTriangle,
 } from 'lucide-react-native';
+import { normalize, wp, hp } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '@constants/theme';
 import { Card } from '@components/common/Card';
 import { blockApi } from '@utils/apiClient';
@@ -259,7 +260,7 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontWeight: 'bold',
   },
-  placeholder: { width: 24 },
+  placeholder: { width: normalize(24) },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -300,9 +301,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   avatarContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: normalize(48),
+    height: normalize(48),
+    borderRadius: normalize(24),
     backgroundColor: COLORS.lightGray,
     justifyContent: 'center',
     alignItems: 'center',
@@ -317,8 +318,8 @@ const styles = StyleSheet.create({
   blockMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginTop: 4,
+    gap: normalize(4),
+    marginTop: normalize(4),
   },
   blockDate: {
     fontFamily: FONTS.regular,
@@ -326,9 +327,9 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
   },
   unblockButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: normalize(40),
+    height: normalize(40),
+    borderRadius: normalize(20),
     backgroundColor: COLORS.error + '15',
     justifyContent: 'center',
     alignItems: 'center',
@@ -365,9 +366,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.xl,
   },
   emptyIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: normalize(80),
+    height: normalize(80),
+    borderRadius: normalize(40),
     backgroundColor: COLORS.lightGray,
     justifyContent: 'center',
     alignItems: 'center',
@@ -385,7 +386,7 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sizes.sm,
     color: COLORS.textSecondary,
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: normalize(20),
   },
 });
 

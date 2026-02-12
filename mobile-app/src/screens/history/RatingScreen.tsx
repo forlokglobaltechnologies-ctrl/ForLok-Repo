@@ -16,6 +16,7 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { BlurView } from 'expo-blur';
 import { ArrowLeft, Star, User, CheckCircle, ChevronDown, X } from 'lucide-react-native';
+import { normalize, wp, hp } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { Button } from '@components/common/Button';
 import { Card } from '@components/common/Card';
@@ -517,7 +518,7 @@ const styles = StyleSheet.create({
   // ===== Header with image =====
   headerImage: {
     width: '100%',
-    height: 200,
+    height: hp(25),
   },
   headerOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -535,9 +536,9 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: normalize(40),
+    height: normalize(40),
+    borderRadius: normalize(20),
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -589,9 +590,9 @@ const styles = StyleSheet.create({
     ...SHADOWS.sm,
   },
   avatarCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: normalize(56),
+    height: normalize(56),
+    borderRadius: normalize(28),
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -607,7 +608,7 @@ const styles = StyleSheet.create({
   userRole: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.sm,
-    marginTop: 2,
+    marginTop: normalize(2),
   },
   // ===== Section Title =====
   sectionTitle: {
@@ -672,7 +673,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: SPACING.xs,
     paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs + 2,
+    paddingVertical: SPACING.xs + normalize(2),
     borderRadius: BORDER_RADIUS.full,
   },
   selectedTagText: {
@@ -689,7 +690,7 @@ const styles = StyleSheet.create({
   },
   dropdownModal: {
     borderRadius: BORDER_RADIUS.lg,
-    maxHeight: 420,
+    maxHeight: hp(52),
     overflow: 'hidden',
     ...SHADOWS.lg,
   },
@@ -707,7 +708,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   dropdownList: {
-    maxHeight: 300,
+    maxHeight: normalize(300),
   },
   dropdownItem: {
     flexDirection: 'row',
@@ -718,8 +719,8 @@ const styles = StyleSheet.create({
     gap: SPACING.md,
   },
   checkbox: {
-    width: 24,
-    height: 24,
+    width: normalize(24),
+    height: normalize(24),
     borderRadius: BORDER_RADIUS.sm,
     borderWidth: 2,
     justifyContent: 'center',
@@ -749,7 +750,7 @@ const styles = StyleSheet.create({
   reviewInput: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.md,
-    minHeight: 110,
+    minHeight: normalize(110),
     padding: SPACING.md,
     borderRadius: BORDER_RADIUS.md,
     borderWidth: 1,
@@ -777,7 +778,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: SPACING.sm + 2,
+    paddingVertical: SPACING.sm + normalize(2),
     borderBottomWidth: 1,
   },
   aspectLabel: {
@@ -788,10 +789,10 @@ const styles = StyleSheet.create({
   },
   miniStarsContainer: {
     flexDirection: 'row',
-    gap: 2,
+    gap: normalize(2),
   },
   miniStarButton: {
-    padding: 3,
+    padding: normalize(3),
   },
   // ===== Submit =====
   submitButton: {

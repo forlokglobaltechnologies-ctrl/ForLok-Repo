@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Ima
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { ArrowLeft, Calendar, Search, Car, Key, Clock, MapPin, ArrowRight, ChevronRight } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
+import { normalize, wp, hp } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { Card } from '@components/common/Card';
 import { Button } from '@components/common/Button';
@@ -312,7 +313,7 @@ const styles = StyleSheet.create({
   /* ── Header ── */
   headerImage: {
     width: '100%',
-    height: 150,
+    height: hp(18),
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
@@ -331,20 +332,20 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     fontFamily: FONTS.regular,
-    fontSize: 22,
+    fontSize: normalize(22),
     color: '#FFF',
     fontWeight: '800',
     textAlign: 'center',
-    letterSpacing: 0.4,
+    letterSpacing: normalize(0.4),
   },
   headerRight: {
     flexDirection: 'row',
     gap: SPACING.sm,
   },
   iconButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: normalize(36),
+    height: normalize(36),
+    borderRadius: normalize(18),
     backgroundColor: 'rgba(255,255,255,0.18)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -359,7 +360,7 @@ const styles = StyleSheet.create({
   },
   tab: {
     flex: 1,
-    paddingVertical: 13,
+    paddingVertical: normalize(13),
     alignItems: 'center',
     borderBottomWidth: 3,
     borderBottomColor: 'transparent',
@@ -367,7 +368,7 @@ const styles = StyleSheet.create({
   activeTab: {},
   tabText: {
     fontFamily: FONTS.regular,
-    fontSize: 13,
+    fontSize: normalize(13),
     fontWeight: '500',
   },
 
@@ -379,7 +380,7 @@ const styles = StyleSheet.create({
 
   /* ── Booking Card ── */
   bookingCard: {
-    borderRadius: 16,
+    borderRadius: normalize(16),
     padding: SPACING.lg,
     marginBottom: SPACING.md,
     ...SHADOWS.md,
@@ -392,9 +393,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   typeIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
+    width: normalize(36),
+    height: normalize(36),
+    borderRadius: normalize(12),
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: SPACING.sm,
@@ -402,26 +403,26 @@ const styles = StyleSheet.create({
   bookingType: {
     flex: 1,
     fontFamily: FONTS.regular,
-    fontSize: 15,
+    fontSize: normalize(15),
     fontWeight: '700',
   },
   statusPill: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
+    paddingHorizontal: normalize(10),
+    paddingVertical: normalize(4),
+    borderRadius: normalize(20),
   },
   statusPillText: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
+    fontSize: normalize(11),
     fontWeight: '700',
-    letterSpacing: 0.3,
+    letterSpacing: normalize(0.3),
   },
 
   /* ── Route Display ── */
   routeSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: normalize(6),
     marginBottom: SPACING.sm,
   },
   routeBox: {
@@ -429,22 +430,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    gap: 6,
+    borderRadius: normalize(12),
+    paddingHorizontal: normalize(10),
+    paddingVertical: normalize(10),
+    gap: normalize(6),
   },
   routeText: {
     flex: 1,
     fontFamily: FONTS.regular,
-    fontSize: 12,
+    fontSize: normalize(12),
     fontWeight: '500',
-    lineHeight: 16,
+    lineHeight: normalize(16),
   },
   routeArrow: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: normalize(26),
+    height: normalize(26),
+    borderRadius: normalize(13),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -453,20 +454,20 @@ const styles = StyleSheet.create({
   metaRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: normalize(8),
     marginBottom: SPACING.sm,
   },
   metaChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 20,
+    gap: normalize(5),
+    paddingHorizontal: normalize(10),
+    paddingVertical: normalize(5),
+    borderRadius: normalize(20),
   },
   metaChipText: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
+    fontSize: normalize(11),
     fontWeight: '500',
   },
 
@@ -490,7 +491,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontFamily: FONTS.regular,
-    fontSize: 14,
+    fontSize: normalize(14),
     marginTop: SPACING.md,
   },
   emptyContainer: {
@@ -501,12 +502,12 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontFamily: FONTS.regular,
-    fontSize: 16,
+    fontSize: normalize(16),
     fontWeight: '600',
   },
   emptySubtext: {
     fontFamily: FONTS.regular,
-    fontSize: 13,
+    fontSize: normalize(13),
   },
 });
 

@@ -36,6 +36,7 @@ import {
   IndianRupee,
 } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
+import { normalize, hp } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { Card } from '@components/common/Card';
 import { walletApi, coinApi } from '@utils/apiClient';
@@ -543,7 +544,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
 
   // ── Header ──
-  headerImage: { width: '100%', height: 180 },
+  headerImage: { width: '100%', height: hp(22) },
   headerOverlay: { ...StyleSheet.absoluteFillObject, opacity: 0.65 },
   blurContainer: { flex: 1, overflow: 'hidden' },
   headerNav: {
@@ -555,14 +556,14 @@ const styles = StyleSheet.create({
     paddingTop: SPACING.xl,
   },
   navButton: {
-    width: 40, height: 40, borderRadius: 20,
+    width: normalize(40), height: normalize(40), borderRadius: normalize(20),
     backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center', alignItems: 'center',
   },
   headerCenter: { flex: 1, alignItems: 'center' },
-  navTitle: { fontFamily: FONTS.regular, fontSize: 20, fontWeight: 'bold', color: '#FFF' },
+  navTitle: { fontFamily: FONTS.regular, fontSize: normalize(20), fontWeight: 'bold', color: '#FFF' },
   navSubtitle: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: 'rgba(255,255,255,0.85)', marginTop: 2 },
-  navPlaceholder: { width: 40 },
+  navPlaceholder: { width: normalize(40) },
 
   // ── Loading ──
   loadingWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: SPACING.sm },
@@ -586,22 +587,22 @@ const styles = StyleSheet.create({
   },
   balanceTop: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.xs },
   balanceIconWrap: {
-    width: 44, height: 44, borderRadius: 22,
+    width: normalize(44), height: normalize(44), borderRadius: normalize(22),
     backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center',
   },
   balanceLabel: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: 'rgba(255,255,255,0.8)' },
-  balanceAmount: { fontFamily: FONTS.regular, fontSize: 38, fontWeight: 'bold', color: '#FFF', marginBottom: 4 },
-  lockedRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: SPACING.sm },
-  lockedText: { fontFamily: FONTS.regular, fontSize: 12, color: 'rgba(255,255,255,0.7)' },
+  balanceAmount: { fontFamily: FONTS.regular, fontSize: normalize(38), fontWeight: 'bold', color: '#FFF', marginBottom: 4 },
+  lockedRow: { flexDirection: 'row', alignItems: 'center', gap: normalize(5), marginBottom: SPACING.sm },
+  lockedText: { fontFamily: FONTS.regular, fontSize: normalize(12), color: 'rgba(255,255,255,0.7)' },
   bookingStatusRow: { marginBottom: SPACING.md },
   bookingStatusPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 10, paddingVertical: 5, borderRadius: BORDER_RADIUS.round, alignSelf: 'flex-start',
+    flexDirection: 'row', alignItems: 'center', gap: normalize(5),
+    paddingHorizontal: normalize(10), paddingVertical: normalize(5), borderRadius: BORDER_RADIUS.round, alignSelf: 'flex-start',
   },
-  bookingStatusText: { fontFamily: FONTS.regular, fontSize: 11, fontWeight: '600' },
+  bookingStatusText: { fontFamily: FONTS.regular, fontSize: normalize(11), fontWeight: '600' },
   addMoneyBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.2)', paddingVertical: 11,
+    backgroundColor: 'rgba(255,255,255,0.2)', paddingVertical: normalize(11),
     borderRadius: BORDER_RADIUS.md, gap: 6,
   },
   addMoneyText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.md, color: '#FFF', fontWeight: '700' },
@@ -612,9 +613,9 @@ const styles = StyleSheet.create({
     flex: 1, borderRadius: BORDER_RADIUS.lg, padding: SPACING.md, alignItems: 'center', ...SHADOWS.sm,
   },
   statIconWrap: {
-    width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginBottom: 6,
+    width: normalize(40), height: normalize(40), borderRadius: normalize(20), justifyContent: 'center', alignItems: 'center', marginBottom: normalize(6),
   },
-  statCardLabel: { fontFamily: FONTS.regular, fontSize: 11, marginBottom: 2 },
+  statCardLabel: { fontFamily: FONTS.regular, fontSize: normalize(11), marginBottom: 2 },
   statCardValue: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.lg, fontWeight: 'bold' },
 
   // ── Info Banner ──
@@ -634,11 +635,11 @@ const styles = StyleSheet.create({
   seeAllText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, fontWeight: '600' },
   txCard: { borderRadius: BORDER_RADIUS.lg, overflow: 'hidden', ...SHADOWS.sm },
   txItem: { flexDirection: 'row', alignItems: 'center', padding: SPACING.md },
-  txIcon: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginRight: SPACING.sm },
+  txIcon: { width: normalize(40), height: normalize(40), borderRadius: normalize(20), justifyContent: 'center', alignItems: 'center', marginRight: SPACING.sm },
   txDetails: { flex: 1 },
   txDesc: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, fontWeight: '500' },
-  txMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
-  txDate: { fontFamily: FONTS.regular, fontSize: 11 },
+  txMetaRow: { flexDirection: 'row', alignItems: 'center', gap: normalize(5), marginTop: 2 },
+  txDate: { fontFamily: FONTS.regular, fontSize: normalize(11) },
   txAmount: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.md, fontWeight: 'bold', marginLeft: SPACING.xs },
   txDivider: { height: 1, marginHorizontal: SPACING.md },
 
@@ -655,14 +656,14 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md, ...SHADOWS.sm,
   },
   coinIconWrap: {
-    width: 56, height: 56, borderRadius: 28,
+    width: normalize(56), height: normalize(56), borderRadius: normalize(28),
     backgroundColor: '#F5A623' + '18', justifyContent: 'center', alignItems: 'center', marginBottom: SPACING.xs,
   },
   coinLabel: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm },
-  coinAmount: { fontFamily: FONTS.regular, fontSize: 44, fontWeight: 'bold', color: '#8B5E00' },
+  coinAmount: { fontFamily: FONTS.regular, fontSize: normalize(44), fontWeight: 'bold', color: '#8B5E00' },
   coinWorthPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 3,
-    backgroundColor: '#FFF8E7', paddingHorizontal: 10, paddingVertical: 4,
+    flexDirection: 'row', alignItems: 'center', gap: normalize(3),
+    backgroundColor: '#FFF8E7', paddingHorizontal: normalize(10), paddingVertical: normalize(4),
     borderRadius: BORDER_RADIUS.round, marginTop: 4, marginBottom: SPACING.md,
   },
   coinWorthText: { fontFamily: FONTS.regular, fontSize: 12, fontWeight: '600', color: '#8B5E00' },
@@ -671,14 +672,14 @@ const styles = StyleSheet.create({
   },
   coinStatItem: { flex: 1, alignItems: 'center' },
   coinStatVal: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.xl, fontWeight: 'bold', color: '#8B5E00' },
-  coinStatLbl: { fontFamily: FONTS.regular, fontSize: 11, marginTop: 2 },
-  coinStatDivider: { width: 1, height: 30, alignSelf: 'center' },
+  coinStatLbl: { fontFamily: FONTS.regular, fontSize: normalize(11), marginTop: 2 },
+  coinStatDivider: { width: 1, height: normalize(30), alignSelf: 'center' },
 
   // ── Coin Actions ──
   actionRow: { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.md },
   coinActionBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    backgroundColor: '#F5A623', paddingVertical: 11, borderRadius: BORDER_RADIUS.md, gap: 6,
+    backgroundColor: '#F5A623', paddingVertical: normalize(11), borderRadius: BORDER_RADIUS.md, gap: normalize(6),
   },
   coinActionText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: '#FFF', fontWeight: '700' },
 
@@ -688,43 +689,43 @@ const styles = StyleSheet.create({
   howToTitle: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.lg, fontWeight: 'bold' },
   howToStep: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.sm },
   howToNum: {
-    width: 24, height: 24, borderRadius: 12, backgroundColor: '#F5A623',
+    width: normalize(24), height: normalize(24), borderRadius: normalize(12), backgroundColor: '#F5A623',
     justifyContent: 'center', alignItems: 'center',
   },
-  howToNumText: { fontFamily: FONTS.regular, fontSize: 11, fontWeight: 'bold', color: '#FFF' },
-  howToStepText: { flex: 1, fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, lineHeight: 20 },
+  howToNumText: { fontFamily: FONTS.regular, fontSize: normalize(11), fontWeight: 'bold', color: '#FFF' },
+  howToStepText: { flex: 1, fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, lineHeight: normalize(20) },
   howToNote: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
+    flexDirection: 'row', alignItems: 'center', gap: normalize(6),
     padding: SPACING.sm, borderRadius: BORDER_RADIUS.md, marginTop: SPACING.xs,
   },
-  howToNoteText: { flex: 1, fontFamily: FONTS.regular, fontSize: 11, color: '#8B5E00', lineHeight: 16 },
+  howToNoteText: { flex: 1, fontFamily: FONTS.regular, fontSize: normalize(11), color: '#8B5E00', lineHeight: normalize(16) },
 
   // ── Modal ──
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: SPACING.lg, paddingBottom: SPACING.xl },
-  modalHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#DDD', alignSelf: 'center', marginBottom: SPACING.md },
+  modalContent: { borderTopLeftRadius: normalize(24), borderTopRightRadius: normalize(24), padding: SPACING.lg, paddingBottom: SPACING.xl },
+  modalHandle: { width: normalize(40), height: normalize(4), borderRadius: normalize(2), backgroundColor: '#DDD', alignSelf: 'center', marginBottom: SPACING.md },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.lg },
-  modalTitle: { fontFamily: FONTS.regular, fontSize: 20, fontWeight: 'bold' },
-  modalClose: { padding: 4 },
+  modalTitle: { fontFamily: FONTS.regular, fontSize: normalize(20), fontWeight: 'bold' },
+  modalClose: { padding: normalize(4) },
   inputLabel: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, marginBottom: SPACING.sm },
   amountInputWrap: {
     flexDirection: 'row', alignItems: 'center', borderWidth: 2,
     borderRadius: BORDER_RADIUS.md, paddingHorizontal: SPACING.md, marginBottom: SPACING.lg,
   },
-  currencySymbol: { fontFamily: FONTS.regular, fontSize: 24, fontWeight: 'bold' },
+  currencySymbol: { fontFamily: FONTS.regular, fontSize: normalize(24), fontWeight: 'bold' },
   amountInput: {
-    flex: 1, fontFamily: FONTS.regular, fontSize: 32, fontWeight: 'bold',
+    flex: 1, fontFamily: FONTS.regular, fontSize: normalize(32), fontWeight: 'bold',
     paddingVertical: SPACING.md, marginLeft: SPACING.xs,
   },
   quickLabel: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, marginBottom: SPACING.sm },
   quickRow: { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.lg },
   quickBtn: {
-    flex: 1, paddingVertical: 10, borderRadius: BORDER_RADIUS.md, alignItems: 'center', borderWidth: 1,
+    flex: 1, paddingVertical: normalize(10), borderRadius: BORDER_RADIUS.md, alignItems: 'center', borderWidth: 1,
   },
   quickBtnText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.md, fontWeight: '600' },
   confirmBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    paddingVertical: 14, borderRadius: BORDER_RADIUS.md, gap: SPACING.sm,
+    paddingVertical: normalize(14), borderRadius: BORDER_RADIUS.md, gap: SPACING.sm,
   },
   confirmBtnText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.md, color: '#FFF', fontWeight: 'bold' },
 });

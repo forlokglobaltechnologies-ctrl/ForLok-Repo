@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useSOS } from '@context/SOSContext';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '@constants/theme';
+import { normalize, wp } from '@utils/responsive';
 import LottieView from 'lottie-react-native';
 
 // Screens where SOS button should be hidden (auth/onboarding + admin screens)
@@ -266,16 +267,16 @@ const styles = StyleSheet.create({
   // Floating button
   floatingContainer: {
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 90 : 75,
-    right: 8,
+    bottom: Platform.OS === 'ios' ? normalize(90) : normalize(75),
+    right: normalize(8),
     zIndex: 99999,
     elevation: 99999,
-    width: 70,
-    height: 70,
+    width: normalize(70),
+    height: normalize(70),
   },
   sosLottie: {
-    width: 70,
-    height: 70,
+    width: normalize(70),
+    height: normalize(70),
   },
 
   // Modal
@@ -288,33 +289,33 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: COLORS.white,
-    borderRadius: 20,
+    borderRadius: normalize(20),
     padding: SPACING.xl,
     width: '100%',
-    maxWidth: 360,
+    maxWidth: wp(90),
     alignItems: 'center',
   },
 
   // Warning icon
   warningIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: normalize(64),
+    height: normalize(64),
+    borderRadius: normalize(32),
     backgroundColor: '#FFEBEE',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: SPACING.md,
   },
   warningIconText: {
-    fontSize: 32,
+    fontSize: normalize(32),
     fontFamily: FONTS.regular,
   },
 
   // Result icon
   resultIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: normalize(64),
+    height: normalize(64),
+    borderRadius: normalize(32),
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: SPACING.md,
@@ -326,14 +327,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFEBEE',
   },
   resultIconText: {
-    fontSize: 32,
+    fontSize: normalize(32),
     fontWeight: 'bold',
     fontFamily: FONTS.regular,
   },
 
   modalTitle: {
     fontFamily: FONTS.regular,
-    fontSize: 22,
+    fontSize: normalize(22),
     fontWeight: 'bold',
     color: COLORS.text,
     marginBottom: SPACING.sm,
@@ -344,7 +345,7 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sizes.sm,
     color: COLORS.textSecondary,
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: normalize(22),
     marginBottom: SPACING.lg,
   },
 
@@ -355,9 +356,9 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   progressRing: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: normalize(120),
+    height: normalize(120),
+    borderRadius: normalize(60),
     backgroundColor: '#FFCDD2',
     justifyContent: 'center',
     alignItems: 'center',
@@ -366,16 +367,16 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     ...StyleSheet.absoluteFillObject,
-    borderRadius: 60,
+    borderRadius: normalize(60),
   },
   holdButton: {
-    width: 104,
-    height: 104,
-    borderRadius: 52,
+    width: normalize(104),
+    height: normalize(104),
+    borderRadius: normalize(52),
     backgroundColor: '#D32F2F',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 3,
+    borderWidth: normalize(3),
     borderColor: '#B71C1C',
   },
   holdButtonActive: {
@@ -389,14 +390,14 @@ const styles = StyleSheet.create({
   holdButtonText: {
     fontFamily: FONTS.regular,
     color: '#FFFFFF',
-    fontSize: 20,
+    fontSize: normalize(20),
     fontWeight: '900',
     letterSpacing: 1,
   },
   holdButtonSubtext: {
     fontFamily: FONTS.regular,
     color: '#FFCDD2',
-    fontSize: 10,
+    fontSize: normalize(10),
     fontWeight: '600',
     marginTop: 2,
   },
@@ -407,15 +408,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
   },
   progressBarBg: {
-    height: 6,
+    height: normalize(6),
     backgroundColor: '#FFCDD2',
-    borderRadius: 3,
+    borderRadius: normalize(3),
     overflow: 'hidden',
   },
   progressBarFill: {
     height: '100%',
     backgroundColor: '#D32F2F',
-    borderRadius: 3,
+    borderRadius: normalize(3),
   },
 
   // Buttons

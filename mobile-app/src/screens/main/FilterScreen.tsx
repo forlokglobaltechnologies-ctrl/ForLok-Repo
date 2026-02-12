@@ -11,6 +11,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { Check, X } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '@constants/theme';
+import { normalize, wp, hp } from '@utils/responsive';
 import { Button } from '@components/common/Button';
 import { Card } from '@components/common/Card';
 import { useLanguage } from '@context/LanguageContext';
@@ -301,9 +302,9 @@ const styles = StyleSheet.create({
   checkboxRow: { flexDirection: 'row', gap: SPACING.lg },
   checkbox: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
   checkboxEmpty: {
-    width: 20,
-    height: 20,
-    borderRadius: 4,
+    width: normalize(20),
+    height: normalize(20),
+    borderRadius: normalize(4),
     borderWidth: 2,
     borderColor: COLORS.border,
   },

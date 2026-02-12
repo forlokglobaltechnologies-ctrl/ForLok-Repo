@@ -8,7 +8,6 @@ import {
   SafeAreaView,
   ImageBackground,
   Linking,
-  Dimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import {
@@ -29,11 +28,11 @@ import {
   Zap,
 } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
+import { normalize, wp, hp } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, SHADOWS } from '@constants/theme';
 import { useLanguage } from '@context/LanguageContext';
 import { useTheme } from '@context/ThemeContext';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const AboutScreen = () => {
   const navigation = useNavigation<any>();
@@ -43,47 +42,47 @@ const AboutScreen = () => {
   const features = [
     {
       icon: Users,
-      title: 'Community First',
-      description: 'Connect with trusted travelers and share rides safely',
+      title: t('aboutScreen.feature1Title'),
+      description: t('aboutScreen.feature1Description'),
       color: '#4CAF50',
     },
     {
       icon: Shield,
-      title: 'Safe & Secure',
-      description: 'Verified users, secure payments, and 24/7 support',
+      title: t('aboutScreen.feature2Title'),
+      description: t('aboutScreen.feature2Description'),
       color: '#2196F3',
     },
     {
       icon: Leaf,
-      title: 'Eco-Friendly',
-      description: 'Reduce carbon footprint by sharing your journey',
+      title: t('aboutScreen.feature3Title'),
+      description: t('aboutScreen.feature3Description'),
       color: '#66BB6A',
     },
     {
       icon: Car,
-      title: 'Flexible Options',
-      description: 'Pooling for daily commutes, rentals for special occasions',
+      title: t('aboutScreen.feature4Title'),
+      description: t('aboutScreen.feature4Description'),
       color: '#FF9800',
     },
   ];
 
   const stats = [
-    { value: '50K+', label: 'Users', icon: Users },
-    { value: '120K+', label: 'Rides', icon: Car },
-    { value: '4.8', label: 'Rating', icon: Sparkles },
+    { value: '50K+', label: t('aboutScreen.users'), icon: Users },
+    { value: '120K+', label: t('aboutScreen.rides'), icon: Car },
+    { value: '4.8', label: t('aboutScreen.rating'), icon: Sparkles },
   ];
 
   const contactItems = [
-    { icon: Mail, label: 'Email', value: 'support@forlok.com', action: 'mailto:support@forlok.com' },
-    { icon: Phone, label: 'Phone', value: '+91 98765 43210', action: 'tel:+919876543210' },
-    { icon: Globe, label: 'Website', value: 'www.forlok.com', action: 'https://forlok.com' },
-    { icon: MapPin, label: 'Address', value: 'Hyderabad, Telangana, India', action: null },
+    { icon: Mail, label: t('aboutScreen.email'), value: 'support@forlok.com', action: 'mailto:support@forlok.com' },
+    { icon: Phone, label: t('aboutScreen.phone'), value: '+91 98765 43210', action: 'tel:+919876543210' },
+    { icon: Globe, label: t('aboutScreen.website'), value: 'www.forlok.com', action: 'https://forlok.com' },
+    { icon: MapPin, label: t('aboutScreen.address'), value: 'Hyderabad, Telangana, India', action: null },
   ];
 
   const legalItems = [
-    { label: 'Terms & Conditions', route: 'TermsConditions' },
-    { label: 'Privacy Policy', route: 'PrivacyPolicy' },
-    { label: 'Patents & Copyrights', route: 'IntellectualProperty' },
+    { label: t('aboutScreen.termsOfService'), route: 'TermsConditions' },
+    { label: t('aboutScreen.privacyPolicy'), route: 'PrivacyPolicy' },
+    { label: t('aboutScreen.intellectualProperty'), route: 'IntellectualProperty' },
   ];
 
   const handleOpenLink = (url: string) => {
@@ -104,8 +103,8 @@ const AboutScreen = () => {
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.navButton}>
               <ArrowLeft size={22} color="#FFF" />
             </TouchableOpacity>
-            <Text style={styles.navTitle}>About Us</Text>
-            <View style={{ width: 38 }} />
+            <Text style={styles.navTitle}>{t('aboutScreen.title')}</Text>
+            <View style={{ width: normalize(38) }} />
           </View>
         </BlurView>
       </ImageBackground>
@@ -118,7 +117,7 @@ const AboutScreen = () => {
             <Text style={styles.logoLetter}>F</Text>
           </View>
           <Text style={[styles.brandName, { color: theme.colors.text }]}>Forlok</Text>
-          <Text style={[styles.tagline, { color: theme.colors.textSecondary }]}>Your Journey, Our Commitment</Text>
+          <Text style={[styles.tagline, { color: theme.colors.textSecondary }]}>{t('aboutScreen.tagline')}</Text>
           <View style={[styles.versionPill, { backgroundColor: theme.colors.primary + '12' }]}>
             <Text style={[styles.versionText, { color: theme.colors.primary }]}>v1.0.0</Text>
           </View>
@@ -141,23 +140,17 @@ const AboutScreen = () => {
             <View style={[styles.cardTitleIcon, { backgroundColor: theme.colors.primary + '12' }]}>
               <Target size={18} color={theme.colors.primary} />
             </View>
-            <Text style={[styles.cardTitle, { color: theme.colors.text }]}>Who We Are</Text>
+            <Text style={[styles.cardTitle, { color: theme.colors.text }]}>{t('aboutScreen.whoWeAre')}</Text>
           </View>
-          <Text style={[styles.bodyText, { color: theme.colors.textSecondary }]}>
-            Forlok is a revolutionary ride-sharing platform designed specifically for Indian travelers.
-            We connect people who are heading in the same direction, making travel more affordable,
-            social, and environmentally friendly.
-          </Text>
           <Text style={[styles.bodyText, { color: theme.colors.textSecondary, marginBottom: 0 }]}>
-            Whether you're commuting daily or planning a long trip, Forlok helps you find the
-            perfect travel companion while sharing costs and reducing your carbon footprint.
+            {t('aboutScreen.missionText')}
           </Text>
         </View>
 
         {/* ── Features Grid ── */}
         <View style={styles.sectionTitleRow}>
           <Zap size={18} color={theme.colors.primary} />
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Why Choose Forlok</Text>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t('aboutScreen.whyChoose')}</Text>
         </View>
         <View style={styles.featuresGrid}>
           {features.map((feature, index) => {
@@ -177,7 +170,7 @@ const AboutScreen = () => {
         {/* ── Contact Card ── */}
         <View style={styles.sectionTitleRow}>
           <Mail size={18} color={theme.colors.primary} />
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Contact Us</Text>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t('aboutScreen.contactUs')}</Text>
         </View>
         <View style={[styles.card, { backgroundColor: theme.colors.surface, padding: 0 }]}>
           {contactItems.map((item, index) => (
@@ -204,7 +197,7 @@ const AboutScreen = () => {
         {/* ── Legal Card ── */}
         <View style={styles.sectionTitleRow}>
           <Shield size={18} color={theme.colors.primary} />
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Legal</Text>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t('aboutScreen.legal')}</Text>
         </View>
         <View style={[styles.card, { backgroundColor: theme.colors.surface, padding: 0 }]}>
           {legalItems.map((item, index) => (
@@ -221,12 +214,12 @@ const AboutScreen = () => {
         {/* ── Footer ── */}
         <View style={styles.footer}>
           <View style={styles.footerRow}>
-            <Text style={[styles.footerText, { color: theme.colors.textSecondary }]}>Made with</Text>
+            <Text style={[styles.footerText, { color: theme.colors.textSecondary }]}>{t('aboutScreen.madeWith')}</Text>
             <Heart size={14} color="#F44336" fill="#F44336" />
-            <Text style={[styles.footerText, { color: theme.colors.textSecondary }]}>in India</Text>
+            <Text style={[styles.footerText, { color: theme.colors.textSecondary }]}>{t('aboutScreen.inIndia')}</Text>
           </View>
           <Text style={[styles.copyright, { color: theme.colors.textSecondary }]}>
-            {'\u00A9'} 2026 Forlok. All rights reserved.
+            {t('aboutScreen.copyright')}
           </Text>
         </View>
       </ScrollView>
@@ -243,7 +236,7 @@ const styles = StyleSheet.create({
   /* ── Hero Header ── */
   headerImage: {
     width: '100%',
-    height: 160,
+    height: hp(20),
   },
   headerOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -260,9 +253,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   navButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: normalize(38),
+    height: normalize(38),
+    borderRadius: normalize(19),
     backgroundColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -270,11 +263,11 @@ const styles = StyleSheet.create({
   navTitle: {
     flex: 1,
     fontFamily: FONTS.regular,
-    fontSize: 22,
+    fontSize: normalize(22),
     color: '#FFF',
     fontWeight: '800',
     textAlign: 'center',
-    letterSpacing: 0.4,
+    letterSpacing: normalize(0.4),
   },
 
   /* ── Scroll ── */
@@ -285,47 +278,47 @@ const styles = StyleSheet.create({
 
   /* ── Brand Card ── */
   brandCard: {
-    borderRadius: 20,
+    borderRadius: normalize(20),
     padding: SPACING.xl,
     alignItems: 'center',
     marginBottom: SPACING.md,
     ...SHADOWS.md,
   },
   logoCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: normalize(64),
+    height: normalize(64),
+    borderRadius: normalize(32),
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: SPACING.sm,
   },
   logoLetter: {
     fontFamily: FONTS.regular,
-    fontSize: 30,
+    fontSize: normalize(30),
     fontWeight: '900',
     color: '#FFF',
   },
   brandName: {
     fontFamily: FONTS.regular,
-    fontSize: 28,
+    fontSize: normalize(28),
     fontWeight: '800',
     letterSpacing: 1,
-    marginBottom: 4,
+    marginBottom: normalize(4),
   },
   tagline: {
     fontFamily: FONTS.regular,
-    fontSize: 14,
+    fontSize: normalize(14),
     fontWeight: '500',
     marginBottom: SPACING.sm,
   },
   versionPill: {
-    paddingHorizontal: 14,
-    paddingVertical: 4,
-    borderRadius: 20,
+    paddingHorizontal: normalize(14),
+    paddingVertical: normalize(4),
+    borderRadius: normalize(20),
   },
   versionText: {
     fontFamily: FONTS.regular,
-    fontSize: 12,
+    fontSize: normalize(12),
     fontWeight: '700',
   },
 
@@ -337,26 +330,26 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    borderRadius: 16,
-    paddingVertical: 14,
+    borderRadius: normalize(16),
+    paddingVertical: normalize(14),
     alignItems: 'center',
-    gap: 4,
+    gap: normalize(4),
     ...SHADOWS.sm,
   },
   statValue: {
     fontFamily: FONTS.regular,
-    fontSize: 20,
+    fontSize: normalize(20),
     fontWeight: '800',
   },
   statLabel: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
+    fontSize: normalize(11),
     fontWeight: '500',
   },
 
   /* ── Generic Card ── */
   card: {
-    borderRadius: 16,
+    borderRadius: normalize(16),
     padding: SPACING.lg,
     marginBottom: SPACING.md,
     ...SHADOWS.md,
@@ -364,25 +357,25 @@ const styles = StyleSheet.create({
   cardTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: normalize(10),
     marginBottom: SPACING.md,
   },
   cardTitleIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+    width: normalize(34),
+    height: normalize(34),
+    borderRadius: normalize(10),
     alignItems: 'center',
     justifyContent: 'center',
   },
   cardTitle: {
     fontFamily: FONTS.regular,
-    fontSize: 17,
+    fontSize: normalize(17),
     fontWeight: '700',
   },
   bodyText: {
     fontFamily: FONTS.regular,
-    fontSize: 14,
-    lineHeight: 22,
+    fontSize: normalize(14),
+    lineHeight: normalize(22),
     marginBottom: SPACING.sm,
   },
 
@@ -390,13 +383,13 @@ const styles = StyleSheet.create({
   sectionTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: normalize(8),
     marginBottom: SPACING.md,
     marginTop: SPACING.sm,
   },
   sectionTitle: {
     fontFamily: FONTS.regular,
-    fontSize: 17,
+    fontSize: normalize(17),
     fontWeight: '700',
   },
 
@@ -408,32 +401,32 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   featureCard: {
-    width: (SCREEN_WIDTH - SPACING.md * 2 - SPACING.sm) / 2,
-    borderRadius: 16,
+    width: (wp(100) - SPACING.md * 2 - SPACING.sm) / 2,
+    borderRadius: normalize(16),
     padding: SPACING.md,
     alignItems: 'center',
     ...SHADOWS.sm,
   },
   featureIconCircle: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: normalize(50),
+    height: normalize(50),
+    borderRadius: normalize(25),
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: SPACING.sm,
   },
   featureTitle: {
     fontFamily: FONTS.regular,
-    fontSize: 13,
+    fontSize: normalize(13),
     fontWeight: '700',
     textAlign: 'center',
-    marginBottom: 4,
+    marginBottom: normalize(4),
   },
   featureDesc: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
+    fontSize: normalize(11),
     textAlign: 'center',
-    lineHeight: 16,
+    lineHeight: normalize(16),
   },
 
   /* ── Contact ── */
@@ -441,28 +434,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: SPACING.lg,
-    paddingVertical: 14,
+    paddingVertical: normalize(14),
   },
   contactIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: normalize(40),
+    height: normalize(40),
+    borderRadius: normalize(12),
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: normalize(12),
   },
   contactInfo: {
     flex: 1,
   },
   contactLabel: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
+    fontSize: normalize(11),
     fontWeight: '500',
-    marginBottom: 2,
+    marginBottom: normalize(2),
   },
   contactValue: {
     fontFamily: FONTS.regular,
-    fontSize: 14,
+    fontSize: normalize(14),
     fontWeight: '600',
   },
   divider: {
@@ -476,11 +469,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: SPACING.lg,
-    paddingVertical: 15,
+    paddingVertical: normalize(15),
   },
   legalText: {
     fontFamily: FONTS.regular,
-    fontSize: 14,
+    fontSize: normalize(14),
     fontWeight: '500',
   },
 
@@ -488,20 +481,20 @@ const styles = StyleSheet.create({
   footer: {
     alignItems: 'center',
     marginTop: SPACING.lg,
-    gap: 6,
+    gap: normalize(6),
   },
   footerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: normalize(5),
   },
   footerText: {
     fontFamily: FONTS.regular,
-    fontSize: 13,
+    fontSize: normalize(13),
   },
   copyright: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
+    fontSize: normalize(11),
   },
 });
 

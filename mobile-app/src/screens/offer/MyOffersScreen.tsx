@@ -15,6 +15,7 @@ import {
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { ArrowLeft, Plus, Car, AlertCircle, X, Clock, MessageCircle, MapPin, ArrowRight, Calendar, Users, Bike, ChevronRight } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
+import { normalize, wp, hp } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { Card } from '@components/common/Card';
 import { Button } from '@components/common/Button';
@@ -569,7 +570,7 @@ const styles = StyleSheet.create({
   /* ── Hero Header ── */
   headerImage: {
     width: '100%',
-    height: 170,
+    height: hp(21),
   },
   headerOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -586,9 +587,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   navButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: normalize(36),
+    height: normalize(36),
+    borderRadius: normalize(18),
     backgroundColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -599,17 +600,17 @@ const styles = StyleSheet.create({
   },
   navTitle: {
     fontFamily: FONTS.regular,
-    fontSize: 22,
+    fontSize: normalize(22),
     color: '#FFF',
     fontWeight: '800',
     letterSpacing: 0.4,
   },
   navSubtitle: {
     fontFamily: FONTS.regular,
-    fontSize: 12,
+    fontSize: normalize(12),
     color: 'rgba(255,255,255,0.7)',
     fontWeight: '500',
-    marginTop: 2,
+    marginTop: normalize(2),
   },
   headerActions: {
     flexDirection: 'row',
@@ -626,16 +627,16 @@ const styles = StyleSheet.create({
   },
   tab: {
     flex: 1,
-    paddingVertical: 13,
+    paddingVertical: normalize(13),
     alignItems: 'center',
     borderBottomWidth: 3,
     borderBottomColor: 'transparent',
-    marginHorizontal: 2,
+    marginHorizontal: normalize(2),
   },
   activeTab: {},
   tabText: {
     fontFamily: FONTS.regular,
-    fontSize: 13,
+    fontSize: normalize(13),
     fontWeight: '500',
   },
 
@@ -647,7 +648,7 @@ const styles = StyleSheet.create({
 
   /* ── Offer Card ── */
   offerCard: {
-    borderRadius: 16,
+    borderRadius: normalize(16),
     padding: SPACING.lg,
     marginBottom: SPACING.md,
     ...SHADOWS.md,
@@ -660,9 +661,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   offerTypeIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
+    width: normalize(38),
+    height: normalize(38),
+    borderRadius: normalize(12),
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: SPACING.sm,
@@ -670,18 +671,18 @@ const styles = StyleSheet.create({
   offerType: {
     flex: 1,
     fontFamily: FONTS.regular,
-    fontSize: 16,
+    fontSize: normalize(16),
     fontWeight: '700',
     letterSpacing: 0.2,
   },
   statusPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 20,
+    paddingHorizontal: normalize(12),
+    paddingVertical: normalize(4),
+    borderRadius: normalize(20),
   },
   statusPillText: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
+    fontSize: normalize(11),
     fontWeight: '700',
     letterSpacing: 0.4,
   },
@@ -749,20 +750,20 @@ const styles = StyleSheet.create({
   },
   vehicleImage: {
     width: '100%',
-    height: 160,
-    borderRadius: 12,
+    height: hp(20),
+    borderRadius: normalize(12),
     marginBottom: SPACING.sm,
     backgroundColor: '#F0F0F0',
   },
   offerVehicle: {
     fontFamily: FONTS.regular,
-    fontSize: 16,
+    fontSize: normalize(16),
     fontWeight: '600',
     marginBottom: SPACING.sm,
   },
   bookedByText: {
     fontFamily: FONTS.regular,
-    fontSize: 13,
+    fontSize: normalize(13),
     marginTop: SPACING.xs,
   },
 
@@ -840,10 +841,10 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: COLORS.white,
-    borderRadius: 20,
+    borderRadius: normalize(20),
     padding: SPACING.xl,
     width: '100%',
-    maxWidth: 400,
+    maxWidth: wp(90),
     alignItems: 'center',
     ...SHADOWS.lg,
   },
@@ -860,7 +861,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontFamily: FONTS.regular,
-    fontSize: 20,
+    fontSize: normalize(20),
     color: COLORS.text,
     fontWeight: '700',
     marginBottom: SPACING.sm,
@@ -868,11 +869,11 @@ const styles = StyleSheet.create({
   },
   modalMessage: {
     fontFamily: FONTS.regular,
-    fontSize: 14,
+    fontSize: normalize(14),
     color: COLORS.textSecondary,
     textAlign: 'center',
     marginBottom: SPACING.xl,
-    lineHeight: 22,
+    lineHeight: normalize(22),
   },
   modalButtons: {
     flexDirection: 'row',
@@ -896,9 +897,9 @@ const styles = StyleSheet.create({
   },
   timeRemainingText: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
+    fontSize: normalize(11),
     color: COLORS.textSecondary,
-    marginTop: 3,
+    marginTop: normalize(3),
   },
 });
 

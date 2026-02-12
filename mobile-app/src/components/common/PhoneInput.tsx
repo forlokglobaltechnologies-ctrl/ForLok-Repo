@@ -7,6 +7,7 @@ import {
   TextInputProps,
 } from 'react-native';
 import { COLORS, FONTS, BORDER_RADIUS, SPACING } from '@constants/theme';
+import { normalize } from '@utils/responsive';
 
 interface PhoneInputProps extends Omit<TextInputProps, 'value' | 'onChangeText'> {
   label?: string;
@@ -95,7 +96,7 @@ const styles = StyleSheet.create({
   },
   flagEmoji: {
     fontFamily: FONTS.regular,
-    fontSize: 20,
+    fontSize: normalize(20),
     marginRight: SPACING.xs,
   },
   prefixText: {

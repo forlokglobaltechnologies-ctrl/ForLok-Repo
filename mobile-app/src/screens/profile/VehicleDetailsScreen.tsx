@@ -25,6 +25,7 @@ import {
   X,
   Edit,
 } from 'lucide-react-native';
+import { normalize, wp, hp } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, SHADOWS, BORDER_RADIUS } from '@constants/theme';
 import { Card } from '@components/common/Card';
 import { Button } from '@components/common/Button';
@@ -425,7 +426,7 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontWeight: 'bold',
   },
-  placeholder: { width: 40 },
+  placeholder: { width: normalize(40) },
   scrollView: {
     flex: 1,
   },
@@ -458,7 +459,7 @@ const styles = StyleSheet.create({
   },
   photoContainer: {
     width: '100%',
-    height: 200,
+    height: hp(25),
     borderRadius: BORDER_RADIUS.lg,
     overflow: 'hidden',
     marginBottom: SPACING.md,
@@ -496,7 +497,7 @@ const styles = StyleSheet.create({
     gap: SPACING.md,
   },
   detailIconContainer: {
-    width: 40,
+    width: normalize(40),
     alignItems: 'center',
   },
   detailInfo: {
@@ -522,8 +523,8 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
   },
   documentImageContainer: {
-    width: 50,
-    height: 50,
+    width: normalize(50),
+    height: normalize(50),
     borderRadius: BORDER_RADIUS.md,
     overflow: 'hidden',
     borderWidth: 1,
@@ -535,7 +536,7 @@ const styles = StyleSheet.create({
     resizeMode: 'cover',
   },
   documentIconContainer: {
-    width: 40,
+    width: normalize(40),
     alignItems: 'center',
   },
   documentInfo: {
@@ -550,7 +551,7 @@ const styles = StyleSheet.create({
   verifiedBadge: {
     alignSelf: 'flex-start',
     paddingHorizontal: SPACING.sm,
-    paddingVertical: 4,
+    paddingVertical: normalize(4),
     borderRadius: BORDER_RADIUS.sm,
   },
   verifiedText: {
@@ -584,7 +585,7 @@ const styles = StyleSheet.create({
   },
   photoThumbnail: {
     width: '100%',
-    height: 120,
+    height: normalize(120),
     borderRadius: BORDER_RADIUS.md,
     resizeMode: 'cover',
   },

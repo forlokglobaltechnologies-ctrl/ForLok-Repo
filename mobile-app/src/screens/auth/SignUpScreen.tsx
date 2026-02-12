@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ImageBackground } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ImageBackground } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowLeft, User, Building, Globe, Check } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { BlurView } from 'expo-blur';
 import { useLanguage } from '@context/LanguageContext';
-
-const { width } = Dimensions.get('window');
+import { normalize, wp, hp } from '@utils/responsive';
 
 const SignUpScreen = () => {
   const navigation = useNavigation();
@@ -201,9 +200,9 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
   },
   gradientBackground: {
-    paddingTop: 50,
+    paddingTop: hp(6),
     paddingBottom: SPACING.xl,
-    minHeight: 200,
+    minHeight: hp(25),
   },
   backButton: {
     marginLeft: SPACING.md,
@@ -230,8 +229,8 @@ const styles = StyleSheet.create({
   cardContainer: {
     flex: 1,
     backgroundColor: COLORS.white,
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
+    borderTopLeftRadius: normalize(32),
+    borderTopRightRadius: normalize(32),
     padding: SPACING.lg,
     paddingTop: SPACING.xl,
   },
@@ -263,7 +262,7 @@ const styles = StyleSheet.create({
   },
   languageArrow: {
     fontFamily: FONTS.regular,
-    fontSize: 12,
+    fontSize: normalize(12),
     color: COLORS.primary,
   },
   languageOptions: {
@@ -318,9 +317,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.85)',
   },
   iconWrapper: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: normalize(72),
+    height: normalize(72),
+    borderRadius: normalize(36),
     backgroundColor: COLORS.white,
     justifyContent: 'center',
     alignItems: 'center',
@@ -345,9 +344,9 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.xs,
   },
   bullet: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: normalize(6),
+    height: normalize(6),
+    borderRadius: normalize(3),
     backgroundColor: COLORS.primary,
     marginRight: SPACING.md,
   },

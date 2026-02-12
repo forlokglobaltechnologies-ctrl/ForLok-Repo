@@ -8,7 +8,6 @@ import {
   ImageBackground,
   Platform,
   StatusBar,
-  Dimensions,
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
@@ -29,10 +28,10 @@ import {
   Inbox,
 } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
+import { normalize, wp, hp } from '@utils/responsive';
 import { adminApi } from '@utils/apiClient';
 
-const { width } = Dimensions.get('window');
-const HEADER_HEIGHT = Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 180 : 200;
+const HEADER_HEIGHT = Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + hp(22) : hp(25);
 
 const formatNumber = (num: number): string => {
   if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
@@ -351,11 +350,11 @@ const styles = StyleSheet.create({
   titleContainer: { alignItems: 'center', marginTop: SPACING.sm },
   heroTitle: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.xxl, fontWeight: '700', color: '#fff', textAlign: 'center' },
   heroSubtitle: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: 'rgba(255, 255, 255, 0.9)', marginTop: SPACING.xs },
-  statsStrip: { flexDirection: 'row', marginHorizontal: SPACING.md, marginTop: -SPACING.md, padding: SPACING.md, backgroundColor: '#fff', borderRadius: 14, borderWidth: 1, borderColor: '#F1F5F9', ...SHADOWS.sm },
+  statsStrip: { flexDirection: 'row', marginHorizontal: SPACING.md, marginTop: -SPACING.md, padding: SPACING.md, backgroundColor: '#fff', borderRadius: normalize(14), borderWidth: 1, borderColor: '#F1F5F9', ...SHADOWS.sm },
   statCol: { flex: 1, alignItems: 'center' },
-  statIconChip: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center', marginBottom: SPACING.xs },
+  statIconChip: { width: normalize(36), height: normalize(36), borderRadius: normalize(18), justifyContent: 'center', alignItems: 'center', marginBottom: SPACING.xs },
   statValue: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.md, fontWeight: '700', color: COLORS.text },
-  statLabel: { fontFamily: FONTS.regular, fontSize: 10, color: COLORS.textSecondary, marginTop: 2 },
+  statLabel: { fontFamily: FONTS.regular, fontSize: normalize(10), color: COLORS.textSecondary, marginTop: normalize(2) },
   tabsScroll: { marginTop: SPACING.lg },
   tabsWrapper: { paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, gap: SPACING.sm },
   tabPill: { paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, borderRadius: BORDER_RADIUS.round, backgroundColor: '#fff', borderWidth: 1, borderColor: '#F1F5F9', marginRight: SPACING.sm },
@@ -366,22 +365,22 @@ const styles = StyleSheet.create({
   loadingContainer: { alignItems: 'center', paddingVertical: SPACING.xxl * 2 },
   loadingText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: COLORS.textSecondary, marginTop: SPACING.md },
   emptyContainer: { alignItems: 'center', paddingVertical: SPACING.xxl * 2 },
-  emptyIconWrap: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center', marginBottom: SPACING.lg },
+  emptyIconWrap: { width: normalize(80), height: normalize(80), borderRadius: normalize(40), backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center', marginBottom: SPACING.lg },
   emptyTitle: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.lg, fontWeight: '700', color: '#1E293B', marginBottom: SPACING.xs },
   emptyText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: '#94A3B8' },
-  userCard: { marginBottom: SPACING.md, padding: SPACING.md, borderRadius: 14, borderWidth: 1, borderColor: '#F1F5F9', backgroundColor: '#fff', ...SHADOWS.sm },
+  userCard: { marginBottom: SPACING.md, padding: SPACING.md, borderRadius: normalize(14), borderWidth: 1, borderColor: '#F1F5F9', backgroundColor: '#fff', ...SHADOWS.sm },
   userCardTop: { flexDirection: 'row', alignItems: 'flex-start' },
   avatarWrapper: { marginRight: SPACING.md },
-  avatarCircle: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' },
+  avatarCircle: { width: normalize(48), height: normalize(48), borderRadius: normalize(24), backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' },
   userInfo: { flex: 1 },
   userName: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.md, fontWeight: '700', color: COLORS.text },
-  userId: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.xs, color: COLORS.textSecondary, marginTop: 2 },
+  userId: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.xs, color: COLORS.textSecondary, marginTop: normalize(2) },
   badgeRow: { flexDirection: 'row', flexWrap: 'wrap', marginTop: SPACING.sm, gap: SPACING.xs },
-  statusBadge: { paddingHorizontal: SPACING.sm, paddingVertical: 4, borderRadius: BORDER_RADIUS.sm },
+  statusBadge: { paddingHorizontal: SPACING.sm, paddingVertical: normalize(4), borderRadius: BORDER_RADIUS.sm },
   statusText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.xs, fontWeight: '600' },
-  typeBadge: { paddingHorizontal: SPACING.sm, paddingVertical: 4, borderRadius: BORDER_RADIUS.sm, backgroundColor: '#F1F5F9' },
+  typeBadge: { paddingHorizontal: SPACING.sm, paddingVertical: normalize(4), borderRadius: BORDER_RADIUS.sm, backgroundColor: '#F1F5F9' },
   typeText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.xs, color: COLORS.textSecondary, fontWeight: '600' },
-  joinedRow: { flexDirection: 'row', alignItems: 'center', marginTop: SPACING.sm, gap: 4 },
+  joinedRow: { flexDirection: 'row', alignItems: 'center', marginTop: SPACING.sm, gap: normalize(4) },
   joinedText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.xs, color: COLORS.textSecondary },
   userActions: { flexDirection: 'row', flexWrap: 'wrap', marginTop: SPACING.md, paddingTop: SPACING.sm, borderTopWidth: 1, borderTopColor: '#F1F5F9', gap: SPACING.sm },
   actionBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, borderRadius: BORDER_RADIUS.sm, backgroundColor: COLORS.primary + '15', gap: SPACING.xs },

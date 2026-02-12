@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Ima
 import { useNavigation, useRoute } from '@react-navigation/native';
 import LottieView from 'lottie-react-native';
 import { ArrowLeft, Heart, Share2, Star, Minus, Plus, Tag, Car, Fuel, Settings, MapPin, IndianRupee, Clock, User } from 'lucide-react-native';
+import { normalize, wp, hp } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, SHADOWS, BORDER_RADIUS } from '@constants/theme';
 import { Button } from '@components/common/Button';
 import { Card } from '@components/common/Card';
@@ -18,10 +19,10 @@ const RentalDetailsScreen = () => {
   if (RENTAL_COMING_SOON) {
     return (
       <View style={{ flex: 1, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' }}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ position: 'absolute', top: 50, left: 16, zIndex: 10, width: 40, height: 40, borderRadius: 20, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' }}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ position: 'absolute', top: normalize(50), left: normalize(16), zIndex: 10, width: normalize(40), height: normalize(40), borderRadius: normalize(20), backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' }}>
           <ArrowLeft size={22} color="#1E293B" />
         </TouchableOpacity>
-        <LottieView source={require('../../../assets/videos/Coming soon.json')} autoPlay loop style={{ width: 300, height: 300 }} />
+        <LottieView source={require('../../../assets/videos/Coming soon.json')} autoPlay loop style={{ width: wp(75), height: wp(75) }} />
       </View>
     );
   }
@@ -65,12 +66,12 @@ const RentalDetailsScreen = () => {
         setRental(response.data);
         console.log('✅ Loaded rental offer details:', response.data);
       } else {
-        Alert.alert('Error', response.error || 'Failed to load offer details');
+        Alert.alert(t('common.error'), response.error || t('rentalDetails.bookingFailed'));
         navigation.goBack();
       }
     } catch (error: any) {
       console.error('❌ Error loading offer:', error);
-      Alert.alert('Error', `Failed to load offer: ${error.message || 'Unknown error'}`);
+      Alert.alert(t('common.error'), error.message || t('rentalDetails.bookingFailed'));
       navigation.goBack();
     } finally {
       setLoading(false);
@@ -125,7 +126,7 @@ const RentalDetailsScreen = () => {
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>Loading offer details...</Text>
+          <Text style={styles.loadingText}>{t('rentalDetails.loading')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -301,7 +302,7 @@ const RentalDetailsScreen = () => {
             <View style={styles.divider} />
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="small" color={COLORS.primary} />
-              <Text style={styles.loadingText}>Loading available time slots...</Text>
+              <Text style={styles.loadingText}>{t('rentalDetails.loading')}</Text>
             </View>
           </View>
         ) : rental.availableFrom && rental.availableUntil ? (
@@ -354,7 +355,7 @@ const RentalDetailsScreen = () => {
 
         {/* Action Buttons */}
         <Button 
-          title={bookingLoading ? 'Booking...' : t('rentalDetails.bookNow')} 
+          title={bookingLoading ? t('common.loading') : t('rentalDetails.bookNow')} 
           onPress={async () => {
             if (bookingLoading) return;
 
@@ -369,7 +370,7 @@ const RentalDetailsScreen = () => {
             } else if (hours >= rental.minimumHours) {
               bookingData.duration = hours;
             } else {
-              Alert.alert('Error', 'Please select a valid time slot or duration');
+              Alert.alert(t('common.error'), t('rentalDetails.pleaseSelectTimeSlot'));
               return;
             }
 
@@ -397,7 +398,7 @@ const RentalDetailsScreen = () => {
               if (response.success && response.data) {
                 const bookingId = response.data.bookingId || response.data._id;
                 Alert.alert(
-                  'Booking Confirmed!',
+                  t('rentalDetails.bookingSuccess'),
                   'Your rental has been booked. Payment will be collected at the end of the trip.',
                   [
                     {
@@ -409,14 +410,14 @@ const RentalDetailsScreen = () => {
                         } as never);
                       },
                     },
-                    { text: 'OK', onPress: () => navigation.navigate('MainDashboard' as never) },
+                    { text: t('common.ok'), onPress: () => navigation.navigate('MainDashboard' as never) },
                   ]
                 );
               } else {
-                Alert.alert('Booking Failed', response.error || 'Failed to create booking.');
+                Alert.alert(t('rentalDetails.bookingFailed'), response.error || t('rentalDetails.bookingFailed'));
               }
             } catch (error: any) {
-              Alert.alert('Error', error.message || 'Something went wrong.');
+              Alert.alert(t('common.error'), error.message || t('rentalDetails.bookingFailed'));
             } finally {
               setBookingLoading(false);
             }
@@ -463,7 +464,7 @@ const styles = StyleSheet.create({
   },
   vehicleImage: {
     width: '100%',
-    height: 250,
+    height: hp(31),
     borderRadius: BORDER_RADIUS.lg,
     marginBottom: SPACING.md,
   },
@@ -612,9 +613,9 @@ const styles = StyleSheet.create({
     gap: SPACING.lg,
   },
   durationButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: normalize(48),
+    height: normalize(48),
+    borderRadius: normalize(24),
     backgroundColor: `${COLORS.primary}15`,
     justifyContent: 'center',
     alignItems: 'center',
@@ -627,7 +628,7 @@ const styles = StyleSheet.create({
   },
   durationDisplay: {
     alignItems: 'center',
-    minWidth: 80,
+    minWidth: normalize(80),
   },
   durationCount: {
     fontFamily: FONTS.regular,

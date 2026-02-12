@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Alert, ActivityIndicator } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ArrowLeft, IndianRupee, CheckCircle, Info } from 'lucide-react-native';
+import { normalize } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { Button } from '@components/common/Button';
 import { Card } from '@components/common/Card';
@@ -267,7 +268,7 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontWeight: 'bold',
   },
-  placeholder: { width: 40 },
+  placeholder: { width: normalize(40) },
   scrollContent: { padding: SPACING.md },
   routeCard: {
     padding: SPACING.lg,
@@ -296,7 +297,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.sm,
     color: COLORS.textSecondary,
-    width: 60,
+    width: normalize(60),
   },
   routeValue: {
     fontFamily: FONTS.regular,
@@ -370,7 +371,7 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sizes.sm,
     color: COLORS.textSecondary,
     flex: 1,
-    lineHeight: 20,
+    lineHeight: normalize(20),
   },
   payInfoCard: {
     flexDirection: 'row',

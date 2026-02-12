@@ -14,8 +14,8 @@ import {
   Share,
   Clipboard,
   ImageBackground,
-  Dimensions,
 } from 'react-native';
+import { normalize, hp } from '@utils/responsive';
 import { useNavigation } from '@react-navigation/native';
 import {
   ArrowLeft,
@@ -42,7 +42,6 @@ import { Card } from '@components/common/Card';
 import { coinApi, referralApi, promoApi } from '@utils/apiClient';
 import { useTheme } from '@context/ThemeContext';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const COIN_COLOR = '#F5A623';
 const COIN_BG = '#FFF8E7';
 const COIN_DARK = '#8B5E00';
@@ -565,7 +564,7 @@ const styles = StyleSheet.create({
   // ── Header with Image ──
   headerImage: {
     width: '100%',
-    height: 180,
+    height: hp(22),
   },
   headerOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -585,9 +584,9 @@ const styles = StyleSheet.create({
     paddingTop: SPACING.lg,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: normalize(40),
+    height: normalize(40),
+    borderRadius: normalize(20),
     backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -598,7 +597,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontFamily: FONTS.regular,
-    fontSize: 22,
+    fontSize: normalize(22),
     fontWeight: 'bold',
     color: '#FFF',
   },
@@ -609,7 +608,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   headerPlaceholder: {
-    width: 40,
+    width: normalize(40),
   },
 
   // ── Loading ──
@@ -640,9 +639,9 @@ const styles = StyleSheet.create({
     ...SHADOWS.md,
   },
   balanceIconWrap: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: normalize(52),
+    height: normalize(52),
+    borderRadius: normalize(26),
     backgroundColor: COIN_BG,
     justifyContent: 'center',
     alignItems: 'center',
@@ -663,9 +662,9 @@ const styles = StyleSheet.create({
   },
   balanceAmount: {
     fontFamily: FONTS.regular,
-    fontSize: 28,
+    fontSize: normalize(28),
     fontWeight: 'bold',
-    lineHeight: 32,
+    lineHeight: normalize(32),
   },
   balanceCoinLabel: {
     fontFamily: FONTS.regular,
@@ -806,15 +805,15 @@ const styles = StyleSheet.create({
   },
   referralCodeText: {
     fontFamily: FONTS.regular,
-    fontSize: 22,
+    fontSize: normalize(22),
     fontWeight: 'bold',
     color: '#4A90D9',
-    letterSpacing: 3,
+    letterSpacing: normalize(3),
   },
   copyBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: normalize(36),
+    height: normalize(36),
+    borderRadius: normalize(18),
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -869,9 +868,9 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
   },
   milestoneIconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: normalize(34),
+    height: normalize(34),
+    borderRadius: normalize(17),
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -941,9 +940,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   submissionPlatformIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: normalize(36),
+    height: normalize(36),
+    borderRadius: normalize(18),
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1002,9 +1001,9 @@ const styles = StyleSheet.create({
     paddingBottom: SPACING.xl,
   },
   modalHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
+    width: normalize(40),
+    height: normalize(4),
+    borderRadius: normalize(2),
     backgroundColor: '#DDD',
     alignSelf: 'center',
     marginBottom: SPACING.md,
@@ -1017,7 +1016,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontFamily: FONTS.regular,
-    fontSize: 20,
+    fontSize: normalize(20),
     fontWeight: 'bold',
   },
   modalClose: {

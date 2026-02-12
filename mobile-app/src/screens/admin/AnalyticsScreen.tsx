@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Dimensions,
   ImageBackground,
   Pressable,
   RefreshControl,
@@ -52,9 +51,9 @@ import {
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { useLanguage } from '@context/LanguageContext';
 import { analyticsApi } from '@utils/apiClient';
+import { normalize, wp, hp, SCREEN_WIDTH } from '@utils/responsive';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const HEADER_HEIGHT = Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 200 : 220;
+const HEADER_HEIGHT = Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + hp(25) : hp(27);
 
 /* ── helpers ─────────────────────────────────────────────── */
 const safeNum = (val: any): number => {
@@ -234,17 +233,17 @@ const AnalyticsScreen = () => {
 
   /* ── chart constants ──────────────────────────────────── */
   const chartWidth = SCREEN_WIDTH - SPACING.md * 4;
-  const chartHeight = 260;
-  const chartPad = { top: 20, right: 20, bottom: 50, left: 50 };
+  const chartHeight = hp(32);
+  const chartPad = { top: normalize(20), right: normalize(20), bottom: normalize(50), left: normalize(50) };
   const cw = chartWidth - chartPad.left - chartPad.right;
   const ch = chartHeight - chartPad.top - chartPad.bottom;
 
   /* ── tab config ───────────────────────────────────────── */
   const tabs = [
-    { key: 'Overview', label: 'Overview', icon: BarChart3 },
-    { key: 'Revenue', label: 'Revenue', icon: DollarSign },
-    { key: 'Users', label: 'Users', icon: Users },
-    { key: 'Leaderboard', label: 'Leaderboard', icon: Award },
+    { key: 'Overview', labelKey: 'admin.analytics.overview', icon: BarChart3 },
+    { key: 'Revenue', labelKey: 'admin.analytics.revenueTab', icon: DollarSign },
+    { key: 'Users', labelKey: 'admin.analytics.usersTab', icon: Users },
+    { key: 'Leaderboard', labelKey: 'admin.analytics.leaderboard', icon: Award },
   ];
 
   /* ── render chart helper ──────────────────────────────── */
@@ -260,7 +259,7 @@ const AnalyticsScreen = () => {
       return (
         <View style={styles.emptyChart}>
           <Activity size={32} color="#CBD5E1" />
-          <Text style={styles.emptyChartText}>No data available yet</Text>
+          <Text style={styles.emptyChartText}>{t('admin.analytics.noDataAvailableChart')}</Text>
         </View>
       );
     const maxVal = Math.max(...data.map((d) => d.value), 1);
@@ -399,7 +398,7 @@ const AnalyticsScreen = () => {
             {pieTotal}%
           </SvgText>
           <SvgText x={cx} y={cy + 12} fontSize="10" textAnchor="middle" fill="#94A3B8">
-            Total
+            {t('admin.analytics.total')}
           </SvgText>
         </Svg>
         <View style={styles.legendCol}>
@@ -424,7 +423,7 @@ const AnalyticsScreen = () => {
         <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
         <View style={[styles.loadingWrap]}>
           <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>Loading analytics...</Text>
+          <Text style={styles.loadingText}>{t('admin.analytics.loadingAnalytics')}</Text>
         </View>
       </View>
     );
@@ -437,7 +436,7 @@ const AnalyticsScreen = () => {
 
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: normalize(40) }}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
       >
@@ -453,8 +452,8 @@ const AnalyticsScreen = () => {
                 </BlurView>
               </TouchableOpacity>
               <View style={{ flex: 1, marginLeft: SPACING.md }}>
-                <Text style={styles.heroTitle}>Analytics & Reports</Text>
-                <Text style={styles.heroSub}>Real-time platform insights</Text>
+                <Text style={styles.heroTitle}>{t('admin.analytics.title')}</Text>
+                <Text style={styles.heroSub}>{t('admin.analytics.realtimeInsights')}</Text>
               </View>
               <TouchableOpacity style={styles.refreshBtn} onPress={onRefresh} activeOpacity={0.7}>
                 <RefreshCw size={18} color="#fff" />
@@ -465,15 +464,15 @@ const AnalyticsScreen = () => {
             <View style={styles.liveBadgeRow}>
               <View style={styles.liveBadge}>
                 <View style={styles.liveDot} />
-                <Text style={styles.liveBadgeText}>{activeTrips} Active Trips</Text>
+                <Text style={styles.liveBadgeText}>{activeTrips} {t('admin.analytics.activeTrips')}</Text>
               </View>
               <View style={styles.liveBadge}>
                 <Zap size={12} color="#FBBF24" />
-                <Text style={styles.liveBadgeText}>{onlineDrivers} Online Drivers</Text>
+                <Text style={styles.liveBadgeText}>{onlineDrivers} {t('admin.analytics.onlineDrivers')}</Text>
               </View>
               <View style={styles.liveBadge}>
                 <Clock size={12} color="#F97316" />
-                <Text style={styles.liveBadgeText}>{pendingBookings} Pending</Text>
+                <Text style={styles.liveBadgeText}>{pendingBookings} {t('admin.analytics.pendingBookings')}</Text>
               </View>
             </View>
           </BlurView>
@@ -482,10 +481,10 @@ const AnalyticsScreen = () => {
         {/* ── Floating Stats Strip ─────────────────────── */}
         <View style={styles.statsStrip}>
           {[
-            { label: 'New Users', value: formatNumber(newUsers), icon: Users, color: '#4A90D9' },
-            { label: 'Revenue', value: formatCurrency(todayRevenue), icon: DollarSign, color: '#00B894' },
-            { label: 'Bookings', value: formatNumber(totalBookings), icon: Car, color: '#F39C12' },
-            { label: 'Net Profit', value: formatCurrency(netProfit), icon: TrendingUp, color: '#7B61FF' },
+            { labelKey: 'admin.analytics.newUsers', value: formatNumber(newUsers), icon: Users, color: '#4A90D9' },
+            { labelKey: 'admin.analytics.revenue', value: formatCurrency(todayRevenue), icon: DollarSign, color: '#00B894' },
+            { labelKey: 'admin.analytics.bookings', value: formatNumber(totalBookings), icon: Car, color: '#F39C12' },
+            { labelKey: 'admin.analytics.netProfit', value: formatCurrency(netProfit), icon: TrendingUp, color: '#7B61FF' },
           ].map((s, i) => (
             <View key={i} style={styles.statsItem}>
               <View style={[styles.statsIcon, { backgroundColor: s.color + '18' }]}>
@@ -495,7 +494,7 @@ const AnalyticsScreen = () => {
                 {s.value}
               </Text>
               <Text style={styles.statsLabel} numberOfLines={1}>
-                {s.label}
+                {t(s.labelKey)}
               </Text>
             </View>
           ))}
@@ -513,7 +512,7 @@ const AnalyticsScreen = () => {
                 activeOpacity={0.7}
               >
                 <tab.icon size={15} color={active ? '#fff' : '#64748B'} />
-                <Text style={[styles.tabPillText, active && styles.tabPillTextActive]}>{tab.label}</Text>
+                <Text style={[styles.tabPillText, active && styles.tabPillTextActive]}>{t(tab.labelKey)}</Text>
               </TouchableOpacity>
             );
           })}
@@ -527,26 +526,26 @@ const AnalyticsScreen = () => {
               <View style={styles.cardHeader}>
                 <View style={styles.cardTitleRow}>
                   <Activity size={18} color="#4A90D9" />
-                  <Text style={styles.cardTitle}>Real-time Activity</Text>
+                  <Text style={styles.cardTitle}>{t('admin.analytics.realtimeActivity')}</Text>
                 </View>
                 <View style={styles.liveIndicator}>
                   <View style={styles.livePulse} />
-                  <Text style={styles.liveLabel}>LIVE</Text>
+                  <Text style={styles.liveLabel}>{t('admin.analytics.live')}</Text>
                 </View>
               </View>
               <View style={styles.realtimeGrid}>
                 {[
-                  { label: 'Active Trips', value: activeTrips, icon: Car, color: '#3B82F6' },
-                  { label: 'Online Drivers', value: onlineDrivers, icon: Users, color: '#10B981' },
-                  { label: 'Pending Bookings', value: pendingBookings, icon: Clock, color: '#F59E0B' },
-                  { label: 'Today Bookings', value: totalBookings, icon: Target, color: '#8B5CF6' },
+                  { labelKey: 'admin.analytics.activeTrips', value: activeTrips, icon: Car, color: '#3B82F6' },
+                  { labelKey: 'admin.analytics.onlineDrivers', value: onlineDrivers, icon: Users, color: '#10B981' },
+                  { labelKey: 'admin.analytics.pendingBookings', value: pendingBookings, icon: Clock, color: '#F59E0B' },
+                  { labelKey: 'admin.analytics.todayBookings', value: totalBookings, icon: Target, color: '#8B5CF6' },
                 ].map((item, idx) => (
                   <View key={idx} style={styles.realtimeCell}>
                     <View style={[styles.realtimeIconWrap, { backgroundColor: item.color + '12' }]}>
                       <item.icon size={18} color={item.color} />
                     </View>
                     <Text style={styles.realtimeValue}>{item.value}</Text>
-                    <Text style={styles.realtimeLabel}>{item.label}</Text>
+                    <Text style={styles.realtimeLabel}>{t(item.labelKey)}</Text>
                   </View>
                 ))}
               </View>
@@ -557,7 +556,7 @@ const AnalyticsScreen = () => {
               <View style={styles.cardHeader}>
                 <View style={styles.cardTitleRow}>
                   <BarChart3 size={18} color="#F59E0B" />
-                  <Text style={styles.cardTitle}>Service Distribution</Text>
+                  <Text style={styles.cardTitle}>{t('admin.analytics.serviceDistribution')}</Text>
                 </View>
               </View>
               {renderPieChart()}
@@ -568,22 +567,22 @@ const AnalyticsScreen = () => {
               <View style={styles.cardHeader}>
                 <View style={styles.cardTitleRow}>
                   <DollarSign size={18} color="#10B981" />
-                  <Text style={styles.cardTitle}>Financial Summary</Text>
+                  <Text style={styles.cardTitle}>{t('admin.analytics.financialSummary')}</Text>
                 </View>
-                <Text style={styles.cardSubtitle}>This month</Text>
+                <Text style={styles.cardSubtitle}>{t('admin.analytics.thisMonth')}</Text>
               </View>
               <View style={styles.financeGrid}>
                 {[
-                  { label: 'Total Revenue', value: formatCurrency(totalRevenue), color: '#10B981', icon: TrendingUp },
-                  { label: 'Total Expenses', value: formatCurrency(totalExpense), color: '#EF4444', icon: TrendingDown },
-                  { label: 'Net Profit', value: formatCurrency(netProfit), color: '#3B82F6', icon: DollarSign },
-                  { label: 'Commission', value: formatCurrency(commissionEarned), color: '#8B5CF6', icon: Award },
+                  { labelKey: 'admin.analytics.totalRevenue', value: formatCurrency(totalRevenue), color: '#10B981', icon: TrendingUp },
+                  { labelKey: 'admin.analytics.totalExpenses', value: formatCurrency(totalExpense), color: '#EF4444', icon: TrendingDown },
+                  { labelKey: 'admin.analytics.netProfit', value: formatCurrency(netProfit), color: '#3B82F6', icon: DollarSign },
+                  { labelKey: 'admin.analytics.commission', value: formatCurrency(commissionEarned), color: '#8B5CF6', icon: Award },
                 ].map((f, i) => (
                   <View key={i} style={styles.financeItem}>
                     <View style={[styles.financeIconWrap, { backgroundColor: f.color + '12' }]}>
                       <f.icon size={16} color={f.color} />
                     </View>
-                    <Text style={styles.financeLabel}>{f.label}</Text>
+                    <Text style={styles.financeLabel}>{t(f.labelKey)}</Text>
                     <Text style={[styles.financeValue, { color: f.color }]}>{f.value}</Text>
                   </View>
                 ))}
@@ -615,7 +614,7 @@ const AnalyticsScreen = () => {
               <View style={styles.cardHeader}>
                 <View style={styles.cardTitleRow}>
                   <TrendingUp size={18} color="#10B981" />
-                  <Text style={styles.cardTitle}>Revenue Trends</Text>
+                  <Text style={styles.cardTitle}>{t('admin.analytics.revenueTrends')}</Text>
                 </View>
               </View>
               {renderLineChart(revenuePoints, '#10B981', 'rev', selectedRevenuePoint, setSelectedRevenuePoint, '₹')}
@@ -626,20 +625,20 @@ const AnalyticsScreen = () => {
               <View style={styles.cardHeader}>
                 <View style={styles.cardTitleRow}>
                   <DollarSign size={18} color="#3B82F6" />
-                  <Text style={styles.cardTitle}>Revenue Breakdown</Text>
+                  <Text style={styles.cardTitle}>{t('admin.analytics.revenueBreakdown')}</Text>
                 </View>
               </View>
               <View style={styles.breakdownList}>
                 {[
-                  { label: 'Total Revenue', value: formatCurrency(totalRevenue), color: '#10B981' },
-                  { label: 'Expenses', value: formatCurrency(totalExpense), color: '#EF4444' },
-                  { label: 'Commission Earned', value: formatCurrency(commissionEarned), color: '#8B5CF6' },
-                  { label: 'Net Profit', value: formatCurrency(netProfit), color: '#3B82F6' },
+                  { labelKey: 'admin.analytics.totalRevenue', value: formatCurrency(totalRevenue), color: '#10B981' },
+                  { labelKey: 'admin.analytics.expenses', value: formatCurrency(totalExpense), color: '#EF4444' },
+                  { labelKey: 'admin.analytics.commissionEarned', value: formatCurrency(commissionEarned), color: '#8B5CF6' },
+                  { labelKey: 'admin.analytics.netProfit', value: formatCurrency(netProfit), color: '#3B82F6' },
                 ].map((item, i) => (
                   <View key={i} style={styles.breakdownRow}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                       <View style={[styles.breakdownDot, { backgroundColor: item.color }]} />
-                      <Text style={styles.breakdownLabel}>{item.label}</Text>
+                      <Text style={styles.breakdownLabel}>{t(item.labelKey)}</Text>
                     </View>
                     <Text style={[styles.breakdownValue, { color: item.color }]}>{item.value}</Text>
                   </View>
@@ -657,7 +656,7 @@ const AnalyticsScreen = () => {
               <View style={styles.cardHeader}>
                 <View style={styles.cardTitleRow}>
                   <Users size={18} color="#3B82F6" />
-                  <Text style={styles.cardTitle}>User Growth</Text>
+                  <Text style={styles.cardTitle}>{t('admin.analytics.userGrowth')}</Text>
                 </View>
               </View>
               {renderLineChart(growthPoints, '#3B82F6', 'usr', selectedUserPoint, setSelectedUserPoint, '')}
@@ -668,18 +667,18 @@ const AnalyticsScreen = () => {
               <View style={styles.cardHeader}>
                 <View style={styles.cardTitleRow}>
                   <Activity size={18} color="#8B5CF6" />
-                  <Text style={styles.cardTitle}>Today's User Metrics</Text>
+                  <Text style={styles.cardTitle}>{t('admin.analytics.todaysUserMetrics')}</Text>
                 </View>
               </View>
               <View style={styles.userMetricsRow}>
                 {[
-                  { label: 'New Users', value: newUsers, color: '#3B82F6' },
-                  { label: 'Active Now', value: onlineDrivers, color: '#10B981' },
-                  { label: 'Bookings', value: totalBookings, color: '#F59E0B' },
+                  { labelKey: 'admin.analytics.newUsers', value: newUsers, color: '#3B82F6' },
+                  { labelKey: 'admin.analytics.activeNow', value: onlineDrivers, color: '#10B981' },
+                  { labelKey: 'admin.analytics.bookings', value: totalBookings, color: '#F59E0B' },
                 ].map((m, i) => (
                   <View key={i} style={[styles.userMetricCard, { borderLeftColor: m.color }]}>
                     <Text style={[styles.userMetricValue, { color: m.color }]}>{m.value}</Text>
-                    <Text style={styles.userMetricLabel}>{m.label}</Text>
+                    <Text style={styles.userMetricLabel}>{t(m.labelKey)}</Text>
                   </View>
                 ))}
               </View>
@@ -690,20 +689,20 @@ const AnalyticsScreen = () => {
               <View style={styles.cardHeader}>
                 <View style={styles.cardTitleRow}>
                   <Car size={18} color="#F59E0B" />
-                  <Text style={styles.cardTitle}>Pooling Breakdown</Text>
+                  <Text style={styles.cardTitle}>{t('admin.analytics.poolingBreakdown')}</Text>
                 </View>
               </View>
               <View style={styles.poolingBreakdownList}>
                 {[
-                  { label: 'Car Pooling', pct: carPoolPct, icon: Car, color: '#3B82F6' },
-                  { label: 'Bike Pooling', pct: bikePoolPct, icon: Bike, color: '#10B981' },
+                  { labelKey: 'admin.analytics.carPooling', pct: carPoolPct, icon: Car, color: '#3B82F6' },
+                  { labelKey: 'admin.analytics.bikePooling', pct: bikePoolPct, icon: Bike, color: '#10B981' },
                 ].map((p, i) => (
                   <View key={i} style={styles.poolingRow}>
                     <View style={styles.poolingRowLeft}>
                       <View style={[styles.poolingIconWrap, { backgroundColor: p.color + '15' }]}>
                         <p.icon size={16} color={p.color} />
                       </View>
-                      <Text style={styles.poolingLabel}>{p.label}</Text>
+                      <Text style={styles.poolingLabel}>{t(p.labelKey)}</Text>
                     </View>
                     <View style={styles.poolingBarWrap}>
                       <View style={[styles.poolingBar, { width: `${Math.min(p.pct, 100)}%`, backgroundColor: p.color }]} />
@@ -724,12 +723,12 @@ const AnalyticsScreen = () => {
               <View style={styles.cardHeader}>
                 <View style={styles.cardTitleRow}>
                   <DollarSign size={18} color="#10B981" />
-                  <Text style={styles.cardTitle}>Top Earners</Text>
+                  <Text style={styles.cardTitle}>{t('admin.analytics.topEarners')}</Text>
                 </View>
-                <Text style={styles.cardBadge}>{topEarners.length} users</Text>
+                <Text style={styles.cardBadge}>{topEarners.length} {t('admin.analytics.usersCount')}</Text>
               </View>
               {topEarners.length === 0 ? (
-                <Text style={styles.noDataText}>No data available</Text>
+                <Text style={styles.noDataText}>{t('admin.analytics.noDataAvailable')}</Text>
               ) : (
                 topEarners.map((u, i) => (
                   <View key={i} style={styles.leaderRow}>
@@ -741,7 +740,7 @@ const AnalyticsScreen = () => {
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.leaderName}>{u.name}</Text>
-                      <Text style={styles.leaderSub}>Total earnings</Text>
+                      <Text style={styles.leaderSub}>{t('admin.analytics.totalEarnings')}</Text>
                     </View>
                     <Text style={styles.leaderValue}>{formatCurrency(u.earnings)}</Text>
                   </View>
@@ -754,12 +753,12 @@ const AnalyticsScreen = () => {
               <View style={styles.cardHeader}>
                 <View style={styles.cardTitleRow}>
                   <Activity size={18} color="#3B82F6" />
-                  <Text style={styles.cardTitle}>Most Active Users</Text>
+                  <Text style={styles.cardTitle}>{t('admin.analytics.mostActiveUsers')}</Text>
                 </View>
-                <Text style={styles.cardBadge}>{mostActive.length} users</Text>
+                <Text style={styles.cardBadge}>{mostActive.length} {t('admin.analytics.usersCount')}</Text>
               </View>
               {mostActive.length === 0 ? (
-                <Text style={styles.noDataText}>No data available</Text>
+                <Text style={styles.noDataText}>{t('admin.analytics.noDataAvailable')}</Text>
               ) : (
                 mostActive.map((u, i) => (
                   <View key={i} style={styles.leaderRow}>
@@ -771,9 +770,9 @@ const AnalyticsScreen = () => {
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.leaderName}>{u.name}</Text>
-                      <Text style={styles.leaderSub}>Total trips</Text>
+                      <Text style={styles.leaderSub}>{t('admin.analytics.totalTrips')}</Text>
                     </View>
-                    <Text style={styles.leaderValue}>{u.trips} trips</Text>
+                    <Text style={styles.leaderValue}>{u.trips} {t('admin.analytics.trips')}</Text>
                   </View>
                 ))
               )}
@@ -784,12 +783,12 @@ const AnalyticsScreen = () => {
               <View style={styles.cardHeader}>
                 <View style={styles.cardTitleRow}>
                   <Star size={18} color="#F59E0B" />
-                  <Text style={styles.cardTitle}>Highest Rated Drivers</Text>
+                  <Text style={styles.cardTitle}>{t('admin.analytics.highestRatedDrivers')}</Text>
                 </View>
-                <Text style={styles.cardBadge}>{highestRated.length} drivers</Text>
+                <Text style={styles.cardBadge}>{highestRated.length} {t('admin.analytics.drivers')}</Text>
               </View>
               {highestRated.length === 0 ? (
-                <Text style={styles.noDataText}>No data available</Text>
+                <Text style={styles.noDataText}>{t('admin.analytics.noDataAvailable')}</Text>
               ) : (
                 highestRated.map((d, i) => (
                   <View key={i} style={styles.leaderRow}>
@@ -801,7 +800,7 @@ const AnalyticsScreen = () => {
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.leaderName}>{d.name}</Text>
-                      <Text style={styles.leaderSub}>{d.trips} trips</Text>
+                      <Text style={styles.leaderSub}>{d.trips} {t('admin.analytics.trips')}</Text>
                     </View>
                     <View style={styles.ratingBadge}>
                       <Star size={12} color="#F59E0B" />
@@ -819,13 +818,13 @@ const AnalyticsScreen = () => {
           <TouchableOpacity style={styles.actionBtn} activeOpacity={0.7}>
             <LinearGradient colors={['#3B82F6', '#2563EB']} style={styles.actionGradient}>
               <Download size={16} color="#fff" />
-              <Text style={styles.actionBtnText}>Export Report</Text>
+              <Text style={styles.actionBtnText}>{t('admin.analytics.exportReport')}</Text>
             </LinearGradient>
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionBtn} activeOpacity={0.7}>
             <LinearGradient colors={['#8B5CF6', '#7C3AED']} style={styles.actionGradient}>
               <BarChart3 size={16} color="#fff" />
-              <Text style={styles.actionBtnText}>Custom Report</Text>
+              <Text style={styles.actionBtnText}>{t('admin.analytics.customReport')}</Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>
@@ -995,7 +994,7 @@ const styles = StyleSheet.create({
   },
   tabPillText: {
     fontFamily: FONTS.regular,
-    fontSize: 13,
+    fontSize: normalize(13),
     color: '#64748B',
     fontWeight: '600',
   },
@@ -1012,7 +1011,7 @@ const styles = StyleSheet.create({
   /* ── Card ─────────── */
   card: {
     backgroundColor: '#fff',
-    borderRadius: 14,
+    borderRadius: normalize(14),
     padding: SPACING.md,
     ...SHADOWS.sm,
     borderWidth: 1,
@@ -1027,27 +1026,27 @@ const styles = StyleSheet.create({
   cardTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: normalize(8),
   },
   cardTitle: {
     fontFamily: FONTS.regular,
-    fontSize: 16,
+    fontSize: normalize(16),
     fontWeight: '700',
     color: '#1E293B',
   },
   cardSubtitle: {
     fontFamily: FONTS.regular,
-    fontSize: 12,
+    fontSize: normalize(12),
     color: '#94A3B8',
   },
   cardBadge: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
+    fontSize: normalize(11),
     color: '#64748B',
     backgroundColor: '#F1F5F9',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
+    paddingHorizontal: normalize(8),
+    paddingVertical: normalize(3),
+    borderRadius: normalize(10),
     fontWeight: '600',
     overflow: 'hidden',
   },
@@ -1056,32 +1055,32 @@ const styles = StyleSheet.create({
   realtimeGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: normalize(10),
   },
   realtimeCell: {
-    width: (SCREEN_WIDTH - SPACING.md * 4 - 10) / 2 - 5,
+    width: (SCREEN_WIDTH - SPACING.md * 4 - normalize(10)) / 2 - 5,
     backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: normalize(12),
+    padding: normalize(12),
     alignItems: 'center',
-    gap: 6,
+    gap: normalize(6),
   },
   realtimeIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: normalize(36),
+    height: normalize(36),
+    borderRadius: normalize(10),
     justifyContent: 'center',
     alignItems: 'center',
   },
   realtimeValue: {
     fontFamily: FONTS.regular,
-    fontSize: 22,
+    fontSize: normalize(22),
     fontWeight: '800',
     color: '#1E293B',
   },
   realtimeLabel: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
+    fontSize: normalize(11),
     color: '#94A3B8',
     fontWeight: '500',
   },
@@ -1090,24 +1089,24 @@ const styles = StyleSheet.create({
   liveIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: normalize(5),
     backgroundColor: '#EF444415',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
+    paddingHorizontal: normalize(8),
+    paddingVertical: normalize(3),
+    borderRadius: normalize(10),
   },
   livePulse: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
+    width: normalize(7),
+    height: normalize(7),
+    borderRadius: normalize(4),
     backgroundColor: '#EF4444',
   },
   liveLabel: {
     fontFamily: FONTS.regular,
-    fontSize: 10,
+    fontSize: normalize(10),
     color: '#EF4444',
     fontWeight: '800',
-    letterSpacing: 1,
+    letterSpacing: normalize(1),
   },
 
   /* ── Pie Chart ────── */
@@ -1118,26 +1117,26 @@ const styles = StyleSheet.create({
   },
   legendCol: {
     flex: 1,
-    gap: 10,
+    gap: normalize(10),
   },
   legendItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: normalize(8),
   },
   legendDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 3,
+    width: normalize(12),
+    height: normalize(12),
+    borderRadius: normalize(3),
   },
   legendLabel: {
     fontFamily: FONTS.regular,
-    fontSize: 12,
+    fontSize: normalize(12),
     color: '#64748B',
   },
   legendValue: {
     fontFamily: FONTS.regular,
-    fontSize: 14,
+    fontSize: normalize(14),
     fontWeight: '700',
     color: '#1E293B',
   },
@@ -1146,69 +1145,69 @@ const styles = StyleSheet.create({
   financeGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: normalize(10),
   },
   financeItem: {
-    width: (SCREEN_WIDTH - SPACING.md * 4 - 10) / 2 - 5,
+    width: (SCREEN_WIDTH - SPACING.md * 4 - normalize(10)) / 2 - 5,
     backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    padding: 12,
-    gap: 6,
+    borderRadius: normalize(12),
+    padding: normalize(12),
+    gap: normalize(6),
   },
   financeIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+    width: normalize(32),
+    height: normalize(32),
+    borderRadius: normalize(8),
     justifyContent: 'center',
     alignItems: 'center',
   },
   financeLabel: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
+    fontSize: normalize(11),
     color: '#94A3B8',
     fontWeight: '500',
   },
   financeValue: {
     fontFamily: FONTS.regular,
-    fontSize: 17,
+    fontSize: normalize(17),
     fontWeight: '800',
     color: '#1E293B',
   },
 
   /* ── Chart ────────── */
   chartContainer: {
-    height: 260,
+    height: hp(32),
     width: '100%',
   },
   emptyChart: {
-    height: 200,
+    height: hp(25),
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 8,
+    gap: normalize(8),
   },
   emptyChartText: {
     fontFamily: FONTS.regular,
-    fontSize: 13,
+    fontSize: normalize(13),
     color: '#94A3B8',
   },
   dataPointTouch: {
     position: 'absolute',
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: normalize(36),
+    height: normalize(36),
+    borderRadius: normalize(18),
     backgroundColor: 'transparent',
   },
 
   /* ── Period toggle ── */
   periodRow: {
     flexDirection: 'row',
-    gap: 8,
-    marginBottom: 4,
+    gap: normalize(8),
+    marginBottom: normalize(4),
   },
   periodBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingHorizontal: normalize(16),
+    paddingVertical: normalize(8),
+    borderRadius: normalize(20),
     backgroundColor: '#fff',
     borderWidth: 1,
     borderColor: '#E2E8F0',
@@ -1219,7 +1218,7 @@ const styles = StyleSheet.create({
   },
   periodBtnText: {
     fontFamily: FONTS.regular,
-    fontSize: 13,
+    fontSize: normalize(13),
     color: '#64748B',
     fontWeight: '600',
   },
@@ -1229,102 +1228,102 @@ const styles = StyleSheet.create({
 
   /* ── Breakdown List ─ */
   breakdownList: {
-    gap: 2,
+    gap: normalize(2),
   },
   breakdownRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: normalize(12),
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
   },
   breakdownDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 3,
+    width: normalize(10),
+    height: normalize(10),
+    borderRadius: normalize(3),
   },
   breakdownLabel: {
     fontFamily: FONTS.regular,
-    fontSize: 14,
+    fontSize: normalize(14),
     color: '#475569',
     fontWeight: '500',
   },
   breakdownValue: {
     fontFamily: FONTS.regular,
-    fontSize: 15,
+    fontSize: normalize(15),
     fontWeight: '700',
   },
 
   /* ── User Metrics ─── */
   userMetricsRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: normalize(10),
   },
   userMetricCard: {
     flex: 1,
     backgroundColor: '#F8FAFC',
-    borderRadius: 10,
-    padding: 12,
+    borderRadius: normalize(10),
+    padding: normalize(12),
     borderLeftWidth: 3,
-    gap: 4,
+    gap: normalize(4),
   },
   userMetricValue: {
     fontFamily: FONTS.regular,
-    fontSize: 22,
+    fontSize: normalize(22),
     fontWeight: '800',
   },
   userMetricLabel: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
+    fontSize: normalize(11),
     color: '#94A3B8',
     fontWeight: '500',
   },
 
   /* ── Pooling Breakdown */
   poolingBreakdownList: {
-    gap: 14,
+    gap: normalize(14),
   },
   poolingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: normalize(10),
   },
   poolingRowLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    width: 120,
+    gap: normalize(8),
+    width: normalize(120),
   },
   poolingIconWrap: {
-    width: 30,
-    height: 30,
-    borderRadius: 8,
+    width: normalize(30),
+    height: normalize(30),
+    borderRadius: normalize(8),
     justifyContent: 'center',
     alignItems: 'center',
   },
   poolingLabel: {
     fontFamily: FONTS.regular,
-    fontSize: 12,
+    fontSize: normalize(12),
     color: '#475569',
     fontWeight: '500',
   },
   poolingBarWrap: {
     flex: 1,
-    height: 8,
+    height: normalize(8),
     backgroundColor: '#F1F5F9',
-    borderRadius: 4,
+    borderRadius: normalize(4),
     overflow: 'hidden',
   },
   poolingBar: {
     height: '100%',
-    borderRadius: 4,
+    borderRadius: normalize(4),
   },
   poolingPct: {
     fontFamily: FONTS.regular,
-    fontSize: 13,
+    fontSize: normalize(13),
     fontWeight: '700',
-    width: 40,
+    width: normalize(40),
     textAlign: 'right',
   },
 
@@ -1332,100 +1331,100 @@ const styles = StyleSheet.create({
   leaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingVertical: 10,
+    gap: normalize(10),
+    paddingVertical: normalize(10),
     borderBottomWidth: 1,
     borderBottomColor: '#F8FAFC',
   },
   rankBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
+    width: normalize(28),
+    height: normalize(28),
+    borderRadius: normalize(8),
     backgroundColor: '#F1F5F9',
     justifyContent: 'center',
     alignItems: 'center',
   },
   rankText: {
     fontFamily: FONTS.regular,
-    fontSize: 13,
+    fontSize: normalize(13),
     fontWeight: '800',
     color: '#64748B',
   },
   leaderAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
+    width: normalize(36),
+    height: normalize(36),
+    borderRadius: normalize(12),
     justifyContent: 'center',
     alignItems: 'center',
   },
   leaderAvatarText: {
     fontFamily: FONTS.regular,
-    fontSize: 15,
+    fontSize: normalize(15),
     fontWeight: '700',
     color: '#3B82F6',
   },
   leaderName: {
     fontFamily: FONTS.regular,
-    fontSize: 14,
+    fontSize: normalize(14),
     fontWeight: '600',
     color: '#1E293B',
   },
   leaderSub: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
+    fontSize: normalize(11),
     color: '#94A3B8',
   },
   leaderValue: {
     fontFamily: FONTS.regular,
-    fontSize: 14,
+    fontSize: normalize(14),
     fontWeight: '700',
     color: '#1E293B',
   },
   ratingBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
+    gap: normalize(3),
     backgroundColor: '#FEF3C7',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 10,
+    paddingHorizontal: normalize(8),
+    paddingVertical: normalize(4),
+    borderRadius: normalize(10),
   },
   ratingText: {
     fontFamily: FONTS.regular,
-    fontSize: 13,
+    fontSize: normalize(13),
     fontWeight: '700',
     color: '#B45309',
   },
   noDataText: {
     fontFamily: FONTS.regular,
-    fontSize: 13,
+    fontSize: normalize(13),
     color: '#94A3B8',
     textAlign: 'center',
-    paddingVertical: 20,
+    paddingVertical: normalize(20),
   },
 
   /* ── Actions ──────── */
   actionsRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: normalize(10),
     paddingHorizontal: SPACING.md,
     marginTop: SPACING.lg,
   },
   actionBtn: {
     flex: 1,
-    borderRadius: 12,
+    borderRadius: normalize(12),
     overflow: 'hidden',
   },
   actionGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 14,
+    gap: normalize(8),
+    paddingVertical: normalize(14),
   },
   actionBtnText: {
     fontFamily: FONTS.regular,
-    fontSize: 14,
+    fontSize: normalize(14),
     fontWeight: '700',
     color: '#fff',
   },

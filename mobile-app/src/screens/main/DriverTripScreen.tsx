@@ -11,11 +11,11 @@ import {
   Modal,
   TextInput,
   ImageBackground,
-  Dimensions,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ArrowLeft, MapPin, Clock, Navigation, Play, Square, Phone, MessageCircle, Users, LogIn, LogOut, KeyRound, X, ArrowRight, Route, Timer, Gauge, User, CircleDot, ChevronDown } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
+import { normalize, wp, hp, SCREEN_WIDTH } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { Card } from '@components/common/Card';
 import { Button } from '@components/common/Button';
@@ -25,7 +25,6 @@ import { trackingApi, bookingApi } from '@utils/apiClient';
 import * as Location from 'expo-location';
 import { WebView } from 'react-native-webview';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface RouteParams {
   bookingId?: string;
@@ -1401,7 +1400,7 @@ const styles = StyleSheet.create({
   /* ── Hero Header ── */
   headerImage: {
     width: '100%',
-    height: 150,
+    height: hp(18),
   },
   headerOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -1419,9 +1418,9 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   navButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: normalize(38),
+    height: normalize(38),
+    borderRadius: normalize(19),
     backgroundColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1433,15 +1432,15 @@ const styles = StyleSheet.create({
   },
   navTitle: {
     fontFamily: FONTS.regular,
-    fontSize: 22,
+    fontSize: normalize(22),
     color: '#FFF',
     fontWeight: '800',
-    letterSpacing: 0.4,
+    letterSpacing: normalize(0.4),
     textAlign: 'center',
   },
   navSubtitle: {
     fontFamily: FONTS.regular,
-    fontSize: 12,
+    fontSize: normalize(12),
     color: 'rgba(255,255,255,0.7)',
     fontWeight: '500',
     marginTop: 2,
@@ -1456,13 +1455,13 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   liveDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
+    width: normalize(7),
+    height: normalize(7),
+    borderRadius: normalize(4),
   },
   liveText: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
+    fontSize: normalize(11),
     color: '#FFF',
     fontWeight: '800',
     letterSpacing: 1,
@@ -1472,9 +1471,9 @@ const styles = StyleSheet.create({
   metricStrip: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 6,
+    borderRadius: normalize(14),
+    paddingVertical: normalize(12),
+    paddingHorizontal: normalize(6),
     marginBottom: SPACING.md,
     ...SHADOWS.sm,
   },
@@ -1485,12 +1484,12 @@ const styles = StyleSheet.create({
   },
   metricValue: {
     fontFamily: FONTS.regular,
-    fontSize: 16,
+    fontSize: normalize(16),
     fontWeight: '800',
   },
   metricLabel: {
     fontFamily: FONTS.regular,
-    fontSize: 10,
+    fontSize: normalize(10),
     fontWeight: '500',
   },
   metricDivider: {
@@ -1500,16 +1499,16 @@ const styles = StyleSheet.create({
 
   /* ── Map ── */
   mapContainer: {
-    height: 260,
+    height: hp(32),
     marginHorizontal: SPACING.md,
-    marginTop: 23,
-    borderRadius: 16,
+    marginTop: normalize(23),
+    borderRadius: normalize(16),
     overflow: 'hidden',
     ...SHADOWS.md,
   },
   webView: {
     flex: 1,
-    height: 260,
+    height: hp(32),
   },
   mapPlaceholder: {
     width: '100%',
@@ -1520,7 +1519,7 @@ const styles = StyleSheet.create({
   },
   mapHint: {
     fontFamily: FONTS.regular,
-    fontSize: 13,
+    fontSize: normalize(13),
     marginTop: SPACING.sm,
   },
 
@@ -1532,17 +1531,17 @@ const styles = StyleSheet.create({
 
   /* ── Shared Card ── */
   card: {
-    borderRadius: 16,
+    borderRadius: normalize(16),
     padding: SPACING.lg,
     marginBottom: SPACING.md,
     ...SHADOWS.md,
   },
   cardTitle: {
     fontFamily: FONTS.regular,
-    fontSize: 16,
+    fontSize: normalize(16),
     fontWeight: '700',
     marginBottom: SPACING.md,
-    letterSpacing: 0.2,
+    letterSpacing: normalize(0.2),
   },
   cardTitleRow: {
     flexDirection: 'row',
@@ -1552,15 +1551,15 @@ const styles = StyleSheet.create({
   },
   countBadge: {
     marginLeft: 'auto',
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: normalize(26),
+    height: normalize(26),
+    borderRadius: normalize(13),
     alignItems: 'center',
     justifyContent: 'center',
   },
   countBadgeText: {
     fontFamily: FONTS.regular,
-    fontSize: 12,
+    fontSize: normalize(12),
     fontWeight: '800',
   },
 
@@ -1575,22 +1574,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 11,
-    gap: 6,
+    borderRadius: normalize(12),
+    paddingHorizontal: normalize(10),
+    paddingVertical: normalize(11),
+    gap: normalize(6),
   },
   routeText: {
     flex: 1,
     fontFamily: FONTS.regular,
-    fontSize: 12,
+    fontSize: normalize(12),
     fontWeight: '500',
-    lineHeight: 16,
+    lineHeight: normalize(16),
   },
   routeArrowCircle: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: normalize(30),
+    height: normalize(30),
+    borderRadius: normalize(15),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1605,10 +1604,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   stopDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginTop: 10,
+    width: normalize(12),
+    height: normalize(12),
+    borderRadius: normalize(6),
+    marginTop: normalize(10),
   },
   stopLine: {
     width: 2,
@@ -1617,10 +1616,10 @@ const styles = StyleSheet.create({
   },
   stopContent: {
     flex: 1,
-    borderRadius: 12,
-    padding: 12,
-    marginLeft: 8,
-    marginBottom: 8,
+    borderRadius: normalize(12),
+    padding: normalize(12),
+    marginLeft: normalize(8),
+    marginBottom: normalize(8),
   },
   stopHeader: {
     flexDirection: 'row',
@@ -1635,68 +1634,68 @@ const styles = StyleSheet.create({
   },
   stopTypeText: {
     fontFamily: FONTS.regular,
-    fontSize: 10,
+    fontSize: normalize(10),
     fontWeight: '700',
-    letterSpacing: 0.3,
+    letterSpacing: normalize(0.3),
   },
   stopPassengerName: {
     fontFamily: FONTS.regular,
-    fontSize: 13,
+    fontSize: normalize(13),
     fontWeight: '600',
   },
   stopAddress: {
     fontFamily: FONTS.regular,
-    fontSize: 12,
-    lineHeight: 17,
+    fontSize: normalize(12),
+    lineHeight: normalize(17),
   },
 
   /* ── Passengers ── */
   passengerCard: {
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 8,
+    borderRadius: normalize(14),
+    padding: normalize(14),
+    marginBottom: normalize(8),
   },
   passengerTop: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   passengerAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: normalize(40),
+    height: normalize(40),
+    borderRadius: normalize(20),
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 10,
+    marginRight: normalize(10),
   },
   passengerInfo: {
     flex: 1,
   },
   passengerName: {
     fontFamily: FONTS.regular,
-    fontSize: 14,
+    fontSize: normalize(14),
     fontWeight: '600',
   },
   passengerRouteRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginTop: 3,
+    gap: normalize(4),
+    marginTop: normalize(3),
   },
   passengerRouteText: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
-    maxWidth: SCREEN_WIDTH * 0.25,
+    fontSize: normalize(11),
+    maxWidth: wp(25),
   },
   pStatusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: normalize(10),
+    paddingVertical: normalize(4),
+    borderRadius: normalize(12),
   },
   pStatusText: {
     fontFamily: FONTS.regular,
-    fontSize: 10,
+    fontSize: normalize(10),
     fontWeight: '700',
-    letterSpacing: 0.3,
+    letterSpacing: normalize(0.3),
   },
   passengerActions: {
     flexDirection: 'row',
@@ -1709,25 +1708,25 @@ const styles = StyleSheet.create({
   pActionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 9,
-    borderRadius: 10,
+    gap: normalize(6),
+    paddingHorizontal: normalize(16),
+    paddingVertical: normalize(9),
+    borderRadius: normalize(10),
   },
   pActionBtnText: {
     fontFamily: FONTS.regular,
-    fontSize: 13,
+    fontSize: normalize(13),
     fontWeight: '600',
     color: '#FFF',
   },
   completedBadge: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
+    paddingHorizontal: normalize(14),
+    paddingVertical: normalize(8),
+    borderRadius: normalize(10),
   },
   completedBadgeText: {
     fontFamily: FONTS.regular,
-    fontSize: 12,
+    fontSize: normalize(12),
     fontWeight: '700',
   },
 
@@ -1739,35 +1738,35 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
-    paddingVertical: 16,
-    borderRadius: 16,
+    gap: normalize(10),
+    paddingVertical: normalize(16),
+    borderRadius: normalize(16),
     ...SHADOWS.md,
   },
   tripStartBtnText: {
     fontFamily: FONTS.regular,
-    fontSize: 16,
+    fontSize: normalize(16),
     color: '#FFF',
     fontWeight: '700',
-    letterSpacing: 0.3,
+    letterSpacing: normalize(0.3),
   },
   tripEndBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
-    paddingVertical: 16,
-    borderRadius: 16,
+    gap: normalize(10),
+    paddingVertical: normalize(16),
+    borderRadius: normalize(16),
     borderWidth: 2,
     borderColor: '#F44336',
     backgroundColor: '#F44336' + '08',
   },
   tripEndBtnText: {
     fontFamily: FONTS.regular,
-    fontSize: 16,
+    fontSize: normalize(16),
     color: '#F44336',
     fontWeight: '700',
-    letterSpacing: 0.3,
+    letterSpacing: normalize(0.3),
   },
 
   /* ── Loading ── */
@@ -1779,7 +1778,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontFamily: FONTS.regular,
-    fontSize: 14,
+    fontSize: normalize(14),
     marginTop: SPACING.md,
   },
 
@@ -1798,9 +1797,9 @@ const styles = StyleSheet.create({
     ...SHADOWS.lg,
   },
   modalHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
+    width: normalize(40),
+    height: normalize(4),
+    borderRadius: normalize(2),
     backgroundColor: 'rgba(0,0,0,0.15)',
     marginBottom: SPACING.lg,
   },
@@ -1812,42 +1811,42 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   modalIconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: normalize(64),
+    height: normalize(64),
+    borderRadius: normalize(32),
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: SPACING.md,
   },
   modalTitle: {
     fontFamily: FONTS.regular,
-    fontSize: 20,
+    fontSize: normalize(20),
     fontWeight: '700',
-    marginBottom: 6,
+    marginBottom: normalize(6),
     textAlign: 'center',
   },
   modalSubtitle: {
     fontFamily: FONTS.regular,
-    fontSize: 13,
+    fontSize: normalize(13),
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: normalize(20),
     marginBottom: SPACING.lg,
   },
   modalHint: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
+    fontSize: normalize(11),
     textAlign: 'center',
   },
   codeInput: {
     width: '100%',
     borderWidth: 2,
-    borderRadius: 14,
+    borderRadius: normalize(14),
     padding: SPACING.md,
-    fontSize: 28,
+    fontSize: normalize(28),
     fontFamily: FONTS.regular,
     fontWeight: '800',
     textAlign: 'center',
-    letterSpacing: 16,
+    letterSpacing: normalize(16),
     marginBottom: SPACING.lg,
   },
   modalButtons: {
@@ -1857,27 +1856,27 @@ const styles = StyleSheet.create({
   },
   modalCancelBtn: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 14,
+    paddingVertical: normalize(14),
+    borderRadius: normalize(14),
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
   },
   modalCancelText: {
     fontFamily: FONTS.regular,
-    fontSize: 15,
+    fontSize: normalize(15),
     fontWeight: '600',
   },
   modalConfirmBtn: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 14,
+    paddingVertical: normalize(14),
+    borderRadius: normalize(14),
     alignItems: 'center',
     justifyContent: 'center',
   },
   modalConfirmText: {
     fontFamily: FONTS.regular,
-    fontSize: 15,
+    fontSize: normalize(15),
     fontWeight: '700',
     color: '#FFF',
   },

@@ -17,6 +17,7 @@ import {
   User,
 } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '@constants/theme';
+import { normalize } from '@utils/responsive';
 import { ratingApi } from '@utils/apiClient';
 
 interface RatingModalProps {
@@ -343,9 +344,9 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   avatarPlaceholder: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: normalize(64),
+    height: normalize(64),
+    borderRadius: normalize(32),
     backgroundColor: COLORS.lightGray,
     justifyContent: 'center',
     alignItems: 'center',
@@ -436,7 +437,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.md,
     color: COLORS.text,
-    minHeight: 100,
+    minHeight: normalize(100),
   },
   charCount: {
     fontFamily: FONTS.regular,

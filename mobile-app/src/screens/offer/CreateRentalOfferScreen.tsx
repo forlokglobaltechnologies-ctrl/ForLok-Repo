@@ -17,6 +17,7 @@ import LottieView from 'lottie-react-native';
 import { Video, ResizeMode } from 'expo-av';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { ArrowLeft, MapPin, Calendar, Clock, Car, IndianRupee, FileText, Minus, Plus, ChevronDown } from 'lucide-react-native';
+import { normalize, wp, hp } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { Button } from '@components/common/Button';
 import { Input } from '@components/common/Input';
@@ -34,20 +35,20 @@ const CreateRentalOfferScreen = () => {
   console.log(`🚀 CreateRentalOfferScreen component rendered (render #${renderCount.current})`);
   
   const navigation = useNavigation();
+  const { t } = useLanguage();
 
   if (RENTAL_COMING_SOON) {
     return (
       <View style={{ flex: 1, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' }}>
         <StatusBar barStyle="dark-content" />
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ position: 'absolute', top: Platform.OS === 'android' ? 40 : 54, left: 16, zIndex: 10, width: 40, height: 40, borderRadius: 20, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' }}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ position: 'absolute', top: Platform.OS === 'android' ? normalize(40) : normalize(54), left: normalize(16), zIndex: 10, width: normalize(40), height: normalize(40), borderRadius: normalize(20), backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' }}>
           <ArrowLeft size={22} color="#1E293B" />
         </TouchableOpacity>
-        <LottieView source={require('../../../assets/videos/Coming soon.json')} autoPlay loop style={{ width: 300, height: 300 }} />
+        <LottieView source={require('../../../assets/videos/Coming soon.json')} autoPlay loop style={{ width: wp(75), height: wp(75) }} />
+        <Text style={{ marginTop: 8, fontSize: 14, color: '#64748B', textAlign: 'center', paddingHorizontal: 24 }}>{t('createRentalOffer.featureInProgress')}</Text>
       </View>
     );
   }
-
-  const { t } = useLanguage();
   const videoRef = useRef<Video>(null);
   
   // Check if documents are uploaded (in real app, get from user context/state)
@@ -554,15 +555,15 @@ const CreateRentalOfferScreen = () => {
 
       if (response.success) {
         Alert.alert(
-          'Success',
-          'Rental offer created successfully!',
+          t('common.success'),
+          t('createRentalOffer.offerCreated'),
           [
             {
-              text: 'View My Offers',
+              text: t('createRentalOffer.viewMyOffers'),
               onPress: () => navigation.navigate('MyOffers' as never),
             },
             {
-              text: 'OK',
+              text: t('common.ok'),
               onPress: () => navigation.goBack(),
             },
           ]
@@ -826,23 +827,23 @@ const CreateRentalOfferScreen = () => {
             {/* Calculate Price Button */}
             <View style={styles.calculatePriceContainer}>
               {/* Debug Info - Remove after fixing */}
-              <View style={{ backgroundColor: '#f0f0f0', padding: 8, marginBottom: 8, borderRadius: 4 }}>
-                <Text style={{ fontSize: 10, color: '#666' }}>
+              <View style={{ backgroundColor: '#f0f0f0', padding: normalize(8), marginBottom: normalize(8), borderRadius: normalize(4) }}>
+                <Text style={{ fontSize: normalize(10), color: '#666' }}>
                   Debug: Vehicle={hasVehicle ? '✓' : '✗'} Date={hasDate ? '✓' : '✗'} From={hasFrom ? '✓' : '✗'} Until={hasUntil ? '✓' : '✗'} Location={hasLocation ? '✓' : '✗'}
                 </Text>
-                <Text style={{ fontSize: 10, color: '#666' }}>
+                <Text style={{ fontSize: normalize(10), color: '#666' }}>
                   Brand={hasBrand ? '✓' : '✗'} Seats={hasSeats ? '✓' : '✗'} Fuel={hasFuelType ? '✓' : '✗'} Trans={hasTransmission ? '✓' : '✗'}
                 </Text>
-                <Text style={{ fontSize: 10, color: canCalculatePrice ? 'green' : 'red', fontWeight: 'bold' }}>
+                <Text style={{ fontSize: normalize(10), color: canCalculatePrice ? 'green' : 'red', fontWeight: 'bold' }}>
                   Can Calculate: {canCalculatePrice ? 'YES' : 'NO'}
                 </Text>
                 {selectedVehicle && (
-                  <Text style={{ fontSize: 8, color: '#999', marginTop: 4 }}>
+                  <Text style={{ fontSize: normalize(8), color: '#999', marginTop: normalize(4) }}>
                     Vehicle keys: {Object.keys(selectedVehicle).join(', ')}
                   </Text>
                 )}
                 {selectedVehicle && (
-                  <Text style={{ fontSize: 8, color: '#999' }}>
+                  <Text style={{ fontSize: normalize(8), color: '#999' }}>
                     Brand: {selectedVehicle.brand || 'MISSING'} | Seats: {selectedVehicle.seats || 'MISSING'} | Fuel: {selectedVehicle.fuelType || 'MISSING'} | Trans: {selectedVehicle.transmission || 'MISSING'}
                   </Text>
                 )}
@@ -954,7 +955,7 @@ const CreateRentalOfferScreen = () => {
             </View>
 
             <Button
-              title={creating ? 'Creating...' : t('createRentalOffer.createOffer')}
+              title={creating ? t('common.loading') : t('createRentalOffer.createOffer')}
               onPress={handleCreate}
               variant="primary"
               size="large"
@@ -1056,7 +1057,7 @@ const styles = StyleSheet.create({
   },
   vehicleImage: {
     width: '100%',
-    height: 140,
+    height: hp(17),
   },
   vehicleSelectContainer: {
     marginBottom: SPACING.md,
@@ -1110,9 +1111,9 @@ const styles = StyleSheet.create({
     gap: SPACING.lg,
   },
   hoursButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: normalize(48),
+    height: normalize(48),
+    borderRadius: normalize(24),
     backgroundColor: COLORS.primary,
     justifyContent: 'center',
     alignItems: 'center',
@@ -1120,7 +1121,7 @@ const styles = StyleSheet.create({
   },
   hoursDisplay: {
     alignItems: 'center',
-    minWidth: 80,
+    minWidth: normalize(80),
   },
   hoursCount: {
     fontFamily: FONTS.regular,

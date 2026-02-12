@@ -10,7 +10,6 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
-  Dimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import {
@@ -29,11 +28,10 @@ import {
 } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import { COLORS, FONTS, SPACING, SHADOWS } from '@constants/theme';
+import { normalize, wp, hp } from '@utils/responsive';
 import { useLanguage } from '@context/LanguageContext';
 import { useTheme } from '@context/ThemeContext';
 import { feedbackApi } from '@utils/apiClient';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const ReportBugScreen = () => {
   const navigation = useNavigation<any>();
@@ -65,15 +63,15 @@ const ReportBugScreen = () => {
 
   const handleSubmit = async () => {
     if (!bugCategory) {
-      Alert.alert('Required', 'Please select a bug category');
+      Alert.alert(t('reportBug.requiredField'), t('reportBug.selectCategory'));
       return;
     }
     if (!title.trim()) {
-      Alert.alert('Required', 'Please enter a bug title');
+      Alert.alert(t('reportBug.requiredField'), t('reportBug.enterTitle'));
       return;
     }
     if (!steps.trim()) {
-      Alert.alert('Required', 'Please describe the steps to reproduce');
+      Alert.alert(t('reportBug.requiredField'), t('reportBug.enterSteps'));
       return;
     }
 
@@ -88,16 +86,16 @@ const ReportBugScreen = () => {
 
       if (response.success) {
         Alert.alert(
-          'Bug Reported',
-          'Thank you for reporting this bug. Our team will investigate and fix it as soon as possible.',
+          t('reportBug.submitSuccess'),
+          t('reportBug.submitSuccessMessage'),
           [{ text: 'OK', onPress: () => navigation.goBack() }]
         );
       } else {
-        Alert.alert('Error', response.error || 'Failed to submit bug report');
+        Alert.alert(t('common.error'), response.error || t('reportBug.submitFailed'));
       }
     } catch (error: any) {
       console.error('Error submitting bug report:', error);
-      Alert.alert('Error', error.message || 'Failed to submit bug report. Please try again.');
+      Alert.alert(t('common.error'), error.message || t('reportBug.submitFailed'));
     } finally {
       setSubmitting(false);
     }
@@ -117,8 +115,8 @@ const ReportBugScreen = () => {
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.navButton}>
               <ArrowLeft size={22} color="#FFF" />
             </TouchableOpacity>
-            <Text style={styles.navTitle}>Report a Bug</Text>
-            <View style={{ width: 38 }} />
+            <Text style={styles.navTitle}>{t('reportBug.title')}</Text>
+            <View style={{ width: normalize(38) }} />
           </View>
         </BlurView>
       </ImageBackground>
@@ -129,13 +127,13 @@ const ReportBugScreen = () => {
         <View style={[styles.infoBanner, { backgroundColor: '#E3F2FD', borderColor: '#90CAF9' }]}>
           <Info size={18} color="#1565C0" />
           <Text style={[styles.infoText, { color: '#1565C0' }]}>
-            Help us squash bugs! The more detail you provide, the faster we can fix it.
+            {t('reportBug.helpText')}
           </Text>
         </View>
 
         {/* ── Bug Category ── */}
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-          <Text style={[styles.cardTitle, { color: theme.colors.text }]}>Bug Category *</Text>
+          <Text style={[styles.cardTitle, { color: theme.colors.text }]}>{t('reportBug.bugCategory')}</Text>
           <View style={styles.categoryGrid}>
             {bugCategories.map((cat) => {
               const isSelected = bugCategory === cat.id;
@@ -162,7 +160,7 @@ const ReportBugScreen = () => {
 
         {/* ── Severity ── */}
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-          <Text style={[styles.cardTitle, { color: theme.colors.text }]}>Severity</Text>
+          <Text style={[styles.cardTitle, { color: theme.colors.text }]}>{t('reportBug.severity')}</Text>
           <View style={styles.severityRow}>
             {severities.map((sev) => {
               const isSelected = severity === sev.id;
@@ -192,12 +190,12 @@ const ReportBugScreen = () => {
 
         {/* ── Bug Title ── */}
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-          <Text style={[styles.cardTitle, { color: theme.colors.text }]}>Bug Title *</Text>
+          <Text style={[styles.cardTitle, { color: theme.colors.text }]}>{t('reportBug.bugTitle')}</Text>
           <TextInput
             style={[styles.input, { color: theme.colors.text, borderColor: theme.colors.border, backgroundColor: theme.colors.background }]}
             value={title}
             onChangeText={setTitle}
-            placeholder="Brief description of the bug..."
+            placeholder={t('reportBug.bugTitlePlaceholder')}
             placeholderTextColor={theme.colors.textSecondary}
             maxLength={120}
           />
@@ -206,12 +204,12 @@ const ReportBugScreen = () => {
 
         {/* ── Steps to Reproduce ── */}
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-          <Text style={[styles.cardTitle, { color: theme.colors.text }]}>Steps to Reproduce *</Text>
+          <Text style={[styles.cardTitle, { color: theme.colors.text }]}>{t('reportBug.stepsToReproduce')}</Text>
           <TextInput
             style={[styles.textArea, { color: theme.colors.text, borderColor: theme.colors.border, backgroundColor: theme.colors.background }]}
             value={steps}
             onChangeText={setSteps}
-            placeholder={"1. Open the app\n2. Go to...\n3. Tap on...\n4. Observe the bug"}
+            placeholder={t('reportBug.stepsPlaceholder')}
             placeholderTextColor={theme.colors.textSecondary}
             multiline
             numberOfLines={5}
@@ -223,12 +221,12 @@ const ReportBugScreen = () => {
 
         {/* ── Expected Behavior ── */}
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-          <Text style={[styles.cardTitle, { color: theme.colors.text }]}>Expected Behavior</Text>
+          <Text style={[styles.cardTitle, { color: theme.colors.text }]}>{t('reportBug.expectedBehavior')}</Text>
           <TextInput
-            style={[styles.textArea, { color: theme.colors.text, borderColor: theme.colors.border, backgroundColor: theme.colors.background, minHeight: 80 }]}
+            style={[styles.textArea, { color: theme.colors.text, borderColor: theme.colors.border, backgroundColor: theme.colors.background, minHeight: normalize(80) }]}
             value={expected}
             onChangeText={setExpected}
-            placeholder="What should have happened?"
+            placeholder={t('reportBug.expectedPlaceholder')}
             placeholderTextColor={theme.colors.textSecondary}
             multiline
             numberOfLines={3}
@@ -239,12 +237,12 @@ const ReportBugScreen = () => {
 
         {/* ── Actual Behavior ── */}
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-          <Text style={[styles.cardTitle, { color: theme.colors.text }]}>Actual Behavior</Text>
+          <Text style={[styles.cardTitle, { color: theme.colors.text }]}>{t('reportBug.actualBehavior')}</Text>
           <TextInput
-            style={[styles.textArea, { color: theme.colors.text, borderColor: theme.colors.border, backgroundColor: theme.colors.background, minHeight: 80 }]}
+            style={[styles.textArea, { color: theme.colors.text, borderColor: theme.colors.border, backgroundColor: theme.colors.background, minHeight: normalize(80) }]}
             value={actual}
             onChangeText={setActual}
-            placeholder="What actually happened instead?"
+            placeholder={t('reportBug.actualPlaceholder')}
             placeholderTextColor={theme.colors.textSecondary}
             multiline
             numberOfLines={3}
@@ -265,14 +263,14 @@ const ReportBugScreen = () => {
           ) : (
             <>
               <Send size={18} color="#FFF" />
-              <Text style={styles.submitText}>Submit Bug Report</Text>
+              <Text style={styles.submitText}>{t('reportBug.submitReport')}</Text>
             </>
           )}
         </TouchableOpacity>
 
         {/* ── Tips Card ── */}
         <View style={[styles.tipsCard, { backgroundColor: '#FFF3E0', borderColor: '#FFE0B2' }]}>
-          <Text style={[styles.tipsTitle, { color: '#E65100' }]}>Tips for a Good Bug Report</Text>
+          <Text style={[styles.tipsTitle, { color: '#E65100' }]}>{t('reportBug.tipsTitle')}</Text>
           <View style={styles.tipRow}>
             <CheckCircle size={14} color="#4CAF50" />
             <Text style={[styles.tipText, { color: '#5D4037' }]}>Be specific - include exact steps</Text>
@@ -343,8 +341,8 @@ const styles = StyleSheet.create({
   infoText: {
     flex: 1,
     fontFamily: FONTS.regular,
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: normalize(13),
+    lineHeight: normalize(19),
   },
 
   /* ── Card ── */
@@ -356,7 +354,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontFamily: FONTS.regular,
-    fontSize: 15,
+    fontSize: normalize(15),
     fontWeight: '700',
     marginBottom: SPACING.md,
   },
@@ -368,17 +366,17 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
   },
   categoryChip: {
-    width: (SCREEN_WIDTH - SPACING.md * 2 - SPACING.lg * 2 - SPACING.sm * 2) / 3,
-    paddingVertical: 14,
+    width: wp(30),
+    paddingVertical: normalize(14),
     borderRadius: 12,
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: normalize(6),
   },
   categoryChipText: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
+    fontSize: normalize(11),
     fontWeight: '600',
   },
 
@@ -391,48 +389,48 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 10,
+    gap: normalize(8),
+    paddingVertical: normalize(12),
+    paddingHorizontal: normalize(10),
     borderRadius: 12,
     borderWidth: 1.5,
   },
   severityDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: normalize(10),
+    height: normalize(10),
+    borderRadius: normalize(5),
   },
   severityLabel: {
     fontFamily: FONTS.regular,
-    fontSize: 12,
+    fontSize: normalize(12),
     fontWeight: '700',
   },
   severityDesc: {
     fontFamily: FONTS.regular,
-    fontSize: 10,
+    fontSize: normalize(10),
   },
 
   /* ── Inputs ── */
   input: {
     fontFamily: FONTS.regular,
-    fontSize: 14,
+    fontSize: normalize(14),
     borderWidth: 1,
     borderRadius: 12,
     padding: SPACING.md,
   },
   textArea: {
     fontFamily: FONTS.regular,
-    fontSize: 14,
+    fontSize: normalize(14),
     borderWidth: 1,
     borderRadius: 12,
     padding: SPACING.md,
-    minHeight: 120,
+    minHeight: normalize(120),
   },
   charCount: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
+    fontSize: normalize(11),
     textAlign: 'right',
-    marginTop: 4,
+    marginTop: normalize(4),
   },
 
   /* ── Submit ── */
@@ -440,14 +438,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
-    paddingVertical: 16,
-    borderRadius: 14,
+    gap: normalize(10),
+    paddingVertical: normalize(16),
+    borderRadius: normalize(14),
     marginBottom: SPACING.lg,
   },
   submitText: {
     fontFamily: FONTS.regular,
-    fontSize: 16,
+    fontSize: normalize(16),
     fontWeight: '700',
     color: '#FFF',
   },
@@ -458,23 +456,23 @@ const styles = StyleSheet.create({
     padding: SPACING.lg,
     borderWidth: 1,
     marginBottom: SPACING.md,
-    gap: 8,
+    gap: normalize(8),
   },
   tipsTitle: {
     fontFamily: FONTS.regular,
-    fontSize: 14,
+    fontSize: normalize(14),
     fontWeight: '700',
-    marginBottom: 4,
+    marginBottom: normalize(4),
   },
   tipRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: normalize(8),
   },
   tipText: {
     fontFamily: FONTS.regular,
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: normalize(12),
+    lineHeight: normalize(18),
   },
 });
 

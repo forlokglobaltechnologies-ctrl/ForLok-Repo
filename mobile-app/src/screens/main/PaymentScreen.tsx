@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, ActivityIndicator, Alert, Linking } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ArrowLeft, CreditCard, Phone, Building, Wallet, CheckCircle, IndianRupee, Banknote } from 'lucide-react-native';
+import { normalize } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { Button } from '@components/common/Button';
 import { Card } from '@components/common/Card';
@@ -565,7 +566,7 @@ const styles = StyleSheet.create({
     color: COLORS.white, 
     fontWeight: 'bold' 
   },
-  placeholder: { width: 40 },
+  placeholder: { width: normalize(40) },
   scrollContent: { padding: SPACING.md },
   summaryCard: { 
     padding: SPACING.lg, 

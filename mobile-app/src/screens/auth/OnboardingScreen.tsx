@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  Dimensions,
   ImageBackground,
   TouchableOpacity,
   StatusBar,
@@ -14,12 +13,18 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '@constants/theme';
 import { Button } from '@components/common/Button';
 import { useLanguage } from '@context/LanguageContext';
+import { normalize, wp, hp } from '@utils/responsive';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const { width } = Dimensions.get('window');
+const ONBOARDING_KEY = '@forlok_onboarding_seen';
 
 const OnboardingScreen = () => {
   const navigation = useNavigation();
   const { t } = useLanguage();
+
+  const markOnboardingSeen = async () => {
+    await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
+  };
   const scrollViewRef = useRef<ScrollView>(null);
   const [currentPage, setCurrentPage] = useState(0);
 
@@ -40,12 +45,12 @@ const OnboardingScreen = () => {
 
   const handleScroll = (event: any) => {
     const offsetX = event.nativeEvent.contentOffset.x;
-    const page = Math.round(offsetX / width);
+    const page = Math.round(offsetX / wp(100));
     setCurrentPage(page);
   };
 
   const goToPage = (page: number) => {
-    scrollViewRef.current?.scrollTo({ x: page * width, animated: true });
+    scrollViewRef.current?.scrollTo({ x: page * wp(100), animated: true });
     setCurrentPage(page);
   };
 
@@ -54,7 +59,7 @@ const OnboardingScreen = () => {
       <StatusBar hidden />
       <TouchableOpacity
         style={styles.skipButton}
-        onPress={() => navigation.navigate('SignUp' as never)}
+        onPress={() => { markOnboardingSeen(); navigation.navigate('SignUp' as never); }}
       >
         <Text style={styles.skipText}>{t('onboarding.skip')}</Text>
       </TouchableOpacity>
@@ -102,14 +107,14 @@ const OnboardingScreen = () => {
         </View>
         <Button
           title={t('common.signUp')}
-          onPress={() => navigation.navigate('SignUp' as never)}
+          onPress={() => { markOnboardingSeen(); navigation.navigate('SignUp' as never); }}
           variant="primary"
           size="large"
           style={styles.signUpButton}
         />
         <Button
           title={t('common.signIn')}
-          onPress={() => navigation.navigate('SignIn' as never)}
+          onPress={() => { markOnboardingSeen(); navigation.navigate('SignIn' as never); }}
           variant="outline"
           size="large"
           style={styles.signInButton}
@@ -126,7 +131,7 @@ const styles = StyleSheet.create({
   },
   skipButton: {
     position: 'absolute',
-    top: 50,
+    top: hp(6),
     right: SPACING.md,
     zIndex: 10,
     padding: SPACING.sm,
@@ -137,7 +142,7 @@ const styles = StyleSheet.create({
     color: COLORS.white,
   },
   slide: {
-    width,
+    width: wp(100),
     flex: 1,
   },
   overlay: {
@@ -165,7 +170,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     opacity: 0.9,
     paddingHorizontal: SPACING.xl,
-    lineHeight: 24,
+    lineHeight: normalize(24),
   },
   pagination: {
     flexDirection: 'row',
@@ -174,25 +179,25 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.lg,
   },
   dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: normalize(8),
+    height: normalize(8),
+    borderRadius: normalize(4),
     backgroundColor: COLORS.primary,
     opacity: 0.3,
-    marginHorizontal: 4,
+    marginHorizontal: normalize(4),
   },
   activeDot: {
     opacity: 1,
-    width: 24,
+    width: normalize(24),
   },
   buttonContainer: {
     backgroundColor: COLORS.white,
     padding: SPACING.md,
     paddingTop: SPACING.lg,
     paddingBottom: SPACING.xl,
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    minHeight: 260,
+    borderTopLeftRadius: normalize(30),
+    borderTopRightRadius: normalize(30),
+    minHeight: hp(32),
   },
   signUpButton: {
     marginBottom: SPACING.md,

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, ActivityIndicator, Alert, Image } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ArrowLeft, CheckCircle, Calendar, Clock, MapPin, User, IndianRupee, CreditCard, Share2, FileText, Check, Car, MessageCircle, XCircle } from 'lucide-react-native';
+import { normalize } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, SHADOWS, BORDER_RADIUS } from '@constants/theme';
 import { Button } from '@components/common/Button';
 import { useLanguage } from '@context/LanguageContext';
@@ -519,7 +520,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   headerRight: {
-    width: 24,
+    width: normalize(24),
   },
   scrollContent: {
     padding: SPACING.md,
@@ -534,18 +535,18 @@ const styles = StyleSheet.create({
     ...SHADOWS.md,
   },
   successIconWrapper: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: normalize(120),
+    height: normalize(120),
+    borderRadius: normalize(60),
     backgroundColor: `${COLORS.success}15`,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: SPACING.lg,
   },
   checkCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: normalize(80),
+    height: normalize(80),
+    borderRadius: normalize(40),
     backgroundColor: COLORS.success,
     justifyContent: 'center',
     alignItems: 'center',
@@ -614,9 +615,9 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   detailIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: normalize(36),
+    height: normalize(36),
+    borderRadius: normalize(18),
     backgroundColor: `${COLORS.primary}15`,
     justifyContent: 'center',
     alignItems: 'center',
@@ -753,9 +754,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   driverPhoto: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: normalize(60),
+    height: normalize(60),
+    borderRadius: normalize(30),
     marginRight: SPACING.md,
     borderWidth: 2,
     borderColor: `${COLORS.primary}20`,

@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ArrowLeft, Phone, MessageCircle, Info, MapPin, Clock, Navigation, AlertCircle, CreditCard, Banknote, CheckCircle, Coins } from 'lucide-react-native';
+import { normalize, wp, hp } from '@utils/responsive';
 import { COLORS, FONTS, SPACING } from '@constants/theme';
 import { Card } from '@components/common/Card';
 import { Button } from '@components/common/Button';
@@ -679,13 +680,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   mapContainer: {
-    height: 300,
+    height: hp(37),
     backgroundColor: COLORS.lightGray,
     position: 'relative',
   },
   webView: {
     flex: 1,
-    height: 300,
+    height: hp(37),
   },
   mapPlaceholder: {
     width: '100%',
@@ -748,9 +749,9 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   driverPhoto: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: normalize(60),
+    height: normalize(60),
+    borderRadius: normalize(30),
   },
   driverDetails: {
     flex: 1,
@@ -840,7 +841,7 @@ const styles = StyleSheet.create({
   paymentOption: {
     flex: 1,
     padding: SPACING.lg,
-    borderRadius: 12,
+    borderRadius: normalize(12),
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
   },

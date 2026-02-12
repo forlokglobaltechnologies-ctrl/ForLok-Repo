@@ -7,8 +7,8 @@ import {
   TouchableOpacity,
   SafeAreaView,
   ImageBackground,
-  Dimensions,
 } from 'react-native';
+import { normalize, wp, hp, SCREEN_WIDTH } from '@utils/responsive';
 import { useNavigation } from '@react-navigation/native';
 import { Menu, Bell, User, Car, Bike, Clock, ChevronLeft, ChevronRight, DollarSign, BarChart } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
@@ -16,8 +16,6 @@ import { COLORS, FONTS, SPACING, SHADOWS, BORDER_RADIUS } from '@constants/theme
 import { Card } from '@components/common/Card';
 import { Button } from '@components/common/Button';
 import { useLanguage } from '@context/LanguageContext';
-
-const { width } = Dimensions.get('window');
 
 const CompanyDashboardScreen = () => {
   const navigation = useNavigation();
@@ -336,7 +334,7 @@ const styles = StyleSheet.create({
   },
   carouselImage: {
     width: '100%',
-    height: 200,
+    height: hp(25),
     position: 'relative',
   },
   overlay: {
@@ -352,9 +350,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
   },
   carouselArrow: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: normalize(40),
+    height: normalize(40),
+    borderRadius: normalize(20),
     backgroundColor: 'rgba(255, 255, 255, 0.3)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -371,14 +369,14 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
   },
   indicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: normalize(8),
+    height: normalize(8),
+    borderRadius: normalize(4),
     backgroundColor: COLORS.lightGray,
   },
   indicatorActive: {
     backgroundColor: COLORS.primary,
-    width: 24,
+    width: normalize(24),
   },
   statsContainer: {
     flexDirection: 'row',
@@ -388,17 +386,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   statBox: {
-    width: (width - SPACING.md * 2 - SPACING.sm * 4) / 3,
-    minWidth: 100,
+    width: (SCREEN_WIDTH - SPACING.md * 2 - SPACING.sm * 4) / 3,
+    minWidth: normalize(100),
     alignItems: 'center',
     padding: SPACING.md,
-    minHeight: 120,
+    minHeight: normalize(120),
     justifyContent: 'center',
   },
   statIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: normalize(56),
+    height: normalize(56),
+    borderRadius: normalize(28),
     backgroundColor: COLORS.primary + '15',
     justifyContent: 'center',
     alignItems: 'center',

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Image, StyleSheet, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, FONTS, SPACING } from '@constants/theme';
+import { normalize, wp, hp } from '@utils/responsive';
 
 const LoadingScreen = () => {
   return (
@@ -40,16 +41,16 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.xl,
   },
   logoCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: normalize(100),
+    height: normalize(100),
+    borderRadius: normalize(50),
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
   },
   logoImage: {
-    width: 100,
-    height: 100,
+    width: normalize(100),
+    height: normalize(100),
   },
   loader: {
     marginBottom: SPACING.md,

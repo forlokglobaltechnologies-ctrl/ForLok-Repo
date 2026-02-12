@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   RefreshControl,
   Image,
-  Dimensions,
   ActivityIndicator,
   FlatList,
   Platform,
@@ -43,9 +42,9 @@ import {
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { useLanguage } from '@context/LanguageContext';
 import { adminApi, analyticsApi, apiCall } from '@utils/apiClient';
+import { normalize, wp, hp, SCREEN_WIDTH } from '@utils/responsive';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CAROUSEL_HEIGHT = 180;
+const CAROUSEL_HEIGHT = hp(22);
 const STAT_CARD_WIDTH = (SCREEN_WIDTH - SPACING.lg * 2 - SPACING.sm) / 2;
 
 // ── Carousel images ──────────────────────────────────────────────
@@ -569,8 +568,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   loadingAnimation: {
-    width: 200,
-    height: 200,
+    width: normalize(200),
+    height: normalize(200),
   },
   loadingText: {
     marginTop: SPACING.sm,
@@ -639,7 +638,7 @@ const styles = StyleSheet.create({
   /* ── Carousel ───────────────────────────────────────────────── */
   carouselContainer: {
     marginBottom: SPACING.lg,
-    borderRadius: 16,
+    borderRadius: normalize(16),
     overflow: 'hidden',
     backgroundColor: '#fff',
     ...SHADOWS.md,
@@ -656,20 +655,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 10,
-    gap: 6,
+    paddingVertical: normalize(10),
+    gap: normalize(6),
     backgroundColor: '#fff',
   },
   dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: normalize(8),
+    height: normalize(8),
+    borderRadius: normalize(4),
     backgroundColor: '#D1D5DB',
   },
   dotActive: {
     backgroundColor: '#4A90D9',
-    width: 24,
-    borderRadius: 12,
+    width: normalize(24),
+    borderRadius: normalize(12),
   },
 
   /* ── Stat Cards ─────────────────────────────────────────────── */
@@ -681,9 +680,9 @@ const styles = StyleSheet.create({
   },
   statCard: {
     width: STAT_CARD_WIDTH,
-    borderRadius: 16,
+    borderRadius: normalize(16),
     padding: SPACING.md,
-    minHeight: 120,
+    minHeight: normalize(120),
     ...SHADOWS.sm,
   },
   statCardHeader: {
@@ -693,42 +692,42 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
   },
   statIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: normalize(36),
+    height: normalize(36),
+    borderRadius: normalize(10),
     justifyContent: 'center',
     alignItems: 'center',
   },
   liveBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: normalize(4),
     backgroundColor: '#00B894' + '15',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 12,
+    paddingHorizontal: normalize(8),
+    paddingVertical: normalize(3),
+    borderRadius: normalize(12),
   },
   liveBadgeText: {
     fontFamily: FONTS.regular,
-    fontSize: 10,
+    fontSize: normalize(10),
     color: '#00B894',
     fontWeight: '700',
   },
   trendBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
+    gap: normalize(2),
   },
   trendText: {
     fontFamily: FONTS.regular,
-    fontSize: 10,
+    fontSize: normalize(10),
     fontWeight: '600',
   },
   statCardValue: {
     fontFamily: FONTS.regular,
-    fontSize: 24,
+    fontSize: normalize(24),
     fontWeight: '800',
-    marginBottom: 2,
+    marginBottom: normalize(2),
   },
   statCardLabel: {
     fontFamily: FONTS.regular,
@@ -757,7 +756,7 @@ const styles = StyleSheet.create({
   viewAllBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
+    gap: normalize(2),
   },
   viewAllText: {
     fontFamily: FONTS.regular,
@@ -780,28 +779,28 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   quickActionIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 16,
+    width: normalize(50),
+    height: normalize(50),
+    borderRadius: normalize(16),
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: SPACING.xs,
   },
   quickActionLabel: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
+    fontSize: normalize(11),
     color: '#475569',
     fontWeight: '600',
     textAlign: 'center',
   },
   actionBadge: {
     position: 'absolute',
-    top: 8,
-    right: 4,
+    top: normalize(8),
+    right: normalize(4),
     backgroundColor: '#E74C3C',
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: normalize(20),
+    height: normalize(20),
+    borderRadius: normalize(10),
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
@@ -809,7 +808,7 @@ const styles = StyleSheet.create({
   },
   actionBadgeText: {
     fontFamily: FONTS.regular,
-    fontSize: 9,
+    fontSize: normalize(9),
     color: '#fff',
     fontWeight: '800',
   },
@@ -821,26 +820,26 @@ const styles = StyleSheet.create({
   },
   bookingCard: {
     flex: 1,
-    borderRadius: 14,
+    borderRadius: normalize(14),
     overflow: 'hidden',
     ...SHADOWS.sm,
   },
   bookingCardGradient: {
     padding: SPACING.md,
     alignItems: 'center',
-    minHeight: 100,
+    minHeight: normalize(100),
     justifyContent: 'center',
-    gap: 6,
+    gap: normalize(6),
   },
   bookingCardValue: {
     fontFamily: FONTS.regular,
-    fontSize: 22,
+    fontSize: normalize(22),
     color: '#fff',
     fontWeight: '800',
   },
   bookingCardLabel: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
+    fontSize: normalize(11),
     color: 'rgba(255,255,255,0.85)',
     fontWeight: '600',
   },
@@ -853,15 +852,15 @@ const styles = StyleSheet.create({
   coinCard: {
     flex: 1,
     backgroundColor: '#fff',
-    borderRadius: 14,
+    borderRadius: normalize(14),
     padding: SPACING.md,
     alignItems: 'center',
     ...SHADOWS.sm,
   },
   coinIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: normalize(40),
+    height: normalize(40),
+    borderRadius: normalize(12),
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: SPACING.xs,
@@ -875,7 +874,7 @@ const styles = StyleSheet.create({
   },
   coinLabel: {
     fontFamily: FONTS.regular,
-    fontSize: 10,
+    fontSize: normalize(10),
     color: '#64748B',
     textAlign: 'center',
     fontWeight: '500',
@@ -901,7 +900,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     paddingVertical: SPACING.sm,
-    borderRadius: 12,
+    borderRadius: normalize(12),
   },
   promoPillValue: {
     fontFamily: FONTS.regular,
@@ -910,20 +909,20 @@ const styles = StyleSheet.create({
   },
   promoPillLabel: {
     fontFamily: FONTS.regular,
-    fontSize: 10,
+    fontSize: normalize(10),
     color: '#64748B',
-    marginTop: 2,
+    marginTop: normalize(2),
     fontWeight: '500',
   },
   reviewButton: {
-    borderRadius: 12,
+    borderRadius: normalize(12),
     overflow: 'hidden',
   },
   reviewButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
+    paddingVertical: normalize(12),
     gap: SPACING.xs,
   },
   reviewButtonText: {
@@ -938,15 +937,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#fff',
-    borderRadius: 14,
+    borderRadius: normalize(14),
     padding: SPACING.md,
     marginBottom: SPACING.sm,
     ...SHADOWS.sm,
   },
   activityIconWrap: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
+    width: normalize(42),
+    height: normalize(42),
+    borderRadius: normalize(12),
     backgroundColor: '#4A90D9' + '15',
     justifyContent: 'center',
     alignItems: 'center',
@@ -960,7 +959,7 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sizes.md,
     color: '#1E293B',
     fontWeight: '600',
-    marginBottom: 2,
+    marginBottom: normalize(2),
   },
   activityType: {
     fontFamily: FONTS.regular,
@@ -970,7 +969,7 @@ const styles = StyleSheet.create({
   activityAmount: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: normalize(4),
   },
   activityAmountText: {
     fontFamily: FONTS.regular,

@@ -7,9 +7,9 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   SafeAreaView,
-  Dimensions,
   Image,
 } from 'react-native';
+import { normalize, wp, hp, SCREEN_WIDTH } from '@utils/responsive';
 import { useNavigation } from '@react-navigation/native';
 import { Video, ResizeMode } from 'expo-av';
 import { Menu, Bell, User, Clock, MapPin, Calendar, TrendingUp, TrendingDown, IndianRupee, Heart, Plus, Coins } from 'lucide-react-native';
@@ -24,8 +24,6 @@ import { useTheme } from '@context/ThemeContext';
 import { dashboardApi } from '@utils/apiClient';
 import { useNotifications } from '@context/NotificationContext';
 import { Alert } from 'react-native';
-
-const { width } = Dimensions.get('window');
 
 const MainDashboardScreen = () => {
   const navigation = useNavigation();
@@ -77,9 +75,13 @@ const MainDashboardScreen = () => {
     <TouchableWithoutFeedback onPress={() => setShowProfileDropdown(false)}>
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={[styles.header, { backgroundColor: theme.colors.primary }]}>
-          <TouchableOpacity style={styles.menuButton}>
-            <Menu size={24} color={theme.colors.white} />
-          </TouchableOpacity>
+          <View style={styles.menuButton}>
+            <Image
+              source={require('../../../assets/signin_logo.png')}
+              style={styles.headerLogo}
+              resizeMode="contain"
+            />
+          </View>
           <Text style={[styles.headerTitle, { color: theme.colors.white }]}>Dashboard</Text>
           <View style={styles.headerRight}>
             <TouchableOpacity
@@ -116,23 +118,27 @@ const MainDashboardScreen = () => {
                       <User size={18} color={theme.colors.text} />
                       <Text style={[styles.dropdownText, { color: theme.colors.text }]}>View Profile</Text>
                     </TouchableOpacity>
-                    <View style={[styles.dropdownDivider, { backgroundColor: theme.colors.border }]} />
-                    <TouchableOpacity
-                      style={styles.dropdownItem}
-                      onPress={() => {
-                        setShowProfileDropdown(false);
-                        if (isPinkMode) {
-                          setPinkMode(false);
-                        } else {
-                          navigation.navigate('PinkPoolingSplash' as never);
-                        }
-                      }}
-                    >
-                      <Heart size={18} color={isPinkMode ? theme.colors.primary : theme.colors.text} />
-                      <Text style={[styles.dropdownText, { color: theme.colors.text }]}>
-                        {isPinkMode ? 'Exit Pink Pooling' : 'Enter Pink Pooling'}
-                      </Text>
-                    </TouchableOpacity>
+                    {(userGender === 'Female' || isPinkMode) && (
+                      <>
+                        <View style={[styles.dropdownDivider, { backgroundColor: theme.colors.border }]} />
+                        <TouchableOpacity
+                          style={styles.dropdownItem}
+                          onPress={() => {
+                            setShowProfileDropdown(false);
+                            if (isPinkMode) {
+                              setPinkMode(false);
+                            } else {
+                              navigation.navigate('PinkPoolingSplash' as never);
+                            }
+                          }}
+                        >
+                          <Heart size={18} color={isPinkMode ? theme.colors.primary : theme.colors.text} />
+                          <Text style={[styles.dropdownText, { color: theme.colors.text }]}>
+                            {isPinkMode ? 'Exit HerPooling' : 'Enter HerPooling'}
+                          </Text>
+                        </TouchableOpacity>
+                      </>
+                    )}
                   </View>
                 </TouchableWithoutFeedback>
               )}
@@ -152,13 +158,13 @@ const MainDashboardScreen = () => {
           <Text style={[styles.welcomeQuote, { color: theme.colors.textSecondary }]}>{t('dashboard.startRide')}</Text>
         </View>
 
-        {/* Pink Pooling Button - Only visible for Female users */}
+        {/* HerPooling Button - Only visible for Female users */}
         {userGender === 'Female' && (
           <Card style={styles.pinkPoolingCard}>
             <TouchableOpacity
               style={styles.pinkPoolingButton}
               onPress={() => {
-                // Gender is already verified, proceed to Pink Pooling
+                // Gender is already verified, proceed to HerPooling
                 navigation.navigate('PinkPoolingSplash' as never);
               }}
             >
@@ -167,7 +173,7 @@ const MainDashboardScreen = () => {
                   <Heart size={32} color="#FF6B9D" fill="#FF6B9D" />
                 </View>
                 <View style={styles.pinkPoolingTextContainer}>
-                  <Text style={styles.pinkPoolingTitle}>Pink Pooling</Text>
+                  <Text style={styles.pinkPoolingTitle}>HerPooling</Text>
                   <Text style={styles.pinkPoolingSubtitle}>Safe rides for women & girls</Text>
                 </View>
               </View>
@@ -261,6 +267,7 @@ const MainDashboardScreen = () => {
                   placeholder={t('dashboard.selectLocation')}
                   editable={false}
                   containerStyle={styles.locationInput}
+                  inputStyle={styles.compactInput}
                 />
               </TouchableOpacity>
 
@@ -277,6 +284,7 @@ const MainDashboardScreen = () => {
                   placeholder={t('dashboard.selectLocation')}
                   editable={false}
                   containerStyle={styles.locationInput}
+                  inputStyle={styles.compactInput}
                 />
               </TouchableOpacity>
             </View>
@@ -436,6 +444,11 @@ const styles = StyleSheet.create({
   menuButton: {
     padding: SPACING.xs,
   },
+  headerLogo: {
+    width: normalize(32),
+    height: normalize(32),
+    borderRadius: normalize(16),
+  },
   headerRight: {
     flexDirection: 'row',
     gap: SPACING.md,
@@ -446,21 +459,21 @@ const styles = StyleSheet.create({
   },
   notifBadge: {
     position: 'absolute' as const,
-    top: -4,
-    right: -6,
+    top: normalize(-4),
+    right: normalize(-6),
     backgroundColor: '#FF3B30',
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
+    borderRadius: normalize(10),
+    minWidth: normalize(20),
+    height: normalize(20),
     justifyContent: 'center' as const,
     alignItems: 'center' as const,
-    paddingHorizontal: 4,
+    paddingHorizontal: normalize(4),
     borderWidth: 2,
     borderColor: COLORS.white,
   },
   notifBadgeText: {
     color: COLORS.white,
-    fontSize: 10,
+    fontSize: normalize(10),
     fontWeight: 'bold' as const,
     fontFamily: FONTS.regular,
   },
@@ -469,9 +482,9 @@ const styles = StyleSheet.create({
   },
   dropdown: {
     position: 'absolute',
-    top: 45,
+    top: normalize(45),
     right: 0,
-    minWidth: 180,
+    minWidth: wp(48),
     borderRadius: BORDER_RADIUS.md,
     paddingVertical: SPACING.xs,
     ...SHADOWS.lg,
@@ -496,10 +509,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: SPACING.md,
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.md,
+    paddingBottom: 0,
   },
   videoContainer: {
-    width: width - SPACING.md * 2,
+    width: SCREEN_WIDTH - SPACING.md * 2,
     height: 220,
     borderRadius: BORDER_RADIUS.xl,
     overflow: 'hidden',
@@ -533,10 +548,12 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     justifyContent: 'center',
-    padding: SPACING.md,
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.sm,
+    paddingBottom: 0,
   },
   locationFieldsContainer: {
-    gap: SPACING.md,
+    gap: SPACING.sm,
   },
   locationFieldWrapper: {
     width: '100%',
@@ -546,6 +563,9 @@ const styles = StyleSheet.create({
   },
   locationInput: {
     marginBottom: 0,
+  },
+  compactInput: {
+    paddingVertical: SPACING.sm,
   },
   vehicleTypeContainer: {
     marginBottom: SPACING.md,

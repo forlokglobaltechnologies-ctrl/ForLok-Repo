@@ -8,7 +8,6 @@ import {
   SafeAreaView,
   ImageBackground,
   Linking,
-  Dimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import {
@@ -24,11 +23,11 @@ import {
   Mail,
 } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
+import { normalize, wp, hp } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, SHADOWS } from '@constants/theme';
 import { useLanguage } from '@context/LanguageContext';
 import { useTheme } from '@context/ThemeContext';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const IntellectualPropertyScreen = () => {
   const navigation = useNavigation<any>();
@@ -141,7 +140,7 @@ A complete list of open-source components and their licenses is available upon r
               <ArrowLeft size={22} color="#FFF" />
             </TouchableOpacity>
             <Text style={styles.navTitle}>Patents & Copyrights</Text>
-            <View style={{ width: 38 }} />
+            <View style={{ width: normalize(38) }} />
           </View>
         </BlurView>
       </ImageBackground>
@@ -238,7 +237,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
 
   /* ── Hero Header ── */
-  headerImage: { width: '100%', height: 160 },
+  headerImage: { width: '100%', height: hp(20) },
   headerOverlay: { ...StyleSheet.absoluteFillObject, opacity: 0.78 },
   blurContainer: {
     ...StyleSheet.absoluteFillObject,
@@ -248,9 +247,9 @@ const styles = StyleSheet.create({
   },
   headerNav: { flexDirection: 'row', alignItems: 'center' },
   navButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: normalize(38),
+    height: normalize(38),
+    borderRadius: normalize(19),
     backgroundColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -258,11 +257,11 @@ const styles = StyleSheet.create({
   navTitle: {
     flex: 1,
     fontFamily: FONTS.regular,
-    fontSize: 22,
+    fontSize: normalize(22),
     color: '#FFF',
     fontWeight: '800',
     textAlign: 'center',
-    letterSpacing: 0.4,
+    letterSpacing: normalize(0.4),
   },
 
   /* ── Scroll ── */
@@ -270,54 +269,54 @@ const styles = StyleSheet.create({
 
   /* ── Title Card ── */
   titleCard: {
-    borderRadius: 20,
+    borderRadius: normalize(20),
     padding: SPACING.xl,
     alignItems: 'center',
     marginBottom: SPACING.md,
     ...SHADOWS.md,
   },
   titleIconCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: normalize(56),
+    height: normalize(56),
+    borderRadius: normalize(28),
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: SPACING.sm,
   },
   titleText: {
     fontFamily: FONTS.regular,
-    fontSize: 22,
+    fontSize: normalize(22),
     fontWeight: '800',
-    marginBottom: 4,
+    marginBottom: normalize(4),
   },
   subtitleText: {
     fontFamily: FONTS.regular,
-    fontSize: 13,
+    fontSize: normalize(13),
     textAlign: 'center',
     marginBottom: SPACING.sm,
   },
   datePill: {
-    paddingHorizontal: 14,
-    paddingVertical: 4,
-    borderRadius: 20,
+    paddingHorizontal: normalize(14),
+    paddingVertical: normalize(4),
+    borderRadius: normalize(20),
   },
   dateText: {
     fontFamily: FONTS.regular,
-    fontSize: 12,
+    fontSize: normalize(12),
     fontWeight: '700',
   },
 
   /* ── Generic Card ── */
   card: {
-    borderRadius: 16,
+    borderRadius: normalize(16),
     padding: SPACING.lg,
     marginBottom: SPACING.md,
     ...SHADOWS.md,
   },
   introText: {
     fontFamily: FONTS.regular,
-    fontSize: 14,
-    lineHeight: 22,
+    fontSize: normalize(14),
+    lineHeight: normalize(22),
   },
 
   /* ── Section ── */
@@ -325,37 +324,37 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: SPACING.md,
-    gap: 10,
+    gap: normalize(10),
   },
   sectionNum: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
+    width: normalize(32),
+    height: normalize(32),
+    borderRadius: normalize(10),
     alignItems: 'center',
     justifyContent: 'center',
   },
   sectionNumText: {
     fontFamily: FONTS.regular,
-    fontSize: 14,
+    fontSize: normalize(14),
     fontWeight: '800',
   },
   sectionTitleArea: { flex: 1 },
   sectionTitle: {
     fontFamily: FONTS.regular,
-    fontSize: 16,
+    fontSize: normalize(16),
     fontWeight: '700',
   },
   sectionIconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+    width: normalize(34),
+    height: normalize(34),
+    borderRadius: normalize(10),
     alignItems: 'center',
     justifyContent: 'center',
   },
   sectionContent: {
     fontFamily: FONTS.regular,
-    fontSize: 13,
-    lineHeight: 21,
+    fontSize: normalize(13),
+    lineHeight: normalize(21),
   },
 
   /* ── Notice ── */
@@ -367,27 +366,27 @@ const styles = StyleSheet.create({
   },
   noticeTitle: {
     fontFamily: FONTS.regular,
-    fontSize: 15,
+    fontSize: normalize(15),
     fontWeight: '700',
   },
 
   /* ── Footer ── */
   footerCard: {
-    borderRadius: 16,
+    borderRadius: normalize(16),
     padding: SPACING.xl,
     alignItems: 'center',
     marginBottom: SPACING.md,
     ...SHADOWS.md,
-    gap: 6,
+    gap: normalize(6),
   },
   footerTitle: {
     fontFamily: FONTS.regular,
-    fontSize: 17,
+    fontSize: normalize(17),
     fontWeight: '700',
   },
   footerText: {
     fontFamily: FONTS.regular,
-    fontSize: 13,
+    fontSize: normalize(13),
     textAlign: 'center',
   },
   contactRow: {
@@ -398,20 +397,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   contactPill: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingHorizontal: normalize(16),
+    paddingVertical: normalize(8),
+    borderRadius: normalize(20),
   },
   contactEmail: {
     fontFamily: FONTS.regular,
-    fontSize: 13,
+    fontSize: normalize(13),
     fontWeight: '700',
   },
   disclaimer: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
+    fontSize: normalize(11),
     textAlign: 'center',
-    lineHeight: 18,
+    lineHeight: normalize(18),
     marginBottom: SPACING.xl,
   },
 });

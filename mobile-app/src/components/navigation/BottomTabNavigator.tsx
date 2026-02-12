@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Home, Plus, Search, Clock, User } from 'lucide-react-native';
 import { FONTS, SPACING, SHADOWS } from '@constants/theme';
+import { normalize } from '@utils/responsive';
 import { useTheme } from '@context/ThemeContext';
 
 interface TabItem {
@@ -92,16 +93,16 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   iconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: normalize(32),
+    height: normalize(32),
+    borderRadius: normalize(16),
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 2,
   },
   tabLabel: {
     fontFamily: FONTS.regular,
-    fontSize: 10,
+    fontSize: normalize(10),
     marginTop: 2,
   },
   activeIndicator: {
@@ -109,9 +110,9 @@ const styles = StyleSheet.create({
     bottom: Platform.OS === 'ios' ? SPACING.xs : SPACING.xs / 2,
     left: '50%',
     marginLeft: -12,
-    width: 24,
-    height: 2,
-    borderRadius: 1,
+    width: normalize(24),
+    height: normalize(2),
+    borderRadius: normalize(1),
   },
 });
 

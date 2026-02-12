@@ -15,6 +15,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { ArrowLeft, Plus, Car, Bike, Edit, Eye } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import { COLORS, FONTS, SPACING, SHADOWS, BORDER_RADIUS } from '@constants/theme';
+import { normalize, wp, hp } from '@utils/responsive';
 import { Card } from '@components/common/Card';
 import { Button } from '@components/common/Button';
 import { useLanguage } from '@context/LanguageContext';
@@ -279,7 +280,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   headerImage: {
     width: '100%',
-    height: 200,
+    height: hp(25),
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
@@ -300,9 +301,9 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: normalize(40),
+    height: normalize(40),
+    borderRadius: normalize(20),
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -319,9 +320,9 @@ const styles = StyleSheet.create({
     zIndex: -1,
   },
   addButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: normalize(40),
+    height: normalize(40),
+    borderRadius: normalize(20),
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -450,7 +451,7 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.lg,
   },
   addButtonEmpty: {
-    minWidth: 200,
+    minWidth: wp(50),
   },
   loadingContainer: {
     flex: 1,

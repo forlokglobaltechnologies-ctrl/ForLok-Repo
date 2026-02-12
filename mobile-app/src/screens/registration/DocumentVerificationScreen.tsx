@@ -28,6 +28,7 @@ import { API_CONFIG } from '../../config/api';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { normalize, wp, hp } from '@utils/responsive';
 
 interface RouteParams {
   serviceType: 'createPooling' | 'createRental' | 'takePooling' | 'takeRental';
@@ -283,7 +284,7 @@ const DocumentVerificationScreen = () => {
       // Request permissions
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Required', 'Please grant camera roll permissions to upload images');
+        Alert.alert(t('documentVerification.permissionDenied'), t('documentVerification.galleryPermission'));
         return;
       }
 
@@ -385,15 +386,15 @@ const DocumentVerificationScreen = () => {
                   await handleDocumentSelected(type, uri, mimeType);
                 }
               } catch (error: any) {
-                Alert.alert('Error', error.message || 'Failed to pick document');
+                Alert.alert(t('common.error'), error.message || t('documentVerification.uploadFailed'));
               }
             },
           },
-          { text: 'Cancel', style: 'cancel' },
+          { text: t('common.cancel'), style: 'cancel' },
         ]
       );
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to open document picker');
+      Alert.alert(t('common.error'), error.message || t('documentVerification.uploadFailed'));
     }
   };
 
@@ -450,10 +451,10 @@ const DocumentVerificationScreen = () => {
             break;
         }
       } else {
-        Alert.alert('Upload Failed', response.error || 'Failed to upload document');
+        Alert.alert(t('documentVerification.uploadFailed'), response.error || t('documentVerification.uploadFailed'));
       }
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to upload document');
+      Alert.alert(t('documentVerification.uploadFailed'), error.message || t('documentVerification.uploadFailed'));
     } finally {
       setUploadingDocument(null);
     }
@@ -520,14 +521,14 @@ const DocumentVerificationScreen = () => {
         else if (mapping.stateKey === 'insurance') setInsurance(cloudinaryUrl);
 
         setUploadStatus((prev) => ({ ...prev, [mapping.stateKey]: 'success' }));
-        Alert.alert('✅ Success', `${type} uploaded to Cloudinary successfully!`);
+        Alert.alert(t('common.success'), `${type} uploaded to Cloudinary successfully!`);
       } else {
         setUploadStatus((prev) => ({ ...prev, [mapping.stateKey]: 'error' }));
-        Alert.alert('❌ Upload Failed', response.error || 'Failed to upload image to Cloudinary');
+        Alert.alert(t('documentVerification.uploadFailed'), response.error || t('documentVerification.uploadFailed'));
       }
     } catch (error: any) {
       setUploadStatus((prev) => ({ ...prev, [mapping.stateKey]: 'error' }));
-      Alert.alert('❌ Upload Failed', error.message || 'Failed to upload image to Cloudinary');
+      Alert.alert(t('documentVerification.uploadFailed'), error.message || t('documentVerification.uploadFailed'));
     } finally {
       setUploadingType(null);
     }
@@ -778,7 +779,7 @@ const DocumentVerificationScreen = () => {
       console.log('✅ handleSubmit completed successfully');
     } catch (error: any) {
       console.error('❌ Error in handleSubmit:', error);
-      Alert.alert('Error', error.message || 'Failed to submit documents. Please try again.');
+      Alert.alert(t('common.error'), error.message || t('documentVerification.submitFailed'));
     } finally {
       console.log('🔄 Setting isSubmitting to false');
       setIsSubmitting(false);
@@ -958,7 +959,7 @@ const DocumentVerificationScreen = () => {
                 {aadhaarVerified ? (
                   <View style={styles.verifiedBadge}>
                     <CheckCircle size={20} color={COLORS.success} />
-                    <Text style={styles.verifiedText}>Verified</Text>
+                    <Text style={styles.verifiedText}>{t('documentVerification.verified')}</Text>
                   </View>
                 ) : (
                   <Button
@@ -988,7 +989,7 @@ const DocumentVerificationScreen = () => {
                 {panVerified ? (
                   <View style={styles.verifiedBadge}>
                     <CheckCircle size={20} color={COLORS.success} />
-                    <Text style={styles.verifiedText}>Verified</Text>
+                    <Text style={styles.verifiedText}>{t('documentVerification.verified')}</Text>
                   </View>
                 ) : (
                   <Button
@@ -1041,7 +1042,7 @@ const DocumentVerificationScreen = () => {
                 {dlVerified ? (
                   <View style={styles.verifiedBadge}>
                     <CheckCircle size={20} color={COLORS.success} />
-                    <Text style={styles.verifiedText}>Verified</Text>
+                    <Text style={styles.verifiedText}>{t('documentVerification.verified')}</Text>
                   </View>
                 ) : (
                   <Button
@@ -1288,7 +1289,7 @@ const DocumentVerificationScreen = () => {
 
       <View style={styles.buttonContainer}>
         <Button
-          title={isSubmitting ? 'Submitting...' : t('documentVerification.submitContinue')}
+          title={isSubmitting ? t('documentVerification.submitting') : t('documentVerification.submitContinue')}
           onPress={handleSubmit}
           variant="primary"
           size="large"
@@ -1313,13 +1314,13 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
   },
   header: {
-    paddingTop: 50,
+    paddingTop: hp(6),
     paddingHorizontal: SPACING.md,
     backgroundColor: COLORS.white,
   },
   backButton: {
     padding: SPACING.sm,
-    width: 40,
+    width: normalize(40),
   },
   scrollView: {
     flex: 1,
@@ -1327,7 +1328,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: SPACING.lg,
-    paddingBottom: SPACING.xxl + 80,
+    paddingBottom: SPACING.xxl + normalize(80),
   },
   title: {
     fontFamily: FONTS.regular,
@@ -1341,7 +1342,7 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sizes.md,
     color: COLORS.textSecondary,
     marginBottom: SPACING.xl,
-    lineHeight: 22,
+    lineHeight: normalize(22),
   },
   documentSection: {
     marginBottom: SPACING.xl,
@@ -1375,8 +1376,8 @@ const styles = StyleSheet.create({
   },
   imagePreviewContainer: {
     position: 'relative',
-    width: 80,
-    height: 80,
+    width: normalize(80),
+    height: normalize(80),
     borderRadius: BORDER_RADIUS.md,
     overflow: 'hidden',
     borderWidth: 2,
@@ -1399,27 +1400,27 @@ const styles = StyleSheet.create({
   },
   successOverlay: {
     position: 'absolute',
-    top: 4,
-    right: 4,
+    top: normalize(4),
+    right: normalize(4),
     backgroundColor: COLORS.success,
-    borderRadius: 12,
-    padding: 4,
+    borderRadius: normalize(12),
+    padding: normalize(4),
   },
   errorOverlay: {
     position: 'absolute',
-    top: 4,
-    right: 4,
+    top: normalize(4),
+    right: normalize(4),
     backgroundColor: COLORS.error,
-    borderRadius: 12,
-    width: 24,
-    height: 24,
+    borderRadius: normalize(12),
+    width: normalize(24),
+    height: normalize(24),
     justifyContent: 'center',
     alignItems: 'center',
   },
   errorText: {
     fontFamily: FONTS.regular,
     color: COLORS.white,
-    fontSize: 14,
+    fontSize: normalize(14),
     fontWeight: 'bold',
   },
   uploadButton: {

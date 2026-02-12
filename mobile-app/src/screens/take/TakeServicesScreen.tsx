@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { ArrowLeft, Users, KeyRound } from 'lucide-react-native';
+import { normalize, wp, hp } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { useLanguage } from '@context/LanguageContext';
 import { useTheme } from '@context/ThemeContext';
@@ -165,9 +166,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   gradientBackground: {
-    paddingTop: 50,
+    paddingTop: normalize(50),
     paddingBottom: SPACING.xl,
-    minHeight: 200,
+    minHeight: hp(25),
   },
   backButton: {
     marginLeft: SPACING.md,
@@ -192,8 +193,8 @@ const styles = StyleSheet.create({
   cardContainer: {
     flex: 1,
     backgroundColor: COLORS.white,
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
+    borderTopLeftRadius: normalize(32),
+    borderTopRightRadius: normalize(32),
     padding: SPACING.lg,
     paddingTop: SPACING.xl,
   },
@@ -220,9 +221,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.85)',
   },
   iconWrapper: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: normalize(72),
+    height: normalize(72),
+    borderRadius: normalize(36),
     backgroundColor: COLORS.white,
     justifyContent: 'center',
     alignItems: 'center',
@@ -246,9 +247,9 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.xs,
   },
   bullet: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: normalize(6),
+    height: normalize(6),
+    borderRadius: normalize(3),
     marginRight: SPACING.md,
   },
   featureText: {

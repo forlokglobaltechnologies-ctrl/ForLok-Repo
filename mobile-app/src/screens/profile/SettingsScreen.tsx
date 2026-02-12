@@ -13,6 +13,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { ArrowLeft, ChevronRight, User, Lock, Bell, Globe, CreditCard, HelpCircle, FileText, Info, Check, Wallet, UserX, Shield } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '@constants/theme';
+import { normalize } from '@utils/responsive';
 import { Card } from '@components/common/Card';
 import { useLanguage } from '@context/LanguageContext';
 
@@ -267,7 +268,7 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontWeight: 'bold',
   },
-  placeholder: { width: 40 },
+  placeholder: { width: normalize(40) },
   scrollContent: { padding: SPACING.md },
   section: { marginBottom: SPACING.lg },
   sectionTitle: {
@@ -312,7 +313,7 @@ const styles = StyleSheet.create({
   logoutButton: {
     backgroundColor: COLORS.error,
     padding: SPACING.md,
-    borderRadius: 8,
+    borderRadius: normalize(8),
     alignItems: 'center',
     marginTop: SPACING.lg,
     marginBottom: SPACING.xl,
@@ -349,15 +350,15 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   modalCloseButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: normalize(32),
+    height: normalize(32),
+    borderRadius: normalize(16),
     backgroundColor: COLORS.lightGray,
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalCloseText: {
-    fontSize: 18,
+    fontSize: normalize(18),
     color: COLORS.text,
     fontWeight: 'bold',
   },

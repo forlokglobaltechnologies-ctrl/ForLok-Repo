@@ -11,7 +11,6 @@ import {
   LayoutAnimation,
   Platform,
   UIManager,
-  Dimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import {
@@ -32,14 +31,13 @@ import {
 } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import { COLORS, FONTS, SPACING, SHADOWS } from '@constants/theme';
+import { normalize, wp, hp } from '@utils/responsive';
 import { useLanguage } from '@context/LanguageContext';
 import { useTheme } from '@context/ThemeContext';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface FAQItem {
   question: string;
@@ -269,7 +267,7 @@ const FAQScreen = () => {
               <ArrowLeft size={22} color="#FFF" />
             </TouchableOpacity>
             <Text style={styles.navTitle}>FAQs</Text>
-            <View style={{ width: 38 }} />
+            <View style={{ width: normalize(38) }} />
           </View>
         </BlurView>
       </ImageBackground>

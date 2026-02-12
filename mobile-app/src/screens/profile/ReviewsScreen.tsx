@@ -11,7 +11,6 @@ import {
   ActivityIndicator,
   ImageBackground,
   Image,
-  Dimensions,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import {
@@ -26,13 +25,13 @@ import {
   ChevronDown,
 } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
+import { normalize, wp, hp } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { Card } from '@components/common/Card';
 import { ratingApi } from '@utils/apiClient';
 import { useLanguage } from '@context/LanguageContext';
 import { useTheme } from '@context/ThemeContext';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface Rating {
   ratingId: string;
@@ -601,7 +600,7 @@ const styles = StyleSheet.create({
   // ── Header with Image ──
   headerImage: {
     width: '100%',
-    height: 180,
+    height: hp(22),
   },
   headerOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -620,9 +619,9 @@ const styles = StyleSheet.create({
     paddingTop: SPACING.lg,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: normalize(40),
+    height: normalize(40),
+    borderRadius: normalize(20),
     backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -633,7 +632,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontFamily: FONTS.regular,
-    fontSize: 20,
+    fontSize: normalize(20),
     fontWeight: 'bold',
     color: '#FFF',
   },
@@ -641,10 +640,10 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.sm,
     color: 'rgba(255,255,255,0.85)',
-    marginTop: 2,
+    marginTop: normalize(2),
   },
   headerPlaceholder: {
-    width: 40,
+    width: normalize(40),
   },
 
   // ── Loading ──
@@ -681,24 +680,24 @@ const styles = StyleSheet.create({
     borderRightWidth: 1,
     borderRightColor: '#E0E0E0',
     marginRight: SPACING.lg,
-    minWidth: 90,
+    minWidth: normalize(90),
   },
   bigRating: {
     fontFamily: FONTS.regular,
-    fontSize: 44,
+    fontSize: normalize(44),
     fontWeight: 'bold',
-    lineHeight: 50,
+    lineHeight: normalize(50),
   },
   ratingLabel: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.xs,
     fontWeight: '700',
-    marginTop: 4,
+    marginTop: normalize(4),
   },
   totalCount: {
     fontFamily: FONTS.regular,
-    fontSize: 10,
-    marginTop: 2,
+    fontSize: normalize(10),
+    marginTop: normalize(2),
   },
   summaryRight: {
     flex: 1,
@@ -804,12 +803,12 @@ const styles = StyleSheet.create({
   },
   popularTag: {
     paddingHorizontal: SPACING.sm,
-    paddingVertical: 5,
+    paddingVertical: normalize(5),
     borderRadius: BORDER_RADIUS.round,
   },
   popularTagText: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
+    fontSize: normalize(11),
     fontWeight: '500',
   },
 
@@ -898,34 +897,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.xs,
-    marginTop: 3,
+    marginTop: normalize(3),
   },
   typeBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingHorizontal: normalize(6),
+    paddingVertical: normalize(2),
     borderRadius: BORDER_RADIUS.round,
   },
   typeBadgeText: {
     fontFamily: FONTS.regular,
-    fontSize: 10,
+    fontSize: normalize(10),
     fontWeight: '600',
   },
   reviewDate: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
+    fontSize: normalize(11),
   },
   ratingBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    gap: normalize(3),
+    paddingHorizontal: normalize(8),
+    paddingVertical: normalize(4),
     borderRadius: BORDER_RADIUS.round,
     marginLeft: SPACING.xs,
   },
   ratingBadgeText: {
     fontFamily: FONTS.regular,
-    fontSize: 13,
+    fontSize: normalize(13),
     fontWeight: 'bold',
     color: '#FFF',
   },
@@ -942,20 +941,20 @@ const styles = StyleSheet.create({
   tagsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
+    gap: normalize(6),
     marginBottom: SPACING.sm,
   },
   tag: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: normalize(4),
     paddingHorizontal: SPACING.sm,
-    paddingVertical: 4,
+    paddingVertical: normalize(4),
     borderRadius: BORDER_RADIUS.round,
   },
   tagText: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
+    fontSize: normalize(11),
     fontWeight: '500',
   },
 

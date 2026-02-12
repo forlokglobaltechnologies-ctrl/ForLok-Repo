@@ -19,6 +19,7 @@ interface InputProps extends TextInputProps {
   showPasswordToggle?: boolean;
   onPasswordToggle?: () => void;
   containerStyle?: any;
+  inputStyle?: any;
   labelColor?: string;
 }
 
@@ -30,6 +31,7 @@ export const Input: React.FC<InputProps> = ({
   showPasswordToggle = false,
   onPasswordToggle,
   containerStyle,
+  inputStyle,
   secureTextEntry,
   labelColor,
   ...props
@@ -53,7 +55,7 @@ export const Input: React.FC<InputProps> = ({
       <View style={[styles.inputContainer, { backgroundColor: colors.surface, borderColor: error ? colors.error : colors.border }]}>
         {leftIcon && <View style={styles.iconContainer}>{leftIcon}</View>}
         <TextInput
-          style={[styles.input, { color: colors.text }, error && styles.inputError]}
+          style={[styles.input, { color: colors.text }, error && styles.inputError, inputStyle]}
           placeholderTextColor={colors.textSecondary}
           secureTextEntry={secureTextEntry && !isPasswordVisible}
           {...props}

@@ -19,6 +19,7 @@ import { Input } from '@components/common/Input';
 import { Card } from '@components/common/Card';
 import { useLanguage } from '@context/LanguageContext';
 import { authApi } from '@utils/apiClient';
+import { normalize, wp, hp } from '@utils/responsive';
 
 const ForgotPasswordScreen = () => {
   const navigation = useNavigation();
@@ -295,7 +296,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   gradient: { flex: 1 },
   header: {
-    paddingTop: 50,
+    paddingTop: hp(6),
     paddingHorizontal: SPACING.md,
   },
   backButton: {

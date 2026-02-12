@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AlertCircle, ArrowLeft, RefreshCw } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING } from '@constants/theme';
+import { normalize, wp, hp } from '@utils/responsive';
 import { Button } from '@components/common/Button';
 
 interface ErrorScreenProps {

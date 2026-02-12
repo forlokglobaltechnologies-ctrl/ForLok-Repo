@@ -11,6 +11,7 @@ import { useNavigation } from '@react-navigation/native';
 import { ArrowLeft, User, Building, Check } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { useLanguage } from '@context/LanguageContext';
+import { normalize, wp, hp } from '@utils/responsive';
 
 const UserTypeSelectionScreen = () => {
   const navigation = useNavigation();
@@ -164,12 +165,12 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(255, 255, 255, 0.4)',
-    paddingTop: 40,
+    paddingTop: hp(5),
   },
   backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: normalize(44),
+    height: normalize(44),
+    borderRadius: normalize(22),
     backgroundColor: COLORS.white,
     justifyContent: 'center',
     alignItems: 'center',

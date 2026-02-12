@@ -20,10 +20,13 @@ import { Button } from '@components/common/Button';
 import { Input } from '@components/common/Input';
 import { useLanguage } from '@context/LanguageContext';
 import { authApi } from '@utils/apiClient';
+import { normalize, wp, hp } from '@utils/responsive';
+import { useAuth } from '@context/AuthContext';
 
 const SignInScreen = () => {
   const navigation = useNavigation();
   const { t } = useLanguage();
+  const { login } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -31,12 +34,12 @@ const SignInScreen = () => {
 
   const handleSignIn = async () => {
     if (!username.trim()) {
-      Alert.alert('Error', 'Please enter your username/email/phone');
+      Alert.alert(t('signIn.errorTitle'), t('signIn.enterUsernameError'));
       return;
     }
 
     if (!password) {
-      Alert.alert('Error', 'Please enter your password');
+      Alert.alert(t('signIn.errorTitle'), t('signIn.enterPasswordError'));
       return;
     }
 
@@ -45,22 +48,28 @@ const SignInScreen = () => {
       const response = await authApi.signin(username.trim(), password);
       
       if (response.success) {
-        // Tokens are automatically saved by apiService
+        // Save auth state via AuthContext
+        const userData = response.data?.user || {};
+        const tokens = response.data?.tokens;
+        if (tokens) {
+          await login(userData, tokens);
+        }
+
         // Check userType and navigate to appropriate dashboard
-        const userType = response.data?.user?.userType || 'individual';
+        const userType = userData.userType || 'individual';
         
         if (userType === 'company') {
-          navigation.navigate('CompanyDashboard' as never);
+          navigation.reset({ index: 0, routes: [{ name: 'CompanyDashboard' as never }] });
         } else if (userType === 'admin') {
-          navigation.navigate('AdminDashboard' as never);
+          navigation.reset({ index: 0, routes: [{ name: 'AdminDashboard' as never }] });
         } else {
-          navigation.navigate('MainDashboard' as never);
+          navigation.reset({ index: 0, routes: [{ name: 'MainDashboard' as never }] });
         }
       } else {
-        Alert.alert('Error', response.error || 'Login failed. Please try again.');
+        Alert.alert(t('signIn.errorTitle'), response.error || t('signIn.loginFailed'));
       }
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to sign in. Please check your credentials.');
+      Alert.alert(t('signIn.errorTitle'), error.message || t('signIn.signInFailed'));
     } finally {
       setLoading(false);
     }
@@ -98,13 +107,11 @@ const SignInScreen = () => {
             </View>
 
             <View style={styles.logoContainer}>
-              <View style={styles.logoCircle}>
-                <Image
-                  source={require('../../../assets/flogo.png')}
-                  style={styles.logoImage}
-                  resizeMode="contain"
-                />
-              </View>
+              <Image
+                source={require('../../../assets/signin_logo.png')}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
             </View>
 
             <Text style={styles.title}>{t('signIn.title')}</Text>
@@ -114,7 +121,7 @@ const SignInScreen = () => {
                 label={t('signIn.username') || 'Username/Email/Phone'}
                 value={username}
                 onChangeText={setUsername}
-                placeholder="Enter username, email, or phone"
+                placeholder={t('signIn.enterUsernamePlaceholder')}
                 autoCapitalize="none"
                 containerStyle={styles.input}
                 labelColor={COLORS.white}
@@ -139,7 +146,7 @@ const SignInScreen = () => {
               </TouchableOpacity>
 
               <Button
-                title={loading ? 'Signing in...' : t('signIn.signInButton')}
+                title={loading ? t('signIn.signingIn') : t('signIn.signInButton')}
                 onPress={handleSignIn}
                 variant="outline"
                 size="large"
@@ -190,7 +197,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     padding: SPACING.lg,
-    paddingTop: 80,
+    paddingTop: hp(10),
   },
   headerRow: {
     flexDirection: 'row',
@@ -219,17 +226,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: SPACING.xl,
   },
-  logoCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: COLORS.white,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   logoImage: {
-    width: 70,
-    height: 70,
+    width: normalize(120),
+    height: normalize(120),
+    borderRadius: normalize(60),
   },
   title: {
     fontFamily: FONTS.regular,

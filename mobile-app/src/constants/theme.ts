@@ -1,4 +1,13 @@
-import { StyleSheet, Platform } from 'react-native';
+import { StyleSheet, Platform, Dimensions, PixelRatio } from 'react-native';
+
+// Inline normalize to avoid circular / load-order issues
+const _SCREEN_WIDTH = Dimensions.get('window').width;
+const _BASE_WIDTH = 375;
+const normalize = (size: number): number => {
+  const scale = _SCREEN_WIDTH / _BASE_WIDTH;
+  const newSize = size * Math.min(Math.max(scale, 0.8), 1.3);
+  return Math.round(PixelRatio.roundToNearestPixel(newSize));
+};
 
 /* ─────────────────────────────────────────────────────────────
    GLOBAL FONT FIX – StyleSheet.create patch
@@ -71,7 +80,7 @@ export const COLORS = {
   overlay: 'rgba(0, 0, 0, 0.5)',
 };
 
-// Pink Pooling Theme Colors
+// HerPooling Theme Colors
 export const PINK_COLORS = {
   primary: '#FF6B9D',
   primaryDark: '#FF87A8',
@@ -90,30 +99,30 @@ export const FONTS = {
   bold: 'MomoTrustDisplay-Regular',
   light: 'MomoTrustDisplay-Regular',
   sizes: {
-    xs: 12,
-    sm: 14,
-    md: 16,
-    lg: 18,
-    xl: 20,
-    xxl: 24,
-    xxxl: 32,
+    xs: normalize(12),
+    sm: normalize(14),
+    md: normalize(16),
+    lg: normalize(18),
+    xl: normalize(20),
+    xxl: normalize(24),
+    xxxl: normalize(32),
   },
 };
 
 export const SPACING = {
-  xs: 4,
-  sm: 8,
-  md: 16,
-  lg: 24,
-  xl: 32,
-  xxl: 48,
+  xs: normalize(4),
+  sm: normalize(8),
+  md: normalize(16),
+  lg: normalize(24),
+  xl: normalize(32),
+  xxl: normalize(48),
 };
 
 export const BORDER_RADIUS = {
-  sm: 4,
-  md: 8,
-  lg: 12,
-  xl: 16,
+  sm: normalize(4),
+  md: normalize(8),
+  lg: normalize(12),
+  xl: normalize(16),
   round: 9999,
 };
 

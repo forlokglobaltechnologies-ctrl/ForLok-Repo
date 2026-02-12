@@ -36,6 +36,7 @@ import {
 } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import { COLORS, FONTS, SPACING, SHADOWS } from '@constants/theme';
+import { normalize } from '@utils/responsive';
 import { useLanguage } from '@context/LanguageContext';
 import { useTheme } from '@context/ThemeContext';
 
@@ -50,22 +51,22 @@ const HelpSupportScreen = () => {
   const quickActions = [
     {
       icon: BookOpen,
-      label: 'FAQs',
-      desc: 'Find quick answers',
+      label: t('helpSupport.faqs'),
+      desc: t('helpSupport.findQuickAnswers'),
       color: '#2196F3',
       onPress: () => navigation.navigate('FAQ'),
     },
     {
       icon: Bug,
-      label: 'Report Bug',
-      desc: 'Found an issue?',
+      label: t('helpSupport.reportBug'),
+      desc: t('helpSupport.foundIssue'),
       color: '#F44336',
       onPress: () => navigation.navigate('ReportBug'),
     },
     {
       icon: MessageSquare,
-      label: 'Feedback',
-      desc: 'Share your thoughts',
+      label: t('helpSupport.feedback'),
+      desc: t('helpSupport.shareThoughts'),
       color: '#4CAF50',
       onPress: () => navigation.navigate('Feedback'),
     },
@@ -135,22 +136,22 @@ const HelpSupportScreen = () => {
   const contactOptions = [
     {
       icon: MessageCircle,
-      label: 'Live Chat',
-      desc: 'Chat with our support team',
+      label: t('helpSupport.liveChat'),
+      desc: t('helpSupport.chatWithSupport'),
       color: '#4CAF50',
       action: () => {},
     },
     {
       icon: Phone,
-      label: 'Call Us',
-      desc: '+91 1800-XXX-XXXX (Toll Free)',
+      label: t('helpSupport.callUs'),
+      desc: t('helpSupport.tollFree'),
       color: '#2196F3',
       action: () => Linking.openURL('tel:+911800XXXXXXX'),
     },
     {
       icon: Mail,
-      label: 'Email Support',
-      desc: 'support@forlok.com',
+      label: t('helpSupport.emailSupport'),
+      desc: t('helpSupport.supportEmail'),
       color: '#FF9800',
       action: () => Linking.openURL('mailto:support@forlok.com'),
     },
@@ -174,7 +175,7 @@ const HelpSupportScreen = () => {
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.navButton}>
               <ArrowLeft size={22} color="#FFF" />
             </TouchableOpacity>
-            <Text style={styles.navTitle}>Help & Support</Text>
+            <Text style={styles.navTitle}>{t('helpSupport.title')}</Text>
             <View style={{ width: 38 }} />
           </View>
         </BlurView>
@@ -189,7 +190,7 @@ const HelpSupportScreen = () => {
             style={[styles.searchInput, { color: theme.colors.text }]}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholder="Search for help topics..."
+            placeholder={t('helpSupport.searchHelpTopics')}
             placeholderTextColor={theme.colors.textSecondary}
           />
         </View>
@@ -215,7 +216,7 @@ const HelpSupportScreen = () => {
         {/* ── Popular Topics ── */}
         <View style={styles.sectionTitleRow}>
           <HelpCircle size={18} color={theme.colors.primary} />
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Popular Topics</Text>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t('helpSupport.popularTopics')}</Text>
         </View>
         <View style={[styles.card, { backgroundColor: theme.colors.surface, padding: 0 }]}>
           {filteredTopics.map((topic, index) => (
@@ -240,7 +241,7 @@ const HelpSupportScreen = () => {
           {filteredTopics.length === 0 && (
             <View style={styles.emptyState}>
               <Search size={24} color={theme.colors.textSecondary} />
-              <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>No topics found for "{searchQuery}"</Text>
+              <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>{t('helpSupport.noTopicsFound')}</Text>
             </View>
           )}
         </View>
@@ -248,7 +249,7 @@ const HelpSupportScreen = () => {
         {/* ── Contact Support ── */}
         <View style={styles.sectionTitleRow}>
           <Headphones size={18} color={theme.colors.primary} />
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Contact Support</Text>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t('helpSupport.contactSupport')}</Text>
         </View>
         <View style={[styles.card, { backgroundColor: theme.colors.surface, padding: 0 }]}>
           {contactOptions.map((contact, index) => (
@@ -270,7 +271,7 @@ const HelpSupportScreen = () => {
 
         {/* ── Support Hours ── */}
         <View style={[styles.supportHoursCard, { backgroundColor: theme.colors.primary + '08', borderColor: theme.colors.primary + '20' }]}>
-          <Text style={[styles.supportHoursTitle, { color: theme.colors.text }]}>Support Hours</Text>
+          <Text style={[styles.supportHoursTitle, { color: theme.colors.text }]}>{t('helpSupport.supportHours')}</Text>
           <Text style={[styles.supportHoursText, { color: theme.colors.textSecondary }]}>
             Monday - Saturday: 9:00 AM - 9:00 PM IST{'\n'}
             Sunday: 10:00 AM - 6:00 PM IST{'\n'}
@@ -334,13 +335,13 @@ const HelpSupportScreen = () => {
                     }}
                   >
                     <BookOpen size={16} color={theme.colors.primary} />
-                    <Text style={[styles.modalFooterBtnText, { color: theme.colors.primary }]}>View All FAQs</Text>
+                    <Text style={[styles.modalFooterBtnText, { color: theme.colors.primary }]}>{t('helpSupport.viewAllFaqs')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.modalFooterBtn, { backgroundColor: theme.colors.primary }]}
                     onPress={() => setSelectedTopic(null)}
                   >
-                    <Text style={[styles.modalFooterBtnText, { color: '#FFF' }]}>Got It</Text>
+                    <Text style={[styles.modalFooterBtnText, { color: '#FFF' }]}>{t('helpSupport.gotIt')}</Text>
                   </TouchableOpacity>
                 </View>
               </>
@@ -417,22 +418,22 @@ const styles = StyleSheet.create({
     ...SHADOWS.sm,
   },
   quickActionIcon: {
-    width: 46,
-    height: 46,
-    borderRadius: 14,
+    width: normalize(46),
+    height: normalize(46),
+    borderRadius: normalize(14),
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: SPACING.sm,
   },
   quickActionLabel: {
     fontFamily: FONTS.regular,
-    fontSize: 13,
+    fontSize: normalize(13),
     fontWeight: '700',
-    marginBottom: 2,
+    marginBottom: normalize(2),
   },
   quickActionDesc: {
     fontFamily: FONTS.regular,
-    fontSize: 10,
+    fontSize: normalize(10),
     textAlign: 'center',
   },
 
@@ -440,13 +441,13 @@ const styles = StyleSheet.create({
   sectionTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: normalize(8),
     marginBottom: SPACING.md,
     marginTop: SPACING.sm,
   },
   sectionTitle: {
     fontFamily: FONTS.regular,
-    fontSize: 17,
+    fontSize: normalize(17),
     fontWeight: '700',
   },
 
@@ -613,8 +614,8 @@ const styles = StyleSheet.create({
   },
   modalBody: {
     fontFamily: FONTS.regular,
-    fontSize: 14,
-    lineHeight: 23,
+    fontSize: normalize(14),
+    lineHeight: normalize(23),
   },
   modalFooter: {
     flexDirection: 'row',
@@ -628,13 +629,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 13,
-    borderRadius: 12,
+    gap: normalize(6),
+    paddingVertical: normalize(13),
+    borderRadius: normalize(12),
   },
   modalFooterBtnText: {
     fontFamily: FONTS.regular,
-    fontSize: 14,
+    fontSize: normalize(14),
     fontWeight: '700',
   },
 });

@@ -1,19 +1,55 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, StyleSheet, ActivityIndicator, StatusBar } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Video, ResizeMode } from 'expo-av';
+import { normalize, hp } from '@utils/responsive';
+import { useAuth } from '@context/AuthContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const ONBOARDING_KEY = '@forlok_onboarding_seen';
 
 const SplashScreen = () => {
   const navigation = useNavigation();
   const videoRef = useRef<Video>(null);
+  const { isAuthenticated, isLoading } = useAuth();
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
+  const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
+
+  // Check if user has seen onboarding before
+  useEffect(() => {
+    const checkOnboarding = async () => {
+      const seen = await AsyncStorage.getItem(ONBOARDING_KEY);
+      setHasSeenOnboarding(seen === 'true');
+      setOnboardingChecked(true);
+    };
+    checkOnboarding();
+  }, []);
 
   useEffect(() => {
+    // Wait for both auth check and onboarding check to complete
+    if (isLoading || !onboardingChecked) return;
+
     const timer = setTimeout(() => {
-      navigation.navigate('Onboarding' as never);
-    }, 6000);
+      if (isAuthenticated) {
+        // User has valid tokens — go straight to dashboard
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'MainDashboard' as never }],
+        });
+      } else if (hasSeenOnboarding) {
+        // Returning user (logged out) — skip onboarding, go to sign in
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'SignIn' as never }],
+        });
+      } else {
+        // First time user — show onboarding
+        navigation.navigate('Onboarding' as never);
+      }
+    }, 3000);
 
     return () => clearTimeout(timer);
-  }, [navigation]);
+  }, [navigation, isAuthenticated, isLoading, onboardingChecked, hasSeenOnboarding]);
 
   return (
     <View style={styles.container}>
@@ -43,7 +79,7 @@ const styles = StyleSheet.create({
   },
   loader: {
     position: 'absolute',
-    bottom: 50,
+    bottom: hp(6),
     alignSelf: 'center',
   },
 });

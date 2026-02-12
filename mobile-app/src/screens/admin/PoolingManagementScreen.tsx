@@ -27,6 +27,7 @@ import {
   AlertCircle,
 } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
+import { normalize, wp, hp } from '@utils/responsive';
 import { adminApi, analyticsApi } from '@utils/apiClient';
 
 const formatNumber = (n: number) => {
@@ -137,7 +138,7 @@ const PoolingManagementScreen = () => {
                 {totalOffers > 0 ? `${totalOffers.toLocaleString()} total offers` : 'Manage pooling offers'}
               </Text>
             </View>
-            <View style={{ width: 38 }} />
+            <View style={{ width: normalize(38) }} />
           </View>
         </BlurView>
       </ImageBackground>
@@ -297,51 +298,51 @@ const PoolingManagementScreen = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F5F7FA' },
-  heroHeader: { height: Platform.OS === 'android' ? 140 + (StatusBar.currentHeight || 0) : 160, width: '100%' },
+  heroHeader: { height: Platform.OS === 'android' ? hp(17) + (StatusBar.currentHeight || 0) : hp(20), width: '100%' },
   heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(15, 52, 96, 0.5)' },
   heroBlur: { flex: 1, justifyContent: 'flex-end', paddingBottom: SPACING.md, paddingHorizontal: SPACING.lg },
   heroNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  heroBackBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center' },
+  heroBackBtn: { width: normalize(38), height: normalize(38), borderRadius: normalize(19), backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center' },
   heroTitleWrap: { alignItems: 'center' },
-  heroTitle: { fontFamily: FONTS.regular, fontSize: 20, color: '#fff', fontWeight: '700' },
-  heroSubtitle: { fontFamily: FONTS.regular, fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 2 },
-  statsStrip: { flexDirection: 'row', backgroundColor: '#fff', marginHorizontal: SPACING.lg, marginTop: -SPACING.md, borderRadius: 14, padding: SPACING.sm, ...SHADOWS.sm, zIndex: 10 },
+  heroTitle: { fontFamily: FONTS.regular, fontSize: normalize(20), color: '#fff', fontWeight: '700' },
+  heroSubtitle: { fontFamily: FONTS.regular, fontSize: normalize(12), color: 'rgba(255,255,255,0.7)', marginTop: normalize(2) },
+  statsStrip: { flexDirection: 'row', backgroundColor: '#fff', marginHorizontal: SPACING.lg, marginTop: -SPACING.md, borderRadius: normalize(14), padding: SPACING.sm, ...SHADOWS.sm, zIndex: 10 },
   statsStripItem: { flex: 1, alignItems: 'center', paddingVertical: SPACING.xs },
-  statsStripIcon: { width: 32, height: 32, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginBottom: 4 },
-  statsStripValue: { fontFamily: FONTS.regular, fontSize: 18, fontWeight: '800' },
-  statsStripLabel: { fontFamily: FONTS.regular, fontSize: 10, color: '#94A3B8', fontWeight: '500', marginTop: 1 },
-  tabsScroll: { marginTop: SPACING.md, maxHeight: 48 },
+  statsStripIcon: { width: normalize(32), height: normalize(32), borderRadius: normalize(10), justifyContent: 'center', alignItems: 'center', marginBottom: normalize(4) },
+  statsStripValue: { fontFamily: FONTS.regular, fontSize: normalize(18), fontWeight: '800' },
+  statsStripLabel: { fontFamily: FONTS.regular, fontSize: normalize(10), color: '#94A3B8', fontWeight: '500', marginTop: normalize(1) },
+  tabsScroll: { marginTop: SPACING.md, maxHeight: normalize(48) },
   tabsContent: { paddingHorizontal: SPACING.lg, gap: SPACING.xs },
-  tab: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: '#fff', borderWidth: 1, borderColor: '#E2E8F0' },
-  tabText: { fontFamily: FONTS.regular, fontSize: 12, color: '#475569', fontWeight: '600' },
+  tab: { flexDirection: 'row', alignItems: 'center', gap: normalize(6), paddingHorizontal: normalize(14), paddingVertical: normalize(8), borderRadius: normalize(20), backgroundColor: '#fff', borderWidth: 1, borderColor: '#E2E8F0' },
+  tabText: { fontFamily: FONTS.regular, fontSize: normalize(12), color: '#475569', fontWeight: '600' },
   tabTextActive: { color: '#fff' },
   scrollView: { flex: 1 },
   scrollContent: { padding: SPACING.lg, paddingTop: SPACING.md },
   loadingContainer: { alignItems: 'center', paddingVertical: SPACING.xxl * 2 },
   loadingText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: COLORS.textSecondary, marginTop: SPACING.md },
   emptyContainer: { alignItems: 'center', paddingVertical: SPACING.xxl * 2 },
-  emptyIconWrap: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center', marginBottom: SPACING.lg },
+  emptyIconWrap: { width: normalize(80), height: normalize(80), borderRadius: normalize(40), backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center', marginBottom: SPACING.lg },
   emptyTitle: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.lg, fontWeight: '700', color: '#1E293B', marginBottom: SPACING.xs },
   emptyText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: '#94A3B8' },
-  offerCard: { backgroundColor: '#fff', borderRadius: 14, padding: SPACING.md, marginBottom: SPACING.sm, borderWidth: 1, borderColor: '#F1F5F9', ...SHADOWS.sm },
+  offerCard: { backgroundColor: '#fff', borderRadius: normalize(14), padding: SPACING.md, marginBottom: SPACING.sm, borderWidth: 1, borderColor: '#F1F5F9', ...SHADOWS.sm },
   cardHeaderRow: { flexDirection: 'row', alignItems: 'center', marginBottom: SPACING.md },
-  cardServiceIcon: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: SPACING.sm },
+  cardServiceIcon: { width: normalize(40), height: normalize(40), borderRadius: normalize(12), justifyContent: 'center', alignItems: 'center', marginRight: SPACING.sm },
   cardHeaderInfo: { flex: 1 },
-  cardDriverName: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.md, color: '#1E293B', fontWeight: '600', marginBottom: 2 },
-  cardOfferId: { fontFamily: FONTS.regular, fontSize: 11, color: '#94A3B8', fontWeight: '500' },
-  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, backgroundColor: '#F1F5F9' },
+  cardDriverName: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.md, color: '#1E293B', fontWeight: '600', marginBottom: normalize(2) },
+  cardOfferId: { fontFamily: FONTS.regular, fontSize: normalize(11), color: '#94A3B8', fontWeight: '500' },
+  statusBadge: { paddingHorizontal: normalize(10), paddingVertical: normalize(4), borderRadius: normalize(10), backgroundColor: '#F1F5F9' },
   statusActive: { backgroundColor: '#00B894' + '15' },
   statusPending: { backgroundColor: '#F39C12' + '15' },
-  statusText: { fontFamily: FONTS.regular, fontSize: 10, color: '#64748B', fontWeight: '700' },
+  statusText: { fontFamily: FONTS.regular, fontSize: normalize(10), color: '#64748B', fontWeight: '700' },
   detailsRow: { marginBottom: SPACING.md },
-  detailItem: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
+  detailItem: { flexDirection: 'row', alignItems: 'center', gap: normalize(6), marginBottom: normalize(6) },
   detailText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: '#64748B', flex: 1 },
   detailMeta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: SPACING.xs, paddingTop: SPACING.sm, borderTopWidth: 1, borderTopColor: '#F8FAFC' },
-  detailMetaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  detailMetaText: { fontFamily: FONTS.regular, fontSize: 12, color: '#94A3B8', fontWeight: '500' },
+  detailMetaItem: { flexDirection: 'row', alignItems: 'center', gap: normalize(4) },
+  detailMetaText: { fontFamily: FONTS.regular, fontSize: normalize(12), color: '#94A3B8', fontWeight: '500' },
   priceText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: '#1E293B', fontWeight: '700' },
   actionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
-  actionButton: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, borderRadius: BORDER_RADIUS.md, backgroundColor: '#4A90D9' + '15', gap: 6 },
+  actionButton: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, borderRadius: BORDER_RADIUS.md, backgroundColor: '#4A90D9' + '15', gap: normalize(6) },
   actionButtonText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: '#4A90D9', fontWeight: '600' },
   approveButton: { backgroundColor: '#00B894' },
   approveButtonText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: '#fff', fontWeight: '600' },
@@ -352,7 +353,7 @@ const styles = StyleSheet.create({
   pageBtnDisabled: { opacity: 0.4 },
   pageBtnText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, fontWeight: '600', color: COLORS.text },
   paginationInfo: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: COLORS.textSecondary },
-  totalInfo: { fontFamily: FONTS.regular, fontSize: 12, color: '#94A3B8', textAlign: 'center', marginTop: SPACING.sm, marginBottom: SPACING.xs },
+  totalInfo: { fontFamily: FONTS.regular, fontSize: normalize(12), color: '#94A3B8', textAlign: 'center', marginTop: SPACING.sm, marginBottom: SPACING.xs },
 });
 
 export default PoolingManagementScreen;

@@ -5,13 +5,13 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Dimensions,
   ImageBackground,
   ActivityIndicator,
   RefreshControl,
   Platform,
   StatusBar,
 } from 'react-native';
+import { normalize, wp, hp } from '@utils/responsive';
 import { useNavigation } from '@react-navigation/native';
 import { BlurView } from 'expo-blur';
 import {
@@ -34,8 +34,6 @@ import {
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { useLanguage } from '@context/LanguageContext';
 import { adminFeedbackApi } from '@utils/apiClient';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const FeedbackManagementScreen = () => {
   const navigation = useNavigation();
@@ -189,7 +187,7 @@ const FeedbackManagementScreen = () => {
                 {total} total feedback{total !== 1 ? 's' : ''}
               </Text>
             </View>
-            <View style={{ width: 38 }} />
+            <View style={{ width: normalize(38) }} />
           </View>
         </BlurView>
       </ImageBackground>
@@ -403,7 +401,7 @@ const FeedbackManagementScreen = () => {
             </>
           )}
 
-          <View style={{ height: 40 }} />
+          <View style={{ height: normalize(40) }} />
         </ScrollView>
       )}
     </View>
@@ -503,7 +501,7 @@ const styles = StyleSheet.create({
   /* ── Filter Tabs ────────────────────────────────────────────── */
   tabsScroll: {
     marginTop: SPACING.md,
-    maxHeight: 48,
+    maxHeight: normalize(48),
   },
   tabsContent: {
     paddingHorizontal: SPACING.lg,
@@ -512,17 +510,17 @@ const styles = StyleSheet.create({
   tab: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
+    gap: normalize(6),
+    paddingHorizontal: normalize(14),
+    paddingVertical: normalize(8),
+    borderRadius: normalize(20),
     backgroundColor: '#fff',
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
   tabText: {
     fontFamily: FONTS.regular,
-    fontSize: 12,
+    fontSize: normalize(12),
     color: '#475569',
     fontWeight: '600',
   },
@@ -531,15 +529,15 @@ const styles = StyleSheet.create({
   },
   tabBadge: {
     backgroundColor: '#F1F5F9',
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 8,
-    minWidth: 20,
+    paddingHorizontal: normalize(6),
+    paddingVertical: normalize(1),
+    borderRadius: normalize(8),
+    minWidth: normalize(20),
     alignItems: 'center',
   },
   tabBadgeText: {
     fontFamily: FONTS.regular,
-    fontSize: 10,
+    fontSize: normalize(10),
     color: '#64748B',
     fontWeight: '700',
   },
@@ -572,9 +570,9 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.xxl * 2,
   },
   emptyIconWrap: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: normalize(80),
+    height: normalize(80),
+    borderRadius: normalize(40),
     backgroundColor: '#F1F5F9',
     justifyContent: 'center',
     alignItems: 'center',
@@ -598,7 +596,7 @@ const styles = StyleSheet.create({
   /* ── Feedback Card ──────────────────────────────────────────── */
   feedbackCard: {
     backgroundColor: '#fff',
-    borderRadius: 14,
+    borderRadius: normalize(14),
     padding: SPACING.md,
     marginBottom: SPACING.sm,
     borderWidth: 1,
@@ -613,9 +611,9 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
   },
   cardTypeIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: normalize(40),
+    height: normalize(40),
+    borderRadius: normalize(12),
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: SPACING.sm,
@@ -628,11 +626,11 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sizes.md,
     color: '#1E293B',
     fontWeight: '600',
-    marginBottom: 2,
+    marginBottom: normalize(2),
   },
   cardId: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
+    fontSize: normalize(11),
     color: '#94A3B8',
     fontWeight: '500',
   },
@@ -642,35 +640,35 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.sm,
     color: '#64748B',
-    lineHeight: 19,
+    lineHeight: normalize(19),
     marginBottom: SPACING.sm,
-    paddingLeft: 52,
+    paddingLeft: normalize(52),
   },
 
   /* Card badges */
   cardBadgeRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
+    gap: normalize(6),
     marginBottom: SPACING.sm,
-    paddingLeft: 52,
+    paddingLeft: normalize(52),
   },
   cardBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
+    gap: normalize(4),
+    paddingHorizontal: normalize(8),
+    paddingVertical: normalize(3),
+    borderRadius: normalize(10),
   },
   cardBadgeDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: normalize(6),
+    height: normalize(6),
+    borderRadius: normalize(3),
   },
   cardBadgeText: {
     fontFamily: FONTS.regular,
-    fontSize: 10,
+    fontSize: normalize(10),
     fontWeight: '700',
   },
 
@@ -682,25 +680,25 @@ const styles = StyleSheet.create({
     paddingTop: SPACING.sm,
     borderTopWidth: 1,
     borderTopColor: '#F8FAFC',
-    paddingLeft: 52,
+    paddingLeft: normalize(52),
   },
   cardUserRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: normalize(6),
     flex: 1,
   },
   cardUserAvatar: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: normalize(24),
+    height: normalize(24),
+    borderRadius: normalize(12),
     backgroundColor: '#F1F5F9',
     justifyContent: 'center',
     alignItems: 'center',
   },
   cardUserName: {
     fontFamily: FONTS.regular,
-    fontSize: 12,
+    fontSize: normalize(12),
     color: '#475569',
     fontWeight: '500',
     flex: 1,
@@ -708,11 +706,11 @@ const styles = StyleSheet.create({
   cardTimeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: normalize(4),
   },
   cardTime: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
+    fontSize: normalize(11),
     color: '#94A3B8',
     fontWeight: '500',
   },
@@ -720,15 +718,15 @@ const styles = StyleSheet.create({
   /* Card rating */
   cardRatingRow: {
     flexDirection: 'row',
-    gap: 2,
-    paddingLeft: 52,
+    gap: normalize(2),
+    paddingLeft: normalize(52),
     marginTop: SPACING.xs,
   },
 
   /* ── Pagination & Load More ─────────────────────────────────── */
   paginationInfo: {
     fontFamily: FONTS.regular,
-    fontSize: 12,
+    fontSize: normalize(12),
     color: '#94A3B8',
     textAlign: 'center',
     marginTop: SPACING.sm,
@@ -738,10 +736,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
-    paddingVertical: 12,
+    gap: normalize(4),
+    paddingVertical: normalize(12),
     backgroundColor: '#4A90D9' + '10',
-    borderRadius: 12,
+    borderRadius: normalize(12),
     marginTop: SPACING.xs,
   },
   loadMoreText: {

@@ -11,7 +11,6 @@ import {
   Alert,
   Linking,
   ImageBackground,
-  Dimensions,
   Modal,
 } from 'react-native';
 import { useNavigation, CommonActions } from '@react-navigation/native';
@@ -49,24 +48,24 @@ import {
   TrendingUp,
 } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
+import { normalize, wp, hp } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, SHADOWS, BORDER_RADIUS } from '@constants/theme';
 import { Card } from '@components/common/Card';
 import { useLanguage } from '@context/LanguageContext';
 import { useTheme } from '@context/ThemeContext';
 import { userApi, documentApi, uploadFile, vehicleApi } from '@utils/apiClient';
 import { apiService } from '@services/api.service';
+import { useAuth } from '@context/AuthContext';
 import * as ImagePicker from 'expo-image-picker';
 import { BottomTabNavigator } from '@components/navigation/BottomTabNavigator';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const HEADER_HEIGHT = 200;
-const AVATAR_SIZE = 110;
-const AVATAR_OVERLAP = AVATAR_SIZE / 2;
+const AVATAR_SIZE = normalize(80);
 
 const ProfileScreen = () => {
   const navigation = useNavigation();
   const { t } = useLanguage();
   const { theme } = useTheme();
+  const { logout: authLogout } = useAuth();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [documents, setDocuments] = useState<any[]>([]);
@@ -88,8 +87,8 @@ const ProfileScreen = () => {
     lottieRef.current?.play();
     setTimeout(async () => {
       try {
-        // Clear tokens and storage
-        await apiService.clearTokens();
+        // Clear tokens and auth state
+        await authLogout();
         await AsyncStorage.removeItem('userId');
         await AsyncStorage.removeItem('userRole');
         await AsyncStorage.removeItem('userName');
@@ -491,7 +490,7 @@ const ProfileScreen = () => {
           {documentsLoading ? (
             <View style={styles.miniLoadingWrap}>
               <ActivityIndicator size="small" color={theme.colors.primary} />
-              <Text style={[styles.loadingLabel, { color: theme.colors.textSecondary, fontSize: 12 }]}>Loading documents...</Text>
+              <Text style={[styles.loadingLabel, { color: theme.colors.textSecondary, fontSize: normalize(12) }]}>Loading documents...</Text>
             </View>
           ) : documents.length > 0 ? (
             <>
@@ -780,7 +779,7 @@ const styles = StyleSheet.create({
   // ── Header ──
   headerImage: {
     width: '100%',
-    height: HEADER_HEIGHT,
+    height: hp(25),
   },
   headerOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -798,21 +797,21 @@ const styles = StyleSheet.create({
     paddingTop: SPACING.xl,
   },
   navButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: normalize(40),
+    height: normalize(40),
+    borderRadius: normalize(20),
     backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   navTitle: {
     fontFamily: FONTS.regular,
-    fontSize: 20,
+    fontSize: normalize(20),
     fontWeight: 'bold',
     color: '#FFF',
   },
   navPlaceholder: {
-    width: 40,
+    width: normalize(40),
   },
 
   // ── Scroll ──
@@ -950,7 +949,7 @@ const styles = StyleSheet.create({
 
   // ── Badges Scroll ──
   badgesScroll: {
-    marginTop: 4,
+    marginTop: normalize(4),
   },
   badgeChip: {
     flexDirection: 'row',
@@ -958,15 +957,15 @@ const styles = StyleSheet.create({
     gap: 5,
     backgroundColor: '#FFF8E7',
     borderRadius: BORDER_RADIUS.round,
-    paddingVertical: 5,
-    paddingHorizontal: 12,
+    paddingVertical: normalize(5),
+    paddingHorizontal: normalize(12),
     marginRight: SPACING.sm,
     borderWidth: 1,
     borderColor: '#F5A623' + '30',
   },
   badgeChipText: {
     fontFamily: FONTS.regular,
-    fontSize: 12,
+    fontSize: normalize(12),
     color: '#8B5E00',
     fontWeight: '600',
   },
@@ -975,13 +974,13 @@ const styles = StyleSheet.create({
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: normalize(8),
     gap: SPACING.sm,
   },
   infoIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: normalize(34),
+    height: normalize(34),
+    borderRadius: normalize(17),
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -990,8 +989,8 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
-    marginBottom: 1,
+    fontSize: normalize(11),
+    marginBottom: normalize(1),
   },
   infoValue: {
     fontFamily: FONTS.regular,
@@ -1003,13 +1002,13 @@ const styles = StyleSheet.create({
   docItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: normalize(10),
     gap: SPACING.sm,
     borderBottomWidth: 1,
   },
   docThumbWrap: {
-    width: 44,
-    height: 44,
+    width: normalize(44),
+    height: normalize(44),
     borderRadius: BORDER_RADIUS.md,
     overflow: 'hidden',
     borderWidth: 1,
@@ -1021,8 +1020,8 @@ const styles = StyleSheet.create({
     resizeMode: 'cover',
   },
   docIconWrap: {
-    width: 44,
-    height: 44,
+    width: normalize(44),
+    height: normalize(44),
     borderRadius: BORDER_RADIUS.md,
     justifyContent: 'center',
     alignItems: 'center',
@@ -1034,17 +1033,17 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.sm,
     fontWeight: '500',
-    marginBottom: 3,
+    marginBottom: normalize(3),
   },
   docStatusPill: {
     alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingHorizontal: normalize(8),
+    paddingVertical: normalize(2),
     borderRadius: BORDER_RADIUS.round,
   },
   docStatusText: {
     fontFamily: FONTS.regular,
-    fontSize: 10,
+    fontSize: normalize(10),
     fontWeight: '600',
   },
   docSubSection: {
@@ -1054,10 +1053,10 @@ const styles = StyleSheet.create({
   },
   docSubTitle: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
+    fontSize: normalize(11),
     fontWeight: '600',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: normalize(0.5),
     marginBottom: SPACING.xs,
   },
 
@@ -1071,9 +1070,9 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
   },
   vehicleIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: normalize(44),
+    height: normalize(44),
+    borderRadius: normalize(22),
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1092,35 +1091,35 @@ const styles = StyleSheet.create({
   },
   vehicleDetails: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
+    fontSize: normalize(11),
     marginTop: 1,
   },
   vehicleActions: {
     flexDirection: 'row',
-    gap: 6,
+    gap: normalize(6),
   },
   vehicleActionBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: normalize(34),
+    height: normalize(34),
+    borderRadius: normalize(17),
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
   },
   addBtn: {
     paddingHorizontal: SPACING.sm,
-    paddingVertical: 5,
+    paddingVertical: normalize(5),
     borderRadius: BORDER_RADIUS.round,
   },
   addBtnText: {
     fontFamily: FONTS.regular,
-    fontSize: 12,
+    fontSize: normalize(12),
     color: '#FFF',
     fontWeight: '700',
   },
   addVehicleBtn: {
     marginTop: SPACING.sm,
-    paddingVertical: 10,
+    paddingVertical: normalize(10),
     paddingHorizontal: SPACING.lg,
     borderRadius: BORDER_RADIUS.md,
   },
@@ -1146,14 +1145,14 @@ const styles = StyleSheet.create({
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: normalize(12),
     paddingHorizontal: SPACING.md,
     gap: SPACING.sm,
   },
   menuIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: normalize(40),
+    height: normalize(40),
+    borderRadius: normalize(20),
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1178,29 +1177,29 @@ const styles = StyleSheet.create({
   },
   logoutModal: {
     width: '100%',
-    maxWidth: 360,
-    borderRadius: 24,
+    maxWidth: wp(90),
+    borderRadius: normalize(24),
     padding: SPACING.xl,
     alignItems: 'center',
     ...SHADOWS.lg,
   },
   logoutLottie: {
-    width: 150,
-    height: 150,
+    width: normalize(150),
+    height: normalize(150),
     marginBottom: SPACING.sm,
   },
   logoutTitle: {
     fontFamily: FONTS.regular,
-    fontSize: 20,
+    fontSize: normalize(20),
     fontWeight: '700',
-    marginBottom: 6,
+    marginBottom: normalize(6),
     textAlign: 'center',
   },
   logoutSubtitle: {
     fontFamily: FONTS.regular,
-    fontSize: 14,
+    fontSize: normalize(14),
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: normalize(20),
     marginBottom: SPACING.lg,
   },
   logoutActions: {
@@ -1210,30 +1209,30 @@ const styles = StyleSheet.create({
   },
   logoutCancelBtn: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: 14,
+    paddingVertical: normalize(14),
+    borderRadius: normalize(14),
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
   },
   logoutCancelText: {
     fontFamily: FONTS.regular,
-    fontSize: 15,
+    fontSize: normalize(15),
     fontWeight: '600',
   },
   logoutConfirmBtn: {
     flex: 1,
     flexDirection: 'row',
-    paddingVertical: 14,
-    borderRadius: 14,
+    paddingVertical: normalize(14),
+    borderRadius: normalize(14),
     backgroundColor: '#F44336',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: normalize(6),
   },
   logoutConfirmText: {
     fontFamily: FONTS.regular,
-    fontSize: 15,
+    fontSize: normalize(15),
     fontWeight: '700',
     color: '#FFF',
   },

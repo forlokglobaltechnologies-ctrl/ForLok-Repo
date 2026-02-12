@@ -18,6 +18,7 @@ import { WebView } from 'react-native-webview';
 import * as Location from 'expo-location';
 import { ArrowLeft, MapPin, Search, X } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '@constants/theme';
+import { normalize } from '@utils/responsive';
 
 export interface LocationData {
   address: string;
@@ -353,12 +354,12 @@ const styles = StyleSheet.create({
     padding: SPACING.xs,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: FONTS.sizes.lg,
     fontFamily: FONTS.bold,
     color: COLORS.text,
   },
   placeholder: {
-    width: 40,
+    width: normalize(40),
   },
   searchContainer: {
     flexDirection: 'row',
@@ -378,7 +379,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
+    fontSize: FONTS.sizes.md,
     color: COLORS.text,
     fontFamily: FONTS.regular,
   },
@@ -392,7 +393,7 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.md,
     borderWidth: 1,
     borderColor: COLORS.border,
-    maxHeight: 200,
+    maxHeight: normalize(200),
   },
   resultItem: {
     flexDirection: 'row',
@@ -406,12 +407,12 @@ const styles = StyleSheet.create({
     marginLeft: SPACING.sm,
   },
   resultAddress: {
-    fontSize: 14,
+    fontSize: FONTS.sizes.sm,
     fontFamily: FONTS.medium,
     color: COLORS.text,
   },
   resultDetails: {
-    fontSize: 12,
+    fontSize: FONTS.sizes.xs,
     fontFamily: FONTS.regular,
     color: COLORS.textSecondary,
     marginTop: 2,
@@ -428,7 +429,7 @@ const styles = StyleSheet.create({
   },
   currentLocationText: {
     color: COLORS.white,
-    fontSize: 16,
+    fontSize: FONTS.sizes.md,
     fontFamily: FONTS.medium,
     marginLeft: SPACING.xs,
   },
@@ -442,7 +443,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: SPACING.md,
-    fontSize: 16,
+    fontSize: FONTS.sizes.md,
     color: COLORS.textSecondary,
     fontFamily: FONTS.regular,
   },

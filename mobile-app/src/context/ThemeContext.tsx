@@ -105,7 +105,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const loadTheme = async () => {
     try {
       // Don't load saved pink theme on app start - always start with normal theme
-      // Pink theme is optional and only applies when user clicks pink pooling
+      // Pink theme is optional and only applies when user clicks HerPooling
       setIsPinkMode(false);
     } catch (error) {
       console.error('Error loading theme:', error);

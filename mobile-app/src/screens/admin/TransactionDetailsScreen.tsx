@@ -10,7 +10,6 @@ import {
   StatusBar,
   ActivityIndicator,
   RefreshControl,
-  Dimensions,
   Linking,
   Alert,
 } from 'react-native';
@@ -40,9 +39,9 @@ import {
   Settings2,
 } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
+import { normalize, wp, hp } from '@utils/responsive';
 import { bookingApi, adminApi } from '@utils/apiClient';
-
-const { width } = Dimensions.get('window');
+import { useLanguage } from '@context/LanguageContext';
 
 /* ── Helpers ── */
 
@@ -90,20 +89,24 @@ const formatDateTime = (d: any): string => {
 };
 
 const getServiceConfig = (type: string) => {
-  const t = (type || '').toLowerCase();
-  if (t === 'rental') return { label: 'Rental', icon: KeyRound, color: '#8B5CF6', bg: '#F3E8FF' };
-  return { label: 'Pooling', icon: Car, color: '#0EA5E9', bg: '#E0F2FE' };
+  const typ = (type || '').toLowerCase();
+  if (typ === 'rental') return { labelKey: 'admin.transactionDetails.rental', icon: KeyRound, color: '#8B5CF6', bg: '#F3E8FF' };
+  return { labelKey: 'admin.transactionDetails.pooling', icon: Car, color: '#0EA5E9', bg: '#E0F2FE' };
 };
 
 const getStatusConfig = (status: string) => {
   const s = (status || '').toLowerCase();
   switch (s) {
-    case 'completed': return { label: 'Completed', color: '#10B981', bg: '#D1FAE5', icon: CheckCircle };
-    case 'cancelled': return { label: 'Cancelled', color: '#EF4444', bg: '#FEE2E2', icon: XCircle };
-    case 'active': case 'in_progress': return { label: s === 'active' ? 'Active' : 'In Progress', color: '#F59E0B', bg: '#FEF3C7', icon: Clock };
-    case 'upcoming': return { label: 'Upcoming', color: '#3B82F6', bg: '#DBEAFE', icon: Calendar };
-    case 'pending': return { label: 'Pending', color: '#F97316', bg: '#FFEDD5', icon: AlertCircle };
-    default: return { label: status || 'Unknown', color: '#6B7280', bg: '#F3F4F6', icon: AlertCircle };
+    case 'completed': return { labelKey: 'admin.transactionDetails.completed', color: '#10B981', bg: '#D1FAE5', icon: CheckCircle };
+    case 'cancelled': return { labelKey: 'admin.transactionDetails.cancelled', color: '#EF4444', bg: '#FEE2E2', icon: XCircle };
+    case 'active': return { labelKey: 'admin.transactionDetails.active', color: '#F59E0B', bg: '#FEF3C7', icon: Clock };
+    case 'in_progress': return { labelKey: 'admin.transactionDetails.inProgress', color: '#F59E0B', bg: '#FEF3C7', icon: Clock };
+    case 'upcoming': return { labelKey: 'admin.transactionDetails.upcoming', color: '#3B82F6', bg: '#DBEAFE', icon: Calendar };
+    case 'pending': return { labelKey: 'admin.transactionDetails.pending', color: '#F97316', bg: '#FFEDD5', icon: AlertCircle };
+    case 'failed': return { labelKey: 'admin.transactionDetails.failed', color: '#EF4444', bg: '#FEE2E2', icon: XCircle };
+    case 'refunded': return { labelKey: 'admin.transactionDetails.refunded', color: '#10B981', bg: '#D1FAE5', icon: CheckCircle };
+    case 'processing': return { labelKey: 'admin.transactionDetails.processing', color: '#F59E0B', bg: '#FEF3C7', icon: Clock };
+    default: return { labelKey: 'admin.transactionDetails.unknown', color: '#6B7280', bg: '#F3F4F6', icon: AlertCircle };
   }
 };
 
@@ -112,6 +115,7 @@ const getStatusConfig = (status: string) => {
 const TransactionDetailsScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
+  const { t } = useLanguage();
   const { transactionId } = (route.params as any) || {};
 
   const [booking, setBooking] = useState<any>(null);
@@ -120,7 +124,7 @@ const TransactionDetailsScreen = () => {
   const [error, setError] = useState('');
 
   const fetchBooking = useCallback(async (isRefresh = false) => {
-    if (!transactionId) { setError('No booking ID provided.'); setLoading(false); return; }
+    if (!transactionId) { setError(t('admin.transactionDetails.noBookingId')); setLoading(false); return; }
     if (!isRefresh) setLoading(true);
     setError('');
     try {
@@ -181,15 +185,15 @@ const TransactionDetailsScreen = () => {
 
         setBooking(merged);
       } else {
-        setError('Booking not found.');
+        setError(t('admin.transactionDetails.bookingNotFound'));
       }
     } catch (e: any) {
-      setError(e?.message || 'Failed to load booking details.');
+      setError(e?.message || t('admin.transactionDetails.failedToLoad'));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [transactionId]);
+  }, [transactionId, t]);
 
   useEffect(() => { fetchBooking(); }, [fetchBooking]);
 
@@ -338,12 +342,12 @@ const TransactionDetailsScreen = () => {
               <ArrowLeft size={20} color="#fff" />
             </TouchableOpacity>
             <View style={styles.heroTitleWrap}>
-              <Text style={styles.heroTitle}>Transaction Details</Text>
+              <Text style={styles.heroTitle}>{t('admin.transactionDetails.title')}</Text>
               <Text style={styles.heroSubtitle} numberOfLines={1}>
-                {transactionId ? `#${String(transactionId).replace(/^#/, '')}` : 'Booking'}
+                {transactionId ? `#${String(transactionId).replace(/^#/, '')}` : t('admin.transactionDetails.booking')}
               </Text>
             </View>
-            <View style={{ width: 38 }} />
+            <View style={{ width: normalize(38) }} />
           </View>
         </BlurView>
       </ImageBackground>
@@ -352,17 +356,17 @@ const TransactionDetailsScreen = () => {
       {loading ? (
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>Loading details...</Text>
+          <Text style={styles.loadingText}>{t('admin.transactionDetails.loadingDetails')}</Text>
         </View>
       ) : error ? (
         <View style={styles.centerContainer}>
           <View style={styles.errorIconWrap}>
             <AlertCircle size={48} color="#EF4444" />
           </View>
-          <Text style={styles.errorTitle}>Something went wrong</Text>
+          <Text style={styles.errorTitle}>{t('admin.transactionDetails.errorTitle')}</Text>
           <Text style={styles.errorText}>{error}</Text>
           <TouchableOpacity style={styles.retryBtn} onPress={() => fetchBooking()}>
-            <Text style={styles.retryBtnText}>Retry</Text>
+            <Text style={styles.retryBtnText}>{t('admin.transactionDetails.retry')}</Text>
           </TouchableOpacity>
         </View>
       ) : booking ? (
@@ -377,15 +381,15 @@ const TransactionDetailsScreen = () => {
             <View style={styles.statusCardTop}>
               <View style={[styles.serviceBadge, { backgroundColor: svcConf.bg }]}>
                 <SvcIcon size={16} color={svcConf.color} />
-                <Text style={[styles.serviceBadgeText, { color: svcConf.color }]}>{svcConf.label}</Text>
+                <Text style={[styles.serviceBadgeText, { color: svcConf.color }]}>{t(svcConf.labelKey)}</Text>
               </View>
               <View style={[styles.statusBadge, { backgroundColor: statusConf.bg }]}>
                 <StatusIcon size={14} color={statusConf.color} />
-                <Text style={[styles.statusBadgeText, { color: statusConf.color }]}>{statusConf.label}</Text>
+                <Text style={[styles.statusBadgeText, { color: statusConf.color }]}>{t(statusConf.labelKey)}</Text>
               </View>
             </View>
             <View style={styles.amountRow}>
-              <Text style={styles.amountLabel}>Total Amount</Text>
+              <Text style={styles.amountLabel}>{t('admin.transactionDetails.totalAmount')}</Text>
               <Text style={styles.amountValue}>{formatCurrency(totalAmount)}</Text>
             </View>
             <View style={styles.idRow}>
@@ -395,7 +399,7 @@ const TransactionDetailsScreen = () => {
           </View>
 
           {/* Route Section */}
-          {renderSection('Route Details', (
+          {renderSection(t('admin.transactionDetails.routeDetails'), (
             <>
               <View style={styles.routeContainer}>
                 <View style={styles.routeTimeline}>
@@ -405,46 +409,46 @@ const TransactionDetailsScreen = () => {
                 </View>
                 <View style={styles.routeInfo}>
                   <View style={styles.routePoint}>
-                    <Text style={styles.routePointLabel}>Pickup</Text>
+                    <Text style={styles.routePointLabel}>{t('admin.transactionDetails.pickup')}</Text>
                     <Text style={styles.routePointValue} numberOfLines={3}>{fromFull}</Text>
                   </View>
                   <View style={styles.routePoint}>
-                    <Text style={styles.routePointLabel}>Drop-off</Text>
+                    <Text style={styles.routePointLabel}>{t('admin.transactionDetails.dropoff')}</Text>
                     <Text style={styles.routePointValue} numberOfLines={3}>{toFull}</Text>
                   </View>
                 </View>
               </View>
-              {distance ? renderInfoRow(Navigation, 'Distance', typeof distance === 'number' ? `${distance} km` : String(distance)) : null}
-              {duration ? renderInfoRow(Clock, 'Duration', typeof duration === 'number' ? `${duration} min` : String(duration)) : null}
-              {scheduledAt ? renderInfoRow(Calendar, 'Scheduled', formatDateTime(scheduledAt)) : null}
-              {completedAt ? renderInfoRow(Clock, 'Completed', formatDateTime(completedAt)) : null}
+              {distance ? renderInfoRow(Navigation, t('admin.transactionDetails.distance'), typeof distance === 'number' ? `${distance} km` : String(distance)) : null}
+              {duration ? renderInfoRow(Clock, t('admin.transactionDetails.duration'), typeof duration === 'number' ? `${duration} min` : String(duration)) : null}
+              {scheduledAt ? renderInfoRow(Calendar, t('admin.transactionDetails.scheduled'), formatDateTime(scheduledAt)) : null}
+              {completedAt ? renderInfoRow(Clock, t('admin.transactionDetails.completed'), formatDateTime(completedAt)) : null}
             </>
           ))}
 
           {/* Passenger Section */}
-          {renderSection('Passenger', (
+          {renderSection(t('admin.transactionDetails.passenger'), (
             <>
-              {renderInfoRow(User, 'Name', userName)}
-              {userIdStr ? renderInfoRow(Hash, 'User ID', userIdStr) : null}
-              {userPhone ? renderInfoRow(Phone, 'Phone', userPhone, {
+              {renderInfoRow(User, t('admin.transactionDetails.name'), userName)}
+              {userIdStr ? renderInfoRow(Hash, t('admin.transactionDetails.userId'), userIdStr) : null}
+              {userPhone ? renderInfoRow(Phone, t('admin.transactionDetails.phone'), userPhone, {
                 color: COLORS.secondary,
                 action: () => Linking.openURL(`tel:${userPhone}`),
               }) : null}
-              {userEmail ? renderInfoRow(Mail, 'Email', userEmail, {
+              {userEmail ? renderInfoRow(Mail, t('admin.transactionDetails.email'), userEmail, {
                 color: COLORS.secondary,
                 action: () => Linking.openURL(`mailto:${userEmail}`),
               }) : null}
-              {firstPassenger?.status ? renderInfoRow(CheckCircle, 'Status', firstPassenger.status.charAt(0).toUpperCase() + firstPassenger.status.slice(1)) : null}
-              {seats ? renderInfoRow(Users, 'Seats Booked', String(seats)) : null}
-              {Array.isArray(b.passengers) && b.passengers.length > 1 ? renderInfoRow(Users, 'Total Passengers', String(b.passengers.length)) : null}
+              {firstPassenger?.status ? renderInfoRow(CheckCircle, t('admin.transactionDetails.status'), firstPassenger.status.charAt(0).toUpperCase() + firstPassenger.status.slice(1)) : null}
+              {seats ? renderInfoRow(Users, t('admin.transactionDetails.seatsBooked'), String(seats)) : null}
+              {Array.isArray(b.passengers) && b.passengers.length > 1 ? renderInfoRow(Users, t('admin.transactionDetails.totalPassengers'), String(b.passengers.length)) : null}
             </>
           ))}
 
           {/* Driver Section */}
-          {driverName ? renderSection('Driver', (
+          {driverName ? renderSection(t('admin.transactionDetails.driver'), (
             <>
-              {renderInfoRow(User, 'Name', driverName)}
-              {driverPhone ? renderInfoRow(Phone, 'Phone', driverPhone, {
+              {renderInfoRow(User, t('admin.transactionDetails.name'), driverName)}
+              {driverPhone ? renderInfoRow(Phone, t('admin.transactionDetails.phone'), driverPhone, {
                 color: COLORS.secondary,
                 action: () => Linking.openURL(`tel:${driverPhone}`),
               }) : null}
@@ -452,89 +456,89 @@ const TransactionDetailsScreen = () => {
           )) : null}
 
           {/* Vehicle Section */}
-          {vehicleStr !== 'N/A' ? renderSection('Vehicle', (
+          {vehicleStr !== 'N/A' ? renderSection(t('admin.transactionDetails.vehicle'), (
             <>
-              {renderInfoRow(Car, 'Vehicle', vehicleStr)}
-              {vehicleNumber ? renderInfoRow(Hash, 'Number Plate', vehicleNumber) : null}
-              {vehicleSeats ? renderInfoRow(Users, 'Seats', String(vehicleSeats)) : null}
-              {vehicleFuel ? renderInfoRow(Fuel, 'Fuel Type', vehicleFuel) : null}
-              {vehicleTransmission ? renderInfoRow(Settings2, 'Transmission', vehicleTransmission) : null}
+              {renderInfoRow(Car, t('admin.transactionDetails.vehicle'), vehicleStr)}
+              {vehicleNumber ? renderInfoRow(Hash, t('admin.transactionDetails.numberPlate'), vehicleNumber) : null}
+              {vehicleSeats ? renderInfoRow(Users, t('admin.transactionDetails.seats'), String(vehicleSeats)) : null}
+              {vehicleFuel ? renderInfoRow(Fuel, t('admin.transactionDetails.fuelType'), vehicleFuel) : null}
+              {vehicleTransmission ? renderInfoRow(Settings2, t('admin.transactionDetails.transmission'), vehicleTransmission) : null}
             </>
           )) : null}
 
           {/* Payment Breakdown */}
-          {renderSection('Payment Details', (
+          {renderSection(t('admin.transactionDetails.paymentDetails'), (
             <>
-              {renderInfoRow(CreditCard, 'Payment Method', safeStr(paymentMethod))}
-              {renderInfoRow(CheckCircle, 'Payment Status', safeStr(paymentStatus), {
+              {renderInfoRow(CreditCard, t('admin.transactionDetails.paymentMethod'), safeStr(paymentMethod))}
+              {renderInfoRow(CheckCircle, t('admin.transactionDetails.paymentStatus'), safeStr(paymentStatus), {
                 color: String(paymentStatus).toLowerCase() === 'paid' || String(paymentStatus).toLowerCase() === 'completed' ? '#10B981' : '#F59E0B',
               })}
-              {paymentId ? renderInfoRow(Hash, 'Transaction ID', paymentId) : null}
+              {paymentId ? renderInfoRow(Hash, t('admin.transactionDetails.transactionId'), paymentId) : null}
               <View style={styles.divider} />
               <View style={styles.breakdownRow}>
-                <Text style={styles.breakdownLabel}>Base Fare</Text>
+                <Text style={styles.breakdownLabel}>{t('admin.transactionDetails.baseFare')}</Text>
                 <Text style={styles.breakdownValue}>{formatCurrency(basePrice)}</Text>
               </View>
               {safeNum(platformFee) > 0 && (
                 <View style={styles.breakdownRow}>
-                  <Text style={styles.breakdownLabel}>Platform Fee</Text>
+                  <Text style={styles.breakdownLabel}>{t('admin.transactionDetails.platformFee')}</Text>
                   <Text style={styles.breakdownValue}>{formatCurrency(platformFee)}</Text>
                 </View>
               )}
               {safeNum(tax) > 0 && (
                 <View style={styles.breakdownRow}>
-                  <Text style={styles.breakdownLabel}>Tax / GST</Text>
+                  <Text style={styles.breakdownLabel}>{t('admin.transactionDetails.taxGst')}</Text>
                   <Text style={styles.breakdownValue}>{formatCurrency(tax)}</Text>
                 </View>
               )}
               {safeNum(discount) > 0 && (
                 <View style={styles.breakdownRow}>
-                  <Text style={styles.breakdownLabel}>Discount</Text>
+                  <Text style={styles.breakdownLabel}>{t('admin.transactionDetails.discount')}</Text>
                   <Text style={[styles.breakdownValue, { color: '#10B981' }]}>-{formatCurrency(discount)}</Text>
                 </View>
               )}
-              <View style={[styles.divider, { marginTop: 8 }]} />
-              <View style={[styles.breakdownRow, { marginTop: 4 }]}>
-                <Text style={styles.breakdownTotalLabel}>Total</Text>
+              <View style={[styles.divider, { marginTop: normalize(8) }]} />
+              <View style={[styles.breakdownRow, { marginTop: normalize(4) }]}>
+                <Text style={styles.breakdownTotalLabel}>{t('admin.transactionDetails.total')}</Text>
                 <Text style={styles.breakdownTotalValue}>{formatCurrency(totalAmount)}</Text>
               </View>
             </>
           ))}
 
           {/* Dates */}
-          {renderSection('Timeline', (
+          {renderSection(t('admin.transactionDetails.timeline'), (
             <>
-              {renderInfoRow(Calendar, 'Booked On', formatDateTime(createdAt))}
-              {time ? renderInfoRow(Clock, 'Departure Time', time) : null}
-              {scheduledAt ? renderInfoRow(Clock, 'Scheduled For', formatDateTime(scheduledAt)) : null}
-              {completedAt ? renderInfoRow(CheckCircle, 'Completed At', formatDateTime(completedAt), { color: '#10B981' }) : null}
-              {cancelledAt ? renderInfoRow(XCircle, 'Cancelled At', formatDateTime(cancelledAt), { color: '#EF4444' }) : null}
-              {updatedAt ? renderInfoRow(Clock, 'Last Updated', formatDateTime(updatedAt)) : null}
-              {bookingNumber ? renderInfoRow(Hash, 'Booking Number', bookingNumber) : null}
+              {renderInfoRow(Calendar, t('admin.transactionDetails.bookedOn'), formatDateTime(createdAt))}
+              {time ? renderInfoRow(Clock, t('admin.transactionDetails.departureTime'), time) : null}
+              {scheduledAt ? renderInfoRow(Clock, t('admin.transactionDetails.scheduledFor'), formatDateTime(scheduledAt)) : null}
+              {completedAt ? renderInfoRow(CheckCircle, t('admin.transactionDetails.completedAt'), formatDateTime(completedAt), { color: '#10B981' }) : null}
+              {cancelledAt ? renderInfoRow(XCircle, t('admin.transactionDetails.cancelledAt'), formatDateTime(cancelledAt), { color: '#EF4444' }) : null}
+              {updatedAt ? renderInfoRow(Clock, t('admin.transactionDetails.lastUpdated'), formatDateTime(updatedAt)) : null}
+              {bookingNumber ? renderInfoRow(Hash, t('admin.transactionDetails.bookingNumber'), bookingNumber) : null}
             </>
           ))}
 
           {/* Cancellation */}
-          {cancellationReason ? renderSection('Cancellation', (
+          {cancellationReason ? renderSection(t('admin.transactionDetails.cancellation'), (
             <>
-              {renderInfoRow(XCircle, 'Reason', cancellationReason, { color: '#EF4444' })}
-              {cancelledBy ? renderInfoRow(User, 'Cancelled By', cancelledBy.charAt(0).toUpperCase() + cancelledBy.slice(1)) : null}
-              {typeof cancellationFee === 'number' ? renderInfoRow(DollarSign, 'Cancellation Fee', formatCurrency(cancellationFee)) : null}
+              {renderInfoRow(XCircle, t('admin.transactionDetails.reason'), cancellationReason, { color: '#EF4444' })}
+              {cancelledBy ? renderInfoRow(User, t('admin.transactionDetails.cancelledBy'), cancelledBy.charAt(0).toUpperCase() + cancelledBy.slice(1)) : null}
+              {typeof cancellationFee === 'number' ? renderInfoRow(DollarSign, t('admin.transactionDetails.cancellationFee'), formatCurrency(cancellationFee)) : null}
             </>
           )) : null}
 
           {/* Status Info */}
-          {(settlementStatus || passengerStatus) ? renderSection('Additional Status', (
+          {(settlementStatus || passengerStatus) ? renderSection(t('admin.transactionDetails.additionalStatus'), (
             <>
-              {settlementStatus ? renderInfoRow(DollarSign, 'Settlement', settlementStatus.charAt(0).toUpperCase() + settlementStatus.slice(1), {
+              {settlementStatus ? renderInfoRow(DollarSign, t('admin.transactionDetails.settlement'), settlementStatus.charAt(0).toUpperCase() + settlementStatus.slice(1), {
                 color: settlementStatus === 'completed' ? '#10B981' : '#F59E0B',
               }) : null}
-              {passengerStatus ? renderInfoRow(User, 'Passenger Status', passengerStatus.charAt(0).toUpperCase() + passengerStatus.slice(1)) : null}
+              {passengerStatus ? renderInfoRow(User, t('admin.transactionDetails.passengerStatus'), passengerStatus.charAt(0).toUpperCase() + passengerStatus.slice(1)) : null}
             </>
           )) : null}
 
           {/* Notes */}
-          {notes ? renderSection('Notes', (
+          {notes ? renderSection(t('admin.transactionDetails.notes'), (
             <View style={styles.notesContainer}>
               <FileText size={16} color="#94A3B8" />
               <Text style={styles.notesText}>{notes}</Text>
@@ -555,21 +559,21 @@ const TransactionDetailsScreen = () => {
                 style={[styles.actionBtn, styles.cancelBtn]}
                 onPress={() => {
                   Alert.alert(
-                    'Cancel Booking',
-                    'Are you sure you want to cancel this booking?',
+                    t('admin.transactionDetails.cancelBooking'),
+                    t('admin.transactionDetails.cancelBookingConfirm'),
                     [
-                      { text: 'No', style: 'cancel' },
+                      { text: t('admin.transactionDetails.no'), style: 'cancel' },
                       {
-                        text: 'Yes, Cancel',
+                        text: t('admin.transactionDetails.yesCancel'),
                         style: 'destructive',
                         onPress: async () => {
                           try {
                             const id = String(bookingId).replace(/^#/, '');
                             await bookingApi.cancelBooking(id, 'Cancelled by admin');
-                            Alert.alert('Success', 'Booking cancelled successfully.');
+                            Alert.alert(t('common.success'), t('admin.transactionDetails.bookingCancelled'));
                             fetchBooking(true);
                           } catch (e: any) {
-                            Alert.alert('Error', e?.message || 'Failed to cancel booking.');
+                            Alert.alert(t('common.error'), e?.message || t('admin.transactionDetails.failedToCancel'));
                           }
                         },
                       },
@@ -578,12 +582,12 @@ const TransactionDetailsScreen = () => {
                 }}
               >
                 <XCircle size={16} color="#EF4444" />
-                <Text style={styles.cancelBtnText}>Cancel Booking</Text>
+                <Text style={styles.cancelBtnText}>{t('admin.transactionDetails.cancelBooking')}</Text>
               </TouchableOpacity>
             )}
           </View>
 
-          <View style={{ height: 40 }} />
+          <View style={{ height: normalize(40) }} />
         </ScrollView>
       ) : null}
     </View>
@@ -594,78 +598,78 @@ const TransactionDetailsScreen = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F5F7FA' },
-  heroHeader: { height: Platform.OS === 'android' ? 140 + (StatusBar.currentHeight || 0) : 160, width: '100%' },
+  heroHeader: { height: Platform.OS === 'android' ? hp(17) + (StatusBar.currentHeight || 0) : hp(20), width: '100%' },
   heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(15, 52, 96, 0.5)' },
   heroBlur: { flex: 1, justifyContent: 'flex-end', paddingBottom: SPACING.md, paddingHorizontal: SPACING.lg },
   heroNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  heroBackBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center' },
+  heroBackBtn: { width: normalize(38), height: normalize(38), borderRadius: normalize(19), backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center' },
   heroTitleWrap: { alignItems: 'center', flex: 1, marginHorizontal: SPACING.sm },
-  heroTitle: { fontFamily: FONTS.regular, fontSize: 20, color: '#fff', fontWeight: '700' },
-  heroSubtitle: { fontFamily: FONTS.regular, fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 2 },
+  heroTitle: { fontFamily: FONTS.regular, fontSize: normalize(20), color: '#fff', fontWeight: '700' },
+  heroSubtitle: { fontFamily: FONTS.regular, fontSize: normalize(12), color: 'rgba(255,255,255,0.7)', marginTop: normalize(2) },
 
   centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: SPACING.xl },
   loadingText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: COLORS.textSecondary, marginTop: SPACING.md },
-  errorIconWrap: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#FEE2E2', justifyContent: 'center', alignItems: 'center', marginBottom: SPACING.lg },
-  errorTitle: { fontFamily: FONTS.regular, fontSize: 18, fontWeight: '700', color: '#1E293B', marginBottom: SPACING.xs },
-  errorText: { fontFamily: FONTS.regular, fontSize: 14, color: '#94A3B8', textAlign: 'center', marginBottom: SPACING.lg },
-  retryBtn: { paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12, backgroundColor: COLORS.primary },
-  retryBtnText: { fontFamily: FONTS.regular, fontSize: 14, fontWeight: '600', color: '#fff' },
+  errorIconWrap: { width: normalize(80), height: normalize(80), borderRadius: normalize(40), backgroundColor: '#FEE2E2', justifyContent: 'center', alignItems: 'center', marginBottom: SPACING.lg },
+  errorTitle: { fontFamily: FONTS.regular, fontSize: normalize(18), fontWeight: '700', color: '#1E293B', marginBottom: SPACING.xs },
+  errorText: { fontFamily: FONTS.regular, fontSize: normalize(14), color: '#94A3B8', textAlign: 'center', marginBottom: SPACING.lg },
+  retryBtn: { paddingHorizontal: normalize(24), paddingVertical: normalize(12), borderRadius: normalize(12), backgroundColor: COLORS.primary },
+  retryBtnText: { fontFamily: FONTS.regular, fontSize: normalize(14), fontWeight: '600', color: '#fff' },
 
   scrollView: { flex: 1 },
   scrollContent: { padding: SPACING.lg, paddingTop: SPACING.md },
 
   /* Status Card */
-  statusCard: { backgroundColor: '#fff', borderRadius: 16, padding: SPACING.lg, marginBottom: SPACING.md, ...SHADOWS.md },
+  statusCard: { backgroundColor: '#fff', borderRadius: normalize(16), padding: SPACING.lg, marginBottom: SPACING.md, ...SHADOWS.md },
   statusCardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.md },
-  serviceBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
-  serviceBadgeText: { fontFamily: FONTS.regular, fontSize: 12, fontWeight: '700' },
-  statusBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
-  statusBadgeText: { fontFamily: FONTS.regular, fontSize: 11, fontWeight: '700' },
+  serviceBadge: { flexDirection: 'row', alignItems: 'center', gap: normalize(6), paddingHorizontal: normalize(12), paddingVertical: normalize(6), borderRadius: normalize(20) },
+  serviceBadgeText: { fontFamily: FONTS.regular, fontSize: normalize(12), fontWeight: '700' },
+  statusBadge: { flexDirection: 'row', alignItems: 'center', gap: normalize(4), paddingHorizontal: normalize(10), paddingVertical: normalize(5), borderRadius: normalize(20) },
+  statusBadgeText: { fontFamily: FONTS.regular, fontSize: normalize(11), fontWeight: '700' },
   amountRow: { alignItems: 'center', marginBottom: SPACING.sm },
-  amountLabel: { fontFamily: FONTS.regular, fontSize: 12, color: '#94A3B8', fontWeight: '500', marginBottom: 4 },
-  amountValue: { fontFamily: FONTS.regular, fontSize: 32, fontWeight: '800', color: '#1E293B' },
-  idRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, backgroundColor: '#F8FAFC', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
-  idText: { fontFamily: FONTS.regular, fontSize: 11, color: '#94A3B8', fontWeight: '500', flex: 1 },
+  amountLabel: { fontFamily: FONTS.regular, fontSize: normalize(12), color: '#94A3B8', fontWeight: '500', marginBottom: normalize(4) },
+  amountValue: { fontFamily: FONTS.regular, fontSize: normalize(32), fontWeight: '800', color: '#1E293B' },
+  idRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: normalize(4), backgroundColor: '#F8FAFC', borderRadius: normalize(8), paddingHorizontal: normalize(12), paddingVertical: normalize(6) },
+  idText: { fontFamily: FONTS.regular, fontSize: normalize(11), color: '#94A3B8', fontWeight: '500', flex: 1 },
 
   /* Sections */
   section: { marginBottom: SPACING.md },
-  sectionTitle: { fontFamily: FONTS.regular, fontSize: 15, fontWeight: '700', color: '#1E293B', marginBottom: SPACING.sm, marginLeft: 4 },
-  sectionCard: { backgroundColor: '#fff', borderRadius: 14, padding: SPACING.md, ...SHADOWS.sm },
+  sectionTitle: { fontFamily: FONTS.regular, fontSize: normalize(15), fontWeight: '700', color: '#1E293B', marginBottom: SPACING.sm, marginLeft: normalize(4) },
+  sectionCard: { backgroundColor: '#fff', borderRadius: normalize(14), padding: SPACING.md, ...SHADOWS.sm },
 
   /* Info Row */
-  infoRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
-  infoIconWrap: { width: 32, height: 32, borderRadius: 10, backgroundColor: '#F8FAFC', justifyContent: 'center', alignItems: 'center', marginRight: SPACING.sm },
+  infoRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: normalize(10) },
+  infoIconWrap: { width: normalize(32), height: normalize(32), borderRadius: normalize(10), backgroundColor: '#F8FAFC', justifyContent: 'center', alignItems: 'center', marginRight: SPACING.sm },
   infoContent: { flex: 1 },
-  infoLabel: { fontFamily: FONTS.regular, fontSize: 11, color: '#94A3B8', fontWeight: '500', marginBottom: 2 },
-  infoValue: { fontFamily: FONTS.regular, fontSize: 14, color: '#1E293B', fontWeight: '600' },
+  infoLabel: { fontFamily: FONTS.regular, fontSize: normalize(11), color: '#94A3B8', fontWeight: '500', marginBottom: normalize(2) },
+  infoValue: { fontFamily: FONTS.regular, fontSize: normalize(14), color: '#1E293B', fontWeight: '600' },
 
   /* Route */
   routeContainer: { flexDirection: 'row', paddingVertical: SPACING.sm },
-  routeTimeline: { width: 24, alignItems: 'center', paddingTop: 4 },
-  routeDot: { width: 10, height: 10, borderRadius: 5 },
-  routeLine: { width: 2, flex: 1, backgroundColor: '#E2E8F0', marginVertical: 4 },
+  routeTimeline: { width: normalize(24), alignItems: 'center', paddingTop: normalize(4) },
+  routeDot: { width: normalize(10), height: normalize(10), borderRadius: normalize(5) },
+  routeLine: { width: 2, flex: 1, backgroundColor: '#E2E8F0', marginVertical: normalize(4) },
   routeInfo: { flex: 1, marginLeft: SPACING.sm, gap: SPACING.md },
-  routePoint: { gap: 2 },
-  routePointLabel: { fontFamily: FONTS.regular, fontSize: 11, color: '#94A3B8', fontWeight: '500' },
-  routePointValue: { fontFamily: FONTS.regular, fontSize: 14, color: '#1E293B', fontWeight: '600' },
+  routePoint: { gap: normalize(2) },
+  routePointLabel: { fontFamily: FONTS.regular, fontSize: normalize(11), color: '#94A3B8', fontWeight: '500' },
+  routePointValue: { fontFamily: FONTS.regular, fontSize: normalize(14), color: '#1E293B', fontWeight: '600' },
 
   /* Payment breakdown */
-  divider: { height: 1, backgroundColor: '#F1F5F9', marginVertical: 8 },
-  breakdownRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4 },
-  breakdownLabel: { fontFamily: FONTS.regular, fontSize: 13, color: '#64748B', fontWeight: '500' },
-  breakdownValue: { fontFamily: FONTS.regular, fontSize: 13, color: '#1E293B', fontWeight: '600' },
-  breakdownTotalLabel: { fontFamily: FONTS.regular, fontSize: 15, color: '#1E293B', fontWeight: '700' },
-  breakdownTotalValue: { fontFamily: FONTS.regular, fontSize: 18, color: '#00B894', fontWeight: '800' },
+  divider: { height: 1, backgroundColor: '#F1F5F9', marginVertical: normalize(8) },
+  breakdownRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: normalize(4) },
+  breakdownLabel: { fontFamily: FONTS.regular, fontSize: normalize(13), color: '#64748B', fontWeight: '500' },
+  breakdownValue: { fontFamily: FONTS.regular, fontSize: normalize(13), color: '#1E293B', fontWeight: '600' },
+  breakdownTotalLabel: { fontFamily: FONTS.regular, fontSize: normalize(15), color: '#1E293B', fontWeight: '700' },
+  breakdownTotalValue: { fontFamily: FONTS.regular, fontSize: normalize(18), color: '#00B894', fontWeight: '800' },
 
   /* Notes */
   notesContainer: { flexDirection: 'row', gap: SPACING.sm, alignItems: 'flex-start' },
-  notesText: { fontFamily: FONTS.regular, fontSize: 13, color: '#64748B', fontWeight: '500', flex: 1, lineHeight: 20 },
+  notesText: { fontFamily: FONTS.regular, fontSize: normalize(13), color: '#64748B', fontWeight: '500', flex: 1, lineHeight: normalize(20) },
 
   /* Actions */
   actionsRow: { marginTop: SPACING.sm },
-  actionBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, borderRadius: 14 },
+  actionBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: normalize(8), paddingVertical: normalize(14), borderRadius: normalize(14) },
   cancelBtn: { backgroundColor: '#FEE2E2', borderWidth: 1, borderColor: '#FECACA' },
-  cancelBtnText: { fontFamily: FONTS.regular, fontSize: 14, fontWeight: '700', color: '#EF4444' },
+  cancelBtnText: { fontFamily: FONTS.regular, fontSize: normalize(14), fontWeight: '700', color: '#EF4444' },
 });
 
 export default TransactionDetailsScreen;

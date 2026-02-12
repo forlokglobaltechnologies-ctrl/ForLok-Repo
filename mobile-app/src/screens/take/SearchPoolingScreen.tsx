@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Ima
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ArrowLeft, Search, Filter, Car, Bike, Star, MapPin, Calendar, ArrowRight } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
+import { normalize, wp, hp } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, SHADOWS, BORDER_RADIUS } from '@constants/theme';
 import { Card } from '@components/common/Card';
 import { Button as CustomButton } from '@components/common/Button';
@@ -325,7 +326,7 @@ const SearchPoolingScreen = () => {
             {isPinkMode && (
               <View style={[styles.pinkModeBanner, { backgroundColor: theme.colors.primaryLight }]}>
                 <Text style={[styles.pinkModeText, { color: theme.colors.primary }]}>
-                  Showing only female drivers - Pink Pooling Mode
+                  Showing only female drivers - HerPooling Mode
                 </Text>
               </View>
             )}

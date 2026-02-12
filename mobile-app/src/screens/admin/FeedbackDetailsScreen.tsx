@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
-  Dimensions,
   ImageBackground,
   ActivityIndicator,
   TextInput,
@@ -32,8 +31,7 @@ import { Card } from '@components/common/Card';
 import { Button } from '@components/common/Button';
 import { useLanguage } from '@context/LanguageContext';
 import { adminFeedbackApi } from '@utils/apiClient';
-
-const { width } = Dimensions.get('window');
+import { normalize, hp } from '@utils/responsive';
 
 const FeedbackDetailsScreen = () => {
   const navigation = useNavigation();
@@ -456,7 +454,7 @@ const styles = StyleSheet.create({
   },
   imageContainer: {
     width: '100%',
-    height: 200,
+    height: hp(25),
     position: 'relative',
     overflow: 'hidden',
     marginBottom: SPACING.md,
@@ -483,9 +481,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   feedbackIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: normalize(80),
+    height: normalize(80),
+    borderRadius: normalize(40),
     backgroundColor: COLORS.white + '30',
     justifyContent: 'center',
     alignItems: 'center',
@@ -572,7 +570,7 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sizes.sm,
     color: COLORS.textSecondary,
     fontWeight: '600',
-    width: 100,
+    width: normalize(100),
   },
   infoValue: {
     fontFamily: FONTS.regular,
@@ -585,7 +583,7 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sizes.sm,
     color: COLORS.text,
     flex: 1,
-    lineHeight: 20,
+    lineHeight: normalize(20),
     marginTop: SPACING.xs,
   },
   responseContainer: {
@@ -604,7 +602,7 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sizes.sm,
     color: COLORS.text,
     marginBottom: SPACING.xs,
-    lineHeight: 20,
+    lineHeight: normalize(20),
   },
   responseDate: {
     fontFamily: FONTS.regular,
@@ -631,7 +629,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.md,
     color: COLORS.text,
-    minHeight: 100,
+    minHeight: normalize(100),
     padding: SPACING.md,
     backgroundColor: COLORS.background,
     borderRadius: BORDER_RADIUS.md,

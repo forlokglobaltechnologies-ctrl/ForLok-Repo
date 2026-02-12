@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import LocationPicker, { LocationData } from '@components/common/LocationPicker';
+import { normalize, wp, hp } from '@utils/responsive';
 
 const LocationPickerScreen = () => {
   const navigation = useNavigation();

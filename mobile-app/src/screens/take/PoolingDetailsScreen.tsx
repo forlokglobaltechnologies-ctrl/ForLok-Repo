@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Image, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ArrowLeft, Heart, Share2, MapPin, ArrowDown, Star, User, Calendar, Clock, Car, Tag, Users, IndianRupee, FileText } from 'lucide-react-native';
+import { normalize, wp, hp } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, SHADOWS, BORDER_RADIUS } from '@constants/theme';
 import { Button } from '@components/common/Button';
 import { Card } from '@components/common/Card';
@@ -570,9 +571,9 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   driverPhoto: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: normalize(100),
+    height: normalize(100),
+    borderRadius: normalize(50),
     marginBottom: SPACING.sm,
     borderWidth: 3,
     borderColor: COLORS.primary + '20',
@@ -623,9 +624,9 @@ const styles = StyleSheet.create({
     gap: SPACING.md,
   },
   routeIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: normalize(40),
+    height: normalize(40),
+    borderRadius: normalize(20),
     backgroundColor: COLORS.primary + '15',
     justifyContent: 'center',
     alignItems: 'center',
@@ -637,7 +638,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.xs,
     color: COLORS.textSecondary,
-    marginBottom: 2,
+    marginBottom: normalize(2),
   },
   routeText: {
     fontFamily: FONTS.regular,
@@ -664,9 +665,9 @@ const styles = StyleSheet.create({
     gap: SPACING.md,
   },
   detailIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: normalize(40),
+    height: normalize(40),
+    borderRadius: normalize(20),
     backgroundColor: COLORS.primary + '15',
     justifyContent: 'center',
     alignItems: 'center',
@@ -678,7 +679,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.xs,
     color: COLORS.textSecondary,
-    marginBottom: 2,
+    marginBottom: normalize(2),
   },
   detailValue: {
     fontFamily: FONTS.regular,
@@ -708,7 +709,7 @@ const styles = StyleSheet.create({
   pricingValueRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: normalize(4),
   },
   pricingValue: {
     fontFamily: FONTS.regular,
@@ -728,7 +729,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.sm,
     color: COLORS.textSecondary,
-    lineHeight: 20,
+    lineHeight: normalize(20),
   },
   loadingContainer: {
     flex: 1,
@@ -757,17 +758,17 @@ const styles = StyleSheet.create({
     gap: SPACING.md,
   },
   passengerIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: normalize(40),
+    height: normalize(40),
+    borderRadius: normalize(20),
     backgroundColor: COLORS.primary + '15',
     justifyContent: 'center',
     alignItems: 'center',
   },
   passengerAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: normalize(40),
+    height: normalize(40),
+    borderRadius: normalize(20),
     borderWidth: 2,
     borderColor: COLORS.primary + '20',
   },
@@ -779,7 +780,7 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sizes.md,
     color: COLORS.text,
     fontWeight: '600',
-    marginBottom: 4,
+    marginBottom: normalize(4),
   },
   passengerMeta: {
     flexDirection: 'row',
@@ -789,10 +790,10 @@ const styles = StyleSheet.create({
   passengerRatingBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
+    gap: normalize(3),
     backgroundColor: COLORS.warning + '15',
     paddingHorizontal: SPACING.sm,
-    paddingVertical: 2,
+    paddingVertical: normalize(2),
     borderRadius: BORDER_RADIUS.round,
   },
   passengerRatingText: {

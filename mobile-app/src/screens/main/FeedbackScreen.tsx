@@ -27,6 +27,7 @@ import {
 } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import { COLORS, FONTS, SPACING, SHADOWS } from '@constants/theme';
+import { normalize, wp, hp } from '@utils/responsive';
 import { useLanguage } from '@context/LanguageContext';
 import { useTheme } from '@context/ThemeContext';
 import { feedbackApi } from '@utils/apiClient';
@@ -45,15 +46,15 @@ const FeedbackScreen = () => {
   const [submitting, setSubmitting] = useState(false);
 
   const feedbackTypes = [
-    { id: 'issue', label: 'Report Issue', icon: AlertTriangle, color: '#F44336', desc: 'Something went wrong' },
-    { id: 'suggestion', label: 'Suggestion', icon: Lightbulb, color: '#FF9800', desc: 'Ideas to improve' },
-    { id: 'complaint', label: 'Complaint', icon: XCircle, color: '#9C27B0', desc: 'Share a concern' },
+    { id: 'issue', labelKey: 'feedback.reportIssue', icon: AlertTriangle, color: '#F44336', descKey: 'feedback.descIssue' },
+    { id: 'suggestion', labelKey: 'feedback.suggestion', icon: Lightbulb, color: '#FF9800', descKey: 'feedback.descSuggestion' },
+    { id: 'complaint', labelKey: 'feedback.complaint', icon: XCircle, color: '#9C27B0', descKey: 'feedback.descComplaint' },
   ];
 
   const priorities = [
-    { id: 'high', label: 'High', color: '#F44336' },
-    { id: 'medium', label: 'Medium', color: '#FF9800' },
-    { id: 'low', label: 'Low', color: '#4CAF50' },
+    { id: 'high', labelKey: 'feedback.high', color: '#F44336' },
+    { id: 'medium', labelKey: 'feedback.medium', color: '#FF9800' },
+    { id: 'low', labelKey: 'feedback.low', color: '#4CAF50' },
   ];
 
   const handleSubmit = async () => {
@@ -86,11 +87,11 @@ const FeedbackScreen = () => {
           [{ text: t('common.ok'), onPress: () => navigation.goBack() }]
         );
       } else {
-        Alert.alert(t('common.error'), response.error || 'Failed to submit feedback');
+        Alert.alert(t('common.error'), response.error || t('feedback.submitFailed'));
       }
     } catch (error: any) {
       console.error('Error submitting feedback:', error);
-      Alert.alert(t('common.error'), error.message || 'Failed to submit feedback');
+      Alert.alert(t('common.error'), error.message || t('feedback.submitFailed'));
     } finally {
       setSubmitting(false);
     }
@@ -110,8 +111,8 @@ const FeedbackScreen = () => {
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.navButton}>
               <ArrowLeft size={22} color="#FFF" />
             </TouchableOpacity>
-            <Text style={styles.navTitle}>Give Feedback</Text>
-            <View style={{ width: 38 }} />
+            <Text style={styles.navTitle}>{t('feedback.title')}</Text>
+            <View style={{ width: normalize(38) }} />
           </View>
         </BlurView>
       </ImageBackground>
@@ -122,13 +123,13 @@ const FeedbackScreen = () => {
         <View style={[styles.welcomeBanner, { backgroundColor: theme.colors.primary + '08', borderColor: theme.colors.primary + '20' }]}>
           <ThumbsUp size={20} color={theme.colors.primary} />
           <Text style={[styles.welcomeText, { color: theme.colors.text }]}>
-            Your feedback helps us improve Forlok for everyone. We read every submission!
+            {t('feedback.helpImprove')}
           </Text>
         </View>
 
         {/* ── Overall Rating ── */}
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-          <Text style={[styles.cardTitle, { color: theme.colors.text }]}>How's your experience?</Text>
+          <Text style={[styles.cardTitle, { color: theme.colors.text }]}>{t('feedback.experienceQuestion')}</Text>
           <View style={styles.starsRow}>
             {[1, 2, 3, 4, 5].map((star) => (
               <TouchableOpacity key={star} onPress={() => setRating(star)} activeOpacity={0.7}>
@@ -142,14 +143,14 @@ const FeedbackScreen = () => {
           </View>
           {rating > 0 && (
             <Text style={[styles.ratingLabel, { color: theme.colors.textSecondary }]}>
-              {rating === 1 ? 'Poor' : rating === 2 ? 'Fair' : rating === 3 ? 'Good' : rating === 4 ? 'Very Good' : 'Excellent!'}
+              {rating === 1 ? t('feedback.ratingPoor') : rating === 2 ? t('feedback.ratingFair') : rating === 3 ? t('feedback.ratingGood') : rating === 4 ? t('feedback.ratingVeryGood') : t('feedback.ratingExcellent')}
             </Text>
           )}
         </View>
 
         {/* ── Feedback Type ── */}
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-          <Text style={[styles.cardTitle, { color: theme.colors.text }]}>Feedback Type *</Text>
+          <Text style={[styles.cardTitle, { color: theme.colors.text }]}>{t('feedback.typeRequired')}</Text>
           <View style={styles.typeRow}>
             {feedbackTypes.map((type) => {
               const isSelected = feedbackType === type.id;
@@ -169,9 +170,9 @@ const FeedbackScreen = () => {
                 >
                   <Icon size={24} color={isSelected ? type.color : theme.colors.textSecondary} />
                   <Text style={[styles.typeLabel, { color: isSelected ? type.color : theme.colors.text }]}>
-                    {type.label}
+                    {t(type.labelKey)}
                   </Text>
-                  <Text style={[styles.typeDesc, { color: theme.colors.textSecondary }]}>{type.desc}</Text>
+                  <Text style={[styles.typeDesc, { color: theme.colors.textSecondary }]}>{t(type.descKey)}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -180,12 +181,12 @@ const FeedbackScreen = () => {
 
         {/* ── Subject ── */}
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-          <Text style={[styles.cardTitle, { color: theme.colors.text }]}>Subject *</Text>
+          <Text style={[styles.cardTitle, { color: theme.colors.text }]}>{t('feedback.subject')}</Text>
           <TextInput
             style={[styles.input, { color: theme.colors.text, borderColor: theme.colors.border, backgroundColor: theme.colors.background }]}
             value={subject}
             onChangeText={setSubject}
-            placeholder="What's this about?"
+            placeholder={t('feedback.subjectPlaceholderShort')}
             placeholderTextColor={theme.colors.textSecondary}
             maxLength={100}
           />
@@ -194,12 +195,12 @@ const FeedbackScreen = () => {
 
         {/* ── Description ── */}
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-          <Text style={[styles.cardTitle, { color: theme.colors.text }]}>Description *</Text>
+          <Text style={[styles.cardTitle, { color: theme.colors.text }]}>{t('feedback.description')}</Text>
           <TextInput
             style={[styles.textArea, { color: theme.colors.text, borderColor: theme.colors.border, backgroundColor: theme.colors.background }]}
             value={description}
             onChangeText={setDescription}
-            placeholder="Tell us more about your feedback..."
+            placeholder={t('feedback.descriptionPlaceholder')}
             placeholderTextColor={theme.colors.textSecondary}
             multiline
             numberOfLines={6}
@@ -211,7 +212,7 @@ const FeedbackScreen = () => {
 
         {/* ── Priority ── */}
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-          <Text style={[styles.cardTitle, { color: theme.colors.text }]}>Priority</Text>
+          <Text style={[styles.cardTitle, { color: theme.colors.text }]}>{t('feedback.priority')}</Text>
           <View style={styles.priorityRow}>
             {priorities.map((p) => {
               const isSelected = priority === p.id;
@@ -230,7 +231,7 @@ const FeedbackScreen = () => {
                 >
                   <View style={[styles.priorityDot, { backgroundColor: p.color }]} />
                   <Text style={[styles.priorityLabel, { color: isSelected ? p.color : theme.colors.text }]}>
-                    {p.label}
+                    {t(p.labelKey)}
                   </Text>
                 </TouchableOpacity>
               );
@@ -242,7 +243,7 @@ const FeedbackScreen = () => {
         <View style={[styles.infoNote, { backgroundColor: theme.colors.background }]}>
           <Info size={16} color={theme.colors.primary} />
           <Text style={[styles.infoNoteText, { color: theme.colors.textSecondary }]}>
-            Your feedback will be reviewed by our support team. We typically respond within 24-48 hours.
+            {t('feedback.reviewInfo')}
           </Text>
         </View>
 
@@ -258,7 +259,7 @@ const FeedbackScreen = () => {
           ) : (
             <>
               <Send size={18} color="#FFF" />
-              <Text style={styles.submitText}>Submit Feedback</Text>
+              <Text style={styles.submitText}>{t('feedback.submit')}</Text>
             </>
           )}
         </TouchableOpacity>
@@ -341,7 +342,7 @@ const styles = StyleSheet.create({
   },
   ratingLabel: {
     fontFamily: FONTS.regular,
-    fontSize: 13,
+    fontSize: normalize(13),
     fontWeight: '600',
     textAlign: 'center',
     marginTop: SPACING.sm,
@@ -377,24 +378,24 @@ const styles = StyleSheet.create({
   /* ── Inputs ── */
   input: {
     fontFamily: FONTS.regular,
-    fontSize: 14,
+    fontSize: normalize(14),
     borderWidth: 1,
     borderRadius: 12,
     padding: SPACING.md,
   },
   textArea: {
     fontFamily: FONTS.regular,
-    fontSize: 14,
+    fontSize: normalize(14),
     borderWidth: 1,
     borderRadius: 12,
     padding: SPACING.md,
-    minHeight: 120,
+    minHeight: normalize(120),
   },
   charCount: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
+    fontSize: normalize(11),
     textAlign: 'right',
-    marginTop: 4,
+    marginTop: normalize(4),
   },
 
   /* ── Priority ── */
@@ -407,19 +408,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 13,
+    gap: normalize(8),
+    paddingVertical: normalize(13),
     borderRadius: 12,
     borderWidth: 1.5,
   },
   priorityDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: normalize(10),
+    height: normalize(10),
+    borderRadius: normalize(5),
   },
   priorityLabel: {
     fontFamily: FONTS.regular,
-    fontSize: 13,
+    fontSize: normalize(13),
     fontWeight: '700',
   },
 
@@ -435,8 +436,8 @@ const styles = StyleSheet.create({
   infoNoteText: {
     flex: 1,
     fontFamily: FONTS.regular,
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: normalize(12),
+    lineHeight: normalize(18),
   },
 
   /* ── Submit ── */
@@ -444,14 +445,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
-    paddingVertical: 16,
-    borderRadius: 14,
+    gap: normalize(10),
+    paddingVertical: normalize(16),
+    borderRadius: normalize(14),
     marginBottom: SPACING.xl,
   },
   submitText: {
     fontFamily: FONTS.regular,
-    fontSize: 16,
+    fontSize: normalize(16),
     fontWeight: '700',
     color: '#FFF',
   },

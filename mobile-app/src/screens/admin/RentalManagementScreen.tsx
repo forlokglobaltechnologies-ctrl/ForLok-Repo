@@ -26,6 +26,7 @@ import {
   ArrowLeft,
 } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
+import { normalize, wp, hp } from '@utils/responsive';
 import { adminApi } from '@utils/apiClient';
 
 const formatNumber = (n: number): string => {
@@ -144,7 +145,7 @@ const RentalManagementScreen = () => {
                 {totalRentals > 0 ? `${totalRentals.toLocaleString()} total rentals` : 'Manage all vehicle rentals'}
               </Text>
             </View>
-            <View style={{ width: 38 }} />
+            <View style={{ width: normalize(38) }} />
           </View>
         </BlurView>
       </ImageBackground>
@@ -293,7 +294,7 @@ const RentalManagementScreen = () => {
           </>
         )}
 
-        <View style={{ height: 40 }} />
+        <View style={{ height: normalize(40) }} />
       </ScrollView>
     </View>
   );
@@ -301,39 +302,39 @@ const RentalManagementScreen = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F5F7FA' },
-  heroHeader: { height: Platform.OS === 'android' ? 140 + (StatusBar.currentHeight || 0) : 160, width: '100%' },
+  heroHeader: { height: Platform.OS === 'android' ? hp(17) + (StatusBar.currentHeight || 0) : hp(20), width: '100%' },
   heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(15, 52, 96, 0.5)' },
   heroBlur: { flex: 1, justifyContent: 'flex-end', paddingBottom: SPACING.md, paddingHorizontal: SPACING.lg },
   heroNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  heroBackBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center' },
+  heroBackBtn: { width: normalize(38), height: normalize(38), borderRadius: normalize(19), backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center' },
   heroTitleWrap: { alignItems: 'center' },
-  heroTitle: { fontFamily: FONTS.regular, fontSize: 20, color: '#fff', fontWeight: '700' },
-  heroSubtitle: { fontFamily: FONTS.regular, fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 2 },
-  statsStrip: { flexDirection: 'row', backgroundColor: '#fff', marginHorizontal: SPACING.lg, marginTop: -SPACING.md, borderRadius: 14, padding: SPACING.sm, ...SHADOWS.sm, zIndex: 10 },
+  heroTitle: { fontFamily: FONTS.regular, fontSize: normalize(20), color: '#fff', fontWeight: '700' },
+  heroSubtitle: { fontFamily: FONTS.regular, fontSize: normalize(12), color: 'rgba(255,255,255,0.7)', marginTop: normalize(2) },
+  statsStrip: { flexDirection: 'row', backgroundColor: '#fff', marginHorizontal: SPACING.lg, marginTop: -SPACING.md, borderRadius: normalize(14), padding: SPACING.sm, ...SHADOWS.sm, zIndex: 10 },
   statsStripItem: { flex: 1, alignItems: 'center', paddingVertical: SPACING.xs },
-  statsStripIcon: { width: 32, height: 32, borderRadius: 10, justifyContent: 'center', alignItems: 'center', marginBottom: 4 },
-  statsStripValue: { fontFamily: FONTS.regular, fontSize: 18, fontWeight: '800' },
-  statsStripLabel: { fontFamily: FONTS.regular, fontSize: 10, color: '#94A3B8', fontWeight: '500', marginTop: 1 },
-  tabsScroll: { marginTop: SPACING.md, maxHeight: 48 },
+  statsStripIcon: { width: normalize(32), height: normalize(32), borderRadius: normalize(10), justifyContent: 'center', alignItems: 'center', marginBottom: normalize(4) },
+  statsStripValue: { fontFamily: FONTS.regular, fontSize: normalize(18), fontWeight: '800' },
+  statsStripLabel: { fontFamily: FONTS.regular, fontSize: normalize(10), color: '#94A3B8', fontWeight: '500', marginTop: normalize(1) },
+  tabsScroll: { marginTop: SPACING.md, maxHeight: normalize(48) },
   tabsContent: { paddingHorizontal: SPACING.lg, gap: SPACING.xs },
-  tab: { paddingHorizontal: 20, paddingVertical: 9, borderRadius: 20, backgroundColor: '#fff', borderWidth: 1, borderColor: '#E2E8F0' },
-  tabText: { fontFamily: FONTS.regular, fontSize: 13, color: '#475569', fontWeight: '600' },
+  tab: { paddingHorizontal: normalize(20), paddingVertical: normalize(9), borderRadius: normalize(20), backgroundColor: '#fff', borderWidth: 1, borderColor: '#E2E8F0' },
+  tabText: { fontFamily: FONTS.regular, fontSize: normalize(13), color: '#475569', fontWeight: '600' },
   tabTextActive: { color: '#fff' },
   scrollView: { flex: 1 },
   scrollContent: { padding: SPACING.lg, paddingTop: SPACING.md },
   loadingContainer: { alignItems: 'center', paddingVertical: SPACING.xxl * 2 },
   loadingText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: COLORS.textSecondary, marginTop: SPACING.md },
   emptyContainer: { alignItems: 'center', paddingVertical: SPACING.xxl * 2 },
-  emptyIconWrap: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center', marginBottom: SPACING.lg },
+  emptyIconWrap: { width: normalize(80), height: normalize(80), borderRadius: normalize(40), backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center', marginBottom: SPACING.lg },
   emptyTitle: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.lg, fontWeight: '700', color: '#1E293B', marginBottom: SPACING.xs },
   emptyText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: '#94A3B8' },
   rentalCardSpacing: { marginBottom: SPACING.sm },
-  rentalCard: { borderRadius: 14, borderWidth: 1, borderColor: '#F1F5F9', backgroundColor: '#fff', padding: SPACING.md, ...SHADOWS.sm },
+  rentalCard: { borderRadius: normalize(14), borderWidth: 1, borderColor: '#F1F5F9', backgroundColor: '#fff', padding: SPACING.md, ...SHADOWS.sm },
   rentalCardHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACING.md, paddingBottom: SPACING.md, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
   rentalCardHeaderLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  rentalIconWrap: { width: 40, height: 40, borderRadius: 12, backgroundColor: COLORS.primary + '12', justifyContent: 'center', alignItems: 'center', marginRight: SPACING.sm },
+  rentalIconWrap: { width: normalize(40), height: normalize(40), borderRadius: normalize(12), backgroundColor: COLORS.primary + '12', justifyContent: 'center', alignItems: 'center', marginRight: SPACING.sm },
   rentalHeaderText: { flex: 1 },
-  rentalOwnerName: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.md, fontWeight: '600', color: COLORS.text, marginBottom: 2 },
+  rentalOwnerName: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.md, fontWeight: '600', color: COLORS.text, marginBottom: normalize(2) },
   rentalIdText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.xs, color: COLORS.textSecondary },
   statusBadge: { paddingHorizontal: SPACING.sm, paddingVertical: SPACING.xs, borderRadius: BORDER_RADIUS.sm, backgroundColor: '#F1F5F9' },
   statusActive: { backgroundColor: '#00B894' + '15' },
@@ -349,7 +350,7 @@ const styles = StyleSheet.create({
   priceBadge: { alignSelf: 'flex-start', backgroundColor: COLORS.primary + '12', paddingHorizontal: SPACING.sm, paddingVertical: SPACING.xs, borderRadius: BORDER_RADIUS.sm, marginBottom: SPACING.md },
   priceText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, fontWeight: '600', color: COLORS.primary },
   rentalActions: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
-  actionBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, borderRadius: BORDER_RADIUS.md, backgroundColor: COLORS.primary + '15', gap: 6 },
+  actionBtn: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, borderRadius: BORDER_RADIUS.md, backgroundColor: COLORS.primary + '15', gap: normalize(6) },
   actionBtnText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, fontWeight: '600', color: COLORS.primary },
   approveBtn: { backgroundColor: '#00B894' },
   approveBtnText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, fontWeight: '600', color: '#fff' },
@@ -360,7 +361,7 @@ const styles = StyleSheet.create({
   pageBtnDisabled: { opacity: 0.4 },
   pageBtnText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, fontWeight: '600', color: COLORS.text },
   paginationInfo: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: COLORS.textSecondary },
-  totalInfo: { fontFamily: FONTS.regular, fontSize: 12, color: '#94A3B8', textAlign: 'center', marginTop: SPACING.sm, marginBottom: SPACING.xs },
+  totalInfo: { fontFamily: FONTS.regular, fontSize: normalize(12), color: '#94A3B8', textAlign: 'center', marginTop: SPACING.sm, marginBottom: SPACING.xs },
 });
 
 export default RentalManagementScreen;

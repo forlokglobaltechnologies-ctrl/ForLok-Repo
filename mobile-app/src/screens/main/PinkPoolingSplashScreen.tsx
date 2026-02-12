@@ -6,6 +6,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import LottieView from 'lottie-react-native';
 import { useTheme } from '@context/ThemeContext';
+import { wp, hp } from '@utils/responsive';
 
 const PinkPoolingSplashScreen = () => {
   const navigation = useNavigation();
@@ -54,8 +55,8 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   animationContainer: {
-    width: 300,
-    height: 200,
+    width: wp(75),
+    height: hp(25),
   },
   animation: {
     width: '100%',

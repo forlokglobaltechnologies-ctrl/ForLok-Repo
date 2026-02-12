@@ -16,6 +16,7 @@ import { Card } from '@components/common/Card';
 import { Input } from '@components/common/Input';
 import { Button } from '@components/common/Button';
 import { useLanguage } from '@context/LanguageContext';
+import { normalize } from '@utils/responsive';
 
 const AdminSettingsScreen = () => {
   const navigation = useNavigation();
@@ -198,7 +199,7 @@ const styles = StyleSheet.create({
     marginLeft: SPACING.sm,
   },
   headerRight: {
-    width: 40,
+    width: normalize(40),
   },
   scrollView: {
     flex: 1,

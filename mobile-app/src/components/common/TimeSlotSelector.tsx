@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { Clock, AlertCircle } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
+import { normalize } from '@utils/responsive';
 
 interface TimeSlot {
   start: string;
@@ -404,7 +405,7 @@ const styles = StyleSheet.create({
     marginRight: SPACING.sm,
     borderWidth: 1,
     borderColor: COLORS.border,
-    minWidth: 120,
+    minWidth: normalize(120),
   },
   slotButtonSelected: {
     backgroundColor: COLORS.primary,
