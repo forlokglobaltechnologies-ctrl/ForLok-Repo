@@ -9,9 +9,12 @@ import {
   SafeAreaView,
   Dimensions,
   Image,
+  Platform,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Video, ResizeMode } from 'expo-av';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Menu, Bell, User, Clock, MapPin, Calendar, TrendingUp, TrendingDown, IndianRupee, Heart, Plus, Coins } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { Button } from '@components/common/Button';
@@ -23,7 +26,6 @@ import { useLanguage } from '@context/LanguageContext';
 import { useTheme } from '@context/ThemeContext';
 import { dashboardApi } from '@utils/apiClient';
 import { useNotifications } from '@context/NotificationContext';
-import { Alert } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
@@ -35,7 +37,8 @@ const MainDashboardScreen = () => {
   const videoRef = useRef<Video>(null);
   const [fromLocation, setFromLocation] = useState<LocationData | null>(null);
   const [toLocation, setToLocation] = useState<LocationData | null>(null);
-  const [date, setDate] = useState('Today, 15 Jan 2024');
+  const [date, setDate] = useState<Date>(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [vehicleType, setVehicleType] = useState<'Car' | 'Bike' | null>(null);
   const [passengers, setPassengers] = useState(1);
   const [dashboardStats, setDashboardStats] = useState<any>(null);
@@ -70,6 +73,38 @@ const MainDashboardScreen = () => {
       console.error('Error loading dashboard data:', error);
     } finally {
       setLoadingStats(false);
+    }
+  };
+
+  const formatDateDisplay = (d: Date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dateOnly = new Date(d);
+    dateOnly.setHours(0, 0, 0, 0);
+    const isToday = dateOnly.getTime() === today.getTime();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const isTomorrow = dateOnly.getTime() === tomorrow.getTime();
+
+    const formatted = d.toLocaleDateString('en-IN', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+    if (isToday) return `Today, ${formatted}`;
+    if (isTomorrow) return `Tomorrow, ${formatted}`;
+    return d.toLocaleDateString('en-IN', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  };
+
+  const onDateChange = (_event: any, selectedDate?: Date) => {
+    setShowDatePicker(Platform.OS === 'ios');
+    if (selectedDate) {
+      setDate(selectedDate);
     }
   };
 
@@ -285,15 +320,25 @@ const MainDashboardScreen = () => {
 
         <View style={styles.searchSection}>
 
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => setShowDatePicker(true)}>
             <Input
               label={t('dashboard.date')}
-              value={date}
-              placeholder="Today, 15 Jan 2024"
+              value={formatDateDisplay(date)}
+              placeholder="Select date"
               editable={false}
               containerStyle={styles.locationInput}
+              leftIcon={<Calendar size={20} color={theme.colors.primary} />}
             />
           </TouchableOpacity>
+          {showDatePicker && (
+            <DateTimePicker
+              value={date}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              onChange={onDateChange}
+              minimumDate={new Date()}
+            />
+          )}
           <View style={styles.vehicleTypeContainer}>
             <Text style={[styles.label, { color: theme.colors.text }]}>{t('dashboard.vehicleType')}</Text>
 
@@ -375,7 +420,7 @@ const MainDashboardScreen = () => {
             onPress={() => (navigation.navigate as any)('SearchPooling', {
               from: fromLocation || undefined,
               to: toLocation || undefined,
-              date,
+              date: date.toISOString().split('T')[0],
               vehicleType: vehicleType || undefined,
               passengers,
             })}
