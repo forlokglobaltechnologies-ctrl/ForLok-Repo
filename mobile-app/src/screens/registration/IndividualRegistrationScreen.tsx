@@ -19,12 +19,14 @@ import { Button } from '@components/common/Button';
 import { Input } from '@components/common/Input';
 import { PhoneInput } from '@components/common/PhoneInput';
 import { useLanguage } from '@context/LanguageContext';
+import { useAuth } from '@context/AuthContext';
 import { authApi } from '@utils/apiClient';
 import LottieView from 'lottie-react-native';
 
 const IndividualRegistrationScreen = () => {
   const navigation = useNavigation();
   const { t } = useLanguage();
+  const { login } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 2;
 
@@ -128,15 +130,20 @@ const IndividualRegistrationScreen = () => {
         });
         
         if (response.success) {
-          // Save tokens if provided
-          if (response.data?.accessToken && response.data?.refreshToken) {
-            // Tokens will be saved by apiService automatically
+          // Save auth state via AuthContext
+          const userData = response.data?.user || response.data || {};
+          const tokens = response.data?.tokens || {
+            accessToken: response.data?.accessToken,
+            refreshToken: response.data?.refreshToken,
+          };
+          if (tokens.accessToken && tokens.refreshToken) {
+            await login(userData, tokens);
           }
           // Show coin celebration, then navigate to dashboard
           setShowCoinCelebration(true);
           setTimeout(() => {
             setShowCoinCelebration(false);
-            navigation.navigate('MainDashboard' as never);
+            navigation.reset({ index: 0, routes: [{ name: 'MainDashboard' as never }] });
           }, 4000);
         } else {
           Alert.alert('Error', response.error || 'Failed to register. Please try again.');
@@ -511,7 +518,7 @@ const IndividualRegistrationScreen = () => {
         animationType="fade"
         onRequestClose={() => {
           setShowCoinCelebration(false);
-          navigation.navigate('MainDashboard' as never);
+          navigation.reset({ index: 0, routes: [{ name: 'MainDashboard' as never }] });
         }}
       >
         <TouchableOpacity
@@ -519,7 +526,7 @@ const IndividualRegistrationScreen = () => {
           activeOpacity={1}
           onPress={() => {
             setShowCoinCelebration(false);
-            navigation.navigate('MainDashboard' as never);
+            navigation.reset({ index: 0, routes: [{ name: 'MainDashboard' as never }] });
           }}
         >
           <View style={styles.celebrationContent}>

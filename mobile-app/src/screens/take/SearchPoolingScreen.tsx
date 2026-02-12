@@ -158,12 +158,19 @@ const SearchPoolingScreen = () => {
       
       if (response.success && response.data) {
         let offersData = response.data.offers || response.data || [];
+        // Client-side filter by vehicle type (safety net)
+        if (vehicleType) {
+          offersData = offersData.filter((offer: any) => {
+            const offerVType = (offer.vehicle?.type || offer.vehicleType || '').toLowerCase();
+            return offerVType === vehicleType.toLowerCase();
+          });
+        }
         // Filter by minimum available seats if passengers filter is set
         if (passengers > 1) {
           offersData = offersData.filter((offer: any) => (offer.availableSeats || 0) >= passengers);
         }
         setOffers(offersData);
-        console.log(`✅ [SearchPooling] Loaded ${offersData.length} pooling offers (filtered for ${passengers} passenger(s))`);
+        console.log(`✅ [SearchPooling] Loaded ${offersData.length} pooling offers (vehicle: ${vehicleType || 'ALL'}, passengers: ${passengers})`);
       } else {
         console.warn('⚠️ [SearchPooling] No offers found:', response.error);
         setOffers([]);

@@ -35,13 +35,14 @@ type WebSocketEventHandler = (data: WebSocketMessage) => void;
 class WebSocketService {
   private ws: WebSocket | null = null;
   private reconnectAttempts = 0;
-  private maxReconnectAttempts = 5;
-  private reconnectDelay = 3000;
+  private maxReconnectAttempts = 3;
+  private reconnectDelay = 5000;
   private reconnectTimer: NodeJS.Timeout | null = null;
   private eventHandlers: Map<WebSocketEventType, Set<WebSocketEventHandler>> = new Map();
   private isConnecting = false;
   private isAuthenticated = false;
   private userId: string | null = null;
+  private manuallyClosed = false;
 
   /**
    * Connect to WebSocket server
@@ -51,13 +52,14 @@ class WebSocketService {
       return;
     }
 
+    this.manuallyClosed = false;
     this.isConnecting = true;
 
     try {
       // Get token for authentication
       const token = await AsyncStorage.getItem(TOKEN_KEY);
       if (!token) {
-        console.warn('No auth token found for WebSocket connection');
+        console.log('ℹ️ WebSocket: No auth token, skipping connection');
         this.isConnecting = false;
         return;
       }
@@ -71,7 +73,6 @@ class WebSocketService {
         console.log('✅ WebSocket connected');
         this.isConnecting = false;
         this.reconnectAttempts = 0;
-        // Authentication is handled via token in URL, no need to call authenticate()
       };
 
       this.ws.onmessage = (event) => {
@@ -79,28 +80,30 @@ class WebSocketService {
           const message: WebSocketMessage = JSON.parse(event.data);
           this.handleMessage(message);
         } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
+          console.warn('WebSocket: Error parsing message');
         }
       };
 
-      this.ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
+      this.ws.onerror = () => {
+        // Suppress noisy error logs — onclose handles reconnection
         this.isConnecting = false;
       };
 
       this.ws.onclose = () => {
-        console.log('❌ WebSocket disconnected');
         this.isAuthenticated = false;
         this.isConnecting = false;
         this.ws = null;
 
-        // Attempt to reconnect if not manually closed
-        if (this.reconnectAttempts < this.maxReconnectAttempts) {
+        // Only reconnect if not manually closed and under retry limit
+        if (!this.manuallyClosed && this.reconnectAttempts < this.maxReconnectAttempts) {
           this.scheduleReconnect();
+        } else if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+          console.log('ℹ️ WebSocket: Server unreachable, will retry when chat is opened');
+          this.reconnectAttempts = 0;
         }
       };
     } catch (error) {
-      console.error('Error connecting to WebSocket:', error);
+      console.warn('WebSocket: Connection failed');
       this.isConnecting = false;
     }
   }
@@ -186,7 +189,9 @@ class WebSocketService {
     this.reconnectAttempts++;
     const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1); // Exponential backoff
 
-    console.log(`🔄 Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+    if (this.reconnectAttempts === 1) {
+      console.log('ℹ️ WebSocket: Reconnecting...');
+    }
 
     this.reconnectTimer = setTimeout(() => {
       this.connect();
@@ -290,6 +295,8 @@ class WebSocketService {
    * Disconnect from WebSocket
    */
   disconnect(): void {
+    this.manuallyClosed = true;
+
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;

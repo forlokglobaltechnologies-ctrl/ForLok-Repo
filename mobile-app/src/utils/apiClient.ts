@@ -396,7 +396,7 @@ export const poolingApi = {
       queryParams.time = params.time;
     }
     if (params.vehicleType) {
-      queryParams.vehicleType = params.vehicleType;
+      queryParams.vehicleType = params.vehicleType.toLowerCase();
     }
     if (params.pinkOnly === true) {
       queryParams.pinkOnly = 'true';

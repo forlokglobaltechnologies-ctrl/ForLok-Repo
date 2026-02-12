@@ -3,18 +3,9 @@
  *
  * Search:  Photon (photon.komoot.io) — fast OSM geocoder, no harsh rate limits
  * Fallback: Nominatim (1 req/s limit) — only used if Photon is down
- * Reverse:  Nominatim — single call per tap, well within rate limit
+ * Reverse:  Photon (primary) → Nominatim (fallback) — single call per tap
  * Map:      Leaflet + OpenStreetMap tiles in WebView
  * GPS:      expo-location (device native)
- *
- * Key improvements over previous version:
- *  - 500 ms debounce on search (prevents rate-limit errors)
- *  - AbortController cancels stale in-flight requests
- *  - Confirm bar: user sees address before committing
- *  - Search result moves map marker (doesn't immediately navigate back)
- *  - GPS failure is graceful (no blocking alert)
- *  - Loading spinner inside search bar while fetching
- *  - FlatList with keyboardShouldPersistTaps for smooth UX
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -24,16 +15,22 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
-  SafeAreaView,
   TextInput,
   FlatList,
   Keyboard,
   Platform,
+  Image,
+  StatusBar,
+  Dimensions,
 } from 'react-native';
 import { WebView } from 'react-native-webview';
 import * as Location from 'expo-location';
-import { ArrowLeft, MapPin, Search, X, Navigation, Check } from 'lucide-react-native';
+import { ArrowLeft, MapPin, Search, X, Navigation, Check, Crosshair } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
+import { normalize, wp, hp } from '@utils/responsive';
+import { LinearGradient } from 'expo-linear-gradient';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // ─── Public types (unchanged — consumed by 6+ files) ─────────
 export interface LocationData {
@@ -79,6 +76,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
     initialLocation || null,
   );
   const [mapReady, setMapReady] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(false);
 
   const webViewRef = useRef<WebView>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -122,22 +120,42 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
       const address = await reverseGeocode(latitude, longitude);
       if (address) {
         setCurrentLocation(address);
-        // Move map to current location if no initial location was provided
         if (!initialLocation) {
           moveMapTo(latitude, longitude, 14);
         }
       }
     } catch (error) {
-      // GPS may fail on emulators or when location services are off.
-      // Don't block the user — silently fall back to default map center.
       console.warn('[LocationPicker] GPS unavailable:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  // ─── Reverse geocoding (Nominatim) — single call per tap ──
+  // ─── Reverse geocoding: Photon (primary) → Nominatim (fallback) ──
   const reverseGeocode = async (lat: number, lng: number): Promise<LocationData | null> => {
+    try {
+      const photonUrl = `https://photon.komoot.io/reverse?lat=${lat}&lon=${lng}&limit=1`;
+      const photonResp = await fetch(photonUrl, {
+        headers: { 'User-Agent': 'Forlok-App/1.0' },
+      });
+      if (photonResp.ok) {
+        const photonData = await photonResp.json();
+        const feature = photonData?.features?.[0];
+        if (feature?.properties) {
+          const p = feature.properties;
+          const parts = [p.name, p.street, p.city || p.town || p.village, p.state].filter(Boolean);
+          return {
+            address: parts.join(', ') || `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
+            lat,
+            lng,
+            city: p.city || p.town || p.village || p.county,
+            state: p.state,
+            pincode: p.postcode,
+          };
+        }
+      }
+    } catch (_) {}
+
     try {
       const url =
         `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}` +
@@ -147,7 +165,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
       });
 
       if (!response.ok) {
-        throw new Error(`Reverse geocode HTTP ${response.status}`);
+        return { address: `${lat.toFixed(6)}, ${lng.toFixed(6)}`, lat, lng };
       }
 
       const data = await response.json();
@@ -158,45 +176,31 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
         lat: parseFloat(data.lat),
         lng: parseFloat(data.lon),
         city:
-          data.address.city ||
-          data.address.town ||
-          data.address.village ||
-          data.address.county,
+          data.address.city || data.address.town || data.address.village || data.address.county,
         state: data.address.state,
         pincode: data.address.postcode,
       };
     } catch (error) {
-      console.error('[LocationPicker] Reverse geocoding error:', error);
-      // Return raw coordinates so the user isn't blocked
       return { address: `${lat.toFixed(6)}, ${lng.toFixed(6)}`, lat, lng };
     }
   };
 
   // ─── Forward search: Photon (primary) → Nominatim (fallback) ──
   const performSearch = useCallback(async (query: string) => {
-    // Cancel any in-flight request to avoid stale results
     if (abortRef.current) {
       abortRef.current.abort();
     }
     abortRef.current = new AbortController();
-
     setSearching(true);
+
     try {
       const encodedQuery = encodeURIComponent(query);
-
-      // PRIMARY: Photon — fast, free, OSM data, no harsh rate limits
-      // Bias towards India (lat=20.5, lon=78.9)
-      const photonUrl =
-        `https://photon.komoot.io/api/?q=${encodedQuery}&limit=6&lang=en&lat=20.5&lon=78.9`;
-
+      const photonUrl = `https://photon.komoot.io/api/?q=${encodedQuery}&limit=6&lang=en&lat=20.5&lon=78.9`;
       const response = await fetch(photonUrl, {
         signal: abortRef.current.signal,
         headers: { 'User-Agent': 'Forlok-App/1.0' },
       });
-
-      if (!response.ok) {
-        throw new Error(`Photon HTTP ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`Photon HTTP ${response.status}`);
 
       const data = await response.json();
       const results: LocationData[] = (data.features || [])
@@ -204,14 +208,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
         .map((feature: any) => {
           const props = feature.properties || {};
           const [lng, lat] = feature.geometry.coordinates;
-          // Build a human-readable address from structured fields
-          const parts = [
-            props.name,
-            props.street,
-            props.city || props.town || props.village,
-            props.state,
-            props.country,
-          ].filter(Boolean);
+          const parts = [props.name, props.street, props.city || props.town || props.village, props.state, props.country].filter(Boolean);
           return {
             address: parts.join(', ') || `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
             lat,
@@ -221,15 +218,10 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
             pincode: props.postcode,
           };
         });
-
       setSearchResults(results);
     } catch (error: any) {
-      // AbortError means the request was cancelled because the user typed more — ignore
       if (error.name === 'AbortError') return;
 
-      console.warn('[LocationPicker] Photon search failed, trying Nominatim fallback:', error);
-
-      // FALLBACK: Nominatim (1 req/s limit, but only reached if Photon is down)
       try {
         const nominatimUrl =
           `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}` +
@@ -250,17 +242,14 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
           setSearchResults(results);
           return;
         }
-      } catch (_) {
-        /* both providers failed */
-      }
-
+      } catch (_) {}
       setSearchResults([]);
     } finally {
       setSearching(false);
     }
   }, []);
 
-  // ─── Move map marker + center via JS injection ─────────────
+  // ─── Move map marker + center ──────────────────────────────
   const moveMapTo = useCallback((lat: number, lng: number, zoom?: number) => {
     const js = `
       if (typeof marker !== 'undefined' && typeof map !== 'undefined') {
@@ -272,34 +261,29 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
     webViewRef.current?.injectJavaScript(js);
   }, []);
 
-  // ─── Search result tap: show on map, DON'T navigate back yet ─
   const handleSearchResultSelect = useCallback((location: LocationData) => {
     setSelectedLocation(location);
     setSearchResults([]);
     setSearchQuery(location.city ? `${location.city}, ${location.state || ''}` : location.address);
+    setSearchFocused(false);
     Keyboard.dismiss();
     moveMapTo(location.lat, location.lng, 15);
   }, [moveMapTo]);
 
-  // ─── Map tap: move pin + reverse geocode ───────────────────
   const handleMapTap = useCallback(async (lat: number, lng: number) => {
-    // Immediately show coordinates while reverse-geocoding
-    setSelectedLocation({ address: 'Fetching address…', lat, lng });
-
+    setSelectedLocation({ address: 'Fetching address...', lat, lng });
     const address = await reverseGeocode(lat, lng);
     if (address) {
       setSelectedLocation(address);
     }
   }, []);
 
-  // ─── Confirm button: commit the selection ──────────────────
   const confirmSelection = useCallback(() => {
-    if (selectedLocation && selectedLocation.address !== 'Fetching address…') {
+    if (selectedLocation && selectedLocation.address !== 'Fetching address...') {
       onLocationSelect(selectedLocation);
     }
   }, [selectedLocation, onLocationSelect]);
 
-  // ─── Use current GPS location ──────────────────────────────
   const useMyLocation = useCallback(() => {
     if (currentLocation) {
       setSelectedLocation(currentLocation);
@@ -323,21 +307,25 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
     <body>
       <div id="map"></div>
       <script>
-        var map = L.map('map', { zoomControl: true }).setView([${mapCenter.lat}, ${mapCenter.lng}], 13);
+        var map = L.map('map', { zoomControl: false }).setView([${mapCenter.lat}, ${mapCenter.lng}], 13);
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '&copy; OpenStreetMap contributors',
+          attribution: '',
           maxZoom: 19
         }).addTo(map);
 
-        var marker = L.marker([${mapCenter.lat}, ${mapCenter.lng}], { draggable: true }).addTo(map);
+        var customIcon = L.divIcon({
+          html: '<div style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;"><svg viewBox="0 0 24 24" width="36" height="36" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z" fill="#1B2B4B"/><path d="M12 6.5c-1.38 0-2.5 1.12-2.5 2.5S10.62 11.5 12 11.5s2.5-1.12 2.5-2.5S13.38 6.5 12 6.5z" fill="white"/></svg></div>',
+          className: '',
+          iconSize: [40, 40],
+          iconAnchor: [20, 40],
+        });
+
+        var marker = L.marker([${mapCenter.lat}, ${mapCenter.lng}], { draggable: true, icon: customIcon }).addTo(map);
 
         function sendLocation(lat, lng) {
-          window.ReactNativeWebView.postMessage(JSON.stringify({
-            type: 'location',
-            lat: lat,
-            lng: lng
-          }));
+          window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'location', lat: lat, lng: lng }));
         }
 
         marker.on('dragend', function() {
@@ -350,7 +338,6 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
           sendLocation(e.latlng.lat, e.latlng.lng);
         });
 
-        // Tell RN the map is ready
         window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'ready' }));
       <\/script>
     </body>
@@ -362,7 +349,6 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
       const data = JSON.parse(event.nativeEvent.data);
       if (data.type === 'ready') {
         setMapReady(true);
-        // If initial location was provided, move marker there
         if (initialLocation) {
           moveMapTo(initialLocation.lat, initialLocation.lng, 15);
         }
@@ -376,88 +362,108 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
 
   // ─── Render ────────────────────────────────────────────────
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <ArrowLeft size={24} color={COLORS.text} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>{title}</Text>
-        <View style={styles.placeholder} />
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+
+      {/* ── Hero Header with loc.png ── */}
+      <View style={styles.heroContainer}>
+        <Image
+          source={require('../../../assets/loc.png')}
+          style={styles.heroImage}
+          resizeMode="cover"
+        />
+        <LinearGradient
+          colors={['rgba(27,43,75,0.85)', 'rgba(27,43,75,0.6)', 'transparent']}
+          style={styles.heroGradient}
+        />
+        <View style={styles.heroContent}>
+          <TouchableOpacity onPress={onBack} style={styles.backButton} activeOpacity={0.7}>
+            <ArrowLeft size={22} color="#fff" />
+          </TouchableOpacity>
+          <View style={styles.titleBlock}>
+            <Text style={styles.heroTitle}>{title}</Text>
+            <Text style={styles.heroSubtitle}>Search or tap on the map to pick a location</Text>
+          </View>
+        </View>
       </View>
 
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <Search size={20} color={COLORS.textSecondary} style={styles.searchIcon} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search city, area, or landmark…"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          placeholderTextColor={COLORS.textSecondary}
-          returnKeyType="search"
-          autoCorrect={false}
-        />
-        {searching && (
-          <ActivityIndicator
-            size="small"
-            color={COLORS.primary}
-            style={{ marginRight: SPACING.xs }}
+      {/* ── Floating Search Card ── */}
+      <View style={styles.searchCard}>
+        <View style={[styles.searchBar, searchFocused && styles.searchBarFocused]}>
+          <Search size={18} color={searchFocused ? COLORS.primary : '#9CA3AF'} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search city, area, or landmark..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholderTextColor="#9CA3AF"
+            returnKeyType="search"
+            autoCorrect={false}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
           />
-        )}
-        {searchQuery.length > 0 && !searching && (
-          <TouchableOpacity
-            onPress={() => {
-              setSearchQuery('');
-              setSearchResults([]);
-            }}
-            style={styles.clearButton}
-          >
-            <X size={18} color={COLORS.textSecondary} />
+          {searching && (
+            <ActivityIndicator size="small" color={COLORS.primary} style={{ marginRight: 4 }} />
+          )}
+          {searchQuery.length > 0 && !searching && (
+            <TouchableOpacity
+              onPress={() => { setSearchQuery(''); setSearchResults([]); }}
+              style={styles.clearButton}
+            >
+              <X size={16} color="#9CA3AF" />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Quick actions row */}
+        {currentLocation && !searchResults.length && (
+          <TouchableOpacity style={styles.quickLocationRow} onPress={useMyLocation} activeOpacity={0.7}>
+            <View style={styles.quickLocationIcon}>
+              <Crosshair size={16} color={COLORS.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.quickLocationTitle}>Use current location</Text>
+              <Text style={styles.quickLocationAddr} numberOfLines={1}>
+                {currentLocation.address}
+              </Text>
+            </View>
+            <Navigation size={16} color={COLORS.primary} />
           </TouchableOpacity>
         )}
-      </View>
 
-      {/* Search Results Dropdown */}
-      {searchResults.length > 0 && (
-        <View style={styles.searchResults}>
+        {/* Search Results */}
+        {searchResults.length > 0 && (
           <FlatList
             data={searchResults}
             keyExtractor={(_, i) => String(i)}
             keyboardShouldPersistTaps="handled"
-            renderItem={({ item }) => (
+            style={styles.resultsList}
+            renderItem={({ item, index }) => (
               <TouchableOpacity
-                style={styles.resultItem}
+                style={[styles.resultItem, index === searchResults.length - 1 && { borderBottomWidth: 0 }]}
                 onPress={() => handleSearchResultSelect(item)}
-                activeOpacity={0.7}
+                activeOpacity={0.6}
               >
-                <MapPin size={18} color={COLORS.primary} />
+                <View style={styles.resultPinWrapper}>
+                  <MapPin size={16} color={COLORS.primary} />
+                </View>
                 <View style={styles.resultText}>
                   <Text style={styles.resultAddress} numberOfLines={2}>
                     {item.address}
                   </Text>
                   {item.city && (
                     <Text style={styles.resultDetails}>
-                      {item.city}
-                      {item.state ? `, ${item.state}` : ''}
+                      {item.city}{item.state ? `, ${item.state}` : ''}
                     </Text>
                   )}
                 </View>
               </TouchableOpacity>
             )}
           />
-        </View>
-      )}
+        )}
+      </View>
 
-      {/* Current Location Button */}
-      {currentLocation && (
-        <TouchableOpacity style={styles.currentLocationButton} onPress={useMyLocation}>
-          <Navigation size={18} color={COLORS.white} />
-          <Text style={styles.currentLocationText}>Use Current Location</Text>
-        </TouchableOpacity>
-      )}
-
-      {/* Map */}
+      {/* ── Map ── */}
       {!loading ? (
         <WebView
           ref={webViewRef}
@@ -470,28 +476,39 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
           renderLoading={() => (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={COLORS.primary} />
-              <Text style={styles.loadingText}>Loading map…</Text>
+              <Text style={styles.loadingText}>Loading map...</Text>
             </View>
           )}
         />
       ) : (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>Getting your location…</Text>
+          <Text style={styles.loadingText}>Getting your location...</Text>
         </View>
       )}
 
-      {/* Bottom Confirm Bar */}
+      {/* ── GPS re-center FAB ── */}
+      {currentLocation && mapReady && (
+        <TouchableOpacity style={styles.gpsFab} onPress={useMyLocation} activeOpacity={0.8}>
+          <Crosshair size={20} color={COLORS.primary} />
+        </TouchableOpacity>
+      )}
+
+      {/* ── Bottom Confirm Card ── */}
       {selectedLocation && (
-        <View style={styles.confirmBar}>
-          <View style={styles.confirmAddressRow}>
-            <MapPin size={18} color={COLORS.primary} style={{ marginTop: 2 }} />
-            <View style={styles.confirmAddressContent}>
-              <Text style={styles.confirmAddressText} numberOfLines={2}>
+        <View style={styles.confirmCard}>
+          <View style={styles.confirmHandle} />
+          <View style={styles.confirmRow}>
+            <View style={styles.confirmPinBadge}>
+              <MapPin size={18} color="#fff" />
+            </View>
+            <View style={styles.confirmInfo}>
+              <Text style={styles.confirmLabel}>Selected Location</Text>
+              <Text style={styles.confirmAddress} numberOfLines={2}>
                 {selectedLocation.address}
               </Text>
               {selectedLocation.city && (
-                <Text style={styles.confirmCityText}>
+                <Text style={styles.confirmCity}>
                   {selectedLocation.city}
                   {selectedLocation.state ? `, ${selectedLocation.state}` : ''}
                   {selectedLocation.pincode ? ` - ${selectedLocation.pincode}` : ''}
@@ -502,18 +519,18 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
           <TouchableOpacity
             style={[
               styles.confirmButton,
-              selectedLocation.address === 'Fetching address…' && styles.confirmButtonDisabled,
+              selectedLocation.address === 'Fetching address...' && styles.confirmButtonDisabled,
             ]}
             onPress={confirmSelection}
-            disabled={selectedLocation.address === 'Fetching address…'}
+            disabled={selectedLocation.address === 'Fetching address...'}
             activeOpacity={0.8}
           >
-            <Check size={20} color={COLORS.white} />
-            <Text style={styles.confirmButtonText}>Confirm</Text>
+            <Check size={20} color="#fff" />
+            <Text style={styles.confirmButtonText}>Confirm Location</Text>
           </TouchableOpacity>
         </View>
       )}
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -521,112 +538,155 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    backgroundColor: COLORS.white,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  backButton: {
-    padding: SPACING.xs,
-  },
-  headerTitle: {
-    fontSize: FONTS.sizes.lg,
-    fontFamily: FONTS.bold,
-    color: COLORS.text,
-  },
-  placeholder: {
-    width: normalize(40),
+    backgroundColor: '#F0F2F5',
   },
 
-  // Search
-  searchContainer: {
+  // Hero header
+  heroContainer: {
+    height: hp(22),
+    minHeight: normalize(160),
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  heroImage: {
+    width: '100%',
+    height: '100%',
+    position: 'absolute',
+  },
+  heroGradient: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  heroContent: {
+    flex: 1,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight || 40 : 50,
+    paddingHorizontal: SPACING.md,
+  },
+  backButton: {
+    width: normalize(38),
+    height: normalize(38),
+    borderRadius: normalize(19),
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  titleBlock: {
+    marginTop: SPACING.sm,
+  },
+  heroTitle: {
+    fontSize: normalize(22),
+    fontFamily: FONTS.bold,
+    color: '#fff',
+    letterSpacing: 0.3,
+  },
+  heroSubtitle: {
+    fontSize: normalize(12),
+    fontFamily: FONTS.regular,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 4,
+  },
+
+  // Floating search card
+  searchCard: {
+    marginHorizontal: SPACING.md,
+    marginTop: -normalize(28),
+    backgroundColor: '#fff',
+    borderRadius: BORDER_RADIUS.lg,
+    ...SHADOWS.lg,
+    elevation: 8,
+    zIndex: 20,
+    overflow: 'hidden',
+  },
+  searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.white,
-    marginHorizontal: SPACING.md,
-    marginTop: SPACING.sm,
-    marginBottom: SPACING.xs,
     paddingHorizontal: SPACING.md,
-    paddingVertical: Platform.OS === 'ios' ? SPACING.sm : SPACING.xs,
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    paddingVertical: Platform.OS === 'ios' ? normalize(12) : normalize(6),
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
   },
-  searchIcon: {
-    marginRight: SPACING.sm,
+  searchBarFocused: {
+    borderBottomColor: COLORS.primary,
   },
   searchInput: {
     flex: 1,
-    fontSize: FONTS.sizes.md,
-    color: COLORS.text,
+    fontSize: normalize(14),
+    color: '#1F2937',
     fontFamily: FONTS.regular,
-    paddingVertical: Platform.OS === 'ios' ? 0 : SPACING.xs,
+    marginLeft: SPACING.sm,
+    paddingVertical: Platform.OS === 'ios' ? 0 : 4,
   },
   clearButton: {
-    padding: SPACING.xs,
+    padding: 6,
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
   },
 
-  // Search results dropdown
-  searchResults: {
-    backgroundColor: COLORS.white,
-    marginHorizontal: SPACING.md,
-    marginBottom: SPACING.xs,
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    maxHeight: 240,
-    ...SHADOWS.md,
-    zIndex: 10,
-    elevation: 5,
+  // Quick use-current-location row
+  quickLocationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: normalize(10),
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  quickLocationIcon: {
+    width: normalize(32),
+    height: normalize(32),
+    borderRadius: normalize(16),
+    backgroundColor: `${COLORS.primary}15`,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: SPACING.sm,
+  },
+  quickLocationTitle: {
+    fontSize: normalize(13),
+    fontFamily: FONTS.medium,
+    color: COLORS.primary,
+  },
+  quickLocationAddr: {
+    fontSize: normalize(11),
+    fontFamily: FONTS.regular,
+    color: '#9CA3AF',
+    marginTop: 1,
+  },
+
+  // Search results
+  resultsList: {
+    maxHeight: normalize(220),
   },
   resultItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    padding: SPACING.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: normalize(10),
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: '#F3F4F6',
+  },
+  resultPinWrapper: {
+    width: normalize(28),
+    height: normalize(28),
+    borderRadius: normalize(14),
+    backgroundColor: `${COLORS.primary}12`,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: SPACING.sm,
+    marginTop: 2,
   },
   resultText: {
     flex: 1,
-    marginLeft: SPACING.sm,
   },
   resultAddress: {
-    fontSize: FONTS.sizes.sm,
-    fontFamily: FONTS.medium,
-    color: COLORS.text,
-    lineHeight: 20,
+    fontSize: normalize(13),
+    fontFamily: FONTS.regular,
+    color: '#1F2937',
+    lineHeight: normalize(18),
   },
   resultDetails: {
-    fontSize: FONTS.sizes.xs,
+    fontSize: normalize(11),
     fontFamily: FONTS.regular,
-    color: COLORS.textSecondary,
+    color: '#9CA3AF',
     marginTop: 2,
-  },
-
-  // Current location
-  currentLocationButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.primary,
-    marginHorizontal: SPACING.md,
-    marginBottom: SPACING.sm,
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.md,
-    borderRadius: BORDER_RADIUS.md,
-  },
-  currentLocationText: {
-    color: COLORS.white,
-    fontSize: 14,
-    fontFamily: FONTS.medium,
-    marginLeft: SPACING.xs,
   },
 
   // Map
@@ -637,65 +697,109 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#F0F2F5',
   },
   loadingText: {
-    marginTop: SPACING.md,
-    fontSize: FONTS.sizes.md,
-    color: COLORS.textSecondary,
+    marginTop: SPACING.sm,
+    fontSize: normalize(13),
+    color: '#6B7280',
     fontFamily: FONTS.regular,
   },
 
-  // Bottom confirm bar
-  confirmBar: {
-    flexDirection: 'row',
+  // GPS FAB
+  gpsFab: {
+    position: 'absolute',
+    right: SPACING.md,
+    bottom: normalize(180),
+    width: normalize(44),
+    height: normalize(44),
+    borderRadius: normalize(22),
+    backgroundColor: '#fff',
     alignItems: 'center',
-    backgroundColor: COLORS.white,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.md,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    ...SHADOWS.lg,
-    elevation: 8,
+    justifyContent: 'center',
+    ...SHADOWS.md,
+    elevation: 6,
+    zIndex: 10,
   },
-  confirmAddressRow: {
-    flex: 1,
+
+  // Bottom confirm card
+  confirmCard: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#fff',
+    borderTopLeftRadius: normalize(20),
+    borderTopRightRadius: normalize(20),
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.sm,
+    paddingBottom: Platform.OS === 'ios' ? normalize(34) : SPACING.md,
+    ...SHADOWS.lg,
+    elevation: 12,
+    zIndex: 20,
+  },
+  confirmHandle: {
+    width: normalize(36),
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#E5E7EB',
+    alignSelf: 'center',
+    marginBottom: SPACING.sm,
+  },
+  confirmRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
+    marginBottom: SPACING.md,
+  },
+  confirmPinBadge: {
+    width: normalize(36),
+    height: normalize(36),
+    borderRadius: normalize(10),
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: SPACING.sm,
   },
-  confirmAddressContent: {
+  confirmInfo: {
     flex: 1,
-    marginLeft: SPACING.xs,
   },
-  confirmAddressText: {
-    fontSize: 13,
-    fontFamily: FONTS.regular,
-    color: COLORS.text,
-    lineHeight: 18,
+  confirmLabel: {
+    fontSize: normalize(11),
+    fontFamily: FONTS.medium,
+    color: '#9CA3AF',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 2,
   },
-  confirmCityText: {
-    fontSize: 11,
+  confirmAddress: {
+    fontSize: normalize(14),
+    fontFamily: FONTS.medium,
+    color: '#1F2937',
+    lineHeight: normalize(20),
+  },
+  confirmCity: {
+    fontSize: normalize(11),
     fontFamily: FONTS.regular,
-    color: COLORS.textSecondary,
+    color: '#6B7280',
     marginTop: 2,
   },
   confirmButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: COLORS.primary,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.sm,
-    borderRadius: BORDER_RADIUS.md,
-    gap: 6,
+    paddingVertical: normalize(14),
+    borderRadius: BORDER_RADIUS.lg,
+    gap: 8,
   },
   confirmButtonDisabled: {
     opacity: 0.5,
   },
   confirmButtonText: {
-    color: COLORS.white,
-    fontSize: 16,
-    fontFamily: FONTS.medium,
-    fontWeight: '600',
+    color: '#fff',
+    fontSize: normalize(16),
+    fontFamily: FONTS.bold,
+    letterSpacing: 0.3,
   },
 });
 

@@ -20,12 +20,14 @@ import { Button } from '@components/common/Button';
 import { Input } from '@components/common/Input';
 import { PhoneInput } from '@components/common/PhoneInput';
 import { useLanguage } from '@context/LanguageContext';
+import { useAuth } from '@context/AuthContext';
 import { authApi, companyApi, uploadFile } from '@utils/apiClient';
 import { normalize, wp, hp } from '@utils/responsive';
 
 const CompanyRegistrationScreen = () => {
   const navigation = useNavigation();
   const { t } = useLanguage();
+  const { login } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 3;
 
@@ -504,9 +506,11 @@ const CompanyRegistrationScreen = () => {
 
       const userId = userResponse.data.user.userId;
       
-      // Save tokens for authenticated requests
-      if (userResponse.data?.tokens?.accessToken) {
-        // Tokens are automatically saved by apiService
+      // Save auth state via AuthContext
+      const userData = userResponse.data?.user || {};
+      const tokens = userResponse.data?.tokens;
+      if (tokens?.accessToken && tokens?.refreshToken) {
+        await login(userData, tokens);
       }
 
       // Step 2: Documents are already uploaded to Cloudinary during selection
@@ -568,9 +572,9 @@ const CompanyRegistrationScreen = () => {
               onPress: () => {
                 // Redirect to company dashboard if userType is company
                 if (userType === 'company') {
-                  navigation.navigate('CompanyDashboard' as never);
+                  navigation.reset({ index: 0, routes: [{ name: 'CompanyDashboard' as never }] });
                 } else {
-                  navigation.navigate('VerificationPending' as never);
+                  navigation.reset({ index: 0, routes: [{ name: 'VerificationPending' as never }] });
                 }
               },
             },

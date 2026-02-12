@@ -29,21 +29,30 @@ const SplashScreen = () => {
     // Wait for both auth check and onboarding check to complete
     if (isLoading || !onboardingChecked) return;
 
+    console.log('🚀 [Splash] Auth flow decision:', {
+      isAuthenticated,
+      hasSeenOnboarding,
+      isLoading,
+    });
+
     const timer = setTimeout(() => {
       if (isAuthenticated) {
         // User has valid tokens — go straight to dashboard
+        console.log('🚀 [Splash] → MainDashboard (authenticated)');
         navigation.reset({
           index: 0,
           routes: [{ name: 'MainDashboard' as never }],
         });
       } else if (hasSeenOnboarding) {
         // Returning user (logged out) — skip onboarding, go to sign in
+        console.log('🚀 [Splash] → SignIn (seen onboarding, not authenticated)');
         navigation.reset({
           index: 0,
           routes: [{ name: 'SignIn' as never }],
         });
       } else {
         // First time user — show onboarding
+        console.log('🚀 [Splash] → Onboarding (first time user)');
         navigation.navigate('Onboarding' as never);
       }
     }, 3000);

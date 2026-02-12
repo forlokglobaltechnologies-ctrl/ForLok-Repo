@@ -30,88 +30,64 @@ const CreatePoolingOfferScreen = () => {
   const { t } = useLanguage();
   const videoRef = useRef<Video>(null);
   
-  // Check if documents are uploaded (in real app, get from user context/state)
+  // ── All state declarations FIRST ──
   const [documentsUploaded, setDocumentsUploaded] = useState(false);
   const [isCheckingDocuments, setIsCheckingDocuments] = useState(true);
+  const [allVehicles, setAllVehicles] = useState<any[]>([]);
+  const [loadingVehicles, setLoadingVehicles] = useState(false);
+  const [fromLocation, setFromLocation] = useState<LocationData | null>(null);
+  const [toLocation, setToLocation] = useState<LocationData | null>(null);
+  const [date, setDate] = useState(new Date());
+  const [time, setTime] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [vehicleType, setVehicleType] = useState<'Car' | 'Bike' | null>(null);
+  const [vehicles, setVehicles] = useState<any[]>([]);
+  const [selectedVehicle, setSelectedVehicle] = useState<any | null>(null);
+  const [showVehicleDropdown, setShowVehicleDropdown] = useState(false);
+  const [availableSeats, setAvailableSeats] = useState(1);
+  const [notes, setNotes] = useState('');
+  const [creating, setCreating] = useState(false);
+  const route = useRoute();
 
-  // Check documents on screen focus
-  useFocusEffect(
-    React.useCallback(() => {
-      checkDocumentsStatus();
-      loadVehicles();
-    }, [])
-  );
+  // ── Derived: filtered vehicles computed fresh every render ──
+  const filteredVehicles = vehicleType
+    ? allVehicles.filter((v: any) => (v.type || '').toLowerCase() === vehicleType.toLowerCase())
+    : allVehicles;
 
-  // Load vehicles from backend
+  // ── Functions ──
   const loadVehicles = async () => {
     try {
       setLoadingVehicles(true);
       const response = await vehicleApi.getVehicles();
       if (response.success && response.data) {
-        const filteredVehicles = response.data.filter((v: any) => 
-          vehicleType ? v.type.toLowerCase() === vehicleType.toLowerCase() : true
-        );
-        setVehicles(filteredVehicles);
-      } else {
-        Alert.alert('Error', 'Failed to load vehicles. Please add a vehicle first.');
+        console.log('🚗 [CreatePooling] Loaded vehicles:', response.data.map((v: any) => `${v.brand}(${v.type})`));
+        setAllVehicles(response.data);
       }
     } catch (error: any) {
       console.error('Error loading vehicles:', error);
-      Alert.alert('Error', 'Failed to load vehicles');
     } finally {
       setLoadingVehicles(false);
     }
   };
-
-  // Reload vehicles when vehicle type changes and auto-select if only one vehicle
-  useEffect(() => {
-    if (vehicleType && documentsUploaded) {
-      loadVehicles();
-      setSelectedVehicle(null);
-    }
-  }, [vehicleType]);
-
-  // Auto-select vehicle when vehicles are loaded and match the selected type
-  useEffect(() => {
-    if (vehicles.length > 0 && vehicleType && !selectedVehicle) {
-      const matchingVehicles = vehicles.filter((v: any) => 
-        v.type.toLowerCase() === vehicleType.toLowerCase()
-      );
-      if (matchingVehicles.length === 1) {
-        // Auto-select if only one vehicle of this type
-        setSelectedVehicle(matchingVehicles[0]);
-        if (matchingVehicles[0].seats && availableSeats > matchingVehicles[0].seats) {
-          setAvailableSeats(matchingVehicles[0].seats);
-        }
-      }
-    }
-  }, [vehicles, vehicleType]);
 
   const checkDocumentsStatus = async () => {
     try {
       setIsCheckingDocuments(true);
       console.log('🔍 Checking documents status for createPooling...');
       
-      // Import document utilities
       const { getUserDocuments, hasAllRequiredDocuments } = require('@utils/documentUtils');
-      
-      // Get existing documents from backend
       const existingDocuments = await getUserDocuments();
-      
       console.log('📋 Existing documents:', existingDocuments);
       
-      // Check if all required documents exist for offering pooling
       const hasAllDocuments = hasAllRequiredDocuments('createPooling', existingDocuments);
-      
       console.log('✅ Has all required documents:', hasAllDocuments);
       
       if (!hasAllDocuments || !existingDocuments) {
         console.log('❌ Missing documents, navigating to DocumentVerification...');
-        // Navigate to document verification screen
         navigation.navigate('DocumentVerification' as never, {
           serviceType: 'createPooling',
           onComplete: () => {
-            console.log('✅ Documents completed, setting documentsUploaded to true');
             setDocumentsUploaded(true);
             setIsCheckingDocuments(false);
           },
@@ -123,7 +99,6 @@ const CreatePoolingOfferScreen = () => {
       }
     } catch (error) {
       console.error('❌ Error checking documents:', error);
-      // If error, navigate to document verification
       navigation.navigate('DocumentVerification' as never, {
         serviceType: 'createPooling',
         onComplete: () => {
@@ -133,21 +108,14 @@ const CreatePoolingOfferScreen = () => {
       } as never);
     }
   };
-  const [fromLocation, setFromLocation] = useState<LocationData | null>(null);
-  const [toLocation, setToLocation] = useState<LocationData | null>(null);
-  const [date, setDate] = useState(new Date());
-  const [time, setTime] = useState(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
-  const [vehicleType, setVehicleType] = useState<'Car' | 'Bike' | null>(null);
-  const [vehicles, setVehicles] = useState<any[]>([]);
-  const [selectedVehicle, setSelectedVehicle] = useState<any | null>(null);
-  const [showVehicleDropdown, setShowVehicleDropdown] = useState(false);
-  const [loadingVehicles, setLoadingVehicles] = useState(false);
-  const [availableSeats, setAvailableSeats] = useState(1);
-  const [notes, setNotes] = useState('');
-  const [creating, setCreating] = useState(false);
-  const route = useRoute();
+
+  // ── Effects ──
+  useFocusEffect(
+    React.useCallback(() => {
+      checkDocumentsStatus();
+      loadVehicles();
+    }, [])
+  );
 
   const formatDate = (date: Date) => {
     const day = date.getDate();
@@ -418,8 +386,10 @@ const CreatePoolingOfferScreen = () => {
                   vehicleType === 'Car' && styles.vehicleTypeSelected,
                 ]}
                   onPress={() => {
+                    console.log('🚗 [CreatePooling] Selected type: Car');
                     setVehicleType('Car');
                     setSelectedVehicle(null);
+                    setShowVehicleDropdown(false);
                     setAvailableSeats(1);
                   }}
                 >
@@ -435,8 +405,10 @@ const CreatePoolingOfferScreen = () => {
                   vehicleType === 'Bike' && styles.vehicleTypeSelected,
                 ]}
                   onPress={() => {
+                    console.log('🚗 [CreatePooling] Selected type: Bike');
                     setVehicleType('Bike');
                     setSelectedVehicle(null);
+                    setShowVehicleDropdown(false);
                     setAvailableSeats(1);
                   }}
                 >
@@ -458,12 +430,12 @@ const CreatePoolingOfferScreen = () => {
                   <ActivityIndicator size="small" color={COLORS.primary} />
                   <Text style={styles.loadingText}>Loading vehicles...</Text>
                 </View>
-              ) : vehicles.length === 0 ? (
+              ) : filteredVehicles.length === 0 ? (
                 <TouchableOpacity
                   style={styles.addVehicleButton}
                   onPress={() => navigation.navigate('AddVehicle' as never)}
                 >
-                  <Text style={styles.addVehicleText}>+ Add Vehicle</Text>
+                  <Text style={styles.addVehicleText}>+ Add {vehicleType}</Text>
                 </TouchableOpacity>
               ) : (
                 <TouchableOpacity
@@ -473,15 +445,15 @@ const CreatePoolingOfferScreen = () => {
                   <Text style={[styles.vehicleDropdownText, !selectedVehicle && styles.placeholderText]}>
                     {selectedVehicle 
                       ? `${selectedVehicle.brand || 'Vehicle'} - ${selectedVehicle.number}`
-                      : 'Select a vehicle'}
+                      : `Select a ${vehicleType.toLowerCase()}`}
                   </Text>
                   <ChevronDown size={20} color={COLORS.textSecondary} />
                 </TouchableOpacity>
               )}
               
-              {showVehicleDropdown && vehicles.length > 0 && (
+              {showVehicleDropdown && filteredVehicles.length > 0 && (
                 <View style={styles.vehicleDropdownList}>
-                  {vehicles.map((vehicle) => (
+                  {filteredVehicles.map((vehicle) => (
                     <TouchableOpacity
                       key={vehicle.vehicleId}
                       style={styles.vehicleDropdownItem}
