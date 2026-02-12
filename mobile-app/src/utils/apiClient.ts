@@ -346,6 +346,7 @@ export const poolingApi = {
     from?: string;
     to?: string;
     date?: string;
+    time?: string; // e.g. "9:00 AM" — filter within ±2 hour window
     vehicleType?: string;
     fromLat: number; // Required for polyline matching
     fromLng: number; // Required for polyline matching
@@ -369,7 +370,8 @@ export const poolingApi = {
       console.log('📍 SearchOffers API call with coordinates:', {
         from: { lat: params.fromLat, lng: params.fromLng },
         to: { lat: params.toLat, lng: params.toLng },
-        date: params.date,
+        date: params.date || 'ANY',
+        time: params.time || 'ANY',
       });
     }
 
@@ -389,6 +391,9 @@ export const poolingApi = {
       } else if (typeof params.date === 'string') {
         queryParams.date = params.date;
       }
+    }
+    if (params.time) {
+      queryParams.time = params.time;
     }
     if (params.vehicleType) {
       queryParams.vehicleType = params.vehicleType;

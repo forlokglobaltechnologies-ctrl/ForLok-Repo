@@ -287,6 +287,7 @@ class PoolingService {
     toLat?: number;
     toLng?: number;
     date?: Date;
+    time?: string; // e.g. "9:00 AM"
     vehicleType?: 'car' | 'bike';
     minPrice?: number;
     maxPrice?: number;
@@ -300,17 +301,36 @@ class PoolingService {
       const limit = filters.limit || 20;
       const skip = (page - 1) * limit;
 
+      // === DETAILED LOGGING ===
+      logger.info(`[SEARCH] ========== searchOffers called ==========`);
+      logger.info(`[SEARCH] Raw filters: date=${filters.date?.toISOString() ?? 'ANY'}, time=${filters.time ?? 'ANY'}, vehicleType=${filters.vehicleType ?? 'ALL'}, pinkOnly=${filters.pinkOnly ?? false}`);
+      logger.info(`[SEARCH] Coordinates: from=(${filters.fromLat}, ${filters.fromLng}), to=(${filters.toLat}, ${filters.toLng})`);
+
       // Build query
       const query: any = {
         status: { $in: ['active', 'pending'] },
         availableSeats: { $gt: 0 },
       };
 
+      // --- DATE FILTER (timezone-safe using UTC) ---
       if (filters.date) {
-        query.date = {
-          $gte: new Date(filters.date.setHours(0, 0, 0, 0)),
-          $lt: new Date(filters.date.setHours(23, 59, 59, 999)),
-        };
+        const dateVal = new Date(filters.date);
+        if (isNaN(dateVal.getTime())) {
+          logger.warn(`[SEARCH] Invalid Date received: ${filters.date}. Skipping date filter.`);
+        } else {
+          const dateStart = new Date(dateVal);
+          dateStart.setUTCHours(0, 0, 0, 0);
+          const dateEnd = new Date(dateVal);
+          dateEnd.setUTCHours(23, 59, 59, 999);
+          query.date = { $gte: dateStart, $lt: dateEnd };
+          logger.info(`[SEARCH] Date filter: $gte=${dateStart.toISOString()}, $lt=${dateEnd.toISOString()}`);
+        }
+      } else {
+        // No date filter — show all future offers (today onwards)
+        const now = new Date();
+        now.setUTCHours(0, 0, 0, 0);
+        query.date = { $gte: now };
+        logger.info(`[SEARCH] No date supplied — showing all offers from today onwards ($gte=${now.toISOString()})`);
       }
 
       if (filters.vehicleType) {
@@ -328,10 +348,76 @@ class PoolingService {
         if (filters.maxPrice !== undefined) query.price.$lte = filters.maxPrice;
       }
 
+      logger.info(`[SEARCH] MongoDB query: ${JSON.stringify(query)}`);
+
       // Get all matching offers first
       let offers = await PoolingOffer.find(query).sort({ createdAt: -1 });
       
-      logger.info(`🔍 Found ${offers.length} offers matching date/status/vehicle filters`);
+      logger.info(`[SEARCH] Found ${offers.length} offers matching date/status/vehicle filters`);
+
+      // --- TIME FILTER (±1 hour window, midnight-safe) ---
+      if (filters.time && offers.length > 0) {
+        const parsedMinutes = this.parseTimeToMinutes(filters.time);
+        if (parsedMinutes !== null) {
+          const TIME_WINDOW_MINUTES = 60; // ±1 hour (industry standard for carpooling)
+          const MINUTES_IN_DAY = 1440; // 24 * 60
+
+          logger.info(`[SEARCH] Time filter: passenger="${filters.time}" (${parsedMinutes}min), window=±${TIME_WINDOW_MINUTES}min`);
+
+          const beforeCount = offers.length;
+          offers = offers.filter((offer) => {
+            const offerMinutes = this.parseTimeToMinutes(offer.time);
+            if (offerMinutes === null) {
+              logger.warn(`[SEARCH] Time filter: offer ${offer.offerId} has unparseable time="${offer.time}" — EXCLUDED`);
+              return false; // Exclude offers with unparseable time
+            }
+
+            // Calculate circular distance (handles midnight wraparound)
+            // e.g. 11:30 PM (1410) vs 12:30 AM (30) → distance = 60, not 1380
+            const diff = Math.abs(offerMinutes - parsedMinutes);
+            const circularDiff = Math.min(diff, MINUTES_IN_DAY - diff);
+            const passes = circularDiff < TIME_WINDOW_MINUTES; // Exclusive bound (< not <=)
+
+            logger.info(`[SEARCH] Time filter: offer ${offer.offerId} time="${offer.time}" (${offerMinutes}min), diff=${circularDiff}min, ${passes ? 'PASS' : 'FAIL'}`);
+            return passes;
+          });
+
+          logger.info(`[SEARCH] Time filter result: ${beforeCount} → ${offers.length} offers after ±${TIME_WINDOW_MINUTES}min window`);
+
+          // Sort remaining offers by time proximity (closest departure first)
+          if (offers.length > 1) {
+            offers.sort((a, b) => {
+              const aMin = this.parseTimeToMinutes(a.time) ?? 0;
+              const bMin = this.parseTimeToMinutes(b.time) ?? 0;
+              const aDiff = Math.abs(aMin - parsedMinutes);
+              const aCirc = Math.min(aDiff, MINUTES_IN_DAY - aDiff);
+              const bDiff = Math.abs(bMin - parsedMinutes);
+              const bCirc = Math.min(bDiff, MINUTES_IN_DAY - bDiff);
+              return aCirc - bCirc;
+            });
+            logger.info(`[SEARCH] Offers sorted by time proximity to ${filters.time}`);
+          }
+        } else {
+          logger.warn(`[SEARCH] Could not parse passenger time string: "${filters.time}". Skipping time filter.`);
+        }
+      } else if (!filters.time) {
+        logger.info(`[SEARCH] No time filter — showing all times`);
+      }
+
+      // --- ZERO-RESULT DIAGNOSTIC ---
+      if (offers.length === 0) {
+        const totalInDb = await PoolingOffer.countDocuments({ status: { $in: ['active', 'pending'] } });
+        logger.warn(`[SEARCH] 0 offers matched. Total active/pending offers in DB: ${totalInDb}`);
+        if (totalInDb > 0) {
+          const sampleOffers = await PoolingOffer.find({ status: { $in: ['active', 'pending'] } })
+            .select('date time route.from.address route.to.address')
+            .limit(5)
+            .lean();
+          sampleOffers.forEach((s: any, i: number) => {
+            logger.warn(`[SEARCH] Sample offer[${i}]: date=${s.date}, time=${s.time}, from=${s.route?.from?.address}, to=${s.route?.to?.address}`);
+          });
+        }
+      }
 
       // Filter by location if provided
       // Uses road-aware matching with polyline fallback
@@ -643,6 +729,47 @@ class PoolingService {
       logger.error('Error cancelling offer:', error);
       throw error;
     }
+  }
+
+  /**
+   * Parse a time string like "9:00 AM", "14:30", "2:30 PM" into minutes since midnight.
+   * Handles: "9:00 AM", "9:00 am", "09:00 AM", "14:30", "2:30 PM", "12:00 AM" (midnight), "12:00 PM" (noon).
+   * Returns null if parsing fails.
+   */
+  private parseTimeToMinutes(timeStr: string): number | null {
+    if (!timeStr || typeof timeStr !== 'string') return null;
+    const cleaned = timeStr.trim();
+    if (!cleaned) return null;
+
+    // Try 12-hour format: "9:00 AM", "12:30 PM"
+    const match12 = cleaned.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+    if (match12) {
+      let hour = parseInt(match12[1], 10);
+      const minute = parseInt(match12[2], 10);
+      const ampm = match12[3].toUpperCase();
+
+      // Validate hour range for 12h format (1-12)
+      if (hour < 1 || hour > 12 || minute < 0 || minute > 59) return null;
+
+      // Convert to 24h
+      if (ampm === 'AM') {
+        hour = hour === 12 ? 0 : hour; // 12 AM = 0, 1-11 AM stays
+      } else {
+        hour = hour === 12 ? 12 : hour + 12; // 12 PM = 12, 1-11 PM → 13-23
+      }
+      return hour * 60 + minute;
+    }
+
+    // Try 24-hour format: "14:30", "09:00"
+    const match24 = cleaned.match(/^(\d{1,2}):(\d{2})$/);
+    if (match24) {
+      const hour = parseInt(match24[1], 10);
+      const minute = parseInt(match24[2], 10);
+      if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+      return hour * 60 + minute;
+    }
+
+    return null;
   }
 }
 

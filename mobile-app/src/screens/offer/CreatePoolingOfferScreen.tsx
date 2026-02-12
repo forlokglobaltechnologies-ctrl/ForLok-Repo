@@ -199,6 +199,14 @@ const CreatePoolingOfferScreen = () => {
       return;
     }
 
+    // Validate date+time is in the future
+    const combinedDateTime = new Date(date);
+    combinedDateTime.setHours(time.getHours(), time.getMinutes(), 0, 0);
+    if (combinedDateTime.getTime() <= Date.now()) {
+      Alert.alert('Invalid Date/Time', 'Please select a date and time in the future.');
+      return;
+    }
+
     try {
       setCreating(true);
 

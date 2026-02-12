@@ -172,6 +172,7 @@ export async function poolingRoutes(fastify: FastifyInstance) {
       if (query.toLat) filters.toLat = parseFloat(query.toLat);
       if (query.toLng) filters.toLng = parseFloat(query.toLng);
       if (query.date) filters.date = new Date(query.date);
+      if (query.time) filters.time = query.time as string; // e.g. "9:00 AM"
       if (query.vehicleType) filters.vehicleType = query.vehicleType;
       if (query.minPrice) filters.minPrice = parseFloat(query.minPrice);
       if (query.maxPrice) filters.maxPrice = parseFloat(query.maxPrice);

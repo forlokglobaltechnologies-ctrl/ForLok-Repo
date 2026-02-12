@@ -13,7 +13,7 @@
 // Default: localhost (works for emulator/simulator)
 // For physical device, change to your computer's IP address
 const API_BASE_URL = __DEV__
-  ? 'http://10.165.34.16:3000' // Your computer's IP for Expo physical device
+  ? 'http://10.206.92.236:3000' // Your computer's IP for Expo physical device
   : 'https://api.forlok.com'; // Production URL
 
 export const API_CONFIG = {
