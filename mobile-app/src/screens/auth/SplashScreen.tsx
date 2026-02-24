@@ -14,13 +14,20 @@ const SplashScreen = () => {
   const [onboardingChecked, setOnboardingChecked] = useState(false);
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
   const letterAnims = React.useRef(BRAND_TEXT.split('').map(() => new Animated.Value(0))).current;
+  const hasNavigatedRef = React.useRef(false);
 
   // Check if user has seen onboarding before
   useEffect(() => {
     const checkOnboarding = async () => {
-      const seen = await AsyncStorage.getItem(ONBOARDING_KEY);
-      setHasSeenOnboarding(seen === 'true');
-      setOnboardingChecked(true);
+      try {
+        const seen = await AsyncStorage.getItem(ONBOARDING_KEY);
+        setHasSeenOnboarding(seen === 'true');
+      } catch (error) {
+        console.warn('Unable to read onboarding state from storage:', error);
+        setHasSeenOnboarding(false);
+      } finally {
+        setOnboardingChecked(true);
+      }
     };
     checkOnboarding();
   }, []);
@@ -28,7 +35,7 @@ const SplashScreen = () => {
   useEffect(() => {
     const appearAnim = Animated.stagger(
       90,
-      letterAnims.map((anim) =>
+      letterAnims.map((anim: Animated.Value) =>
         Animated.timing(anim, {
           toValue: 1,
           duration: 360,
@@ -41,7 +48,7 @@ const SplashScreen = () => {
 
   useEffect(() => {
     // Wait for both auth check and onboarding check to complete
-    if (isLoading || !onboardingChecked) return;
+    if (isLoading || !onboardingChecked || hasNavigatedRef.current) return;
 
     console.log('🚀 [Splash] Auth flow decision:', {
       isAuthenticated,
@@ -50,6 +57,9 @@ const SplashScreen = () => {
     });
 
     const timer = setTimeout(() => {
+      if (hasNavigatedRef.current) return;
+      hasNavigatedRef.current = true;
+
       if (isAuthenticated) {
         // User has valid tokens — go straight to dashboard
         console.log('🚀 [Splash] → MainDashboard (authenticated)');
@@ -67,7 +77,10 @@ const SplashScreen = () => {
       } else {
         // First time user — show onboarding
         console.log('🚀 [Splash] → Onboarding (first time user)');
-        navigation.navigate('Onboarding' as never);
+        navigation.reset({
+          index: 0,
+          routes: [{ name: 'Onboarding' as never }],
+        });
       }
     }, 3000);
 

@@ -249,7 +249,7 @@ const SearchPoolingScreen = () => {
           </TouchableOpacity>
           <Text style={[styles.topTitle, { color: theme.colors.text }]}>Find a Ride</Text>
           <TouchableOpacity
-            onPress={() => setShowFilters((prev) => !prev)}
+            onPress={() => setShowFilters((prev: boolean) => !prev)}
             style={[styles.filterHeaderBtn, { borderColor: showFilters ? theme.colors.primary : theme.colors.border }]}
             activeOpacity={0.8}
           >
@@ -433,7 +433,7 @@ const SearchPoolingScreen = () => {
           </View>
         )}
 
-        {offers.map((offer) => {
+        {offers.map((offer: any) => {
           const vType = (offer.vehicle?.type || '').toLowerCase();
           const isCarType = vType === 'car';
           const isScootyType = vType === 'scooty' || vType === 'scooter';
@@ -668,9 +668,6 @@ const SearchPoolingScreen = () => {
                           }),
                         ]);
                         if (p1.success && p1.data && p2.success && p2.data) {
-                          // #region agent log
-                          fetch('http://127.0.0.1:7775/ingest/9bdd2fd3-ac77-45be-b342-a40ab02f34f7',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'cb7cf5'},body:JSON.stringify({sessionId:'cb7cf5',location:'SearchPoolingScreen.tsx:bookingModal',message:'Booking modal prices',data:{leg1:{finalPrice:p1.data.finalPrice,platformFee:p1.data.platformFee,totalAmount:p1.data.totalAmount},leg2:{finalPrice:p2.data.finalPrice,platformFee:p2.data.platformFee,totalAmount:p2.data.totalAmount},combinedTotal:Math.round(p1.data.totalAmount+p2.data.totalAmount)},timestamp:Date.now()})}).catch(()=>{});
-                          // #endregion
                           setLeg1PriceBreakdown(p1.data);
                           setLeg2PriceBreakdown(p2.data);
                           setShowBookingModal(true);

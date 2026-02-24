@@ -23,6 +23,7 @@ import { useSnackbar } from '@context/SnackbarContext';
 import { getUserErrorMessage, mapFieldErrors } from '@utils/errorUtils';
 
 const ACCENT = '#F9A825';
+type SignInErrors = { username?: string; password?: string };
 
 const SignInScreen = () => {
   const navigation = useNavigation();
@@ -33,10 +34,10 @@ const SignInScreen = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<{ username?: string; password?: string }>({});
+  const [errors, setErrors] = useState<SignInErrors>({});
 
   const handleSignIn = async () => {
-    const nextErrors: { username?: string; password?: string } = {};
+    const nextErrors: SignInErrors = {};
     if (!username.trim()) {
       nextErrors.username = t('signIn.enterUsernameError');
     }
@@ -62,7 +63,7 @@ const SignInScreen = () => {
         }
       } else {
         const mapped = mapFieldErrors(response as any, { username: 'username', password: 'password' });
-        setErrors((prev) => ({ ...prev, ...mapped }));
+        setErrors((prev: SignInErrors) => ({ ...prev, ...mapped }));
         showSnackbar({
           message: getUserErrorMessage(response as any, t('signIn.loginFailed')),
           type: 'error',
@@ -129,9 +130,9 @@ const SignInScreen = () => {
           <Input
             label={t('signIn.username') || 'Username/Email/Phone'}
             value={username}
-            onChangeText={(text) => {
+            onChangeText={(text: string) => {
               setUsername(text);
-              if (errors.username) setErrors((prev) => ({ ...prev, username: undefined }));
+              if (errors.username) setErrors((prev: SignInErrors) => ({ ...prev, username: undefined }));
             }}
             placeholder={t('signIn.enterUsernamePlaceholder')}
             autoCapitalize="none"
@@ -143,9 +144,9 @@ const SignInScreen = () => {
           <Input
             label={t('signIn.password')}
             value={password}
-            onChangeText={(text) => {
+            onChangeText={(text: string) => {
               setPassword(text);
-              if (errors.password) setErrors((prev) => ({ ...prev, password: undefined }));
+              if (errors.password) setErrors((prev: SignInErrors) => ({ ...prev, password: undefined }));
             }}
             placeholder={t('signIn.enterPassword')}
             secureTextEntry={!showPassword}

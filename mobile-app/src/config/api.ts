@@ -2,15 +2,13 @@
  * API Configuration
  * Backend API base URL and endpoints
  *
- * Environment is auto-detected via React Native's __DEV__ flag:
- *   - DEV  (expo start / debug build) → local backend at DEV_API_URL
- *   - PROD (eas build / release)      → deployed backend at PROD_API_URL
+ * Backend target is currently forced to production URL.
  */
 
-const DEV_API_URL = 'http://10.72.83.16:3000';
-const PROD_API_URL = 'https://forlok-repo.onrender.com';
+const DEV_API_URL = 'https://forlok-repo-1.onrender.com';
+const PROD_API_URL = 'https://forlok-repo-1.onrender.com';
 
-const API_BASE_URL = __DEV__ ? DEV_API_URL : PROD_API_URL;
+const API_BASE_URL = PROD_API_URL;
 
 export const API_CONFIG = {
   BASE_URL: API_BASE_URL,
