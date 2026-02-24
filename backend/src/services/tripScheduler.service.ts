@@ -92,7 +92,6 @@ class TripSchedulerService {
       });
 
       if (bookings.length === 0) {
-        logger.warn(`No bookings found for offer ${offerId}`);
         return;
       }
 

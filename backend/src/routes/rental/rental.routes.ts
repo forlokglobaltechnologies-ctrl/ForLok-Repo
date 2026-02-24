@@ -122,7 +122,7 @@ export async function rentalRoutes(fastify: FastifyInstance) {
    */
   const calculatePriceSchema = z.object({
     vehicleId: z.string().optional(),
-    vehicleType: z.enum(['car', 'bike']).optional(),
+    vehicleType: z.enum(['car', 'bike', 'scooty']).optional(),
     brand: z.string().optional(),
     model: z.string().optional(),
     year: z.number().optional(),

@@ -1,4 +1,5 @@
 import PoolingOffer from '../models/PoolingOffer';
+import Booking from '../models/Booking';
 import User from '../models/User';
 import Vehicle from '../models/Vehicle';
 import { generateUserId } from '../utils/helpers';
@@ -6,7 +7,7 @@ import { NotFoundError, ConflictError } from '../utils/errors';
 import logger from '../utils/logger';
 import { calculateDistance } from '../utils/helpers';
 import { Route, OfferStatus } from '../types';
-import { getRoutePolyline, getRouteWithRoadSegments } from '../utils/maps';
+import { getRoutePolyline, getRouteWithRoadSegments, generateAutoWaypoints, getMinWaypointCount } from '../utils/maps';
 import { isRouteOnPath } from '../utils/maps';
 import { roadMatchingService } from './road-matching.service';
 
@@ -41,6 +42,18 @@ class PoolingService {
       // Verify vehicle ownership
       if (vehicle.userId !== data.driverId && vehicle.companyId !== data.driverId) {
         throw new ConflictError('Vehicle does not belong to driver');
+      }
+
+      // Check if vehicle is already in use by an active offer
+      const existingOffer = await PoolingOffer.findOne({
+        'vehicle.vehicleId': data.vehicleId,
+        status: { $in: ['active', 'pending', 'in_progress', 'booked'] },
+      });
+      if (existingOffer) {
+        throw new ConflictError(
+          `This vehicle is already assigned to an active pooling offer (${existingOffer.offerId}). ` +
+          `Complete or cancel that offer first.`
+        );
       }
 
       // Generate offer ID
@@ -139,6 +152,42 @@ class PoolingService {
         // Continue without road segments - will use polyline matching
       }
 
+      // Auto-generate waypoints if driver provided fewer than minimum required
+      if (routeWithPolyline.polyline && routeWithPolyline.polyline.length > 2) {
+        const routeDistKm = calculateDistance(
+          data.route.from.lat, data.route.from.lng,
+          data.route.to.lat, data.route.to.lng
+        );
+        const existingWaypoints = routeWithPolyline.waypoints || [];
+        const minRequired = getMinWaypointCount(routeDistKm);
+
+        if (existingWaypoints.length < minRequired) {
+          try {
+            const autoWaypoints = await generateAutoWaypoints(routeWithPolyline.polyline, routeDistKm);
+            if (autoWaypoints.length > 0) {
+              // Merge: keep driver-provided first, fill gaps with auto-generated
+              const driverCities = new Set(
+                existingWaypoints.map((wp: any) => (wp.city || wp.address || '').toLowerCase().trim())
+              );
+              const merged = [...existingWaypoints];
+              for (const aw of autoWaypoints) {
+                const awCity = (aw.city || aw.address || '').toLowerCase().trim();
+                if (!driverCities.has(awCity) && merged.length < minRequired) {
+                  merged.push(aw);
+                  driverCities.add(awCity);
+                }
+              }
+              // Re-number order sequentially
+              merged.forEach((wp: any, idx: number) => { wp.order = idx; });
+              routeWithPolyline.waypoints = merged;
+              logger.info(`Offer ${offerId}: merged waypoints — ${existingWaypoints.length} driver + ${merged.length - existingWaypoints.length} auto = ${merged.length} total (min required: ${minRequired})`);
+            }
+          } catch (error) {
+            logger.warn(`Failed to auto-generate waypoints for offer ${offerId}:`, error);
+          }
+        }
+      }
+
       // Create offer
       const offer = await PoolingOffer.create({
         offerId,
@@ -181,19 +230,19 @@ class PoolingService {
    * Sync offer status based on passengers and available seats
    */
   private async syncOfferStatus(offer: any): Promise<void> {
+    // Never override in_progress or completed — these are set by trip lifecycle
+    if (offer.status === 'in_progress' || offer.status === 'completed') return;
+
     const hasPassengers = offer.passengers && offer.passengers.length > 0;
     const allSeatsFilled = offer.availableSeats === 0;
 
-    // Fix status if it's incorrect
     if (offer.status === 'pending' && hasPassengers) {
-      // Has passengers but still pending - should be active
       offer.status = 'active';
       await offer.save();
       logger.info(`Synced offer status: ${offer.offerId} -> active`);
     }
 
     if (offer.status === 'active' && allSeatsFilled) {
-      // All seats filled but still active - should be booked
       offer.status = 'booked';
       await offer.save();
       logger.info(`Synced offer status: ${offer.offerId} -> booked`);
@@ -288,7 +337,7 @@ class PoolingService {
     toLng?: number;
     date?: Date;
     time?: string; // e.g. "9:00 AM"
-    vehicleType?: 'car' | 'bike';
+    vehicleType?: 'car' | 'bike' | 'scooty';
     minPrice?: number;
     maxPrice?: number;
     maxDistance?: number;
@@ -348,9 +397,24 @@ class PoolingService {
         if (filters.maxPrice !== undefined) query.price.$lte = filters.maxPrice;
       }
 
+      // Coarse geo pre-filter: only load offers whose from/to/waypoints are within ~30km of the passenger's from or to
+      if (filters.fromLat && filters.fromLng && filters.toLat && filters.toLng) {
+        const GEO_PREFILTER_DEG = 0.27; // ~30km in degrees latitude
+        const minLat = Math.min(filters.fromLat, filters.toLat) - GEO_PREFILTER_DEG;
+        const maxLat = Math.max(filters.fromLat, filters.toLat) + GEO_PREFILTER_DEG;
+        const minLng = Math.min(filters.fromLng, filters.toLng) - GEO_PREFILTER_DEG;
+        const maxLng = Math.max(filters.fromLng, filters.toLng) + GEO_PREFILTER_DEG;
+
+        query.$or = [
+          { 'route.from.lat': { $gte: minLat, $lte: maxLat }, 'route.from.lng': { $gte: minLng, $lte: maxLng } },
+          { 'route.to.lat': { $gte: minLat, $lte: maxLat }, 'route.to.lng': { $gte: minLng, $lte: maxLng } },
+          { 'route.waypoints': { $elemMatch: { lat: { $gte: minLat, $lte: maxLat }, lng: { $gte: minLng, $lte: maxLng } } } },
+        ];
+        logger.info(`[SEARCH] Geo pre-filter: lat[${minLat.toFixed(2)},${maxLat.toFixed(2)}] lng[${minLng.toFixed(2)},${maxLng.toFixed(2)}]`);
+      }
+
       logger.info(`[SEARCH] MongoDB query: ${JSON.stringify(query)}`);
 
-      // Get all matching offers first
       let offers = await PoolingOffer.find(query).sort({ createdAt: -1 });
       
       logger.info(`[SEARCH] Found ${offers.length} offers matching date/status/vehicle filters`);
@@ -420,7 +484,6 @@ class PoolingService {
       }
 
       // Filter by location if provided
-      // Uses road-aware matching with polyline fallback
       if (filters.fromLat && filters.fromLng && filters.toLat && filters.toLng) {
         const passengerFromLat = filters.fromLat;
         const passengerFromLng = filters.fromLng;
@@ -428,32 +491,127 @@ class PoolingService {
         const passengerToLng = filters.toLng;
 
         logger.info(
-          `🔍 Filtering offers for passenger route: ` +
+          `🔍 Filtering ${offers.length} offers for passenger route: ` +
           `(${passengerFromLat},${passengerFromLng}) → (${passengerToLat},${passengerToLng})`
         );
 
-        // Filter offers using road-aware matching with polyline fallback
         const offersWithMatch = await Promise.all(
           offers.map(async (offer) => {
-            logger.error(`[DEBUG] Evaluating offer ${offer.offerId}`);
-            
-            const driverFromLat = offer.route.from.lat;
-            const driverFromLng = offer.route.from.lng;
-            const driverToLat = offer.route.to.lat;
-            const driverToLng = offer.route.to.lng;
-
-            logger.info(
-              `🔍 Checking offer: Driver ${offer.route.from.address} (${driverFromLat},${driverFromLng}) → ` +
-              `${offer.route.to.address} (${driverToLat},${driverToLng})`
-            );
-
             let matchingConfidence: number | undefined = undefined;
 
-            // Try road-aware matching first if road segments are available
-            if (offer.route.roadSegments && offer.route.roadSegments.length > 0) {
-              const segments = offer.route.roadSegments;
-              logger.error(`[DEBUG] Offer ${offer.offerId} has ${segments.length} road segments - using road-aware matching`);
-              
+            // ── Universal direction check: reject pickup BEFORE source or drop AFTER destination ──
+            const src = offer.route.from;
+            const dest = offer.route.to;
+            // Use first waypoint or destination as the "forward" reference
+            const fwdRef = (offer.route.waypoints && offer.route.waypoints.length > 0)
+              ? offer.route.waypoints.sort((a: any, b: any) => a.order - b.order)[0]
+              : dest;
+            // Forward vector from source
+            const fwdLat = fwdRef.lat - src.lat;
+            const fwdLng = fwdRef.lng - src.lng;
+            // Vector from source to passenger pickup
+            const pickupDotProduct = fwdLat * (passengerFromLat - src.lat) + fwdLng * (passengerFromLng - src.lng);
+
+            if (pickupDotProduct < 0) {
+              logger.info(
+                `❌ DIRECTION REJECT: ${offer.offerId} — passenger pickup (${passengerFromLat.toFixed(4)}, ${passengerFromLng.toFixed(4)}) ` +
+                `is BEHIND driver source (${src.lat.toFixed(4)}, ${src.lng.toFixed(4)}), dot=${pickupDotProduct.toFixed(4)}`
+              );
+              return { offer, match: false };
+            }
+
+            // Backward reference: last waypoint or source
+            const bwdRef = (offer.route.waypoints && offer.route.waypoints.length > 0)
+              ? offer.route.waypoints.sort((a: any, b: any) => b.order - a.order)[0]
+              : src;
+            // Arrival vector into destination
+            const arrLat = dest.lat - bwdRef.lat;
+            const arrLng = dest.lng - bwdRef.lng;
+            // Overshoot vector from destination to passenger drop
+            const dropDotProduct = arrLat * (passengerToLat - dest.lat) + arrLng * (passengerToLng - dest.lng);
+
+            if (dropDotProduct > 0) {
+              logger.info(
+                `❌ DIRECTION REJECT: ${offer.offerId} — passenger drop (${passengerToLat.toFixed(4)}, ${passengerToLng.toFixed(4)}) ` +
+                `is PAST driver destination (${dest.lat.toFixed(4)}, ${dest.lng.toFixed(4)}), dot=${dropDotProduct.toFixed(4)}`
+              );
+              return { offer, match: false };
+            }
+
+            const hasWaypoints = offer.route.waypoints && offer.route.waypoints.length > 0;
+
+            // --- Strategy 1: Waypoint matching (BlaBlaCar-style, primary) ---
+            if (hasWaypoints) {
+              const wps = offer.route.waypoints!;
+              const searchablePoints = [
+                { lat: offer.route.from.lat, lng: offer.route.from.lng, order: -1, label: 'SOURCE' },
+                ...wps.map((wp: any) => ({
+                  lat: wp.lat, lng: wp.lng, order: wp.order,
+                  label: wp.city || wp.address?.split(',')[0] || `WP${wp.order}`,
+                })),
+                { lat: offer.route.to.lat, lng: offer.route.to.lng, order: wps.length + 1, label: 'DEST' },
+              ].sort((a: any, b: any) => a.order - b.order);
+
+              const driverRouteDistKm = calculateDistance(
+                offer.route.from.lat, offer.route.from.lng,
+                offer.route.to.lat, offer.route.to.lng
+              );
+
+              // BlaBlaCar-style radius: city-level matching, generous for long routes
+              let waypointRadius: number;
+              if (driverRouteDistKm < 30) waypointRadius = 5;
+              else if (driverRouteDistKm < 100) waypointRadius = 15;
+              else if (driverRouteDistKm < 200) waypointRadius = 25;
+              else if (driverRouteDistKm < 400) waypointRadius = 35;
+              else waypointRadius = 45;
+
+              let bestPickup = { dist: Infinity, order: -1, label: '' };
+              let bestDrop = { dist: Infinity, order: -1, label: '' };
+
+              for (const pt of searchablePoints) {
+                const pickupDist = calculateDistance(passengerFromLat, passengerFromLng, pt.lat, pt.lng);
+                if (pickupDist < bestPickup.dist) {
+                  bestPickup = { dist: pickupDist, order: pt.order, label: (pt as any).label };
+                }
+                const dropDist = calculateDistance(passengerToLat, passengerToLng, pt.lat, pt.lng);
+                if (dropDist < bestDrop.dist) {
+                  bestDrop = { dist: dropDist, order: pt.order, label: (pt as any).label };
+                }
+              }
+
+              logger.info(
+                `[WAYPOINT-MATCH] ${offer.offerId}: route=${driverRouteDistKm.toFixed(0)}km, radius=${waypointRadius}km, ` +
+                `points=[${searchablePoints.map((p: any) => p.label).join(' → ')}], ` +
+                `bestPickup=${bestPickup.label}(${bestPickup.dist.toFixed(1)}km, order=${bestPickup.order}), ` +
+                `bestDrop=${bestDrop.label}(${bestDrop.dist.toFixed(1)}km, order=${bestDrop.order})`
+              );
+
+              if (
+                bestPickup.dist <= waypointRadius &&
+                bestDrop.dist <= waypointRadius &&
+                bestPickup.order < bestDrop.order
+              ) {
+                matchingConfidence = 0.9;
+                logger.info(
+                  `✅ MATCH: ${offer.offerId} (waypoint match, pickup near ${bestPickup.label} ${bestPickup.dist.toFixed(1)}km, drop near ${bestDrop.label} ${bestDrop.dist.toFixed(1)}km)`
+                );
+                (offer as any).matchingConfidence = matchingConfidence;
+                return { offer, match: true };
+              } else {
+                const reasons: string[] = [];
+                if (bestPickup.dist > waypointRadius) reasons.push(`pickup too far: ${bestPickup.dist.toFixed(1)}km > ${waypointRadius}km`);
+                if (bestDrop.dist > waypointRadius) reasons.push(`drop too far: ${bestDrop.dist.toFixed(1)}km > ${waypointRadius}km`);
+                if (bestPickup.order >= bestDrop.order) reasons.push(`wrong order: pickup(${bestPickup.order}) >= drop(${bestDrop.order})`);
+                logger.info(`[WAYPOINT-MATCH] ${offer.offerId}: ❌ FAILED — ${reasons.join(', ')}`);
+              }
+
+              // For offers with waypoints, skip road-aware entirely (BlaBlaCar doesn't use road names)
+              // Fall through to polyline as final fallback
+            }
+
+            // --- Strategy 2: Road-aware matching (ONLY for offers WITHOUT waypoints) ---
+            let roadAwareAccepted = false;
+            if (!hasWaypoints && offer.route.roadSegments && offer.route.roadSegments.length > 0) {
               try {
                 const roadMatch = await roadMatchingService.validateRoadAwareMatch(
                   offer.route.roadSegments,
@@ -461,46 +619,26 @@ class PoolingService {
                   passengerFromLng,
                   passengerToLat,
                   passengerToLng,
-                  false // hasRecentDeviation
+                  false
                 );
 
                 matchingConfidence = roadMatch.confidence;
-                logger.error(`[DEBUG] Calculated confidence score = ${matchingConfidence.toFixed(2)} for offer ${offer.offerId}`);
 
-                // High confidence: Accept match immediately
-                if (roadMatch.confidence >= 0.8 && roadMatch.isValid) {
-                  logger.info(
-                    `✅ MATCH: Driver ${offer.route.from.address} → ${offer.route.to.address} (road-aware match, confidence=${roadMatch.confidence.toFixed(2)})`
-                  );
-                  (offer as any).matchingConfidence = matchingConfidence;
-                  return { offer, match: true };
-                }
-
-                // Medium confidence: Still accept
                 if (roadMatch.confidence >= 0.6 && roadMatch.isValid) {
                   logger.info(
-                    `   Medium confidence (${roadMatch.confidence.toFixed(2)}), but road-aware match is valid - accepting`
+                    `✅ MATCH: ${offer.offerId} (road-aware, confidence=${roadMatch.confidence.toFixed(2)})`
                   );
                   (offer as any).matchingConfidence = matchingConfidence;
+                  roadAwareAccepted = true;
                   return { offer, match: true };
-                } else {
-                  // Low confidence: Reject
-                  logger.error(`[DEBUG] Offer ${offer.offerId} rejected due to confidence < 0.6 (confidence=${roadMatch.confidence.toFixed(2)})`);
-                  return { offer, match: false };
                 }
               } catch (error) {
-                logger.warn(
-                  `Road-aware matching failed for offer ${offer.offerId}, using polyline fallback:`,
-                  error
-                );
-                // Continue to polyline fallback only if road-aware matching throws error
+                logger.warn(`Road-aware matching error for ${offer.offerId}, falling through to polyline`);
               }
-            } else {
-              logger.error(`[DEBUG] Offer ${offer.offerId} has NO road segments - will use polyline fallback`);
             }
 
-            // Fallback to polyline matching - ONLY if no road segments exist
-            if (!offer.route.roadSegments || offer.route.roadSegments.length === 0) {
+            // --- Strategy 3: Polyline fallback ---
+            if (!roadAwareAccepted) {
               const polylineMatch = isRouteOnPath(
                 passengerFromLat,
                 passengerFromLng,
@@ -510,26 +648,18 @@ class PoolingService {
               );
 
               if (polylineMatch) {
-                matchingConfidence = 0.5; // Default confidence for polyline-only matches
-                logger.info(
-                  `✅ MATCH: Driver ${offer.route.from.address} → ${offer.route.to.address} (polyline fallback match)`
-                );
+                matchingConfidence = matchingConfidence ?? 0.5;
+                logger.info(`✅ MATCH: ${offer.offerId} (polyline fallback)`);
                 (offer as any).matchingConfidence = matchingConfidence;
                 return { offer, match: true };
-              } else {
-                logger.info(
-                  `❌ NO MATCH: Driver ${offer.route.from.address} → ${offer.route.to.address} (polyline validation failed)`
-                );
-                return { offer, match: false };
               }
-            } else {
-              // Road segments exist but matching failed - don't fall back to polyline
-              return { offer, match: false };
             }
+
+            logger.info(`❌ NO MATCH: ${offer.offerId} (all strategies failed)`);
+            return { offer, match: false };
           })
         );
 
-        // Filter to only matched offers
         offers = offersWithMatch.filter((item) => item.match).map((item) => item.offer);
         
         logger.error(`[DEBUG] Final offers returned by search = ${offers.length}`);
@@ -710,7 +840,7 @@ class PoolingService {
   /**
    * Cancel offer
    */
-  async cancelOffer(offerId: string, driverId: string): Promise<void> {
+  async cancelOffer(offerId: string, driverId: string): Promise<{ deleted: boolean }> {
     try {
       const offer = await PoolingOffer.findOne({ offerId });
       if (!offer) {
@@ -721,12 +851,34 @@ class PoolingService {
         throw new ConflictError('You do not have permission to cancel this offer');
       }
 
-      offer.status = 'cancelled';
-      await offer.save();
+      if (offer.status === 'in_progress') {
+        throw new ConflictError('Cannot cancel an offer that is currently in progress');
+      }
 
-      logger.info(`Pooling offer cancelled: ${offerId}`);
+      // Check for active bookings
+      const activeBookings = await Booking.countDocuments({
+        poolingOfferId: offerId,
+        status: { $in: ['pending', 'confirmed', 'in_progress'] },
+      });
+
+      if (activeBookings > 0) {
+        throw new ConflictError(
+          `Cannot delete this offer — ${activeBookings} passenger(s) have active bookings. Cancel their bookings first or complete the trip.`
+        );
+      }
+
+      // No active bookings — safe to fully delete
+      await PoolingOffer.deleteOne({ offerId });
+      // Also clean up any old cancelled/completed bookings referencing this offer
+      await Booking.updateMany(
+        { poolingOfferId: offerId, status: { $in: ['cancelled', 'completed'] } },
+        { $set: { status: 'cancelled' } }
+      );
+
+      logger.info(`Pooling offer deleted: ${offerId} (no active bookings)`);
+      return { deleted: true };
     } catch (error) {
-      logger.error('Error cancelling offer:', error);
+      logger.error('Error cancelling/deleting offer:', error);
       throw error;
     }
   }
@@ -770,6 +922,346 @@ class PoolingService {
     }
 
     return null;
+  }
+  /**
+   * Search for connected (multi-hop) rides when direct rides are unavailable.
+   * Chains two pooling offers through a transfer point.
+   */
+  async searchConnectedOffers(filters: {
+    fromLat: number;
+    fromLng: number;
+    toLat: number;
+    toLng: number;
+    date?: Date;
+    time?: string;
+    vehicleType?: 'car' | 'bike' | 'scooty';
+    pinkOnly?: boolean;
+  }): Promise<{
+    direct: any[];
+    connected: any[];
+    totalDirect: number;
+    totalConnected: number;
+  }> {
+    try {
+      logger.info(`[CONNECTED-SEARCH] ========== searchConnectedOffers ==========`);
+      logger.info(`[CONNECTED-SEARCH] from=(${filters.fromLat}, ${filters.fromLng}), to=(${filters.toLat}, ${filters.toLng})`);
+
+      // 1. Run direct search first
+      const directResult = await this.searchOffers({
+        fromLat: filters.fromLat,
+        fromLng: filters.fromLng,
+        toLat: filters.toLat,
+        toLng: filters.toLng,
+        date: filters.date,
+        time: filters.time,
+        vehicleType: filters.vehicleType,
+        pinkOnly: filters.pinkOnly,
+        limit: 20,
+      });
+
+      // If plenty of direct results, skip connected search
+      if (directResult.offers.length >= 3) {
+        logger.info(`[CONNECTED-SEARCH] ${directResult.offers.length} direct offers found, skipping connected search`);
+        return {
+          direct: directResult.offers,
+          connected: [],
+          totalDirect: directResult.total,
+          totalConnected: 0,
+        };
+      }
+
+      // 2. Build date query for candidate offers
+      const dateQuery: any = {};
+      if (filters.date) {
+        const dateVal = new Date(filters.date);
+        if (!isNaN(dateVal.getTime())) {
+          const dateStart = new Date(dateVal);
+          dateStart.setUTCHours(0, 0, 0, 0);
+          const dateEnd = new Date(dateVal);
+          dateEnd.setUTCHours(23, 59, 59, 999);
+          dateQuery.date = { $gte: dateStart, $lt: dateEnd };
+        }
+      } else {
+        const now = new Date();
+        now.setUTCHours(0, 0, 0, 0);
+        dateQuery.date = { $gte: now };
+      }
+
+      const baseQuery: any = {
+        status: { $in: ['active', 'pending'] },
+        availableSeats: { $gt: 0 },
+        ...dateQuery,
+      };
+
+      if (filters.vehicleType) {
+        baseQuery['vehicle.type'] = filters.vehicleType.toLowerCase();
+      }
+      if (filters.pinkOnly) {
+        baseQuery.isPinkPooling = true;
+      }
+
+      // #region agent log
+      fetch('http://127.0.0.1:7775/ingest/9bdd2fd3-ac77-45be-b342-a40ab02f34f7',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'cb7cf5'},body:JSON.stringify({sessionId:'cb7cf5',location:'pooling.service.ts:connSearch-dateQuery',message:'Connected search date query + base query',data:{dateQuery,baseQuery,filtersDate:filters.date},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+
+      // 3. Find ALL active offers for this date range
+      const allOffers = await PoolingOffer.find(baseQuery).lean();
+      logger.info(`[CONNECTED-SEARCH] Total active offers in date range: ${allOffers.length}`);
+
+      if (allOffers.length < 2) {
+        return {
+          direct: directResult.offers,
+          connected: [],
+          totalDirect: directResult.total,
+          totalConnected: 0,
+        };
+      }
+
+      const ROUTE_PROXIMITY_KM = 5;
+      const TRANSFER_RADIUS_KM = 10;
+
+      // Compute accurate route distance from polyline when route.distance is missing
+      const getAccurateRouteKm = (offer: any): number => {
+        if (offer.route.distance && offer.route.distance > 0) return offer.route.distance;
+        if (offer.route.polyline?.length > 1) {
+          let totalKm = 0;
+          const pts = offer.route.polyline;
+          const step = Math.max(1, Math.floor(pts.length / 500));
+          for (let i = step; i < pts.length; i += step) {
+            totalKm += calculateDistance(pts[i - step].lat, pts[i - step].lng, pts[i].lat, pts[i].lng);
+          }
+          // Add last segment
+          const last = pts[pts.length - 1];
+          const prevIdx = Math.floor((pts.length - 1) / step) * step;
+          if (prevIdx < pts.length - 1) {
+            totalKm += calculateDistance(pts[prevIdx].lat, pts[prevIdx].lng, last.lat, last.lng);
+          }
+          return totalKm;
+        }
+        return calculateDistance(
+          offer.route.from.lat, offer.route.from.lng,
+          offer.route.to.lat, offer.route.to.lng
+        ) * 1.3;
+      };
+
+      // Helper: find minimum distance from a point to any polyline point or route key points
+      const minDistToRoutePolyline = (lat: number, lng: number, offer: any): number => {
+        let minDist = Infinity;
+
+        // Check from/to
+        const dFrom = calculateDistance(lat, lng, offer.route.from.lat, offer.route.from.lng);
+        if (dFrom < minDist) minDist = dFrom;
+        const dTo = calculateDistance(lat, lng, offer.route.to.lat, offer.route.to.lng);
+        if (dTo < minDist) minDist = dTo;
+
+        // Check waypoints
+        if (offer.route.waypoints?.length) {
+          for (const wp of offer.route.waypoints) {
+            const d = calculateDistance(lat, lng, wp.lat, wp.lng);
+            if (d < minDist) minDist = d;
+          }
+        }
+
+        // Check polyline (sample every 10th point for performance on long polylines)
+        if (offer.route.polyline?.length) {
+          const step = Math.max(1, Math.floor(offer.route.polyline.length / 200));
+          for (let i = 0; i < offer.route.polyline.length; i += step) {
+            const p = offer.route.polyline[i];
+            const d = calculateDistance(lat, lng, p.lat, p.lng);
+            if (d < minDist) minDist = d;
+          }
+          // Always check the last point
+          const last = offer.route.polyline[offer.route.polyline.length - 1];
+          const dLast = calculateDistance(lat, lng, last.lat, last.lng);
+          if (dLast < minDist) minDist = dLast;
+        }
+
+        return minDist;
+      };
+
+      // Dynamic radius: for long routes use larger radius, min 10km, max 50km
+      const getDynamicRadius = (offer: any): number => {
+        const routeKm = getAccurateRouteKm(offer);
+        const radius = Math.max(10, Math.min(50, routeKm * 0.2));
+        return radius;
+      };
+
+      // #region agent log
+      for (const o of allOffers) {
+        const dFrom = minDistToRoutePolyline(filters.fromLat, filters.fromLng, o);
+        const dynRadius = getDynamicRadius(o);
+        logger.info(`[CONNECTED-SEARCH]   ${o.offerId}: ${o.route.from.city||o.route.from.address} → ${o.route.to.city||o.route.to.address}, accurateKm=${getAccurateRouteKm(o).toFixed(0)}, distFromPassengerFrom=${dFrom.toFixed(1)}km, dynRadius=${dynRadius.toFixed(1)}km`);
+      }
+      // #endregion
+
+      // 4. Find Leg 1 candidates: passenger FROM is near the offer's route (polyline-based)
+      const leg1Candidates = allOffers.filter((offer) => {
+        const minDist = minDistToRoutePolyline(filters.fromLat, filters.fromLng, offer);
+        const radius = getDynamicRadius(offer);
+        return minDist <= radius;
+      });
+
+      logger.info(`[CONNECTED-SEARCH] Leg 1 candidates (polyline proximity): ${leg1Candidates.length}`);
+
+      const connected: any[] = [];
+
+      const AVG_SPEED_KMH = 65;
+
+      for (const leg1 of leg1Candidates) {
+        // Transfer point = Leg 1 DESTINATION (where the driver actually stops)
+        const transferLat = leg1.route.to.lat;
+        const transferLng = leg1.route.to.lng;
+
+        // Skip if transfer point is already the passenger's final destination
+        const transferToDestDist = calculateDistance(transferLat, transferLng, filters.toLat, filters.toLng);
+        if (transferToDestDist < 10) {
+          logger.info(`[CONNECTED-SEARCH] Skip Leg1=${leg1.offerId} (${leg1.route.from.city}→${leg1.route.to.city}): transfer=destination (${transferToDestDist.toFixed(1)}km)`);
+          continue;
+        }
+
+        // Skip if leg1 is circular (source near destination)
+        const leg1SrcToDestDist = calculateDistance(
+          leg1.route.from.lat, leg1.route.from.lng, transferLat, transferLng
+        );
+        if (leg1SrcToDestDist < 5) continue;
+
+        // 5. Find Leg 2: transfer point near Leg 2's route AND passenger destination near Leg 2's route
+        const leg2Candidates = allOffers.filter((offer) => {
+          if (offer.offerId === leg1.offerId) return false;
+
+          const transferDist = minDistToRoutePolyline(transferLat, transferLng, offer);
+          if (transferDist > TRANSFER_RADIUS_KM) return false;
+
+          const dropDist = minDistToRoutePolyline(filters.toLat, filters.toLng, offer);
+          const radius = getDynamicRadius(offer);
+          return dropDist <= radius;
+        });
+
+        logger.info(`[CONNECTED-SEARCH] Leg1=${leg1.offerId} (${leg1.route.from.city}→${leg1.route.to.city}), transfer=${leg1.route.to.city||leg1.route.to.address}, Leg2 candidates: ${leg2Candidates.length}`);
+
+        if (leg2Candidates.length === 0) continue;
+
+        // 6. Time compatibility
+        const leg1DepartMinutes = this.parseTimeToMinutes(leg1.time);
+        if (leg1DepartMinutes === null) continue;
+
+        const leg1RouteKm = getAccurateRouteKm(leg1);
+        const leg1RouteDuration = Math.round((leg1RouteKm / AVG_SPEED_KMH) * 60);
+        const leg1ArrivalMinutes = leg1DepartMinutes + leg1RouteDuration;
+
+        // #region agent log
+        logger.info(`[CONNECTED-SEARCH] Leg1 ${leg1.offerId}: routeKm=${leg1RouteKm.toFixed(0)}, duration=${leg1RouteDuration}min, depart=${leg1DepartMinutes}min, arrive=${leg1ArrivalMinutes}min at ${leg1.route.to.city}`);
+        // #endregion
+
+        for (const leg2 of leg2Candidates) {
+          const leg2DepartMinutes = this.parseTimeToMinutes(leg2.time);
+          if (leg2DepartMinutes === null) continue;
+
+          const gapMinutes = leg2DepartMinutes - leg1ArrivalMinutes;
+
+          // #region agent log
+          logger.info(`[CONNECTED-SEARCH] Time: leg1 arrive=${leg1ArrivalMinutes}min at ${leg1.route.to.city}, leg2=${leg2.offerId} depart=${leg2DepartMinutes}min, gap=${gapMinutes}min`);
+          // #endregion
+
+          if (gapMinutes < -60 || gapMinutes > 300) continue;
+
+          const leg2RouteKm = getAccurateRouteKm(leg2);
+          const leg2RouteDuration = Math.round((leg2RouteKm / AVG_SPEED_KMH) * 60);
+          const leg2ArrivalMinutes = leg2DepartMinutes + leg2RouteDuration;
+          const totalDurationMinutes = leg2ArrivalMinutes - leg1DepartMinutes;
+
+          const BASE_RATES: Record<string, number> = { car: 8, bike: 5, scooty: 4 };
+          const PLATFORM_FEE_RATE = 0.10;
+          const leg1VType = (leg1.vehicle?.type || 'car').toLowerCase();
+          const leg2VType = (leg2.vehicle?.type || 'car').toLowerCase();
+          const leg1Dist = calculateDistance(leg1.route.from.lat, leg1.route.from.lng, leg1.route.to.lat, leg1.route.to.lng);
+          const leg2Dist = calculateDistance(leg2.route.from.lat, leg2.route.from.lng, leg2.route.to.lat, leg2.route.to.lng);
+          const leg1Base = Math.round(leg1Dist * (BASE_RATES[leg1VType] || 5));
+          const leg2Base = Math.round(leg2Dist * (BASE_RATES[leg2VType] || 5));
+          const leg1Fee = Math.max(Math.round(leg1Base * PLATFORM_FEE_RATE), 5);
+          const leg2Fee = Math.max(Math.round(leg2Base * PLATFORM_FEE_RATE), 5);
+          const leg1Price = leg1Base + leg1Fee;
+          const leg2Price = leg2Base + leg2Fee;
+          const totalPrice = leg1Price + leg2Price;
+
+          const formatTime = (mins: number): string => {
+            const h = Math.floor(mins / 60) % 24;
+            const m = mins % 60;
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+            return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
+          };
+
+          const formatDuration = (mins: number): string => {
+            const h = Math.floor(mins / 60);
+            const m = mins % 60;
+            if (h === 0) return `${m} min`;
+            if (m === 0) return `${h} hr`;
+            return `${h} hr ${m} min`;
+          };
+
+          connected.push({
+            type: 'connected',
+            totalLegs: 2,
+            totalPrice,
+            totalDuration: formatDuration(totalDurationMinutes),
+            totalDurationMinutes,
+            transferPoint: {
+              address: leg1.route.to.address || 'Transfer Point',
+              lat: transferLat,
+              lng: transferLng,
+              city: leg1.route.to.city || '',
+            },
+            waitTime: formatDuration(Math.max(0, gapMinutes)),
+            waitTimeMinutes: Math.max(0, gapMinutes),
+            legs: [
+              {
+                legNumber: 1,
+                offer: leg1,
+                from: leg1.route.from,
+                to: leg1.route.to,
+                departureTime: leg1.time,
+                arrivalTime: formatTime(leg1ArrivalMinutes),
+                duration: formatDuration(leg1RouteDuration),
+                durationMinutes: leg1RouteDuration,
+                price: leg1Price,
+              },
+              {
+                legNumber: 2,
+                offer: leg2,
+                from: leg2.route.from,
+                to: leg2.route.to,
+                departureTime: leg2.time,
+                arrivalTime: formatTime(leg2ArrivalMinutes),
+                duration: formatDuration(leg2RouteDuration),
+                durationMinutes: leg2RouteDuration,
+                price: leg2Price,
+              },
+            ],
+          });
+        }
+      }
+
+      connected.sort((a, b) => {
+        if (a.totalDurationMinutes !== b.totalDurationMinutes) {
+          return a.totalDurationMinutes - b.totalDurationMinutes;
+        }
+        return a.totalPrice - b.totalPrice;
+      });
+
+      const topConnected = connected.slice(0, 5);
+      logger.info(`[CONNECTED-SEARCH] Found ${connected.length} connected rides, returning top ${topConnected.length}`);
+
+      return {
+        direct: directResult.offers,
+        connected: topConnected,
+        totalDirect: directResult.total,
+        totalConnected: topConnected.length,
+      };
+    } catch (error) {
+      logger.error('[CONNECTED-SEARCH] Error:', error);
+      throw error;
+    }
   }
 }
 

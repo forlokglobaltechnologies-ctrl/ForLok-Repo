@@ -10,10 +10,14 @@ import {
   Alert,
   Image,
   ActivityIndicator,
+  Modal,
+  FlatList,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useIsFocused } from '@react-navigation/native';
 import { ArrowLeft, Camera, CheckCircle } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
+
+const ACCENT = '#F9A825';
 import { Button } from '@components/common/Button';
 import { Input } from '@components/common/Input';
 import {
@@ -35,9 +39,21 @@ interface RouteParams {
   onComplete?: () => void;
 }
 
+const INDIAN_STATES = [
+  'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
+  'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand',
+  'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur',
+  'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab',
+  'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura',
+  'Uttar Pradesh', 'Uttarakhand', 'West Bengal',
+  'Andaman and Nicobar Islands', 'Chandigarh', 'Dadra and Nagar Haveli and Daman and Diu',
+  'Delhi', 'Jammu and Kashmir', 'Ladakh', 'Lakshadweep', 'Puducherry',
+];
+
 const DocumentVerificationScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
+  const isFocused = useIsFocused();
   const { t } = useLanguage();
   const params = (route.params as RouteParams) || { serviceType: 'createPooling' };
 
@@ -50,7 +66,10 @@ const DocumentVerificationScreen = () => {
   const [panVerified, setPanVerified] = useState(false);
   const [dlNumber, setDlNumber] = useState('');
   const [dlDob, setDlDob] = useState('');
+  const [dlDobDate, setDlDobDate] = useState<Date | null>(null);
+  const [showDlDobPicker, setShowDlDobPicker] = useState(false);
   const [dlState, setDlState] = useState('');
+  const [showStatePicker, setShowStatePicker] = useState(false);
   const [dlVerified, setDlVerified] = useState(false);
   
   // Image upload states (for vehicle docs, user photo)
@@ -121,7 +140,14 @@ const DocumentVerificationScreen = () => {
           );
           if (dlDoc && dlDoc.status === 'verified') {
             setDlNumber(dlDoc.documentNumber || '');
-            setDlDob(dlDoc.metadata?.dob || '');
+            const savedDob = dlDoc.metadata?.dob || '';
+            setDlDob(savedDob);
+            if (savedDob) {
+              const parts = savedDob.split('/');
+              if (parts.length === 3) {
+                setDlDobDate(new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0])));
+              }
+            }
             setDlState(dlDoc.metadata?.state || '');
             setDlVerified(true);
           }
@@ -180,6 +206,20 @@ const DocumentVerificationScreen = () => {
     
     loadDocuments();
   }, [serviceType]);
+
+  useEffect(() => {
+    if (!isFocused) return;
+    const refreshVehicles = async () => {
+      try {
+        const vehiclesResponse = await vehicleApi.getVehicles();
+        if (vehiclesResponse.success && vehiclesResponse.data && vehiclesResponse.data.length > 0) {
+          setExistingVehicles(vehiclesResponse.data);
+          setVehicleAlreadyExists(true);
+        }
+      } catch (_e) { /* ignore */ }
+    };
+    refreshVehicles();
+  }, [isFocused]);
 
   const getScreenTitle = () => {
     return t('documentVerification.title');
@@ -298,7 +338,7 @@ const DocumentVerificationScreen = () => {
             onPress: async () => {
               const result = await ImagePicker.launchCameraAsync({
                 mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                allowsEditing: true,
+                allowsEditing: false,
                 quality: 0.8,
               });
 
@@ -312,7 +352,7 @@ const DocumentVerificationScreen = () => {
             onPress: async () => {
               const result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                allowsEditing: true,
+                allowsEditing: false,
                 quality: 0.8,
               });
 
@@ -345,7 +385,7 @@ const DocumentVerificationScreen = () => {
               }
               const result = await ImagePicker.launchCameraAsync({
                 mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                allowsEditing: true,
+                allowsEditing: false,
                 quality: 0.8,
               });
               if (!result.canceled && result.assets[0]) {
@@ -363,7 +403,7 @@ const DocumentVerificationScreen = () => {
               }
               const result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                allowsEditing: true,
+                allowsEditing: false,
                 quality: 0.8,
               });
               if (!result.canceled && result.assets[0]) {
@@ -570,39 +610,13 @@ const DocumentVerificationScreen = () => {
         return;
       }
 
-      if (requiredDocs.needsVehicleInfo) {
-        if (!vehicleAlreadyExists) {
-          if (!vehicleType) {
-            Alert.alert('Missing Information', 'Please select vehicle type (Car or Bike)');
-            return;
-          }
-          if (!vehicleNumber.trim()) {
-            Alert.alert('Missing Information', 'Please enter your vehicle number');
-            return;
-          }
-          if (!vehicleBrand.trim()) {
-            Alert.alert('Missing Information', 'Please enter vehicle brand');
-            return;
-          }
-          if (!vehicleFront || !vehicleBack) {
-            Alert.alert('Missing Documents', 'Please upload both front and back photos of your vehicle');
-            return;
-          }
-          if (!insurance) {
-            Alert.alert('Missing Documents', 'Please upload your insurance papers');
-            return;
-          }
-        } else {
-          // Vehicle already exists, just need to verify documents are uploaded
-          if (!vehicleFront || !vehicleBack) {
-            Alert.alert('Missing Documents', 'Please upload both front and back photos of your vehicle');
-            return;
-          }
-          if (!insurance) {
-            Alert.alert('Missing Documents', 'Please upload your insurance papers');
-            return;
-          }
-        }
+      if (requiredDocs.needsVehicleInfo && !vehicleAlreadyExists) {
+        Alert.alert(
+          'Vehicle Required',
+          'Please add your vehicle first using the "Add Vehicle" button.',
+          [{ text: 'OK' }]
+        );
+        return;
       }
 
       console.log('✅ Validation passed, setting isSubmitting to true');
@@ -920,13 +934,11 @@ const DocumentVerificationScreen = () => {
     >
       <View style={styles.header}>
         <TouchableOpacity
-          onPress={() => {
-            // Navigate to dashboard
-            navigation.navigate('MainDashboard' as never);
-          }}
-          style={styles.backButton}
+          onPress={() => navigation.navigate('MainDashboard' as never)}
+          style={styles.backBtn}
+          activeOpacity={0.7}
         >
-          <ArrowLeft size={24} color={COLORS.primary} />
+          <ArrowLeft size={22} color="#1A1A1A" />
         </TouchableOpacity>
       </View>
 
@@ -1023,22 +1035,49 @@ const DocumentVerificationScreen = () => {
                   containerStyle={styles.input}
                   editable={!dlVerified}
                 />
-                <Input
-                  label="Date of Birth"
-                  value={dlDob}
-                  onChangeText={setDlDob}
-                  placeholder="DD/MM/YYYY"
-                  containerStyle={styles.input}
-                  editable={!dlVerified}
-                />
-                <Input
-                  label="State"
-                  value={dlState}
-                  onChangeText={setDlState}
-                  placeholder="Enter state"
-                  containerStyle={styles.input}
-                  editable={!dlVerified}
-                />
+                <View style={styles.input}>
+                  <Text style={styles.fieldLabel}>Date of Birth</Text>
+                  <TouchableOpacity
+                    style={styles.datePickerBtn}
+                    onPress={() => !dlVerified && setShowDlDobPicker(true)}
+                    activeOpacity={dlVerified ? 1 : 0.7}
+                  >
+                    <Text style={[styles.datePickerText, !dlDob && styles.datePickerPlaceholder]}>
+                      {dlDob || 'Select date of birth'}
+                    </Text>
+                  </TouchableOpacity>
+                  {showDlDobPicker && (
+                    <DateTimePicker
+                      value={dlDobDate || new Date(2000, 0, 1)}
+                      mode="date"
+                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                      maximumDate={new Date()}
+                      minimumDate={new Date(1940, 0, 1)}
+                      onChange={(event, selectedDate) => {
+                        setShowDlDobPicker(Platform.OS === 'ios');
+                        if (selectedDate) {
+                          setDlDobDate(selectedDate);
+                          const dd = String(selectedDate.getDate()).padStart(2, '0');
+                          const mm = String(selectedDate.getMonth() + 1).padStart(2, '0');
+                          const yyyy = selectedDate.getFullYear();
+                          setDlDob(`${dd}/${mm}/${yyyy}`);
+                        }
+                      }}
+                    />
+                  )}
+                </View>
+                <View style={styles.input}>
+                  <Text style={styles.fieldLabel}>State</Text>
+                  <TouchableOpacity
+                    style={styles.datePickerBtn}
+                    onPress={() => !dlVerified && setShowStatePicker(true)}
+                    activeOpacity={dlVerified ? 1 : 0.7}
+                  >
+                    <Text style={[styles.datePickerText, !dlState && styles.datePickerPlaceholder]}>
+                      {dlState || 'Select state'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
                 {dlVerified ? (
                   <View style={styles.verifiedBadge}>
                     <CheckCircle size={20} color={COLORS.success} />
@@ -1071,239 +1110,69 @@ const DocumentVerificationScreen = () => {
                   </View>
                 ) : (
                   <>
-                    <Text style={styles.sectionTitle}>Vehicle Information</Text>
-                    <Input
-                      label="Vehicle Type *"
-                      value={vehicleType === 'car' ? 'Car' : vehicleType === 'bike' ? 'Bike' : ''}
-                      placeholder="Select vehicle type"
-                      editable={false}
-                      containerStyle={styles.input}
-                    />
-                    <View style={styles.vehicleTypeContainer}>
-                      <TouchableOpacity
-                        style={[styles.vehicleTypeButton, vehicleType === 'car' && styles.vehicleTypeSelected]}
-                        onPress={() => setVehicleType('car')}
-                      >
-                        <Text style={[styles.vehicleTypeText, vehicleType === 'car' && styles.vehicleTypeTextSelected]}>Car</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.vehicleTypeButton, vehicleType === 'bike' && styles.vehicleTypeSelected]}
-                        onPress={() => setVehicleType('bike')}
-                      >
-                        <Text style={[styles.vehicleTypeText, vehicleType === 'bike' && styles.vehicleTypeTextSelected]}>Bike</Text>
-                      </TouchableOpacity>
-                    </View>
-                    <Input
-                      label={t('documentVerification.vehicleNumber')}
-                      value={vehicleNumber}
-                      onChangeText={setVehicleNumber}
-                      placeholder={t('documentVerification.vehicleNumber')}
-                      containerStyle={styles.input}
-                    />
-                    <Input
-                      label="Vehicle Brand *"
-                      value={vehicleBrand}
-                      onChangeText={setVehicleBrand}
-                      placeholder="e.g., Honda, Maruti, Hyundai"
-                      containerStyle={styles.input}
-                    />
-                    <Input
-                      label="Vehicle Model *"
-                      value={vehicleModel}
-                      onChangeText={setVehicleModel}
-                      placeholder="e.g., City, Swift, Creta"
-                      containerStyle={styles.input}
-                    />
-                    
-                    {/* Year Picker */}
-                    <View style={styles.input}>
-                      <Text style={styles.label}>Year of Manufacture *</Text>
-                      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.yearScroll}>
-                        {Array.from({ length: 20 }, (_, i) => new Date().getFullYear() - i).map((y) => (
-                          <TouchableOpacity
-                            key={y}
-                            style={[styles.yearButton, vehicleYear === y && styles.yearButtonSelected]}
-                            onPress={() => setVehicleYear(y)}
-                          >
-                            <Text style={[styles.yearText, vehicleYear === y && styles.yearTextSelected]}>{y}</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </ScrollView>
-                    </View>
-
-                    <Input
-                      label="Color"
-                      value={vehicleColor}
-                      onChangeText={setVehicleColor}
-                      placeholder="e.g., White, Black, Red"
-                      containerStyle={styles.input}
-                    />
-
-                    {/* Seats */}
-                    <View style={styles.input}>
-                      <Text style={styles.label}>Number of Seats *</Text>
-                      {vehicleType === 'bike' ? (
-                        <View style={styles.seatsContainer}>
-                          <View style={[styles.seatButton, styles.seatButtonSelected, styles.seatButtonDisabled]}>
-                            <Text style={[styles.seatText, styles.seatTextSelected]}>2</Text>
-                          </View>
-                          <Text style={styles.bikeSeatsNote}>Bikes have 2 seats (rider + pillion)</Text>
-                        </View>
-                      ) : (
-                        <View style={styles.seatsContainer}>
-                          {[2, 3, 4, 5, 6, 7, 8].map((s) => (
-                            <TouchableOpacity
-                              key={s}
-                              style={[styles.seatButton, vehicleSeats === s && styles.seatButtonSelected]}
-                              onPress={() => setVehicleSeats(s)}
-                            >
-                              <Text style={[styles.seatText, vehicleSeats === s && styles.seatTextSelected]}>{s}</Text>
-                            </TouchableOpacity>
-                          ))}
-                        </View>
-                      )}
-                    </View>
-
-                    {/* Fuel Type */}
-                    <View style={styles.input}>
-                      <Text style={styles.label}>Fuel Type *</Text>
-                      <View style={styles.optionsRow}>
-                        {['Petrol', 'Diesel', 'Electric', 'CNG'].map((fuel) => (
-                          <TouchableOpacity
-                            key={fuel}
-                            style={[styles.optionButton, vehicleFuelType === fuel && styles.optionButtonSelected]}
-                            onPress={() => setVehicleFuelType(fuel as any)}
-                          >
-                            <Text style={[styles.optionText, vehicleFuelType === fuel && styles.optionTextSelected]}>
-                              {fuel}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    </View>
-
-                    {/* Transmission */}
-                    <View style={styles.input}>
-                      <Text style={styles.label}>Transmission *</Text>
-                      {vehicleType === 'bike' ? (
-                        <View>
-                          <View style={styles.optionsRow}>
-                            {['Manual', 'Automatic'].map((trans) => (
-                              <TouchableOpacity
-                                key={trans}
-                                style={[styles.optionButton, vehicleTransmission === trans && styles.optionButtonSelected]}
-                                onPress={() => setVehicleTransmission(trans as any)}
-                              >
-                                <Text style={[styles.optionText, vehicleTransmission === trans && styles.optionTextSelected]}>
-                                  {trans === 'Manual' ? 'Gear Bike' : 'Scooter/CVT'}
-                                </Text>
-                              </TouchableOpacity>
-                            ))}
-                          </View>
-                          <Text style={styles.bikeTransmissionNote}>
-                            Manual = Gear bikes | Automatic = Scooters/CVT
-                          </Text>
-                        </View>
-                      ) : (
-                        <View style={styles.optionsRow}>
-                          {['Manual', 'Automatic'].map((trans) => (
-                            <TouchableOpacity
-                              key={trans}
-                              style={[styles.optionButton, vehicleTransmission === trans && styles.optionButtonSelected]}
-                              onPress={() => setVehicleTransmission(trans as any)}
-                            >
-                              <Text style={[styles.optionText, vehicleTransmission === trans && styles.optionTextSelected]}>
-                                {trans}
-                              </Text>
-                            </TouchableOpacity>
-                          ))}
-                        </View>
-                      )}
-                    </View>
-
-                    {/* Insurance Expiry */}
-                    <TouchableOpacity onPress={() => setShowInsuranceDatePicker(true)} style={styles.input}>
-                      <Text style={styles.label}>Insurance Expiry Date *</Text>
-                      <View style={styles.dateInput}>
-                        <Text style={[styles.dateText, !insuranceExpiry && styles.datePlaceholder]}>
-                          {insuranceExpiry
-                            ? insuranceExpiry.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
-                            : 'Select date'}
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
-                    {showInsuranceDatePicker && (
-                      <DateTimePicker
-                        value={insuranceExpiry || new Date()}
-                        mode="date"
-                        display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                        onChange={(event, selectedDate) => {
-                          setShowInsuranceDatePicker(Platform.OS === 'ios');
-                          if (selectedDate) {
-                            setInsuranceExpiry(selectedDate);
-                          }
-                        }}
-                        minimumDate={new Date()}
+                    <View style={styles.addVehicleSection}>
+                      <Text style={styles.sectionTitle}>Vehicle Information</Text>
+                      <Text style={styles.addVehicleDesc}>
+                        Add your vehicle details to start offering rides. This uses the same form as the full Add Vehicle screen.
+                      </Text>
+                      <Button
+                        title="Add Vehicle"
+                        onPress={() => navigation.navigate('AddVehicle' as never)}
+                        variant="primary"
+                        size="medium"
                       />
-                    )}
+                    </View>
                   </>
                 )}
 
-                {/* Vehicle Documents */}
-                <View style={styles.documentsSection}>
-                  <Text style={styles.sectionTitle}>Vehicle Documents *</Text>
-                  {[
-                    { key: 'rc', label: 'Registration Certificate (RC)', doc: registrationCertificate },
-                    { key: 'insurance', label: 'Insurance Certificate', doc: insurance },
-                    { key: 'puc', label: 'Pollution Certificate (PUC)', doc: pollutionCertificate },
-                    { key: 'taxi', label: 'Taxi Service Papers', doc: taxiServicePapers, optional: true },
-                  ].map(({ key, label, doc, optional }) => (
-                    <View key={key} style={styles.documentRow}>
-                      <View style={styles.documentInfo}>
-                        <Text style={styles.documentLabel}>
-                          {label} {optional && '(Optional)'}
-                        </Text>
-                        {doc && <CheckCircle size={16} color={COLORS.success} />}
-                      </View>
-                      <TouchableOpacity
-                        style={styles.documentButton}
-                        onPress={() => (doc ? handleRemoveDocument(key as any) : handleDocumentPicker(key as any))}
-                        disabled={uploadingDocument === key}
-                      >
-                        {uploadingDocument === key ? (
-                          <ActivityIndicator size="small" color={COLORS.primary} />
-                        ) : doc ? (
-                          <Text style={styles.removeText}>Remove</Text>
-                        ) : (
-                          <Text style={styles.uploadText}>Upload</Text>
-                        )}
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                </View>
+                {/* Vehicle documents are handled in AddVehicle screen */}
               </>
             )}
           </>
         )}
       </ScrollView>
 
-      <View style={styles.buttonContainer}>
-        <Button
-          title={isSubmitting ? t('documentVerification.submitting') : t('documentVerification.submitContinue')}
+      <View style={styles.bottomBar}>
+        <TouchableOpacity
+          style={[styles.submitBtn, isSubmitting && styles.submitBtnDisabled]}
           onPress={handleSubmit}
-          variant="primary"
-          size="large"
-          style={styles.submitButton}
+          activeOpacity={0.85}
           disabled={isSubmitting}
-        />
-        {isSubmitting && (
-          <ActivityIndicator
-            size="small"
-            color={COLORS.primary}
-            style={styles.loader}
-          />
-        )}
+        >
+          {isSubmitting ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <Text style={styles.submitBtnText}>{t('documentVerification.submitContinue')}</Text>
+          )}
+        </TouchableOpacity>
       </View>
+      {/* State Picker Modal */}
+      <Modal visible={showStatePicker} transparent animationType="slide">
+        <View style={styles.stateModalOverlay}>
+          <View style={styles.stateModalContent}>
+            <View style={styles.stateModalHeader}>
+              <Text style={styles.stateModalTitle}>Select State</Text>
+              <TouchableOpacity onPress={() => setShowStatePicker(false)}>
+                <Text style={styles.stateModalClose}>Close</Text>
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={INDIAN_STATES}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[styles.stateItem, dlState === item && styles.stateItemSelected]}
+                  onPress={() => { setDlState(item); setShowStatePicker(false); }}
+                >
+                  <Text style={[styles.stateItemText, dlState === item && styles.stateItemTextSelected]}>{item}</Text>
+                  {dlState === item && <CheckCircle size={18} color={COLORS.primary} />}
+                </TouchableOpacity>
+              )}
+              showsVerticalScrollIndicator={false}
+            />
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 };
@@ -1311,16 +1180,20 @@ const DocumentVerificationScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.white,
+    backgroundColor: '#FFFFFF',
   },
   header: {
     paddingTop: hp(6),
-    paddingHorizontal: SPACING.md,
-    backgroundColor: COLORS.white,
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.sm,
   },
-  backButton: {
-    padding: SPACING.sm,
+  backBtn: {
     width: normalize(40),
+    height: normalize(40),
+    borderRadius: normalize(20),
+    backgroundColor: '#F5F5F5',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   scrollView: {
     flex: 1,
@@ -1331,31 +1204,29 @@ const styles = StyleSheet.create({
     paddingBottom: SPACING.xxl + normalize(80),
   },
   title: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xxl,
-    color: COLORS.primary,
-    marginBottom: SPACING.sm,
-    fontWeight: 'bold',
+    fontFamily: FONTS.bold,
+    fontSize: normalize(24),
+    color: '#1A1A1A',
+    marginBottom: SPACING.xs,
   },
   description: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
-    color: COLORS.textSecondary,
+    fontSize: FONTS.sizes.sm,
+    color: '#888888',
     marginBottom: SPACING.xl,
-    lineHeight: normalize(22),
+    lineHeight: normalize(20),
   },
   documentSection: {
-    marginBottom: SPACING.xl,
+    marginBottom: SPACING.lg,
     paddingBottom: SPACING.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.lightGray,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#E0E0E0',
   },
   documentTitle: {
-    fontFamily: FONTS.regular,
+    fontFamily: FONTS.semiBold,
     fontSize: FONTS.sizes.md,
-    color: COLORS.text,
+    color: '#1A1A1A',
     marginBottom: SPACING.md,
-    fontWeight: 'bold',
   },
   documentRow: {
     flexDirection: 'row',
@@ -1447,6 +1318,24 @@ const styles = StyleSheet.create({
     borderRadius: BORDER_RADIUS.md,
     marginBottom: SPACING.md,
   },
+  addVehicleSection: {
+    backgroundColor: '#F8F9FA',
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    marginBottom: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+  },
+  addVehicleDesc: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.sm,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    marginBottom: SPACING.md,
+    lineHeight: 20,
+  },
   infoLabel: {
     fontFamily: FONTS.medium,
     fontSize: FONTS.sizes.sm,
@@ -1495,23 +1384,58 @@ const styles = StyleSheet.create({
   input: {
     marginBottom: SPACING.md,
   },
-  buttonContainer: {
+  fieldLabel: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.sm,
+    color: COLORS.text,
+    marginBottom: SPACING.xs,
+    fontWeight: '500',
+  },
+  datePickerBtn: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: BORDER_RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: normalize(14),
+    backgroundColor: COLORS.white,
+  },
+  datePickerText: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.md,
+    color: COLORS.text,
+  },
+  datePickerPlaceholder: {
+    color: COLORS.textSecondary,
+  },
+  bottomBar: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: COLORS.white,
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: SPACING.lg,
     paddingTop: SPACING.md,
-    paddingBottom: SPACING.lg,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    paddingBottom: hp(3),
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#E0E0E0',
     zIndex: 1000,
-    elevation: 10, // For Android
-    ...SHADOWS.md,
+    elevation: 10,
   },
-  submitButton: {
-    width: '100%',
+  submitBtn: {
+    backgroundColor: ACCENT,
+    height: normalize(52),
+    borderRadius: normalize(26),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  submitBtnDisabled: {
+    opacity: 0.45,
+  },
+  submitBtnText: {
+    fontFamily: FONTS.semiBold,
+    fontSize: FONTS.sizes.lg,
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
   },
   verifiedBadge: {
     flexDirection: 'row',
@@ -1676,6 +1600,59 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.sm,
     color: COLORS.error,
+    fontWeight: '600',
+  },
+  stateModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  stateModalContent: {
+    backgroundColor: '#FFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '60%',
+    paddingBottom: Platform.OS === 'ios' ? 34 : 16,
+  },
+  stateModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: SPACING.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: COLORS.border,
+  },
+  stateModalTitle: {
+    fontFamily: FONTS.medium || FONTS.regular,
+    fontSize: FONTS.sizes.lg,
+    color: COLORS.text,
+    fontWeight: '700',
+  },
+  stateModalClose: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.md,
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
+  stateItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: SPACING.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#F0F0F0',
+  },
+  stateItemSelected: {
+    backgroundColor: COLORS.primary + '10',
+  },
+  stateItemText: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.md,
+    color: COLORS.text,
+  },
+  stateItemTextSelected: {
+    color: COLORS.primary,
     fontWeight: '600',
   },
 });

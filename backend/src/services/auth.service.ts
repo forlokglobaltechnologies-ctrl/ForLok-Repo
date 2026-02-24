@@ -75,7 +75,7 @@ class AuthService {
         const existingUser = await User.findOne({ phone: formattedPhone });
         if (existingUser) {
           console.error('❌ [AUTH SERVICE] User already exists:', formattedPhone);
-          throw new ConflictError('User already exists with this phone number');
+          throw new ConflictError('This phone number already exists');
         }
         console.log('✅ [AUTH SERVICE] User does not exist, proceeding with signup');
       }
@@ -315,7 +315,7 @@ class AuthService {
       // Check if user already exists
       const existingUser = await User.findOne({ phone: formattedPhone });
       if (existingUser) {
-        throw new ConflictError('User already exists with this phone number');
+        throw new ConflictError('This phone number already exists');
       }
 
       // Generate unique user ID (LKU format for individuals, U format for companies)

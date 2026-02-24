@@ -1,12 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ImageBackground, SafeAreaView, Modal, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Modal,
+  TouchableOpacity,
+  Image,
+  StatusBar,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { CheckCircle, X } from 'lucide-react-native';
-import { BlurView } from 'expo-blur';
-import { COLORS, FONTS, SPACING, SHADOWS, BORDER_RADIUS } from '@constants/theme';
-import { Button } from '@components/common/Button';
+import { X } from 'lucide-react-native';
+import { FONTS, SPACING, BORDER_RADIUS } from '@constants/theme';
 import { useLanguage } from '@context/LanguageContext';
 import { normalize, wp, hp } from '@utils/responsive';
+
+const ACCENT = '#F9A825';
 
 const VerificationPendingScreen = () => {
   const navigation = useNavigation();
@@ -14,175 +22,197 @@ const VerificationPendingScreen = () => {
   const [modalVisible, setModalVisible] = useState(true);
 
   useEffect(() => {
-    // Modal opens automatically when screen loads
     setModalVisible(true);
   }, []);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ImageBackground
-        source={require('../../../assets/reg_compleete.jpg')}
-        style={styles.backgroundImage}
-        resizeMode="cover"
-      >
-        <View style={styles.overlay} />
-        <BlurView intensity={50} style={styles.blurContainer}>
-          <View style={styles.content}>
-            <View style={styles.iconContainer}>
-              <View style={styles.successIconWrapper}>
-                <View style={styles.checkIconContainer}>
-                  <CheckCircle size={64} color={COLORS.white} strokeWidth={2} />
-                </View>
-              </View>
-            </View>
-            <Text style={styles.title}>{t('verificationPending.registrationComplete')}</Text>
-            <Button
-              title={t('verificationPending.goToDashboard')}
-              onPress={() => navigation.navigate('MainDashboard' as never)}
-              variant="primary"
-              size="large"
-              style={styles.button}
-            />
-          </View>
-        </BlurView>
-      </ImageBackground>
+    <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+
+      <View style={styles.content}>
+        <Image
+          source={require('../../../assets/reg_success.png')}
+          style={styles.illustration}
+          resizeMode="contain"
+        />
+
+        <Text style={styles.title}>{t('verificationPending.registrationComplete')}</Text>
+        <Text style={styles.subtitle}>
+          Your account has been created successfully. You're all set to start!
+        </Text>
+
+        <TouchableOpacity
+          style={styles.dashboardBtn}
+          onPress={() => navigation.navigate('MainDashboard' as never)}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.dashboardBtnText}>
+            {t('verificationPending.goToDashboard')}
+          </Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Verification Info Modal */}
       <Modal
         visible={modalVisible}
-        transparent={true}
+        transparent
         animationType="fade"
         onRequestClose={() => setModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={styles.modalCard}>
             <TouchableOpacity
-              style={styles.closeButton}
+              style={styles.closeBtn}
               onPress={() => setModalVisible(false)}
             >
-              <X size={24} color={COLORS.text} />
+              <X size={20} color="#666666" />
             </TouchableOpacity>
-            <Text style={styles.modalTitle}>{t('verificationPending.verificationStatus')}</Text>
+
+            <View style={styles.modalIconWrap}>
+              <Text style={styles.modalIcon}>🎉</Text>
+            </View>
+
+            <Text style={styles.modalTitle}>
+              {t('verificationPending.verificationStatus')}
+            </Text>
             <Text style={styles.modalMessage}>
               {t('verificationPending.verificationMessage')}
             </Text>
             <Text style={styles.modalInfo}>
               {t('verificationPending.notificationInfo')}
             </Text>
+
+            <TouchableOpacity
+              style={styles.modalBtn}
+              onPress={() => setModalVisible(false)}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.modalBtnText}>Got it</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  backgroundImage: {
-    flex: 1,
-    width: '100%',
-    height: '100%',
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: COLORS.primary,
-    opacity: 0.6,
-  },
-  blurContainer: {
-    flex: 1,
+    backgroundColor: '#FFFFFF',
   },
   content: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: SPACING.xl,
+    paddingHorizontal: SPACING.xl,
   },
-  iconContainer: {
+  illustration: {
+    width: wp(55),
+    height: hp(22),
     marginBottom: SPACING.xl,
-    marginTop: -SPACING.xl,
-  },
-  successIconWrapper: {
-    width: normalize(120),
-    height: normalize(120),
-    borderRadius: normalize(60),
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  checkIconContainer: {
-    marginTop: -SPACING.xs,
-    borderRadius: normalize(40),
   },
   title: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xxxl,
-    color: COLORS.white,
+    fontFamily: FONTS.bold,
+    fontSize: normalize(26),
+    color: '#1A1A1A',
     textAlign: 'center',
+    marginBottom: SPACING.sm,
+  },
+  subtitle: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.md,
+    color: '#888888',
+    textAlign: 'center',
+    lineHeight: normalize(24),
     marginBottom: SPACING.xl,
-    fontWeight: '600',
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
+    paddingHorizontal: SPACING.md,
   },
-  button: {
+  dashboardBtn: {
+    backgroundColor: ACCENT,
+    height: normalize(52),
+    borderRadius: normalize(26),
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.xxl,
     minWidth: wp(70),
-    ...SHADOWS.md,
   },
-  // Modal Styles
+  dashboardBtnText: {
+    fontFamily: FONTS.semiBold,
+    fontSize: FONTS.sizes.lg,
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
+  },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-start',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: SPACING.xl,
     paddingHorizontal: SPACING.lg,
   },
-  modalContent: {
-    backgroundColor: COLORS.white,
-    borderRadius: BORDER_RADIUS.xl,
+  modalCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: normalize(20),
     padding: SPACING.xl,
     width: '100%',
     maxWidth: wp(90),
-    marginTop: SPACING.xl,
-    ...SHADOWS.lg,
+    alignItems: 'center',
   },
-  closeButton: {
+  closeBtn: {
     position: 'absolute',
     top: SPACING.md,
     right: SPACING.md,
     width: normalize(32),
     height: normalize(32),
     borderRadius: normalize(16),
-    backgroundColor: COLORS.lightGray,
+    backgroundColor: '#F5F5F5',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1,
   },
-  modalTitle: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xl,
-    color: COLORS.text,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: SPACING.lg,
+  modalIconWrap: {
+    marginBottom: SPACING.md,
     marginTop: SPACING.sm,
+  },
+  modalIcon: {
+    fontSize: normalize(48),
+  },
+  modalTitle: {
+    fontFamily: FONTS.bold,
+    fontSize: FONTS.sizes.xl,
+    color: '#1A1A1A',
+    textAlign: 'center',
+    marginBottom: SPACING.md,
   },
   modalMessage: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.md,
-    color: COLORS.text,
+    color: '#555555',
     textAlign: 'center',
     lineHeight: normalize(24),
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.sm,
   },
   modalInfo: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.sm,
-    color: COLORS.textSecondary,
+    color: '#999999',
     textAlign: 'center',
     lineHeight: normalize(20),
+    marginBottom: SPACING.lg,
+  },
+  modalBtn: {
+    backgroundColor: ACCENT,
+    height: normalize(44),
+    borderRadius: normalize(22),
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.xl,
+    minWidth: normalize(140),
+  },
+  modalBtnText: {
+    fontFamily: FONTS.semiBold,
+    fontSize: FONTS.sizes.md,
+    color: '#FFFFFF',
   },
 });
 

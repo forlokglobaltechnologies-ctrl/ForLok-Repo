@@ -165,7 +165,7 @@ class RentalService {
     lat?: number;
     lng?: number;
     date?: Date;
-    vehicleType?: 'car' | 'bike';
+    vehicleType?: 'car' | 'bike' | 'scooty';
     minPrice?: number;
     maxPrice?: number;
     maxDistance?: number;

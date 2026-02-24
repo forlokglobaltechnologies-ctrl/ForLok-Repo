@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef, ReactNode } from 'react';
 import { Alert, Platform } from 'react-native';
 import * as Location from 'expo-location';
 import { sosApi } from '@utils/apiClient';
@@ -12,6 +12,9 @@ interface SOSContextType {
   lastSOSTime: Date | null;
   currentRoute: string;
   setCurrentRoute: (route: string) => void;
+  sosVisible: boolean;
+  handleLogoTap: () => void;
+  showSOS: () => void;
 }
 
 const SOSContext = createContext<SOSContextType>({
@@ -23,6 +26,9 @@ const SOSContext = createContext<SOSContextType>({
   lastSOSTime: null,
   currentRoute: '',
   setCurrentRoute: () => {},
+  sosVisible: false,
+  handleLogoTap: () => {},
+  showSOS: () => {},
 });
 
 export const useSOS = () => useContext(SOSContext);
@@ -36,6 +42,34 @@ export const SOSProvider: React.FC<SOSProviderProps> = ({ children }) => {
   const [isSending, setIsSending] = useState(false);
   const [lastSOSTime, setLastSOSTime] = useState<Date | null>(null);
   const [currentRoute, setCurrentRouteState] = useState<string>('');
+  const [sosVisible, setSosVisible] = useState(false);
+
+  const logoTapCountRef = useRef(0);
+  const logoTapTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const sosHideTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const showSOS = useCallback(() => {
+    setSosVisible(true);
+    if (sosHideTimerRef.current) clearTimeout(sosHideTimerRef.current);
+    sosHideTimerRef.current = setTimeout(() => {
+      setSosVisible(false);
+    }, 60000);
+  }, []);
+
+  const handleLogoTap = useCallback(() => {
+    logoTapCountRef.current += 1;
+
+    if (logoTapTimerRef.current) clearTimeout(logoTapTimerRef.current);
+
+    if (logoTapCountRef.current >= 3) {
+      logoTapCountRef.current = 0;
+      showSOS();
+    } else {
+      logoTapTimerRef.current = setTimeout(() => {
+        logoTapCountRef.current = 0;
+      }, 800);
+    }
+  }, [showSOS]);
 
   const setCurrentRoute = useCallback((route: string) => {
     setCurrentRouteState(route);
@@ -131,6 +165,9 @@ export const SOSProvider: React.FC<SOSProviderProps> = ({ children }) => {
         lastSOSTime,
         currentRoute,
         setCurrentRoute,
+        sosVisible,
+        handleLogoTap,
+        showSOS,
       }}
     >
       {children}

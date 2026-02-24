@@ -15,7 +15,8 @@
     "test:direction": "node tests/test-direction-validation.js",
     "test:bounds": "node tests/test-array-bounds.js",
     "test:errors": "node tests/test-error-handling.js",
-    "test:deviation": "node tests/test-route-deviation.js"
+    "test:deviation": "node tests/test-route-deviation.js",
+    "test:validation-contract": "node tests/test-validation-contract.js"
   },
   "keywords": [
     "ride-sharing",

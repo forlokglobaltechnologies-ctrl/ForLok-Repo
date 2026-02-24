@@ -1,154 +1,129 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ImageBackground } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  ScrollView,
+  StatusBar,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { ArrowLeft, User, Building, Globe, Check } from 'lucide-react-native';
-import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
-import { BlurView } from 'expo-blur';
+import { ArrowLeft, User, Building2, Globe, ChevronDown, Check } from 'lucide-react-native';
+import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '@constants/theme';
 import { useLanguage } from '@context/LanguageContext';
 import { normalize, wp, hp } from '@utils/responsive';
+
+const ACCENT = '#F9A825';
 
 const SignUpScreen = () => {
   const navigation = useNavigation();
   const { language, changeLanguage, t } = useLanguage();
-  const [showLanguageSelector, setShowLanguageSelector] = useState(false);
+  const [showLang, setShowLang] = useState(false);
+
+  const languages = [
+    { code: 'en', label: t('signUp.english') },
+    { code: 'te', label: t('signUp.telugu') },
+    { code: 'hi', label: t('signUp.hindi') },
+  ];
+
+  const currentLang = languages.find((l) => l.code === language);
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={[COLORS.primary, COLORS.primaryDark]}
-        style={styles.gradientBackground}
-      >
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+
+      {/* Header */}
+      <View style={styles.header}>
         <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
+          style={styles.backBtn}
+          onPress={() => {
+            if (navigation.canGoBack()) navigation.goBack();
+            else navigation.navigate('Onboarding' as never);
+          }}
+          activeOpacity={0.7}
         >
-          <ArrowLeft size={24} color={COLORS.white} />
+          <ArrowLeft size={22} color="#1A1A1A" />
         </TouchableOpacity>
 
-        <View style={styles.headerContent}>
-          <Text style={styles.title}>{t('signUp.title')}</Text>
-          <Text style={styles.subtitle}>{t('signUp.subtitle')}</Text>
+        <TouchableOpacity
+          style={styles.langPill}
+          onPress={() => setShowLang(!showLang)}
+          activeOpacity={0.7}
+        >
+          <Globe size={16} color={ACCENT} />
+          <Text style={styles.langPillText}>{currentLang?.label}</Text>
+          <ChevronDown size={14} color="#999" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Language dropdown */}
+      {showLang && (
+        <View style={styles.langDropdown}>
+          {languages.map((lang) => (
+            <TouchableOpacity
+              key={lang.code}
+              style={[
+                styles.langOption,
+                language === lang.code && styles.langOptionActive,
+              ]}
+              onPress={async () => {
+                await changeLanguage(lang.code as any);
+                setShowLang(false);
+              }}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[
+                  styles.langOptionText,
+                  language === lang.code && styles.langOptionTextActive,
+                ]}
+              >
+                {lang.label}
+              </Text>
+              {language === lang.code && (
+                <Check size={16} color={ACCENT} />
+              )}
+            </TouchableOpacity>
+          ))}
         </View>
-      </LinearGradient>
+      )}
 
-      <View style={styles.cardContainer}>
-        {/* Language Selector */}
-        <View style={styles.languageContainer}>
-          <TouchableOpacity
-            style={styles.languageSelector}
-            onPress={() => setShowLanguageSelector(!showLanguageSelector)}
-            activeOpacity={0.8}
-          >
-            <Globe size={20} color={COLORS.primary} />
-            <Text style={styles.languageLabel}>{t('signUp.selectLanguage')}</Text>
-            <Text style={styles.languageValue}>
-              {language === 'en' ? t('signUp.english') : language === 'te' ? t('signUp.telugu') : t('signUp.hindi')}
-            </Text>
-            <Text style={styles.languageArrow}>{showLanguageSelector ? '▲' : '▼'}</Text>
-          </TouchableOpacity>
-
-          {showLanguageSelector && (
-            <View style={styles.languageOptions}>
-              <TouchableOpacity
-                style={[
-                  styles.languageOption,
-                  language === 'en' && styles.languageOptionSelected,
-                ]}
-                onPress={async () => {
-                  await changeLanguage('en');
-                  setShowLanguageSelector(false);
-                }}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.languageOptionText,
-                    language === 'en' && styles.languageOptionTextSelected,
-                  ]}
-                >
-                  {t('signUp.english')}
-                </Text>
-                {language === 'en' && <Check size={18} color={COLORS.primary} />}
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.languageOption,
-                  language === 'te' && styles.languageOptionSelected,
-                ]}
-                onPress={async () => {
-                  await changeLanguage('te');
-                  setShowLanguageSelector(false);
-                }}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.languageOptionText,
-                    language === 'te' && styles.languageOptionTextSelected,
-                  ]}
-                >
-                  {t('signUp.telugu')}
-                </Text>
-                {language === 'te' && <Check size={18} color={COLORS.primary} />}
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.languageOption,
-                  language === 'hi' && styles.languageOptionSelected,
-                ]}
-                onPress={async () => {
-                  await changeLanguage('hi');
-                  setShowLanguageSelector(false);
-                }}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.languageOptionText,
-                    language === 'hi' && styles.languageOptionTextSelected,
-                  ]}
-                >
-                  {t('signUp.hindi')}
-                </Text>
-                {language === 'hi' && <Check size={18} color={COLORS.primary} />}
-              </TouchableOpacity>
-            </View>
-          )}
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Illustration */}
+        <View style={styles.illustrationWrap}>
+          <Image
+            source={require('../../../assets/signup_illustration.png')}
+            style={styles.illustration}
+            resizeMode="contain"
+          />
         </View>
 
+        {/* Title */}
+        <Text style={styles.title}>{t('signUp.title')}</Text>
+        <Text style={styles.subtitle}>{t('signUp.subtitle')}</Text>
+
+        {/* Option cards */}
         <TouchableOpacity
           style={styles.optionCard}
           onPress={() => navigation.navigate('IndividualRegistration' as never)}
           activeOpacity={0.8}
         >
-          <ImageBackground
-            source={require('../../../assets/user.jpg')}
-            style={styles.cardBackground}
-            imageStyle={styles.cardBackgroundImage}
-            resizeMode="cover"
-          >
-            <BlurView intensity={20} style={styles.blurContainer}>
-              <View style={styles.cardContent}>
-                <View style={styles.iconWrapper}>
-                  <User size={36} color={COLORS.primary} />
-                </View>
-                <Text style={styles.optionTitle}>{t('signUp.individualTitle')}</Text>
-                <View style={styles.featuresList}>
-                  <View style={styles.featureItem}>
-                    <View style={styles.bullet} />
-                    <Text style={styles.featureText}>{t('signUp.individualFeature1')}</Text>
-                  </View>
-                  <View style={styles.featureItem}>
-                    <View style={styles.bullet} />
-                    <Text style={styles.featureText}>{t('signUp.individualFeature2')}</Text>
-                  </View>
-                </View>
-              </View>
-            </BlurView>
-          </ImageBackground>
+          <View style={[styles.iconCircle, { backgroundColor: '#EBF5FF' }]}>
+            <User size={24} color="#1565C0" />
+          </View>
+          <View style={styles.optionContent}>
+            <Text style={styles.optionTitle}>{t('signUp.individualTitle')}</Text>
+            <Text style={styles.optionDesc}>{t('signUp.individualFeature1')}</Text>
+          </View>
+          <ChevronDown
+            size={20}
+            color="#BBBBBB"
+            style={{ transform: [{ rotate: '-90deg' }] }}
+          />
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -156,40 +131,28 @@ const SignUpScreen = () => {
           onPress={() => navigation.navigate('CompanyRegistration' as never)}
           activeOpacity={0.8}
         >
-          <ImageBackground
-            source={require('../../../assets/company.jpg')}
-            style={styles.cardBackground}
-            imageStyle={styles.cardBackgroundImage}
-            resizeMode="cover"
-          >
-            <BlurView intensity={20} style={styles.blurContainer}>
-              <View style={styles.cardContent}>
-                <View style={styles.iconWrapper}>
-                  <Building size={36} color={COLORS.primary} />
-                </View>
-                <Text style={styles.optionTitle}>{t('signUp.companyTitle')}</Text>
-                <View style={styles.featuresList}>
-                  <View style={styles.featureItem}>
-                    <View style={styles.bullet} />
-                    <Text style={styles.featureText}>{t('signUp.companyFeature1')}</Text>
-                  </View>
-                  <View style={styles.featureItem}>
-                    <View style={styles.bullet} />
-                    <Text style={styles.featureText}>{t('signUp.companyFeature2')}</Text>
-                  </View>
-                </View>
-              </View>
-            </BlurView>
-          </ImageBackground>
+          <View style={[styles.iconCircle, { backgroundColor: '#FFF3E0' }]}>
+            <Building2 size={24} color="#E65100" />
+          </View>
+          <View style={styles.optionContent}>
+            <Text style={styles.optionTitle}>{t('signUp.companyTitle')}</Text>
+            <Text style={styles.optionDesc}>{t('signUp.companyFeature1')}</Text>
+          </View>
+          <ChevronDown
+            size={20}
+            color="#BBBBBB"
+            style={{ transform: [{ rotate: '-90deg' }] }}
+          />
         </TouchableOpacity>
 
-        <View style={styles.signInContainer}>
+        {/* Sign in link */}
+        <View style={styles.signInRow}>
           <Text style={styles.signInText}>{t('signUp.alreadyHaveAccount')} </Text>
           <TouchableOpacity onPress={() => navigation.navigate('SignIn' as never)}>
             <Text style={styles.signInLink}>{t('signUp.signInLink')}</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </ScrollView>
     </View>
   );
 };
@@ -197,183 +160,157 @@ const SignUpScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.primary,
+    backgroundColor: '#FFFFFF',
   },
-  gradientBackground: {
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingTop: hp(6),
-    paddingBottom: SPACING.xl,
-    minHeight: hp(25),
-  },
-  backButton: {
-    marginLeft: SPACING.md,
-    padding: SPACING.sm,
-    alignSelf: 'flex-start',
-  },
-  headerContent: {
     paddingHorizontal: SPACING.lg,
-    paddingTop: SPACING.md,
+    paddingBottom: SPACING.sm,
   },
-  title: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xxxl,
-    color: COLORS.white,
-    fontWeight: 'bold',
-    marginBottom: SPACING.sm,
+  backBtn: {
+    width: normalize(40),
+    height: normalize(40),
+    borderRadius: normalize(20),
+    backgroundColor: '#F5F5F5',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  subtitle: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
-    color: COLORS.white,
-    opacity: 0.9,
-  },
-  cardContainer: {
-    flex: 1,
-    backgroundColor: COLORS.white,
-    borderTopLeftRadius: normalize(32),
-    borderTopRightRadius: normalize(32),
-    padding: SPACING.lg,
-    paddingTop: SPACING.xl,
-  },
-  languageContainer: {
-    marginBottom: SPACING.lg,
-  },
-  languageSelector: {
+  langPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: SPACING.md,
-    backgroundColor: COLORS.lightGray,
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
+    backgroundColor: '#F5F5F5',
+    paddingHorizontal: normalize(12),
+    paddingVertical: normalize(8),
+    borderRadius: normalize(20),
+    gap: normalize(5),
   },
-  languageLabel: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
-    color: COLORS.text,
-    marginLeft: SPACING.sm,
-    flex: 1,
+  langPillText: {
+    fontFamily: FONTS.semiBold,
+    fontSize: FONTS.sizes.xs,
+    color: '#333333',
   },
-  languageValue: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
-    color: COLORS.primary,
-    fontWeight: '600',
-    marginRight: SPACING.xs,
-  },
-  languageArrow: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(12),
-    color: COLORS.primary,
-  },
-  languageOptions: {
-    marginTop: SPACING.xs,
-    backgroundColor: COLORS.white,
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.lightGray,
+  langDropdown: {
+    position: 'absolute',
+    top: hp(6) + normalize(48),
+    right: SPACING.lg,
+    backgroundColor: '#FFFFFF',
+    borderRadius: BORDER_RADIUS.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#E0E0E0',
+    zIndex: 100,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    minWidth: normalize(140),
     overflow: 'hidden',
-    ...SHADOWS.sm,
   },
-  languageOption: {
+  langOption: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: SPACING.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.lightGray,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: normalize(12),
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#F0F0F0',
   },
-  languageOptionSelected: {
-    backgroundColor: COLORS.primaryLight,
+  langOptionActive: {
+    backgroundColor: '#FFFDE7',
   },
-  languageOptionText: {
+  langOptionText: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
-    color: COLORS.text,
+    fontSize: FONTS.sizes.sm,
+    color: '#555555',
   },
-  languageOptionTextSelected: {
-    color: COLORS.primary,
-    fontWeight: '600',
+  langOptionTextActive: {
+    fontFamily: FONTS.semiBold,
+    color: ACCENT,
+  },
+  scrollContent: {
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: hp(4),
+  },
+  illustrationWrap: {
+    alignItems: 'center',
+    marginTop: SPACING.sm,
+    marginBottom: SPACING.lg,
+  },
+  illustration: {
+    width: wp(80),
+    height: hp(26),
+  },
+  title: {
+    fontFamily: FONTS.bold,
+    fontSize: normalize(26),
+    color: '#1A1A1A',
+    marginBottom: SPACING.xs,
+    marginTop: SPACING.md,
+  },
+  subtitle: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.sm,
+    color: '#888888',
+    marginBottom: SPACING.xl,
+    marginTop: SPACING.xs,
+    lineHeight: normalize(20),
   },
   optionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#E0E0E0',
     borderRadius: BORDER_RADIUS.xl,
-    marginBottom: SPACING.lg,
-    borderWidth: 2,
-    borderColor: COLORS.lightGray,
-    ...SHADOWS.md,
-    overflow: 'hidden',
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  cardBackground: {
-    width: '100%',
-  },
-  cardBackgroundImage: {
-    borderRadius: BORDER_RADIUS.xl,
-  },
-  blurContainer: {
-    width: '100%',
-    overflow: 'hidden',
-  },
-  cardContent: {
-    padding: SPACING.lg,
-    backgroundColor: 'rgba(255, 255, 255, 0.85)',
-  },
-  iconWrapper: {
-    width: normalize(72),
-    height: normalize(72),
-    borderRadius: normalize(36),
-    backgroundColor: COLORS.white,
+  iconCircle: {
+    width: normalize(50),
+    height: normalize(50),
+    borderRadius: normalize(25),
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: SPACING.md,
-    alignSelf: 'center',
-    ...SHADOWS.sm,
+  },
+  optionContent: {
+    flex: 1,
+    marginLeft: SPACING.md,
   },
   optionTitle: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.lg,
-    color: COLORS.primary,
-    fontWeight: 'bold',
-    marginBottom: SPACING.sm,
-    textAlign: 'center',
-  },
-  featuresList: {
-    marginTop: SPACING.xs,
-  },
-  featureItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: SPACING.xs,
-  },
-  bullet: {
-    width: normalize(6),
-    height: normalize(6),
-    borderRadius: normalize(3),
-    backgroundColor: COLORS.primary,
-    marginRight: SPACING.md,
-  },
-  featureText: {
-    fontFamily: FONTS.regular,
+    fontFamily: FONTS.semiBold,
     fontSize: FONTS.sizes.md,
-    color: COLORS.text,
-    flex: 1,
+    color: '#1A1A1A',
+    marginBottom: normalize(2),
   },
-  signInContainer: {
+  optionDesc: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.xs,
+    color: '#999999',
+  },
+  signInRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: SPACING.lg,
-    paddingTop: SPACING.lg,
+    alignItems: 'center',
+    marginTop: SPACING.xl,
   },
   signInText: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
-    color: COLORS.textSecondary,
+    fontSize: FONTS.sizes.sm,
+    color: '#999999',
   },
   signInLink: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
-    color: COLORS.primary,
-    fontWeight: 'bold',
+    fontFamily: FONTS.semiBold,
+    fontSize: FONTS.sizes.sm,
+    color: ACCENT,
   },
 });
 
 export default SignUpScreen;
-

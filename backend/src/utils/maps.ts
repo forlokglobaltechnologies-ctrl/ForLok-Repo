@@ -386,6 +386,80 @@ export async function getRoutePolyline(
 }
 
 /**
+ * Determine minimum required waypoints based on route distance
+ */
+export function getMinWaypointCount(routeDistanceKm: number): number {
+  if (routeDistanceKm < 30) return 0;
+  if (routeDistanceKm < 100) return 1;
+  if (routeDistanceKm < 200) return 2;
+  if (routeDistanceKm < 400) return 4;
+  return 5;
+}
+
+/**
+ * Auto-generate waypoints by sampling the polyline at even intervals
+ * and reverse-geocoding each sampled point to get a city name.
+ * Skips the first/last 10% of the polyline to avoid duplicating source/destination.
+ * Deduplicates by city name.
+ */
+export async function generateAutoWaypoints(
+  polyline: Array<{ lat: number; lng: number; index: number }>,
+  routeDistanceKm: number
+): Promise<Array<{ address: string; lat: number; lng: number; city?: string; order: number }>> {
+  const count = getMinWaypointCount(routeDistanceKm);
+  if (count === 0 || polyline.length < 3) return [];
+
+  const startIdx = Math.floor(polyline.length * 0.1);
+  const endIdx = Math.floor(polyline.length * 0.9);
+  const usableLength = endIdx - startIdx;
+
+  if (usableLength < count) return [];
+
+  const step = usableLength / (count + 1);
+  const sampledPoints: Array<{ lat: number; lng: number }> = [];
+
+  for (let i = 1; i <= count; i++) {
+    const idx = Math.round(startIdx + step * i);
+    const point = polyline[Math.min(idx, polyline.length - 1)];
+    sampledPoints.push({ lat: point.lat, lng: point.lng });
+  }
+
+  const waypoints: Array<{ address: string; lat: number; lng: number; city?: string; order: number }> = [];
+  const seenCities = new Set<string>();
+
+  for (let i = 0; i < sampledPoints.length; i++) {
+    const pt = sampledPoints[i];
+    try {
+      const geo = await reverseGeocode(pt.lat, pt.lng);
+      const city = geo?.city || '';
+      const cityKey = city.toLowerCase().trim();
+
+      if (cityKey && seenCities.has(cityKey)) continue;
+      if (cityKey) seenCities.add(cityKey);
+
+      waypoints.push({
+        address: geo?.address || `${pt.lat.toFixed(4)}, ${pt.lng.toFixed(4)}`,
+        lat: pt.lat,
+        lng: pt.lng,
+        city: city || undefined,
+        order: waypoints.length,
+      });
+    } catch (err) {
+      logger.warn(`Failed to reverse-geocode waypoint at (${pt.lat}, ${pt.lng}):`, err);
+      waypoints.push({
+        address: `${pt.lat.toFixed(4)}, ${pt.lng.toFixed(4)}`,
+        lat: pt.lat,
+        lng: pt.lng,
+        order: waypoints.length,
+      });
+    }
+  }
+
+  logger.info(`Auto-generated ${waypoints.length} waypoints for ${routeDistanceKm.toFixed(0)}km route`);
+  return waypoints;
+}
+
+/**
  * Find nearest polyline index for a given coordinate
  * Returns the index and distance of the closest point in the polyline
  */
@@ -549,10 +623,30 @@ export function isRouteOnPath(
     return false;
   }
 
-  // Maximum allowed distance from route (3km) - stricter than before
-  const MAX_DISTANCE_FROM_ROUTE_KM = 3;
+  // Dynamic radius based on driver route length
+  const driverRouteDistance = calculateHaversineDistance(
+    driverPolyline[0].lat,
+    driverPolyline[0].lng,
+    driverPolyline[driverPolyline.length - 1].lat,
+    driverPolyline[driverPolyline.length - 1].lng
+  );
+  let maxDistanceKm: number;
+  if (driverRouteDistance < 30) {
+    maxDistanceKm = 5;
+  } else if (driverRouteDistance < 100) {
+    maxDistanceKm = 10;
+  } else if (driverRouteDistance < 200) {
+    maxDistanceKm = 20;
+  } else {
+    maxDistanceKm = 40;
+  }
 
-  // Find nearest points on driver route for passenger start and end
+  // For very sparse polylines (likely OSRM fallback), be even more generous
+  if (driverPolyline.length <= 5 && driverRouteDistance > 50) {
+    maxDistanceKm = Math.max(maxDistanceKm, driverRouteDistance * 0.15);
+    logger.info(`⚠️ Sparse polyline (${driverPolyline.length} points for ${driverRouteDistance.toFixed(0)}km), using extended radius: ${maxDistanceKm.toFixed(0)}km`);
+  }
+
   const passengerStart = distanceToPolylineSegment(
     passengerFromLat,
     passengerFromLng,
@@ -564,17 +658,16 @@ export function isRouteOnPath(
     driverPolyline
   );
 
-  // Check if passenger points are too far from driver route
-  if (passengerStart.distance > MAX_DISTANCE_FROM_ROUTE_KM) {
+  if (passengerStart.distance > maxDistanceKm) {
     logger.info(
-      `❌ Route mismatch: Passenger start is ${passengerStart.distance.toFixed(2)}km away (max: ${MAX_DISTANCE_FROM_ROUTE_KM}km)`
+      `❌ Route mismatch: Passenger start is ${passengerStart.distance.toFixed(2)}km away (max: ${maxDistanceKm}km, route: ${driverRouteDistance.toFixed(0)}km)`
     );
     return false;
   }
 
-  if (passengerEnd.distance > MAX_DISTANCE_FROM_ROUTE_KM) {
+  if (passengerEnd.distance > maxDistanceKm) {
     logger.info(
-      `❌ Route mismatch: Passenger end is ${passengerEnd.distance.toFixed(2)}km away (max: ${MAX_DISTANCE_FROM_ROUTE_KM}km)`
+      `❌ Route mismatch: Passenger end is ${passengerEnd.distance.toFixed(2)}km away (max: ${maxDistanceKm}km, route: ${driverRouteDistance.toFixed(0)}km)`
     );
     return false;
   }
@@ -582,11 +675,9 @@ export function isRouteOnPath(
   const passengerStartIndex = passengerStart.nearestIndex;
   const passengerEndIndex = passengerEnd.nearestIndex;
 
-  // Driver route indices (first and last points)
   const driverStartIndex = driverPolyline[0]?.index || 0;
   const driverEndIndex = driverPolyline[driverPolyline.length - 1]?.index || 0;
 
-  // Core matching logic: driverStartIndex <= passengerStartIndex < passengerEndIndex <= driverEndIndex
   const isIndexMatch =
     driverStartIndex <= passengerStartIndex &&
     passengerStartIndex < passengerEndIndex &&
@@ -599,40 +690,13 @@ export function isRouteOnPath(
     return false;
   }
 
-  // Calculate route distances for validation
-  const driverRouteDistance = calculateHaversineDistance(
-    driverPolyline[0].lat,
-    driverPolyline[0].lng,
-    driverPolyline[driverPolyline.length - 1].lat,
-    driverPolyline[driverPolyline.length - 1].lng
-  );
-
-  const passengerRouteDistance = calculateHaversineDistance(
-    passengerFromLat,
-    passengerFromLng,
-    passengerToLat,
-    passengerToLng
-  );
-
-  // Passenger route should be shorter than driver route (max 10% longer allowed for route variations)
-  const isDistanceValid = passengerRouteDistance <= driverRouteDistance * 1.1;
-
-  if (!isDistanceValid) {
-    logger.info(
-      `❌ Distance mismatch: driver=${driverRouteDistance.toFixed(2)}km, passenger=${passengerRouteDistance.toFixed(2)}km`
-    );
-    return false;
-  }
-
-  const isMatch = isIndexMatch && isDistanceValid;
-
   logger.info(
     `✅ Route match: driver[${driverStartIndex}-${driverEndIndex}] vs passenger[${passengerStartIndex}-${passengerEndIndex}], ` +
-    `driver=${driverRouteDistance.toFixed(2)}km, passenger=${passengerRouteDistance.toFixed(2)}km, ` +
+    `route=${driverRouteDistance.toFixed(2)}km, radius=${maxDistanceKm}km, ` +
     `startDist=${passengerStart.distance.toFixed(2)}km, endDist=${passengerEnd.distance.toFixed(2)}km`
   );
 
-  return isMatch;
+  return true;
 }
 
 /**

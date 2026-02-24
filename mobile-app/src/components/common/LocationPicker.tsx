@@ -1,8 +1,8 @@
 /**
  * LocationPicker Component — Production-grade, 100% free
  *
- * Search:  Photon (photon.komoot.io) — fast OSM geocoder, no harsh rate limits
- * Fallback: Nominatim (1 req/s limit) — only used if Photon is down
+ * Search:  Open-Meteo Geocoding API — free, fast, no API key needed
+ * Fallback: Nominatim (1 req/s limit) — only used if Open-Meteo is down
  * Reverse:  Photon (primary) → Nominatim (fallback) — single call per tap
  * Map:      Leaflet + OpenStreetMap tiles in WebView
  * GPS:      expo-location (device native)
@@ -185,7 +185,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
     }
   };
 
-  // ─── Forward search: Photon (primary) → Nominatim (fallback) ──
+  // ─── Forward search: Open-Meteo (primary) → Nominatim (fallback) ──
   const performSearch = useCallback(async (query: string) => {
     if (abortRef.current) {
       abortRef.current.abort();
@@ -195,29 +195,24 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
 
     try {
       const encodedQuery = encodeURIComponent(query);
-      const photonUrl = `https://photon.komoot.io/api/?q=${encodedQuery}&limit=6&lang=en&lat=20.5&lon=78.9`;
-      const response = await fetch(photonUrl, {
+      const meteoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodedQuery}&count=6&language=en&format=json`;
+      const response = await fetch(meteoUrl, {
         signal: abortRef.current.signal,
-        headers: { 'User-Agent': 'Forlok-App/1.0' },
       });
-      if (!response.ok) throw new Error(`Photon HTTP ${response.status}`);
+      if (!response.ok) throw new Error(`Open-Meteo HTTP ${response.status}`);
 
       const data = await response.json();
-      const results: LocationData[] = (data.features || [])
-        .filter((f: any) => f.geometry?.coordinates)
-        .map((feature: any) => {
-          const props = feature.properties || {};
-          const [lng, lat] = feature.geometry.coordinates;
-          const parts = [props.name, props.street, props.city || props.town || props.village, props.state, props.country].filter(Boolean);
-          return {
-            address: parts.join(', ') || `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
-            lat,
-            lng,
-            city: props.city || props.town || props.village || props.county,
-            state: props.state,
-            pincode: props.postcode,
-          };
-        });
+      const results: LocationData[] = (data.results || []).map((item: any) => {
+        const parts = [item.name, item.admin3, item.admin2, item.admin1, item.country].filter(Boolean);
+        return {
+          address: parts.join(', '),
+          lat: item.latitude,
+          lng: item.longitude,
+          city: item.name || item.admin3 || item.admin2,
+          state: item.admin1,
+          pincode: undefined,
+        };
+      });
       setSearchResults(results);
     } catch (error: any) {
       if (error.name === 'AbortError') return;
@@ -278,11 +273,15 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
     }
   }, []);
 
+  const selectedLocationRef = useRef<LocationData | null>(selectedLocation);
+  selectedLocationRef.current = selectedLocation;
+
   const confirmSelection = useCallback(() => {
-    if (selectedLocation && selectedLocation.address !== 'Fetching address...') {
-      onLocationSelect(selectedLocation);
+    const loc = selectedLocationRef.current;
+    if (loc && loc.address !== 'Fetching address...') {
+      onLocationSelect(loc);
     }
-  }, [selectedLocation, onLocationSelect]);
+  }, [onLocationSelect]);
 
   const useMyLocation = useCallback(() => {
     if (currentLocation) {
@@ -692,6 +691,7 @@ const styles = StyleSheet.create({
   // Map
   map: {
     flex: 1,
+    zIndex: 1,
   },
   loadingContainer: {
     flex: 1,

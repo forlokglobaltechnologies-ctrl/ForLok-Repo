@@ -11,7 +11,7 @@ import { ApiResponse } from '../../types';
 const addVehicleSchema = z.object({
   userId: z.string().optional(),
   companyId: z.string().optional(),
-  type: z.enum(['car', 'bike']),
+  type: z.enum(['car', 'bike', 'scooty']),
   brand: z.string().min(1),
   model: z.string().optional(),
   year: z.number().min(1900).max(new Date().getFullYear() + 1).optional(),

@@ -73,6 +73,8 @@ class WebSocketService {
         console.log('✅ WebSocket connected');
         this.isConnecting = false;
         this.reconnectAttempts = 0;
+        // Send auth message to server
+        this.authenticate();
       };
 
       this.ws.onmessage = (event) => {
@@ -119,14 +121,16 @@ class WebSocketService {
         return;
       }
 
-      // Get userId from token or AsyncStorage
-      const userId = await AsyncStorage.getItem('userId');
-      if (!userId) {
-        console.error('No userId found');
-        return;
+      // Get userId from stored user object
+      const storedUser = await AsyncStorage.getItem('@forlok_user');
+      if (storedUser) {
+        try {
+          const userData = JSON.parse(storedUser);
+          this.userId = userData.userId || null;
+        } catch {
+          // ignore parse error
+        }
       }
-
-      this.userId = userId;
 
       if (this.ws?.readyState === WebSocket.OPEN) {
         this.ws.send(

@@ -23,9 +23,11 @@ import { Button } from '@components/common/Button';
 import { Input } from '@components/common/Input';
 import { Card } from '@components/common/Card';
 import { useLanguage } from '@context/LanguageContext';
+import { useSnackbar } from '@context/SnackbarContext';
 import { rentalApi, vehicleApi } from '@utils/apiClient';
 import LocationPicker, { LocationData } from '@components/common/LocationPicker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getUserErrorMessage } from '@utils/errorUtils';
 
 const RENTAL_COMING_SOON = true; // V2 feature — flip to false to re-enable
 
@@ -36,6 +38,7 @@ const CreateRentalOfferScreen = () => {
   
   const navigation = useNavigation();
   const { t } = useLanguage();
+  const { showSnackbar } = useSnackbar();
 
   if (RENTAL_COMING_SOON) {
     return (
@@ -119,12 +122,12 @@ const CreateRentalOfferScreen = () => {
         setVehicles(filteredVehicles);
         console.log(`✅ Loaded ${filteredVehicles.length} vehicles of type ${selectedType || 'all'}`);
       } else {
-        Alert.alert('Error', 'Failed to load vehicles. Please add a vehicle first.');
+        showSnackbar({ message: 'Failed to load vehicles. Please add a vehicle first.', type: 'error' });
         setVehicles([]);
       }
     } catch (error: any) {
       console.error('Error loading vehicles:', error);
-      Alert.alert('Error', 'Failed to load vehicles');
+      showSnackbar({ message: 'Failed to load vehicles', type: 'error' });
       setVehicles([]);
     } finally {
       setLoadingVehicles(false);
@@ -288,7 +291,7 @@ const CreateRentalOfferScreen = () => {
           console.log('✅ Price state updated successfully');
         } else {
           console.error('❌ Invalid price value:', suggestedPrice);
-          Alert.alert('Error', 'Invalid price calculated. Please try again.');
+          showSnackbar({ message: 'Invalid price calculated. Please try again.', type: 'error' });
         }
       } else {
         console.error('❌ Price calculation failed:', {
@@ -569,11 +572,14 @@ const CreateRentalOfferScreen = () => {
           ]
         );
       } else {
-        Alert.alert('Error', response.error || 'Failed to create offer. Please try again.');
+        showSnackbar({
+          message: getUserErrorMessage(response as any, 'Failed to create offer. Please try again.'),
+          type: 'error',
+        });
       }
     } catch (error: any) {
       console.error('Error creating offer:', error);
-      Alert.alert('Error', error.message || 'Failed to create offer. Please try again.');
+      showSnackbar({ message: error.message || 'Failed to create offer. Please try again.', type: 'error' });
     } finally {
       setCreating(false);
     }

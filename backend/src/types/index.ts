@@ -3,7 +3,7 @@
 export type UserType = 'individual' | 'company' | 'admin';
 export type UserStatus = 'active' | 'inactive' | 'suspended' | 'pending_verification';
 export type BookingStatus = 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled';
-export type OfferStatus = 'active' | 'pending' | 'expired' | 'completed' | 'cancelled' | 'suspended' | 'booked';
+export type OfferStatus = 'active' | 'pending' | 'expired' | 'completed' | 'cancelled' | 'suspended' | 'booked' | 'in_progress';
 export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded';
 export type PaymentMethod = 'upi' | 'card' | 'wallet' | 'net_banking' | 'offline_cash';
 export type DocumentType =
@@ -24,7 +24,7 @@ export type DocumentType =
   | 'gst_certificate'
   | 'business_license';
 export type DocumentStatus = 'pending' | 'verified' | 'rejected' | 'under_review';
-export type VehicleType = 'car' | 'bike';
+export type VehicleType = 'car' | 'bike' | 'scooty';
 export type ServiceType = 'pooling' | 'rental';
 export type OTPType = 'signup' | 'login' | 'reset_password' | 'verify_phone' | 'verify_email';
 export type NotificationType =
@@ -96,14 +96,24 @@ export interface RouteRoadSegment {
   distance?: number;
 }
 
+// Waypoint for driver-specified intermediate stops
+export interface Waypoint {
+  address: string;
+  lat: number;
+  lng: number;
+  city?: string;
+  order: number;
+}
+
 // Route Types
 export interface Route {
   from: Location;
   to: Location;
+  waypoints?: Waypoint[];
   distance?: number; // in km
   duration?: number; // in minutes
-  polyline?: Array<{ lat: number; lng: number; index: number }>; // Polyline coordinates with indices for route matching
-  roadSegments?: RouteRoadSegment[]; // Road segments for road-aware matching
+  polyline?: Array<{ lat: number; lng: number; index: number }>;
+  roadSegments?: RouteRoadSegment[];
 }
 
 // JWT Payload
@@ -140,4 +150,6 @@ export interface AppError extends Error {
   statusCode?: number;
   code?: string;
   isOperational?: boolean;
+  fieldErrors?: Array<{ field: string; message: string; code?: string }>;
+  details?: unknown;
 }

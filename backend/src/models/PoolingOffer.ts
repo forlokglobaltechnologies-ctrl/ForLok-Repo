@@ -26,6 +26,7 @@ export interface IPoolingOffer extends Document {
   passengers: Array<{
     userId: string;
     name: string;
+    seatsBooked?: number;
     status: 'pending' | 'confirmed' | 'cancelled';
   }>;
   status: OfferStatus;
@@ -85,13 +86,20 @@ const poolingOfferSchema = new Schema<IPoolingOffer>(
         city: String,
         state: String,
       },
-      distance: Number, // in km
-      duration: Number, // in minutes
+      waypoints: [{
+        address: String,
+        lat: Number,
+        lng: Number,
+        city: String,
+        order: Number,
+      }],
+      distance: Number,
+      duration: Number,
       polyline: [{
         lat: Number,
         lng: Number,
-        index: Number, // Sequential index in the polyline
-      }], // Polyline coordinates for route matching
+        index: Number,
+      }],
       roadSegments: [{
         roadId: String,
         roadName: String,
@@ -102,7 +110,7 @@ const poolingOfferSchema = new Schema<IPoolingOffer>(
         lng: Number,
         segmentIndex: Number,
         distance: Number,
-      }], // Road segments for road-aware matching
+      }],
     },
     date: {
       type: Date,
@@ -115,7 +123,7 @@ const poolingOfferSchema = new Schema<IPoolingOffer>(
     vehicle: {
       type: {
         type: String,
-        enum: ['car', 'bike'],
+        enum: ['car', 'bike', 'scooty'],
         required: true,
       },
       brand: {
@@ -158,6 +166,11 @@ const poolingOfferSchema = new Schema<IPoolingOffer>(
           ref: 'User',
         },
         name: String,
+        seatsBooked: {
+          type: Number,
+          min: 1,
+          default: 1,
+        },
         status: {
           type: String,
           enum: ['pending', 'confirmed', 'cancelled'],
@@ -167,7 +180,7 @@ const poolingOfferSchema = new Schema<IPoolingOffer>(
     ],
     status: {
       type: String,
-      enum: ['active', 'pending', 'expired', 'completed', 'cancelled', 'suspended', 'booked'],
+      enum: ['active', 'pending', 'expired', 'completed', 'cancelled', 'suspended', 'booked', 'in_progress'],
       default: 'pending',
     },
     views: {
@@ -189,6 +202,7 @@ poolingOfferSchema.index({ driverId: 1, status: 1 });
 poolingOfferSchema.index({ date: 1, status: 1 });
 poolingOfferSchema.index({ 'route.from.lat': 1, 'route.from.lng': 1 });
 poolingOfferSchema.index({ 'route.to.lat': 1, 'route.to.lng': 1 });
+poolingOfferSchema.index({ 'route.waypoints.lat': 1, 'route.waypoints.lng': 1 });
 poolingOfferSchema.index({ offerId: 1 }, { unique: true });
 poolingOfferSchema.index({ createdAt: -1 });
 poolingOfferSchema.index({ status: 1, date: 1 });

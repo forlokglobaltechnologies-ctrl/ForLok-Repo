@@ -13,15 +13,18 @@ import {
   Image,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { ArrowLeft, Camera, Car, Bike, CheckCircle, X, FileText } from 'lucide-react-native';
+import { ArrowLeft, Camera, Car, Bike, CheckCircle, X, FileText, Calendar, Shield, Fuel, Settings2 } from 'lucide-react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '@constants/theme';
 import { normalize, wp, hp } from '@utils/responsive';
 import { Button } from '@components/common/Button';
 import { Input } from '@components/common/Input';
-import { Card } from '@components/common/Card';
+
 import { useLanguage } from '@context/LanguageContext';
+import { useSnackbar } from '@context/SnackbarContext';
 import { vehicleApi, rentalApi, uploadFile } from '@utils/apiClient';
 import { API_CONFIG } from '../../config/api';
+import { getUserErrorMessage } from '@utils/errorUtils';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -30,9 +33,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const AddVehicleScreen = () => {
   const navigation = useNavigation();
   const { t } = useLanguage();
+  const { showSnackbar } = useSnackbar();
   
   // Basic Info
-  const [vehicleType, setVehicleType] = useState<'car' | 'bike' | null>(null);
+  const [vehicleType, setVehicleType] = useState<'car' | 'bike' | 'scooty' | null>(null);
   const [vehicleNumber, setVehicleNumber] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [brand, setBrand] = useState('');
@@ -74,10 +78,12 @@ const AddVehicleScreen = () => {
     loadUserType();
   }, []);
 
-  // Auto-set seats for bikes (bikes always have 2 seats)
   useEffect(() => {
-    if (vehicleType === 'bike') {
+    if (vehicleType === 'bike' || vehicleType === 'scooty') {
       setSeats(2);
+    }
+    if (vehicleType === 'scooty') {
+      setTransmission('Automatic');
     }
   }, [vehicleType]);
 
@@ -112,7 +118,7 @@ const AddVehicleScreen = () => {
     try {
       setCalculatingPrice(true);
       const response = await rentalApi.calculatePrice({
-        vehicleType: vehicleType as 'car' | 'bike',
+        vehicleType: (vehicleType === 'scooty' ? 'bike' : vehicleType) as 'car' | 'bike',
         brand,
         model: model || undefined,
         year: year || undefined,
@@ -148,7 +154,7 @@ const AddVehicleScreen = () => {
               }
               const result = await ImagePicker.launchCameraAsync({
                 mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                allowsEditing: true,
+                allowsEditing: false,
                 quality: 0.8,
               });
               if (!result.canceled && result.assets[0]) {
@@ -166,7 +172,7 @@ const AddVehicleScreen = () => {
               }
               const result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                allowsEditing: true,
+                allowsEditing: false,
                 quality: 0.8,
               });
               if (!result.canceled && result.assets[0]) {
@@ -189,7 +195,7 @@ const AddVehicleScreen = () => {
                   await handleDocumentSelected(type, uri, mimeType);
                 }
               } catch (error: any) {
-                Alert.alert('Error', error.message || 'Failed to pick document');
+                showSnackbar({ message: error.message || 'Failed to pick document', type: 'error' });
               }
             },
           },
@@ -197,7 +203,7 @@ const AddVehicleScreen = () => {
         ]
       );
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to open document picker');
+      showSnackbar({ message: error.message || 'Failed to open document picker', type: 'error' });
     }
   };
 
@@ -260,7 +266,7 @@ const AddVehicleScreen = () => {
         Alert.alert('Upload Failed', response.error || 'Failed to upload document');
       }
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to upload document');
+      showSnackbar({ message: error.message || 'Failed to upload document', type: 'error' });
     } finally {
       setUploading(null);
     }
@@ -299,9 +305,8 @@ const AddVehicleScreen = () => {
               }
               const result = await ImagePicker.launchCameraAsync({
                 mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                allowsEditing: true,
+                allowsEditing: false,
                 quality: 0.8,
-                aspect: [4, 3],
               });
               if (!result.canceled && result.assets[0]) {
                 await handlePhotoUpload(type, result.assets[0].uri);
@@ -318,9 +323,8 @@ const AddVehicleScreen = () => {
               }
               const result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                allowsEditing: true,
+                allowsEditing: false,
                 quality: 0.8,
-                aspect: [4, 3],
               });
               if (!result.canceled && result.assets[0]) {
                 await handlePhotoUpload(type, result.assets[0].uri);
@@ -331,7 +335,7 @@ const AddVehicleScreen = () => {
         ]
       );
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to open photo picker');
+      showSnackbar({ message: error.message || 'Failed to open photo picker', type: 'error' });
     }
   };
 
@@ -389,7 +393,7 @@ const AddVehicleScreen = () => {
         Alert.alert('Upload Failed', response.error || 'Failed to upload photo');
       }
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to upload photo');
+      showSnackbar({ message: error.message || 'Failed to upload photo', type: 'error' });
     } finally {
       setUploadingPhoto(null);
     }
@@ -442,9 +446,8 @@ const AddVehicleScreen = () => {
       Alert.alert('Validation Error', 'Please enter number of seats');
       return;
     }
-    // Validate bike seats
-    if (vehicleType === 'bike' && seats !== 2) {
-      Alert.alert('Validation Error', 'Bikes must have exactly 2 seats');
+    if ((vehicleType === 'bike' || vehicleType === 'scooty') && seats !== 2) {
+      Alert.alert('Validation Error', 'Bikes and scooties must have exactly 2 seats');
       return;
     }
     if (!fuelType) {
@@ -570,11 +573,11 @@ const AddVehicleScreen = () => {
           ]
         );
       } else {
-        Alert.alert('Error', response.error || 'Failed to add vehicle');
+        showSnackbar({ message: getUserErrorMessage(response as any, 'Failed to add vehicle'), type: 'error' });
       }
     } catch (error: any) {
       console.error('Error saving vehicle:', error);
-      Alert.alert('Error', error.message || 'Failed to add vehicle');
+      showSnackbar({ message: error.message || 'Failed to add vehicle', type: 'error' });
     } finally {
       setSaving(false);
     }
@@ -587,173 +590,193 @@ const AddVehicleScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <ArrowLeft size={24} color={COLORS.white} />
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <ArrowLeft size={22} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t('addVehicle.title')}</Text>
-        <View style={styles.placeholder} />
+        <View style={{ width: normalize(36) }} />
       </View>
 
       <KeyboardAvoidingView
         style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           {/* Vehicle Type */}
-          <View style={styles.vehicleTypeContainer}>
-            <Text style={styles.label}>{t('addVehicle.vehicleType')} *</Text>
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Choose Vehicle Type</Text>
             <View style={styles.vehicleTypeOptions}>
-              <TouchableOpacity
-                style={[
-                  styles.vehicleTypeButton,
-                  vehicleType === 'car' && styles.vehicleTypeSelected,
-                ]}
-                onPress={() => {
-                  setVehicleType('car');
-                  setSeats(5); // Reset to default
-                }}
-              >
-                <Car size={24} color={vehicleType === 'car' ? COLORS.primary : COLORS.textSecondary} />
-                <Text
-                  style={[
-                    styles.vehicleTypeText,
-                    vehicleType === 'car' && styles.vehicleTypeTextSelected,
-                  ]}
-                >
-                  {t('dashboard.car')}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.vehicleTypeButton,
-                  vehicleType === 'bike' && styles.vehicleTypeSelected,
-                ]}
-                onPress={() => {
-                  setVehicleType('bike');
-                  setSeats(2); // Bikes always have 2 seats
-                }}
-              >
-                <Bike size={24} color={vehicleType === 'bike' ? COLORS.primary : COLORS.textSecondary} />
-                <Text
-                  style={[
-                    styles.vehicleTypeText,
-                    vehicleType === 'bike' && styles.vehicleTypeTextSelected,
-                  ]}
-                >
-                  {t('dashboard.bike')}
-                </Text>
-              </TouchableOpacity>
+              {([
+                { type: 'car' as const, icon: 'car', color: '#1565C0', bg: '#E3F2FD', label: 'Car', seats: 5 },
+                { type: 'bike' as const, icon: 'bike', color: '#E65100', bg: '#FFF3E0', label: 'Bike', seats: 2 },
+                { type: 'scooty' as const, icon: 'scooty', color: '#6A1B9A', bg: '#F3E5F5', label: 'Scooty', seats: 2 },
+              ]).map((vt) => {
+                const isSelected = vehicleType === vt.type;
+                return (
+                  <TouchableOpacity
+                    key={vt.type}
+                    style={[
+                      styles.vehicleTypeButton,
+                      { backgroundColor: isSelected ? vt.color : COLORS.white, borderColor: isSelected ? vt.color : COLORS.border },
+                    ]}
+                    onPress={() => { setVehicleType(vt.type); setSeats(vt.seats); }}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.vehicleIconWrap, { backgroundColor: isSelected ? 'rgba(255,255,255,0.25)' : vt.bg }]}>
+                      {vt.icon === 'car' && <Car size={24} color={isSelected ? '#FFF' : vt.color} />}
+                      {vt.icon === 'bike' && <Bike size={24} color={isSelected ? '#FFF' : vt.color} />}
+                      {vt.icon === 'scooty' && <MaterialCommunityIcons name="moped" size={24} color={isSelected ? '#FFF' : vt.color} />}
+                    </View>
+                    <Text style={[styles.vehicleTypeText, { color: isSelected ? '#FFF' : COLORS.text }]}>
+                      {vt.label}
+                    </Text>
+                    {isSelected && (
+                      <View style={styles.vehicleCheckBadge}>
+                        <CheckCircle size={14} color={vt.color} />
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </View>
 
           {/* Basic Information */}
-          <Input
-            label={t('addVehicle.vehicleNumber')}
-            value={vehicleNumber}
-            onChangeText={setVehicleNumber}
-            placeholder="e.g., AP 12 AB 1234"
-            containerStyle={styles.input}
-            autoCapitalize="characters"
-          />
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Basic Information</Text>
 
-          {userType === 'company' && (
-          <Input
-            label={t('addVehicle.companyName')}
-            value={companyName}
-            onChangeText={setCompanyName}
-            placeholder={t('addVehicle.selectFromDropdown')}
+            <Input
+              label={t('addVehicle.vehicleNumber')}
+              value={vehicleNumber}
+              onChangeText={setVehicleNumber}
+              placeholder="e.g., AP 12 AB 1234"
+              containerStyle={styles.input}
+              autoCapitalize="characters"
+            />
+
+            {userType === 'company' && (
+              <Input
+                label={t('addVehicle.companyName')}
+                value={companyName}
+                onChangeText={setCompanyName}
+                placeholder={t('addVehicle.selectFromDropdown')}
+                containerStyle={styles.input}
+              />
+            )}
+
+            <View style={styles.rowInputs}>
+              <View style={{ flex: 1 }}>
+                <Input
+                  label="Brand *"
+                  value={brand}
+                  onChangeText={setBrand}
+                  placeholder="e.g., Honda"
+                  containerStyle={styles.input}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Input
+                  label="Model *"
+                  value={model}
+                  onChangeText={setModel}
+                  placeholder="e.g., Activa"
+                  containerStyle={styles.input}
+                />
+              </View>
+            </View>
+
+            <View style={styles.input}>
+              <Text style={styles.label}>Year of Manufacture *</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.yearScroll}>
+                {yearOptions.map((y) => (
+                  <TouchableOpacity
+                    key={y}
+                    style={[styles.yearButton, year === y && styles.yearButtonSelected]}
+                    onPress={() => setYear(y)}
+                  >
+                    <Text style={[styles.yearText, year === y && styles.yearTextSelected]}>{y}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+
+            <Input
+              label="Color"
+              value={color}
+              onChangeText={setColor}
+              placeholder="e.g., White, Black, Red"
               containerStyle={styles.input}
             />
-          )}
-
-          <Input
-            label="Brand *"
-            value={brand}
-            onChangeText={setBrand}
-            placeholder="e.g., Honda, Maruti, Hyundai"
-            containerStyle={styles.input}
-          />
-
-          <Input
-            label="Model *"
-            value={model}
-            onChangeText={setModel}
-            placeholder="e.g., City, Swift, Creta"
-            containerStyle={styles.input}
-          />
-
-          {/* Year Picker */}
-          <View style={styles.input}>
-            <Text style={styles.label}>Year of Manufacture *</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.yearScroll}>
-              {yearOptions.map((y) => (
-                <TouchableOpacity
-                  key={y}
-                  style={[styles.yearButton, year === y && styles.yearButtonSelected]}
-                  onPress={() => setYear(y)}
-                >
-                  <Text style={[styles.yearText, year === y && styles.yearTextSelected]}>{y}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
           </View>
 
-          <Input
-            label="Color"
-            value={color}
-            onChangeText={setColor}
-            placeholder="e.g., White, Black, Red"
-            containerStyle={styles.input}
-          />
-
           {/* Vehicle Specs */}
-          <View style={styles.input}>
-            <Text style={styles.label}>Number of Seats *</Text>
-            {vehicleType === 'bike' ? (
-              <View style={styles.seatsContainer}>
-                <View style={[styles.seatButton, styles.seatButtonSelected, styles.seatButtonDisabled]}>
-                  <Text style={[styles.seatText, styles.seatTextSelected]}>2</Text>
-                </View>
-                <Text style={styles.bikeSeatsNote}>Bikes have 2 seats (rider + pillion)</Text>
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Specifications</Text>
+
+            <View style={styles.input}>
+              <View style={styles.labelRow}>
+                <Text style={styles.label}>Number of Seats *</Text>
               </View>
-            ) : (
-              <View style={styles.seatsContainer}>
-                {[2, 3, 4, 5, 6, 7, 8].map((s) => (
+              {(vehicleType === 'bike' || vehicleType === 'scooty') ? (
+                <View style={styles.lockedSpecRow}>
+                  <View style={styles.lockedSpecBadge}>
+                    <Text style={styles.lockedSpecValue}>2</Text>
+                  </View>
+                  <Text style={styles.lockedSpecNote}>
+                    {vehicleType === 'scooty' ? 'Scooties always have 2 seats' : 'Bikes always have 2 seats'}
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.seatsContainer}>
+                  {[2, 3, 4, 5, 6, 7, 8].map((s) => (
+                    <TouchableOpacity
+                      key={s}
+                      style={[styles.seatButton, seats === s && styles.seatButtonSelected]}
+                      onPress={() => setSeats(s)}
+                    >
+                      <Text style={[styles.seatText, seats === s && styles.seatTextSelected]}>{s}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
+
+            <View style={styles.input}>
+              <View style={styles.labelRow}>
+                <Fuel size={14} color={COLORS.textSecondary} />
+                <Text style={styles.label}>Fuel Type *</Text>
+              </View>
+              <View style={styles.optionsRow}>
+                {(vehicleType === 'scooty' || vehicleType === 'bike'
+                  ? ['Petrol', 'Electric']
+                  : ['Petrol', 'Diesel', 'Electric', 'CNG']
+                ).map((fuel) => (
                   <TouchableOpacity
-                    key={s}
-                    style={[styles.seatButton, seats === s && styles.seatButtonSelected]}
-                    onPress={() => setSeats(s)}
+                    key={fuel}
+                    style={[styles.optionButton, fuelType === fuel && styles.optionButtonSelected]}
+                    onPress={() => setFuelType(fuel as any)}
                   >
-                    <Text style={[styles.seatText, seats === s && styles.seatTextSelected]}>{s}</Text>
+                    <Text style={[styles.optionText, fuelType === fuel && styles.optionTextSelected]}>
+                      {fuel}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </View>
-            )}
-          </View>
-
-          {/* Fuel Type */}
-          <View style={styles.input}>
-            <Text style={styles.label}>Fuel Type *</Text>
-            <View style={styles.optionsRow}>
-              {['Petrol', 'Diesel', 'Electric', 'CNG'].map((fuel) => (
-                <TouchableOpacity
-                  key={fuel}
-                  style={[styles.optionButton, fuelType === fuel && styles.optionButtonSelected]}
-                  onPress={() => setFuelType(fuel as any)}
-                >
-                  <Text style={[styles.optionText, fuelType === fuel && styles.optionTextSelected]}>
-                    {fuel}
-                  </Text>
-                </TouchableOpacity>
-              ))}
             </View>
-          </View>
 
-          {/* Transmission */}
-          <View style={styles.input}>
-            <Text style={styles.label}>Transmission *</Text>
-            {vehicleType === 'bike' ? (
-              <View>
+            <View style={styles.input}>
+              <View style={styles.labelRow}>
+                <Settings2 size={14} color={COLORS.textSecondary} />
+                <Text style={styles.label}>Transmission *</Text>
+              </View>
+              {vehicleType === 'scooty' ? (
+                <View style={styles.lockedSpecRow}>
+                  <View style={[styles.lockedSpecBadge, { backgroundColor: '#6A1B9A' }]}>
+                    <Text style={styles.lockedSpecValue}>Auto</Text>
+                  </View>
+                  <Text style={styles.lockedSpecNote}>Scooties use CVT automatic transmission</Text>
+                </View>
+              ) : vehicleType === 'bike' ? (
                 <View style={styles.optionsRow}>
                   {['Manual', 'Automatic'].map((trans) => (
                     <TouchableOpacity
@@ -762,85 +785,77 @@ const AddVehicleScreen = () => {
                       onPress={() => setTransmission(trans as any)}
                     >
                       <Text style={[styles.optionText, transmission === trans && styles.optionTextSelected]}>
-                        {trans === 'Manual' ? 'Gear Bike' : 'Scooter/CVT'}
+                        {trans === 'Manual' ? 'Gear' : 'CVT/Auto'}
                       </Text>
                     </TouchableOpacity>
                   ))}
                 </View>
-                <Text style={styles.bikeTransmissionNote}>
-                  Manual = Gear bikes | Automatic = Scooters/CVT
+              ) : (
+                <View style={styles.optionsRow}>
+                  {['Manual', 'Automatic'].map((trans) => (
+                    <TouchableOpacity
+                      key={trans}
+                      style={[styles.optionButton, transmission === trans && styles.optionButtonSelected]}
+                      onPress={() => setTransmission(trans as any)}
+                    >
+                      <Text style={[styles.optionText, transmission === trans && styles.optionTextSelected]}>
+                        {trans}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
+
+            <TouchableOpacity onPress={() => setShowInsuranceDatePicker(true)} style={styles.input}>
+              <View style={styles.labelRow}>
+                <Shield size={14} color={COLORS.textSecondary} />
+                <Text style={styles.label}>Insurance Expiry Date *</Text>
+              </View>
+              <View style={styles.dateInput}>
+                <Calendar size={16} color={insuranceExpiry ? COLORS.primary : COLORS.textSecondary} />
+                <Text style={[styles.dateText, !insuranceExpiry && styles.datePlaceholder]}>
+                  {insuranceExpiry
+                    ? insuranceExpiry.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+                    : 'Select date'}
                 </Text>
               </View>
-            ) : (
-              <View style={styles.optionsRow}>
-                {['Manual', 'Automatic'].map((trans) => (
-                  <TouchableOpacity
-                    key={trans}
-                    style={[styles.optionButton, transmission === trans && styles.optionButtonSelected]}
-                    onPress={() => setTransmission(trans as any)}
-                  >
-                    <Text style={[styles.optionText, transmission === trans && styles.optionTextSelected]}>
-                      {trans}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+            </TouchableOpacity>
+            {showInsuranceDatePicker && (
+              <DateTimePicker
+                value={insuranceExpiry || new Date()}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={(event, selectedDate) => {
+                  setShowInsuranceDatePicker(Platform.OS === 'ios');
+                  if (selectedDate) {
+                    setInsuranceExpiry(selectedDate);
+                  }
+                }}
+                minimumDate={new Date()}
+              />
             )}
           </View>
 
-          {/* Insurance Expiry */}
-          <TouchableOpacity onPress={() => setShowInsuranceDatePicker(true)} style={styles.input}>
-            <Text style={styles.label}>Insurance Expiry Date *</Text>
-            <View style={styles.dateInput}>
-              <Text style={[styles.dateText, !insuranceExpiry && styles.datePlaceholder]}>
-                {insuranceExpiry
-                  ? insuranceExpiry.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
-                  : 'Select date'}
-              </Text>
-            </View>
-          </TouchableOpacity>
-          {showInsuranceDatePicker && (
-            <DateTimePicker
-              value={insuranceExpiry || new Date()}
-              mode="date"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              onChange={(event, selectedDate) => {
-                setShowInsuranceDatePicker(Platform.OS === 'ios');
-                if (selectedDate) {
-                  setInsuranceExpiry(selectedDate);
-                }
-              }}
-              minimumDate={new Date()}
-            />
-          )}
-
           {/* Suggested Price Card */}
           {suggestedPrice && priceBreakdown && (
-            <Card style={styles.priceCard}>
-              <Text style={styles.priceTitle}>💰 Suggested Rental Price</Text>
-              <Text style={styles.priceAmount}>₹{suggestedPrice}/hour</Text>
+            <View style={styles.priceCard}>
+              <Text style={styles.priceTitle}>Suggested Rental Price</Text>
+              <Text style={styles.priceAmount}>₹{suggestedPrice}<Text style={styles.priceUnit}>/hour</Text></Text>
               <View style={styles.priceBreakdown}>
-                <Text style={styles.breakdownTitle}>Price Breakdown:</Text>
+                <Text style={styles.breakdownTitle}>Price Breakdown</Text>
                 {priceBreakdown && (
-                  <>
-                    <Text style={styles.breakdownText}>
-                      Base: ₹{priceBreakdown.basePrice} × {priceBreakdown.ageMultiplier.toFixed(2)} (age) ×{' '}
-                      {priceBreakdown.transmissionMultiplier.toFixed(2)} (transmission) ×{' '}
-                      {priceBreakdown.fuelMultiplier.toFixed(2)} (fuel) ×{' '}
-                      {priceBreakdown.seatsMultiplier.toFixed(2)} (seats)
-                    </Text>
-                    <Text style={styles.breakdownText}>
-                      = ₹{suggestedPrice}/hour
-                    </Text>
-                  </>
+                  <Text style={styles.breakdownText}>
+                    Base ₹{priceBreakdown.basePrice} × {priceBreakdown.ageMultiplier.toFixed(2)} (age) × {priceBreakdown.transmissionMultiplier.toFixed(2)} (trans) × {priceBreakdown.fuelMultiplier.toFixed(2)} (fuel) × {priceBreakdown.seatsMultiplier.toFixed(2)} (seats) = ₹{suggestedPrice}/hr
+                  </Text>
                 )}
               </View>
-            </Card>
+            </View>
           )}
 
           {/* Vehicle Photos */}
-          <Card style={styles.documentsCard}>
-            <Text style={styles.documentsTitle}>Vehicle Photos</Text>
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Vehicle Photos</Text>
             <View style={styles.photosGrid}>
               {[
                 { key: 'front', label: 'Front View', photo: photoFront },
@@ -861,24 +876,24 @@ const AddVehicleScreen = () => {
                       <View style={styles.photoPreview}>
                         <Image source={{ uri: photo }} style={styles.photoImage} />
                         <View style={styles.photoOverlay}>
-                          <X size={20} color={COLORS.white} />
+                          <X size={20} color="#FFF" />
                         </View>
                       </View>
                     ) : (
                       <View style={styles.photoPlaceholder}>
-                        <Camera size={24} color={COLORS.primary} />
-                        <Text style={styles.photoPlaceholderText}>Add Photo</Text>
+                        <Camera size={22} color={COLORS.primary} />
+                        <Text style={styles.photoPlaceholderText}>Upload</Text>
                       </View>
                     )}
                   </TouchableOpacity>
                 </View>
               ))}
             </View>
-          </Card>
+          </View>
 
           {/* Documents */}
-          <Card style={styles.documentsCard}>
-            <Text style={styles.documentsTitle}>{t('addVehicle.documents')} *</Text>
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>{t('addVehicle.documents')} *</Text>
             {[
               { key: 'rc', label: 'Registration Certificate (RC)', photo: registrationCertificate },
               { key: 'insurance', label: 'Insurance Certificate', photo: insurance },
@@ -888,10 +903,10 @@ const AddVehicleScreen = () => {
               <View key={key} style={styles.documentRow}>
                 <View style={styles.documentInfo}>
                   <Text style={styles.documentLabel}>
-                    {label} {optional && '(Optional)'}
+                    {label} {optional && <Text style={{ color: '#999', fontWeight: '400' }}>(Optional)</Text>}
                   </Text>
-                  {photo && <CheckCircle size={16} color={COLORS.success} />}
-            </View>
+                  {photo && <CheckCircle size={16} color="#38A169" />}
+                </View>
                 <TouchableOpacity
                   style={styles.documentButton}
                   onPress={() => (photo ? handleRemoveDocument(key) : handleDocumentPicker(key as any))}
@@ -900,14 +915,14 @@ const AddVehicleScreen = () => {
                   {uploading === key ? (
                     <ActivityIndicator size="small" color={COLORS.primary} />
                   ) : photo ? (
-                    <X size={20} color={COLORS.error} />
+                    <X size={18} color="#E53E3E" />
                   ) : (
-                    <FileText size={20} color={COLORS.primary} />
+                    <FileText size={18} color={COLORS.primary} />
                   )}
-              </TouchableOpacity>
-            </View>
+                </TouchableOpacity>
+              </View>
             ))}
-          </Card>
+          </View>
 
           <Button
             title={saving ? 'Saving...' : t('common.save')}
@@ -924,71 +939,123 @@ const AddVehicleScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+  container: { flex: 1, backgroundColor: '#F5F6F8' },
   header: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: '#FFF',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.md,
-    paddingTop: SPACING.xl,
+    paddingHorizontal: normalize(16),
+    paddingVertical: normalize(12),
+    paddingTop: normalize(46),
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#E8E8E8',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+  },
+  backBtn: {
+    width: normalize(36),
+    height: normalize(36),
+    borderRadius: normalize(18),
+    backgroundColor: '#F5F6F8',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitle: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xl,
-    color: COLORS.white,
-    fontWeight: 'bold',
+    fontFamily: FONTS.medium || FONTS.regular,
+    fontSize: normalize(17),
+    color: COLORS.text,
+    fontWeight: '700',
   },
-  placeholder: { width: normalize(40) },
   keyboardView: { flex: 1 },
-  scrollContent: { padding: SPACING.md },
-  vehicleTypeContainer: { marginBottom: SPACING.md },
+  scrollContent: { padding: normalize(14), paddingBottom: normalize(40) },
+  sectionCard: {
+    backgroundColor: '#FFF',
+    borderRadius: normalize(16),
+    padding: normalize(16),
+    marginBottom: normalize(12),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1,
+  },
+  sectionTitle: {
+    fontFamily: FONTS.medium || FONTS.regular,
+    fontSize: normalize(15),
+    color: COLORS.text,
+    fontWeight: '700',
+    marginBottom: normalize(14),
+  },
   label: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.text,
-    marginBottom: SPACING.xs,
+    fontSize: normalize(12),
+    color: '#666',
+    marginBottom: normalize(6),
     fontWeight: '600',
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: normalize(6),
+    marginBottom: normalize(6),
+  },
+  rowInputs: {
+    flexDirection: 'row',
+    gap: normalize(10),
   },
   vehicleTypeOptions: {
     flexDirection: 'row',
-    gap: SPACING.md,
+    gap: normalize(10),
   },
   vehicleTypeButton: {
     flex: 1,
-    padding: SPACING.md,
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
     alignItems: 'center',
-    gap: SPACING.xs,
+    paddingVertical: normalize(16),
+    paddingHorizontal: normalize(8),
+    borderRadius: normalize(16),
+    borderWidth: 2,
+    position: 'relative',
   },
-  vehicleTypeSelected: {
-    backgroundColor: COLORS.primary + '20',
-    borderColor: COLORS.primary,
+  vehicleIconWrap: {
+    width: normalize(48),
+    height: normalize(48),
+    borderRadius: normalize(24),
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: normalize(8),
   },
   vehicleTypeText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
-    color: COLORS.text,
+    fontFamily: FONTS.medium || FONTS.regular,
+    fontSize: normalize(13),
+    fontWeight: '600',
   },
-  vehicleTypeTextSelected: {
-    color: COLORS.primary,
-    fontWeight: 'bold',
+  vehicleCheckBadge: {
+    position: 'absolute',
+    top: normalize(6),
+    right: normalize(6),
+    width: normalize(20),
+    height: normalize(20),
+    borderRadius: normalize(10),
+    backgroundColor: '#FFF',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  input: { marginBottom: SPACING.md },
+  input: { marginBottom: normalize(14) },
   yearScroll: {
-    marginTop: SPACING.xs,
+    marginTop: normalize(4),
   },
   yearButton: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    marginRight: SPACING.sm,
-    backgroundColor: COLORS.white,
+    paddingHorizontal: normalize(16),
+    paddingVertical: normalize(9),
+    borderRadius: normalize(22),
+    borderWidth: 1.5,
+    borderColor: '#E0E0E0',
+    marginRight: normalize(8),
+    backgroundColor: '#FFF',
   },
   yearButtonSelected: {
     backgroundColor: COLORS.primary,
@@ -996,28 +1063,29 @@ const styles = StyleSheet.create({
   },
   yearText: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
+    fontSize: normalize(13),
     color: COLORS.text,
+    fontWeight: '500',
   },
   yearTextSelected: {
-    color: COLORS.white,
-    fontWeight: 'bold',
+    color: '#FFF',
+    fontWeight: '700',
   },
   seatsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: SPACING.sm,
-    marginTop: SPACING.xs,
+    gap: normalize(8),
+    marginTop: normalize(4),
   },
   seatButton: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.white,
-    minWidth: normalize(50),
+    width: normalize(44),
+    height: normalize(44),
+    borderRadius: normalize(22),
+    borderWidth: 1.5,
+    borderColor: '#E0E0E0',
+    backgroundColor: '#FFF',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   seatButtonSelected: {
     backgroundColor: COLORS.primary,
@@ -1025,28 +1093,55 @@ const styles = StyleSheet.create({
   },
   seatText: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
+    fontSize: normalize(14),
     color: COLORS.text,
+    fontWeight: '600',
   },
   seatTextSelected: {
-    color: COLORS.white,
-    fontWeight: 'bold',
+    color: '#FFF',
+    fontWeight: '700',
+  },
+  seatButtonDisabled: { opacity: 0.8 },
+  lockedSpecRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: normalize(10),
+    marginTop: normalize(4),
+    backgroundColor: '#F8F9FA',
+    padding: normalize(10),
+    borderRadius: normalize(12),
+  },
+  lockedSpecBadge: {
+    backgroundColor: COLORS.primary,
+    borderRadius: normalize(10),
+    paddingHorizontal: normalize(14),
+    paddingVertical: normalize(6),
+  },
+  lockedSpecValue: {
+    fontFamily: FONTS.regular,
+    fontSize: normalize(14),
+    color: '#FFF',
+    fontWeight: '700',
+  },
+  lockedSpecNote: {
+    fontFamily: FONTS.regular,
+    fontSize: normalize(12),
+    color: '#666',
+    flex: 1,
   },
   optionsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: SPACING.sm,
-    marginTop: SPACING.xs,
+    gap: normalize(8),
+    marginTop: normalize(4),
   },
   optionButton: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.white,
-    flex: 1,
-    minWidth: '45%',
+    paddingHorizontal: normalize(18),
+    paddingVertical: normalize(10),
+    borderRadius: normalize(22),
+    borderWidth: 1.5,
+    borderColor: '#E0E0E0',
+    backgroundColor: '#FFF',
     alignItems: 'center',
   },
   optionButtonSelected: {
@@ -1055,151 +1150,174 @@ const styles = StyleSheet.create({
   },
   optionText: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
+    fontSize: normalize(13),
     color: COLORS.text,
+    fontWeight: '500',
   },
   optionTextSelected: {
-    color: COLORS.white,
-    fontWeight: 'bold',
+    color: '#FFF',
+    fontWeight: '700',
   },
   dateInput: {
-    padding: SPACING.md,
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.white,
-    marginTop: SPACING.xs,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: normalize(10),
+    padding: normalize(14),
+    borderRadius: normalize(12),
+    borderWidth: 1.5,
+    borderColor: '#E0E0E0',
+    backgroundColor: '#FFF',
+    marginTop: normalize(4),
   },
   dateText: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
+    fontSize: normalize(14),
     color: COLORS.text,
   },
   datePlaceholder: {
-    color: COLORS.textSecondary,
+    color: '#999',
   },
   priceCard: {
-    padding: SPACING.md,
-    marginBottom: SPACING.md,
-    backgroundColor: COLORS.primary + '10',
+    padding: normalize(16),
+    marginBottom: normalize(12),
+    backgroundColor: '#F0FFF4',
     borderWidth: 1,
-    borderColor: COLORS.primary + '30',
+    borderColor: '#C6F6D5',
+    borderRadius: normalize(16),
   },
   priceTitle: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.textSecondary,
-    marginBottom: SPACING.xs,
+    fontSize: normalize(12),
+    color: '#38A169',
+    marginBottom: normalize(4),
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   priceAmount: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xxl,
-    color: COLORS.primary,
+    fontSize: normalize(28),
+    color: '#22543D',
     fontWeight: 'bold',
-    marginBottom: SPACING.sm,
+    marginBottom: normalize(8),
+  },
+  priceUnit: {
+    fontSize: normalize(14),
+    fontWeight: '500',
+    color: '#666',
   },
   priceBreakdown: {
-    marginTop: SPACING.sm,
-    paddingTop: SPACING.sm,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    marginTop: normalize(6),
+    paddingTop: normalize(8),
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#C6F6D5',
   },
   breakdownTitle: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.textSecondary,
-    marginBottom: SPACING.xs,
+    fontSize: normalize(11),
+    color: '#666',
+    marginBottom: normalize(4),
     fontWeight: '600',
   },
   breakdownText: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.textSecondary,
-    marginBottom: SPACING.xs / 2,
+    fontSize: normalize(11),
+    color: '#888',
+    lineHeight: normalize(16),
   },
-  documentsCard: { padding: SPACING.md, marginBottom: SPACING.md },
+  documentsCard: {
+    padding: normalize(16),
+    marginBottom: normalize(12),
+    borderRadius: normalize(16),
+    backgroundColor: '#FFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1,
+  },
   documentsTitle: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
+    fontFamily: FONTS.medium || FONTS.regular,
+    fontSize: normalize(15),
     color: COLORS.text,
-    fontWeight: 'bold',
-    marginBottom: SPACING.md,
+    fontWeight: '700',
+    marginBottom: normalize(14),
   },
   documentRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: SPACING.sm,
-    paddingVertical: SPACING.xs,
+    marginBottom: normalize(8),
+    paddingVertical: normalize(10),
+    paddingHorizontal: normalize(14),
+    backgroundColor: '#F8F9FA',
+    borderRadius: normalize(12),
   },
   documentInfo: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.xs,
+    gap: normalize(8),
   },
   documentLabel: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
+    fontSize: normalize(13),
     color: COLORS.text,
     flex: 1,
+    fontWeight: '500',
   },
   documentButton: {
-    padding: SPACING.sm,
+    width: normalize(36),
+    height: normalize(36),
+    borderRadius: normalize(18),
+    backgroundColor: '#FFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  saveButton: { marginTop: SPACING.md, marginBottom: SPACING.xl },
-  seatButtonDisabled: {
-    opacity: 0.7,
-  },
-  bikeSeatsNote: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.textSecondary,
-    marginTop: SPACING.xs,
-    fontStyle: 'italic',
-  },
-  bikeTransmissionNote: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.textSecondary,
-    marginTop: SPACING.xs,
-    fontStyle: 'italic',
-  },
+  saveButton: { marginTop: normalize(8), marginBottom: normalize(32) },
   photosGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: SPACING.md,
+    gap: normalize(10),
   },
   photoItem: {
     width: '47%',
   },
   photoLabel: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
-    color: COLORS.textSecondary,
-    marginBottom: SPACING.xs,
+    fontSize: normalize(11),
+    color: '#888',
+    marginBottom: normalize(6),
+    fontWeight: '500',
   },
   photoButton: {
     width: '100%',
     aspectRatio: 1,
-    borderRadius: BORDER_RADIUS.md,
+    borderRadius: normalize(14),
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.background,
+    borderWidth: 1.5,
+    borderColor: '#E0E0E0',
+    borderStyle: 'dashed',
+    backgroundColor: '#FAFAFA',
   },
   photoPlaceholder: {
     width: '100%',
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: COLORS.background,
-    gap: SPACING.xs,
+    backgroundColor: '#FAFAFA',
+    gap: normalize(6),
   },
   photoPlaceholderText: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
+    fontSize: normalize(11),
     color: COLORS.primary,
+    fontWeight: '600',
   },
   photoPreview: {
     width: '100%',
@@ -1217,7 +1335,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.35)',
     justifyContent: 'center',
     alignItems: 'center',
   },

@@ -1,19 +1,19 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { View, StyleSheet, ActivityIndicator, StatusBar } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, StyleSheet, ActivityIndicator, StatusBar, Text, Animated } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Video, ResizeMode } from 'expo-av';
 import { normalize, hp } from '@utils/responsive';
 import { useAuth } from '@context/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ONBOARDING_KEY = '@forlok_onboarding_seen';
+const BRAND_TEXT = 'ForLok';
 
 const SplashScreen = () => {
   const navigation = useNavigation();
-  const videoRef = useRef<Video>(null);
   const { isAuthenticated, isLoading } = useAuth();
   const [onboardingChecked, setOnboardingChecked] = useState(false);
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
+  const letterAnims = React.useRef(BRAND_TEXT.split('').map(() => new Animated.Value(0))).current;
 
   // Check if user has seen onboarding before
   useEffect(() => {
@@ -24,6 +24,20 @@ const SplashScreen = () => {
     };
     checkOnboarding();
   }, []);
+
+  useEffect(() => {
+    const appearAnim = Animated.stagger(
+      90,
+      letterAnims.map((anim) =>
+        Animated.timing(anim, {
+          toValue: 1,
+          duration: 360,
+          useNativeDriver: true,
+        })
+      )
+    );
+    appearAnim.start();
+  }, [letterAnims]);
 
   useEffect(() => {
     // Wait for both auth check and onboarding check to complete
@@ -62,21 +76,37 @@ const SplashScreen = () => {
 
   return (
     <View style={styles.container}>
-      <StatusBar hidden />
-      <Video
-        ref={videoRef}
-        source={require('../../../assets/videos/mobile screen logo copy_1.mp4')}
-        style={StyleSheet.absoluteFillObject}
-        resizeMode={ResizeMode.COVER}
-        shouldPlay
-        isLooping
-        isMuted
-      />
-      <ActivityIndicator
-        size="large"
-        color="#FFFFFF"
-        style={styles.loader}
-      />
+      <StatusBar barStyle="light-content" backgroundColor="#F4AB04" />
+      <View style={styles.gradient}>
+        <View style={styles.brandTag}>
+          {BRAND_TEXT.split('').map((char, index) => (
+            <Animated.Text
+              key={`${char}-${index}`}
+              style={[
+                styles.brandLetter,
+                {
+                  opacity: letterAnims[index],
+                  transform: [
+                    {
+                      translateY: letterAnims[index].interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [8, 0],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            >
+              {char}
+            </Animated.Text>
+          ))}
+        </View>
+
+        <View style={styles.loaderWrap}>
+          <ActivityIndicator size="small" color="#FFFFFF" style={styles.loader} />
+          <Text style={styles.loadingText}>Loading</Text>
+        </View>
+      </View>
     </View>
   );
 };
@@ -84,11 +114,40 @@ const SplashScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: '#F4AB04',
   },
-  loader: {
+  gradient: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F4AB04',
+  },
+  brandTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  brandLetter: {
+    color: '#FFFFFF',
+    fontSize: normalize(42),
+    fontWeight: '700',
+    letterSpacing: 0.6,
+  },
+  loaderWrap: {
     position: 'absolute',
     bottom: hp(6),
+    alignSelf: 'center',
+    alignItems: 'center',
+    gap: 6,
+  },
+  loader: {
+    alignSelf: 'center',
+  },
+  loadingText: {
+    color: '#FFFFFF',
+    fontSize: normalize(12),
+    letterSpacing: 0.2,
     alignSelf: 'center',
   },
 });

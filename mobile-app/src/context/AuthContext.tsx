@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiService } from '../services/api.service';
 import { websocketService } from '../services/websocket.service';
+import { API_CONFIG } from '../config/api';
 
 const TOKEN_KEY = '@forlok_access_token';
 const REFRESH_TOKEN_KEY = '@forlok_refresh_token';
@@ -55,35 +56,65 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const storedUser = await AsyncStorage.getItem(USER_KEY);
 
       if (token && refreshToken) {
-        // We have tokens — user is authenticated
         if (storedUser) {
           setUser(JSON.parse(storedUser));
         }
         setIsAuthenticated(true);
-        // Connect WebSocket now that we're authenticated
+        setIsLoading(false);
+
         websocketService.connect();
+
+        // Refresh profile in the background — don't block the splash screen
+        apiService.request(API_CONFIG.ENDPOINTS.USER.PROFILE, {
+          method: 'GET',
+          requiresAuth: true,
+        }).then(async (profileResp) => {
+          if (profileResp.success && profileResp.data) {
+            const freshUser = profileResp.data;
+            setUser(freshUser);
+            await AsyncStorage.setItem(USER_KEY, JSON.stringify(freshUser));
+          } else if (profileResp.error?.includes('Authentication failed') || profileResp.error?.includes('Please login')) {
+            console.warn('Session expired, logging out');
+            await apiService.clearTokens();
+            await AsyncStorage.removeItem(USER_KEY);
+            setUser(null);
+            setIsAuthenticated(false);
+          }
+        }).catch(() => {});
       } else {
         setIsAuthenticated(false);
         setUser(null);
+        setIsLoading(false);
       }
     } catch (error) {
       console.error('Error checking auth state:', error);
       setIsAuthenticated(false);
       setUser(null);
-    } finally {
       setIsLoading(false);
     }
   };
 
   const login = useCallback(async (userData: User, tokens: { accessToken: string; refreshToken: string }) => {
     try {
-      // Save tokens
+      // Save tokens first so authenticated requests work
       await apiService.saveTokens(tokens.accessToken, tokens.refreshToken);
-      // Save user data
+
+      // Set auth state with login response data (instant)
       await AsyncStorage.setItem(USER_KEY, JSON.stringify(userData));
       setUser(userData);
       setIsAuthenticated(true);
-      // Connect WebSocket after login
+
+      // Fetch full profile to fill any fields missing from the login response
+      const profileResp = await apiService.request(API_CONFIG.ENDPOINTS.USER.PROFILE, {
+        method: 'GET',
+        requiresAuth: true,
+      });
+      if (profileResp.success && profileResp.data) {
+        const fullUser = profileResp.data;
+        setUser(fullUser);
+        await AsyncStorage.setItem(USER_KEY, JSON.stringify(fullUser));
+      }
+
       websocketService.connect();
     } catch (error) {
       console.error('Error during login:', error);

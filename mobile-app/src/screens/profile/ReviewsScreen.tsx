@@ -3,35 +3,19 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
-  SafeAreaView,
-  RefreshControl,
   FlatList,
+  RefreshControl,
   ActivityIndicator,
-  ImageBackground,
   Image,
+  StatusBar,
 } from 'react-native';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import {
-  ArrowLeft,
-  Star,
-  User,
-  MessageSquare,
-  ThumbsUp,
-  Calendar,
-  TrendingUp,
-  Award,
-  ChevronDown,
-} from 'lucide-react-native';
-import { BlurView } from 'expo-blur';
-import { normalize, wp, hp } from '@utils/responsive';
-import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
-import { Card } from '@components/common/Card';
+import { ArrowLeft, Star, User, ThumbsUp, TrendingUp, Award, MessageSquare } from 'lucide-react-native';
+import { normalize, hp } from '@utils/responsive';
+import { FONTS } from '@constants/theme';
 import { ratingApi } from '@utils/apiClient';
-import { useLanguage } from '@context/LanguageContext';
 import { useTheme } from '@context/ThemeContext';
-
 
 interface Rating {
   ratingId: string;
@@ -49,12 +33,7 @@ interface Rating {
   comment?: string;
   tags?: string[];
   createdAt: string;
-  rater?: {
-    userId: string;
-    name: string;
-    photo?: string;
-  };
-  // Legacy fields (may not exist)
+  rater?: { userId: string; name: string; photo?: string };
   userName?: string;
   userPhoto?: string;
 }
@@ -63,20 +42,12 @@ interface RatingBreakdown {
   averageRating: number;
   totalRatings: number;
   ratingDistribution: { [key: number]: number };
-  categoryAverages: {
-    punctuality?: number;
-    vehicleCondition?: number;
-    driving?: number;
-    behavior?: number;
-    communication?: number;
-    service?: number;
-  };
+  categoryAverages: { punctuality?: number; vehicleCondition?: number; driving?: number; behavior?: number; communication?: number; service?: number };
   recentTags: string[];
   asDriver?: { average: number; count: number };
   asPassenger?: { average: number; count: number };
 }
 
-// Normalize backend response to match RatingBreakdown interface
 const normalizeBreakdown = (data: any): RatingBreakdown => ({
   averageRating: data.averageRating ?? data.average ?? 0,
   totalRatings: data.totalRatings ?? data.total ?? 0,
@@ -87,18 +58,14 @@ const normalizeBreakdown = (data: any): RatingBreakdown => ({
   asPassenger: data.asPassenger,
 });
 
-type RouteParams = {
-  ReviewsScreen: {
-    userId: string;
-    userName?: string;
-  };
-};
+type RouteParams = { ReviewsScreen: { userId: string; userName?: string } };
+
+const STAR_COLOR = '#FFB800';
 
 const ReviewsScreen = () => {
   const navigation = useNavigation<any>();
   const route = useRoute<RouteProp<RouteParams, 'ReviewsScreen'>>();
   const { userId, userName } = route.params;
-  const { t } = useLanguage();
   const { theme } = useTheme();
 
   const [refreshing, setRefreshing] = useState(false);
@@ -112,7 +79,6 @@ const ReviewsScreen = () => {
   const fetchData = useCallback(async (reset = false) => {
     try {
       const currentPage = reset ? 1 : page;
-
       const [breakdownRes, reviewsRes] = await Promise.all([
         reset || !breakdown ? ratingApi.getBreakdown(userId) : Promise.resolve(null),
         ratingApi.getUserRatingsDetails(userId, {
@@ -125,14 +91,9 @@ const ReviewsScreen = () => {
       if (breakdownRes?.success && breakdownRes.data) {
         setBreakdown(normalizeBreakdown(breakdownRes.data));
       }
-
       if (reviewsRes.success && reviewsRes.data) {
         const newReviews = reviewsRes.data.ratings || [];
-        if (reset) {
-          setReviews(newReviews);
-        } else {
-          setReviews((prev) => [...prev, ...newReviews]);
-        }
+        setReviews(reset ? newReviews : (prev) => [...prev, ...newReviews]);
         setHasMore(newReviews.length === 20);
         if (!reset) setPage(currentPage + 1);
       }
@@ -157,866 +118,651 @@ const ReviewsScreen = () => {
   };
 
   const loadMore = () => {
-    if (!loading && hasMore) {
-      fetchData();
-    }
+    if (!loading && hasMore) fetchData();
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-    if (diffDays === 0) return 'Today';
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 7) return `${diffDays} days ago`;
-    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-
-    return date.toLocaleDateString('en-IN', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
+  const fmtDate = (dateString: string) => {
+    const d = new Date(dateString);
+    const diff = Math.floor((Date.now() - d.getTime()) / 86400000);
+    if (diff === 0) return 'Today';
+    if (diff === 1) return 'Yesterday';
+    if (diff < 7) return `${diff}d ago`;
+    if (diff < 30) return `${Math.floor(diff / 7)}w ago`;
+    return d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
   };
 
-  const getRatingLabel = (rating: number) => {
-    if (rating >= 4.5) return 'Excellent';
-    if (rating >= 3.5) return 'Very Good';
-    if (rating >= 2.5) return 'Good';
-    if (rating >= 1.5) return 'Fair';
-    return 'Poor';
-  };
-
-  const getRatingColor = (rating: number) => {
-    if (rating >= 4) return '#4CAF50';
-    if (rating >= 3) return '#FF9800';
-    if (rating >= 2) return '#FF5722';
+  const ratingColor = (r: number) => {
+    if (r >= 4) return '#4CAF50';
+    if (r >= 3) return '#FF9800';
+    if (r >= 2) return '#FF5722';
     return '#F44336';
   };
 
-  const getReviewerName = (item: Rating): string => {
-    // Backend provides rater object with enriched user data
-    if (item.rater?.name) return item.rater.name;
-    // Fallback to legacy fields
-    if (item.userName) return item.userName;
-    return 'User';
+  const ratingWord = (r: number) => {
+    if (r >= 4.5) return 'Excellent';
+    if (r >= 3.5) return 'Very Good';
+    if (r >= 2.5) return 'Good';
+    if (r >= 1.5) return 'Fair';
+    return 'Poor';
   };
 
-  const getReviewerPhoto = (item: Rating): string | null => {
-    if (item.rater?.photo) return item.rater.photo;
-    if (item.userPhoto) return item.userPhoto;
-    return null;
-  };
+  const humanize = (s: string) => s.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
 
-  const renderStars = (rating: number, size = 16) => {
+  /* ── Stars ── */
+  const Stars = ({ rating, size = 14 }: { rating: number; size?: number }) => (
+    <View style={{ flexDirection: 'row', gap: 1 }}>
+      {[1, 2, 3, 4, 5].map((i) => (
+        <Star key={i} size={size} color={i <= rating ? STAR_COLOR : '#E0E0E0'} fill={i <= rating ? STAR_COLOR : 'transparent'} />
+      ))}
+    </View>
+  );
+
+  /* ── Bar ── */
+  const Bar = ({ stars, count, total }: { stars: number; count: number; total: number }) => {
+    const pct = total > 0 ? (count / total) * 100 : 0;
     return (
-      <View style={styles.starsRow}>
-        {[1, 2, 3, 4, 5].map((star) => (
-          <Star
-            key={star}
-            size={size}
-            color={star <= rating ? '#FFB800' : '#E0E0E0'}
-            fill={star <= rating ? '#FFB800' : 'transparent'}
-          />
-        ))}
-      </View>
-    );
-  };
-
-  const renderRatingBar = (stars: number, count: number, total: number) => {
-    const percentage = total > 0 ? (count / total) * 100 : 0;
-    return (
-      <View style={styles.ratingBarRow} key={stars}>
-        <Text style={[styles.ratingBarLabel, { color: theme.colors.textSecondary }]}>{stars}</Text>
-        <Star size={10} color="#FFB800" fill="#FFB800" />
-        <View style={[styles.ratingBarContainer, { backgroundColor: theme.colors.border }]}>
-          <View
-            style={[
-              styles.ratingBarFill,
-              { width: `${percentage}%`, backgroundColor: getRatingColor(stars) },
-            ]}
-          />
+      <View style={s.barRow}>
+        <Text style={[s.barLabel, { color: theme.colors.textSecondary }]}>{stars}</Text>
+        <Star size={9} color={STAR_COLOR} fill={STAR_COLOR} />
+        <View style={[s.barTrack, { backgroundColor: theme.colors.border + '80' }]}>
+          <View style={[s.barFill, { width: `${pct}%`, backgroundColor: ratingColor(stars) }]} />
         </View>
-        <Text style={[styles.ratingBarCount, { color: theme.colors.textSecondary }]}>{count}</Text>
+        <Text style={[s.barCount, { color: theme.colors.textSecondary }]}>{count}</Text>
       </View>
     );
   };
 
-  const renderReview = ({ item }: { item: Rating }) => {
-    const reviewerName = getReviewerName(item);
-    const reviewerPhoto = getReviewerPhoto(item);
-    const ratingColor = getRatingColor(item.overallRating);
-    const isDriverReview = item.ratingType === 'passenger_to_driver';
-
+  /* ── Summary header ── */
+  const SummaryHeader = () => {
+    if (!breakdown) return null;
+    const avg = breakdown.averageRating;
     return (
-      <View style={[styles.reviewCard, { backgroundColor: theme.colors.surface }]}>
-        {/* Review Header */}
-        <View style={styles.reviewHeader}>
-          <View style={styles.reviewerInfo}>
-            {reviewerPhoto ? (
-              <Image source={{ uri: reviewerPhoto }} style={styles.reviewerAvatar} />
-            ) : (
-              <View style={[styles.avatarPlaceholder, { backgroundColor: theme.colors.primary + '20' }]}>
-                <Text style={[styles.avatarInitial, { color: theme.colors.primary }]}>
-                  {reviewerName.charAt(0).toUpperCase()}
-                </Text>
+      <View style={[s.summaryCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+        {/* Score + bars */}
+        <View style={s.summaryRow}>
+          <View style={s.scoreCol}>
+            <Text style={[s.scoreNum, { color: theme.colors.text }]}>{avg.toFixed(1)}</Text>
+            <Stars rating={Math.round(avg)} size={16} />
+            <Text style={[s.scoreWord, { color: ratingColor(avg) }]}>{ratingWord(avg)}</Text>
+            <Text style={[s.scoreCount, { color: theme.colors.textSecondary }]}>
+              {breakdown.totalRatings} ratings
+            </Text>
+          </View>
+          <View style={[s.scoreDivider, { backgroundColor: theme.colors.border }]} />
+          <View style={s.barsCol}>
+            {[5, 4, 3, 2, 1].map((n) => (
+              <Bar key={n} stars={n} count={breakdown.ratingDistribution[n] || 0} total={breakdown.totalRatings} />
+            ))}
+          </View>
+        </View>
+
+        {/* Driver / Passenger split */}
+        {(breakdown.asDriver?.count || breakdown.asPassenger?.count) ? (
+          <View style={[s.splitRow, { borderTopColor: theme.colors.border }]}>
+            {breakdown.asDriver && breakdown.asDriver.count > 0 && (
+              <View style={[s.splitPill, { backgroundColor: '#EEF2FF' }]}>
+                <Award size={14} color="#4F46E5" />
+                <Text style={[s.splitPillLabel, { color: '#4F46E5' }]}>Driver</Text>
+                <Text style={[s.splitPillValue, { color: '#4F46E5' }]}>{breakdown.asDriver.average.toFixed(1)}</Text>
+                <Star size={10} color={STAR_COLOR} fill={STAR_COLOR} />
+                <Text style={s.splitPillCount}>({breakdown.asDriver.count})</Text>
               </View>
             )}
-            <View style={styles.reviewerDetails}>
-              <Text style={[styles.reviewerName, { color: theme.colors.text }]}>{reviewerName}</Text>
-              <View style={styles.reviewMetaRow}>
-                <View style={[styles.typeBadge, { backgroundColor: isDriverReview ? '#E3F2FD' : '#FFF3E0' }]}>
-                  <Text style={[styles.typeBadgeText, { color: isDriverReview ? '#1565C0' : '#E65100' }]}>
-                    {isDriverReview ? 'As Driver' : 'As Passenger'}
-                  </Text>
-                </View>
-                <Text style={[styles.reviewDate, { color: theme.colors.textSecondary }]}>
-                  {formatDate(item.createdAt)}
-                </Text>
+            {breakdown.asPassenger && breakdown.asPassenger.count > 0 && (
+              <View style={[s.splitPill, { backgroundColor: '#FFF7ED' }]}>
+                <User size={14} color="#EA580C" />
+                <Text style={[s.splitPillLabel, { color: '#EA580C' }]}>Rider</Text>
+                <Text style={[s.splitPillValue, { color: '#EA580C' }]}>{breakdown.asPassenger.average.toFixed(1)}</Text>
+                <Star size={10} color={STAR_COLOR} fill={STAR_COLOR} />
+                <Text style={s.splitPillCount}>({breakdown.asPassenger.count})</Text>
               </View>
+            )}
+          </View>
+        ) : null}
+
+        {/* Tags */}
+        {breakdown.recentTags?.length > 0 && (
+          <View style={[s.tagsSection, { borderTopColor: theme.colors.border }]}>
+            <View style={s.tagsSectionHeader}>
+              <TrendingUp size={13} color={theme.colors.textSecondary} />
+              <Text style={[s.tagsSectionTitle, { color: theme.colors.textSecondary }]}>Top mentions</Text>
+            </View>
+            <View style={s.tagsWrap}>
+              {breakdown.recentTags.slice(0, 6).map((tag, i) => (
+                <View key={i} style={[s.tagChip, { backgroundColor: theme.colors.primary + '10' }]}>
+                  <Text style={[s.tagChipText, { color: theme.colors.primary }]}>{humanize(tag)}</Text>
+                </View>
+              ))}
             </View>
           </View>
-          <View style={[styles.ratingBadge, { backgroundColor: ratingColor }]}>
-            <Star size={12} color="#FFF" fill="#FFF" />
-            <Text style={styles.ratingBadgeText}>{Number(item.overallRating).toFixed(1)}</Text>
+        )}
+      </View>
+    );
+  };
+
+  /* ── Filter row ── */
+  const filters = [
+    { key: 'all', label: 'All' },
+    { key: 'passenger_to_driver', label: 'As Driver' },
+    { key: 'driver_to_passenger', label: 'As Rider' },
+  ];
+
+  const FilterRow = () => (
+    <View style={s.filterRow}>
+      {filters.map((f) => {
+        const active = selectedFilter === f.key;
+        return (
+          <TouchableOpacity
+            key={f.key}
+            onPress={() => selectedFilter !== f.key && setSelectedFilter(f.key)}
+            style={[
+              s.filterPill,
+              { borderColor: active ? theme.colors.primary : theme.colors.border },
+              active && { backgroundColor: theme.colors.primary },
+            ]}
+          >
+            <Text style={[s.filterPillText, { color: active ? '#FFF' : theme.colors.textSecondary }]}>
+              {f.label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+      <View style={{ flex: 1 }} />
+      <Text style={[s.resultCount, { color: theme.colors.textSecondary }]}>
+        {reviews.length} review{reviews.length !== 1 ? 's' : ''}
+      </Text>
+    </View>
+  );
+
+  /* ── Review card ── */
+  const renderReview = ({ item }: { item: Rating }) => {
+    const name = item.rater?.name || item.userName || 'User';
+    const photo = item.rater?.photo || item.userPhoto || null;
+    const isDriver = item.ratingType === 'passenger_to_driver';
+
+    const categoryEntries = [
+      { key: 'punctuality', label: 'Punctual', val: item.punctuality },
+      { key: 'vehicleCondition', label: 'Vehicle', val: item.vehicleCondition },
+      { key: 'driving', label: 'Driving', val: item.driving },
+      { key: 'behavior', label: 'Behavior', val: item.behavior },
+      { key: 'communication', label: 'Comms', val: item.communication },
+    ].filter((c) => c.val != null);
+
+    return (
+      <View style={[s.reviewCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+        {/* Header */}
+        <View style={s.reviewTop}>
+          {photo ? (
+            <Image source={{ uri: photo }} style={s.avatar} />
+          ) : (
+            <View style={[s.avatarFallback, { backgroundColor: theme.colors.primary + '15' }]}>
+              <Text style={[s.avatarLetter, { color: theme.colors.primary }]}>{name.charAt(0).toUpperCase()}</Text>
+            </View>
+          )}
+
+          <View style={s.reviewInfo}>
+            <Text style={[s.reviewName, { color: theme.colors.text }]}>{name}</Text>
+            <View style={s.reviewMeta}>
+              <Text style={[s.reviewType, { color: isDriver ? '#4F46E5' : '#EA580C' }]}>
+                {isDriver ? 'Driver' : 'Rider'}
+              </Text>
+              <View style={s.dot} />
+              <Text style={[s.reviewDate, { color: theme.colors.textSecondary }]}>{fmtDate(item.createdAt)}</Text>
+            </View>
+          </View>
+
+          <View style={[s.ratingPill, { backgroundColor: ratingColor(item.overallRating) }]}>
+            <Star size={11} color="#FFF" fill="#FFF" />
+            <Text style={s.ratingPillText}>{Number(item.overallRating).toFixed(1)}</Text>
           </View>
         </View>
 
         {/* Comment */}
         {item.comment ? (
-          <Text style={[styles.reviewComment, { color: theme.colors.text }]}>{item.comment}</Text>
+          <Text style={[s.comment, { color: theme.colors.text }]}>{item.comment}</Text>
         ) : null}
 
         {/* Tags */}
         {item.tags && item.tags.length > 0 && (
-          <View style={styles.tagsRow}>
-            {item.tags.map((tag, index) => (
-              <View key={index} style={[styles.tag, { backgroundColor: theme.colors.primary + '12' }]}>
-                <ThumbsUp size={10} color={theme.colors.primary} />
-                <Text style={[styles.tagText, { color: theme.colors.primary }]}>
-                  {tag.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
-                </Text>
+          <View style={s.reviewTagsRow}>
+            {item.tags.map((tag, i) => (
+              <View key={i} style={[s.reviewTag, { backgroundColor: theme.colors.primary + '0D' }]}>
+                <ThumbsUp size={9} color={theme.colors.primary} />
+                <Text style={[s.reviewTagText, { color: theme.colors.primary }]}>{humanize(tag)}</Text>
               </View>
             ))}
           </View>
         )}
 
-        {/* Category Ratings */}
-        {(item.punctuality != null ||
-          item.vehicleCondition != null ||
-          item.driving != null ||
-          item.behavior != null ||
-          item.communication != null) && (
-          <View style={[styles.categoryRatings, { borderTopColor: theme.colors.border }]}>
-            {item.punctuality != null && (
-              <View style={styles.categoryItem}>
-                <Text style={[styles.categoryLabel, { color: theme.colors.textSecondary }]}>Punctuality</Text>
-                <View style={styles.categoryValueRow}>
-                  <Star size={10} color="#FFB800" fill="#FFB800" />
-                  <Text style={[styles.categoryValue, { color: theme.colors.text }]}>
-                    {Number(item.punctuality).toFixed(1)}
-                  </Text>
+        {/* Category mini-bars */}
+        {categoryEntries.length > 0 && (
+          <View style={[s.catRow, { borderTopColor: theme.colors.border + '60' }]}>
+            {categoryEntries.map((c) => (
+              <View key={c.key} style={s.catItem}>
+                <Text style={[s.catLabel, { color: theme.colors.textSecondary }]}>{c.label}</Text>
+                <View style={s.catValueRow}>
+                  <Star size={9} color={STAR_COLOR} fill={STAR_COLOR} />
+                  <Text style={[s.catValue, { color: theme.colors.text }]}>{Number(c.val).toFixed(1)}</Text>
                 </View>
               </View>
-            )}
-            {item.vehicleCondition != null && (
-              <View style={styles.categoryItem}>
-                <Text style={[styles.categoryLabel, { color: theme.colors.textSecondary }]}>Vehicle</Text>
-                <View style={styles.categoryValueRow}>
-                  <Star size={10} color="#FFB800" fill="#FFB800" />
-                  <Text style={[styles.categoryValue, { color: theme.colors.text }]}>
-                    {Number(item.vehicleCondition).toFixed(1)}
-                  </Text>
-                </View>
-              </View>
-            )}
-            {item.driving != null && (
-              <View style={styles.categoryItem}>
-                <Text style={[styles.categoryLabel, { color: theme.colors.textSecondary }]}>Driving</Text>
-                <View style={styles.categoryValueRow}>
-                  <Star size={10} color="#FFB800" fill="#FFB800" />
-                  <Text style={[styles.categoryValue, { color: theme.colors.text }]}>
-                    {Number(item.driving).toFixed(1)}
-                  </Text>
-                </View>
-              </View>
-            )}
-            {item.behavior != null && (
-              <View style={styles.categoryItem}>
-                <Text style={[styles.categoryLabel, { color: theme.colors.textSecondary }]}>Behavior</Text>
-                <View style={styles.categoryValueRow}>
-                  <Star size={10} color="#FFB800" fill="#FFB800" />
-                  <Text style={[styles.categoryValue, { color: theme.colors.text }]}>
-                    {Number(item.behavior).toFixed(1)}
-                  </Text>
-                </View>
-              </View>
-            )}
-            {item.communication != null && (
-              <View style={styles.categoryItem}>
-                <Text style={[styles.categoryLabel, { color: theme.colors.textSecondary }]}>Communication</Text>
-                <View style={styles.categoryValueRow}>
-                  <Star size={10} color="#FFB800" fill="#FFB800" />
-                  <Text style={[styles.categoryValue, { color: theme.colors.text }]}>
-                    {Number(item.communication).toFixed(1)}
-                  </Text>
-                </View>
-              </View>
-            )}
+            ))}
           </View>
         )}
       </View>
     );
   };
 
-  const filters = [
-    { key: 'all', label: 'All Reviews' },
-    { key: 'passenger_to_driver', label: 'As Driver' },
-    { key: 'driver_to_passenger', label: 'As Passenger' },
-  ];
-
-  if (loading && !refreshing && reviews.length === 0) {
-    return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <ImageBackground
-          source={require('../../../assets/reviews.png')}
-          style={styles.headerImage}
-          resizeMode="cover"
-        >
-          <View style={[styles.headerOverlay, { backgroundColor: theme.colors.primary }]} />
-          <BlurView intensity={40} style={styles.blurContainer}>
-            <View style={styles.headerContent}>
-              <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                <ArrowLeft size={22} color="#FFF" />
-              </TouchableOpacity>
-              <Text style={styles.headerTitle}>Reviews & Ratings</Text>
-              <View style={styles.headerPlaceholder} />
-            </View>
-          </BlurView>
-        </ImageBackground>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-          <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>
-            Loading reviews...
-          </Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
+  /* ── Main render ── */
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      {/* Hero Header with Image */}
-      <ImageBackground
-        source={require('../../../assets/reviews.png')}
-        style={styles.headerImage}
-        resizeMode="cover"
-      >
-        <View style={[styles.headerOverlay, { backgroundColor: theme.colors.primary }]} />
-        <BlurView intensity={40} style={styles.blurContainer}>
-          <View style={styles.headerContent}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-              <ArrowLeft size={22} color="#FFF" />
-            </TouchableOpacity>
-            <View style={styles.headerCenter}>
-              <Text style={styles.headerTitle}>
-                {userName ? `${userName}'s Reviews` : 'Reviews & Ratings'}
-              </Text>
-              {breakdown && (
-                <Text style={styles.headerSubtitle}>
-                  {breakdown.totalRatings} reviews
-                </Text>
-              )}
-            </View>
-            <View style={styles.headerPlaceholder} />
-          </View>
-        </BlurView>
-      </ImageBackground>
+    <View style={[s.container, { backgroundColor: theme.colors.background }]}>
+      <StatusBar barStyle="dark-content" backgroundColor={theme.colors.surface} />
 
-      <FlatList
-        data={reviews}
-        keyExtractor={(item) => item.ratingId}
-        renderItem={renderReview}
-        contentContainerStyle={styles.listContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.colors.primary]} />
-        }
-        onEndReached={loadMore}
-        onEndReachedThreshold={0.5}
-        ListHeaderComponent={() => (
-          <>
-            {/* Overall Rating Summary Card */}
-            {breakdown && (
-              <View style={[styles.summaryCard, { backgroundColor: theme.colors.surface }]}>
-                {/* Big rating number + stars */}
-                <View style={styles.summaryTop}>
-                  <View style={styles.summaryLeft}>
-                    <Text style={[styles.bigRating, { color: theme.colors.text }]}>
-                      {breakdown.averageRating.toFixed(1)}
-                    </Text>
-                    {renderStars(Math.round(breakdown.averageRating), 18)}
-                    <Text style={[styles.ratingLabel, { color: getRatingColor(breakdown.averageRating) }]}>
-                      {getRatingLabel(breakdown.averageRating)}
-                    </Text>
-                    <Text style={[styles.totalCount, { color: theme.colors.textSecondary }]}>
-                      Based on {breakdown.totalRatings} reviews
-                    </Text>
-                  </View>
+      {/* Header */}
+      <View style={[s.header, { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.border }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <ArrowLeft size={22} color={theme.colors.text} />
+        </TouchableOpacity>
+        <View style={s.headerTitles}>
+          <Text style={[s.headerTitle, { color: theme.colors.text }]}>
+            {userName ? `${userName}'s Reviews` : 'Reviews'}
+          </Text>
+          {breakdown && (
+            <Text style={[s.headerSub, { color: theme.colors.textSecondary }]}>
+              {breakdown.averageRating.toFixed(1)} avg · {breakdown.totalRatings} total
+            </Text>
+          )}
+        </View>
+      </View>
 
-                  {/* Distribution bars */}
-                  <View style={styles.summaryRight}>
-                    {[5, 4, 3, 2, 1].map((stars) =>
-                      renderRatingBar(
-                        stars,
-                        breakdown.ratingDistribution[stars] || 0,
-                        breakdown.totalRatings
-                      )
-                    )}
-                  </View>
-                </View>
-
-                {/* As Driver / As Passenger split */}
-                {(breakdown.asDriver || breakdown.asPassenger) && (
-                  <View style={[styles.splitRatings, { borderTopColor: theme.colors.border }]}>
-                    {breakdown.asDriver && breakdown.asDriver.count > 0 && (
-                      <View style={[styles.splitItem, { backgroundColor: '#E3F2FD' }]}>
-                        <Award size={16} color="#1565C0" />
-                        <View style={styles.splitInfo}>
-                          <Text style={styles.splitLabel}>As Driver</Text>
-                          <View style={styles.splitValueRow}>
-                            <Text style={[styles.splitValue, { color: '#1565C0' }]}>
-                              {breakdown.asDriver.average.toFixed(1)}
-                            </Text>
-                            <Star size={12} color="#FFB800" fill="#FFB800" />
-                            <Text style={styles.splitCount}>({breakdown.asDriver.count})</Text>
-                          </View>
-                        </View>
-                      </View>
-                    )}
-                    {breakdown.asPassenger && breakdown.asPassenger.count > 0 && (
-                      <View style={[styles.splitItem, { backgroundColor: '#FFF3E0' }]}>
-                        <User size={16} color="#E65100" />
-                        <View style={styles.splitInfo}>
-                          <Text style={styles.splitLabel}>As Passenger</Text>
-                          <View style={styles.splitValueRow}>
-                            <Text style={[styles.splitValue, { color: '#E65100' }]}>
-                              {breakdown.asPassenger.average.toFixed(1)}
-                            </Text>
-                            <Star size={12} color="#FFB800" fill="#FFB800" />
-                            <Text style={styles.splitCount}>({breakdown.asPassenger.count})</Text>
-                          </View>
-                        </View>
-                      </View>
-                    )}
-                  </View>
-                )}
-
-                {/* Popular Tags */}
-                {breakdown.recentTags && breakdown.recentTags.length > 0 && (
-                  <View style={[styles.popularTags, { borderTopColor: theme.colors.border }]}>
-                    <View style={styles.popularTagsHeader}>
-                      <TrendingUp size={14} color={theme.colors.primary} />
-                      <Text style={[styles.popularTagsTitle, { color: theme.colors.text }]}>
-                        Popular Mentions
-                      </Text>
-                    </View>
-                    <View style={styles.popularTagsRow}>
-                      {breakdown.recentTags.slice(0, 6).map((tag, index) => (
-                        <View key={index} style={[styles.popularTag, { backgroundColor: theme.colors.primary + '12' }]}>
-                          <Text style={[styles.popularTagText, { color: theme.colors.primary }]}>
-                            {tag.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
-                          </Text>
-                        </View>
-                      ))}
-                    </View>
-                  </View>
-                )}
+      {loading && reviews.length === 0 ? (
+        <View style={s.center}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+        </View>
+      ) : (
+        <FlatList
+          data={reviews}
+          keyExtractor={(item) => item.ratingId}
+          renderItem={renderReview}
+          contentContainerStyle={s.listContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.5}
+          ListHeaderComponent={() => (
+            <>
+              <SummaryHeader />
+              <FilterRow />
+            </>
+          )}
+          ListEmptyComponent={() => (
+            <View style={s.emptyWrap}>
+              <View style={[s.emptyCircle, { backgroundColor: theme.colors.border + '40' }]}>
+                <MessageSquare size={28} color={theme.colors.textSecondary} />
               </View>
-            )}
-
-            {/* Filter Tabs */}
-            <View style={[styles.filterContainer, { backgroundColor: theme.colors.surface }]}>
-              {filters.map((filter) => (
-                <TouchableOpacity
-                  key={filter.key}
-                  style={[
-                    styles.filterTab,
-                    selectedFilter === filter.key && [styles.filterTabActive, { backgroundColor: theme.colors.primary }],
-                  ]}
-                  onPress={() => {
-                    if (selectedFilter !== filter.key) {
-                      setSelectedFilter(filter.key);
-                    }
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.filterTabText,
-                      { color: theme.colors.textSecondary },
-                      selectedFilter === filter.key && styles.filterTabTextActive,
-                    ]}
-                  >
-                    {filter.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              <Text style={[s.emptyTitle, { color: theme.colors.text }]}>No reviews yet</Text>
+              <Text style={[s.emptySub, { color: theme.colors.textSecondary }]}>
+                Reviews appear after trips are completed and rated
+              </Text>
             </View>
-
-            {/* Reviews count label */}
-            <Text style={[styles.reviewsSectionLabel, { color: theme.colors.textSecondary }]}>
-              {reviews.length > 0
-                ? `Showing ${reviews.length} review${reviews.length !== 1 ? 's' : ''}`
-                : ''}
-            </Text>
-          </>
-        )}
-        ListEmptyComponent={() => (
-          <View style={[styles.emptyCard, { backgroundColor: theme.colors.surface }]}>
-            <View style={[styles.emptyIconWrapper, { backgroundColor: theme.colors.primary + '15' }]}>
-              <MessageSquare size={40} color={theme.colors.primary} />
-            </View>
-            <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>No Reviews Yet</Text>
-            <Text style={[styles.emptySubtext, { color: theme.colors.textSecondary }]}>
-              Reviews will appear here once trips are completed and rated.
-            </Text>
-          </View>
-        )}
-        ListFooterComponent={() =>
-          loading && hasMore ? (
-            <ActivityIndicator style={styles.footerLoader} color={theme.colors.primary} />
-          ) : null
-        }
-      />
-    </SafeAreaView>
+          )}
+          ListFooterComponent={loading && hasMore ? <ActivityIndicator style={{ paddingVertical: normalize(20) }} color={theme.colors.primary} /> : null}
+        />
+      )}
+    </View>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+const s = StyleSheet.create({
+  container: { flex: 1 },
 
-  // ── Header with Image ──
-  headerImage: {
-    width: '100%',
-    height: hp(22),
-  },
-  headerOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0.65,
-  },
-  blurContainer: {
-    flex: 1,
-    overflow: 'hidden',
-  },
-  headerContent: {
-    flex: 1,
+  /* Header */
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.lg,
+    paddingTop: normalize(48),
+    paddingBottom: normalize(14),
+    paddingHorizontal: normalize(16),
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  backButton: {
-    width: normalize(40),
-    height: normalize(40),
-    borderRadius: normalize(20),
-    backgroundColor: 'rgba(255,255,255,0.2)',
+  backBtn: {
+    width: normalize(36),
+    height: normalize(36),
+    alignItems: 'center',
     justifyContent: 'center',
-    alignItems: 'center',
+    marginRight: normalize(8),
   },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
-  },
+  headerTitles: { flex: 1 },
   headerTitle: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(20),
-    fontWeight: 'bold',
-    color: '#FFF',
+    fontFamily: FONTS.medium,
+    fontSize: normalize(22),
+    fontWeight: '700',
+    letterSpacing: -0.3,
   },
-  headerSubtitle: {
+  headerSub: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: 'rgba(255,255,255,0.85)',
-    marginTop: normalize(2),
-  },
-  headerPlaceholder: {
-    width: normalize(40),
+    fontSize: normalize(12),
+    marginTop: normalize(1),
   },
 
-  // ── Loading ──
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: SPACING.sm,
-  },
-  loadingText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-  },
-
-  // ── List ──
-  listContent: {
-    padding: SPACING.md,
-    paddingBottom: SPACING.xl,
-  },
-
-  // ── Summary Card ──
+  /* Summary */
   summaryCard: {
-    borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.lg,
-    marginBottom: SPACING.md,
-    ...SHADOWS.md,
+    borderRadius: normalize(12),
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: normalize(16),
+    marginBottom: normalize(14),
   },
-  summaryTop: {
+  summaryRow: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
   },
-  summaryLeft: {
+  scoreCol: {
     alignItems: 'center',
-    paddingRight: SPACING.lg,
-    borderRightWidth: 1,
-    borderRightColor: '#E0E0E0',
-    marginRight: SPACING.lg,
-    minWidth: normalize(90),
+    minWidth: normalize(80),
+    marginRight: normalize(16),
   },
-  bigRating: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(44),
-    fontWeight: 'bold',
-    lineHeight: normalize(50),
+  scoreNum: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(40),
+    fontWeight: '700',
+    lineHeight: normalize(46),
   },
-  ratingLabel: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
+  scoreWord: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(11),
     fontWeight: '700',
     marginTop: normalize(4),
   },
-  totalCount: {
+  scoreCount: {
     fontFamily: FONTS.regular,
-    fontSize: normalize(10),
+    fontSize: normalize(10.5),
     marginTop: normalize(2),
   },
-  summaryRight: {
+  scoreDivider: {
+    width: 1,
+    alignSelf: 'stretch',
+    marginRight: normalize(16),
+  },
+  barsCol: {
     flex: 1,
     justifyContent: 'center',
+    gap: normalize(3),
   },
-  starsRow: {
-    flexDirection: 'row',
-    gap: 2,
-  },
-  ratingBarRow: {
+  barRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
   },
-  ratingBarLabel: {
+  barLabel: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
-    width: 12,
-    marginRight: 2,
+    fontSize: normalize(10.5),
+    width: normalize(12),
     textAlign: 'center',
+    marginRight: normalize(3),
   },
-  ratingBarContainer: {
+  barTrack: {
     flex: 1,
-    height: 6,
-    borderRadius: 3,
-    marginHorizontal: SPACING.xs,
+    height: normalize(5),
+    borderRadius: normalize(3),
+    marginHorizontal: normalize(5),
     overflow: 'hidden',
   },
-  ratingBarFill: {
+  barFill: {
     height: '100%',
-    borderRadius: 3,
+    borderRadius: normalize(3),
   },
-  ratingBarCount: {
+  barCount: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
-    width: 22,
+    fontSize: normalize(10.5),
+    width: normalize(22),
     textAlign: 'right',
   },
 
-  // ── Split Ratings (Driver/Passenger) ──
-  splitRatings: {
+  /* Split row */
+  splitRow: {
     flexDirection: 'row',
-    gap: SPACING.sm,
-    marginTop: SPACING.md,
-    paddingTop: SPACING.md,
-    borderTopWidth: 1,
+    gap: normalize(8),
+    marginTop: normalize(14),
+    paddingTop: normalize(14),
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
-  splitItem: {
-    flex: 1,
+  splitPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.sm,
-    padding: SPACING.sm,
-    borderRadius: BORDER_RADIUS.md,
+    gap: normalize(5),
+    paddingHorizontal: normalize(10),
+    paddingVertical: normalize(7),
+    borderRadius: normalize(8),
   },
-  splitInfo: {
-    flex: 1,
-  },
-  splitLabel: {
-    fontFamily: FONTS.regular,
-    fontSize: 11,
-    color: '#666',
+  splitPillLabel: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(11),
     fontWeight: '600',
   },
-  splitValueRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    marginTop: 1,
+  splitPillValue: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(13),
+    fontWeight: '700',
   },
-  splitValue: {
+  splitPillCount: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
-    fontWeight: 'bold',
-  },
-  splitCount: {
-    fontFamily: FONTS.regular,
-    fontSize: 10,
-    color: '#999',
+    fontSize: normalize(10),
+    color: '#9CA3AF',
   },
 
-  // ── Popular Tags ──
-  popularTags: {
-    borderTopWidth: 1,
-    paddingTop: SPACING.md,
-    marginTop: SPACING.md,
+  /* Tags */
+  tagsSection: {
+    marginTop: normalize(14),
+    paddingTop: normalize(14),
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
-  popularTagsHeader: {
+  tagsSectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.xs,
-    marginBottom: SPACING.sm,
+    gap: normalize(5),
+    marginBottom: normalize(8),
   },
-  popularTagsTitle: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
+  tagsSectionTitle: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(11.5),
     fontWeight: '600',
   },
-  popularTagsRow: {
+  tagsWrap: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: SPACING.xs,
+    gap: normalize(6),
   },
-  popularTag: {
-    paddingHorizontal: SPACING.sm,
+  tagChip: {
+    paddingHorizontal: normalize(10),
     paddingVertical: normalize(5),
-    borderRadius: BORDER_RADIUS.round,
+    borderRadius: normalize(20),
   },
-  popularTagText: {
-    fontFamily: FONTS.regular,
+  tagChipText: {
+    fontFamily: FONTS.medium,
     fontSize: normalize(11),
     fontWeight: '500',
   },
 
-  // ── Filter Tabs ──
-  filterContainer: {
+  /* Filters */
+  filterRow: {
     flexDirection: 'row',
-    borderRadius: BORDER_RADIUS.lg,
-    padding: 4,
-    marginBottom: SPACING.sm,
-    ...SHADOWS.sm,
-  },
-  filterTab: {
-    flex: 1,
-    paddingVertical: SPACING.sm,
     alignItems: 'center',
-    borderRadius: BORDER_RADIUS.md,
+    gap: normalize(8),
+    marginBottom: normalize(14),
   },
-  filterTabActive: {
-    ...SHADOWS.sm,
+  filterPill: {
+    paddingHorizontal: normalize(14),
+    paddingVertical: normalize(7),
+    borderRadius: normalize(20),
+    borderWidth: 1,
   },
-  filterTabText: {
+  filterPillText: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(12),
+    fontWeight: '600',
+  },
+  resultCount: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    fontWeight: '500',
+    fontSize: normalize(11),
   },
-  filterTabTextActive: {
-    color: '#FFF',
+
+  /* Review card */
+  reviewCard: {
+    borderRadius: normalize(12),
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: normalize(14),
+    marginBottom: normalize(10),
+  },
+  reviewTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: normalize(10),
+  },
+  avatar: {
+    width: normalize(40),
+    height: normalize(40),
+    borderRadius: normalize(20),
+  },
+  avatarFallback: {
+    width: normalize(40),
+    height: normalize(40),
+    borderRadius: normalize(20),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarLetter: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(16),
     fontWeight: '700',
   },
-
-  // ── Reviews Section Label ──
-  reviewsSectionLabel: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xs,
-    marginBottom: SPACING.sm,
-    paddingLeft: 4,
-  },
-
-  // ── Review Card ──
-  reviewCard: {
-    borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.md,
-    marginBottom: SPACING.sm,
-    ...SHADOWS.sm,
-  },
-  reviewHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: SPACING.sm,
-  },
-  reviewerInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-    flex: 1,
-  },
-  reviewerAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 2,
-    borderColor: '#E0E0E0',
-  },
-  avatarPlaceholder: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarInitial: {
-    fontFamily: FONTS.regular,
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  reviewerDetails: {
-    flex: 1,
-  },
-  reviewerName: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
+  reviewInfo: { flex: 1 },
+  reviewName: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(14),
     fontWeight: '600',
   },
-  reviewMetaRow: {
+  reviewMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.xs,
-    marginTop: normalize(3),
+    gap: normalize(5),
+    marginTop: normalize(2),
   },
-  typeBadge: {
-    paddingHorizontal: normalize(6),
-    paddingVertical: normalize(2),
-    borderRadius: BORDER_RADIUS.round,
-  },
-  typeBadgeText: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(10),
+  reviewType: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(11),
     fontWeight: '600',
+  },
+  dot: {
+    width: normalize(3),
+    height: normalize(3),
+    borderRadius: normalize(1.5),
+    backgroundColor: '#BDBDBD',
   },
   reviewDate: {
     fontFamily: FONTS.regular,
     fontSize: normalize(11),
   },
-  ratingBadge: {
+  ratingPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: normalize(3),
     paddingHorizontal: normalize(8),
     paddingVertical: normalize(4),
-    borderRadius: BORDER_RADIUS.round,
-    marginLeft: SPACING.xs,
+    borderRadius: normalize(6),
   },
-  ratingBadgeText: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(13),
-    fontWeight: 'bold',
+  ratingPillText: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(12),
+    fontWeight: '700',
     color: '#FFF',
   },
-
-  // ── Comment ──
-  reviewComment: {
+  comment: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
-    lineHeight: 22,
-    marginBottom: SPACING.sm,
+    fontSize: normalize(13),
+    lineHeight: normalize(20),
+    marginTop: normalize(10),
   },
-
-  // ── Tags ──
-  tagsRow: {
+  reviewTagsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: normalize(6),
-    marginBottom: SPACING.sm,
+    gap: normalize(5),
+    marginTop: normalize(10),
   },
-  tag: {
+  reviewTag: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: normalize(4),
-    paddingHorizontal: SPACING.sm,
+    paddingHorizontal: normalize(8),
     paddingVertical: normalize(4),
-    borderRadius: BORDER_RADIUS.round,
+    borderRadius: normalize(14),
   },
-  tagText: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(11),
+  reviewTagText: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(10.5),
     fontWeight: '500',
   },
-
-  // ── Category Ratings ──
-  categoryRatings: {
+  catRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: SPACING.md,
-    paddingTop: SPACING.sm,
-    borderTopWidth: 1,
+    gap: normalize(12),
+    marginTop: normalize(10),
+    paddingTop: normalize(10),
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
-  categoryItem: {
+  catItem: {
     alignItems: 'center',
-    minWidth: 60,
+    minWidth: normalize(48),
   },
-  categoryLabel: {
+  catLabel: {
     fontFamily: FONTS.regular,
-    fontSize: 10,
-    marginBottom: 2,
+    fontSize: normalize(10),
+    marginBottom: normalize(2),
   },
-  categoryValueRow: {
+  catValueRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
+    gap: normalize(2),
   },
-  categoryValue: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    fontWeight: 'bold',
+  catValue: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(12),
+    fontWeight: '700',
   },
 
-  // ── Empty State ──
-  emptyCard: {
-    borderRadius: BORDER_RADIUS.lg,
-    padding: SPACING.xl,
-    alignItems: 'center',
-    ...SHADOWS.sm,
+  /* List */
+  listContent: {
+    paddingHorizontal: normalize(16),
+    paddingTop: normalize(14),
+    paddingBottom: normalize(30),
   },
-  emptyIconWrapper: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    justifyContent: 'center',
+
+  /* Center / empty */
+  center: {
+    flex: 1,
     alignItems: 'center',
-    marginBottom: SPACING.md,
+    justifyContent: 'center',
+  },
+  emptyWrap: {
+    alignItems: 'center',
+    paddingVertical: normalize(60),
+  },
+  emptyCircle: {
+    width: normalize(64),
+    height: normalize(64),
+    borderRadius: normalize(32),
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: normalize(16),
   },
   emptyTitle: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.lg,
-    fontWeight: 'bold',
-    marginBottom: SPACING.xs,
+    fontFamily: FONTS.medium,
+    fontSize: normalize(16),
+    fontWeight: '700',
+    marginBottom: normalize(4),
   },
-  emptySubtext: {
+  emptySub: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
+    fontSize: normalize(13),
     textAlign: 'center',
-    lineHeight: 20,
-  },
-
-  // ── Footer ──
-  footerLoader: {
-    paddingVertical: SPACING.lg,
+    paddingHorizontal: normalize(40),
   },
 });
 

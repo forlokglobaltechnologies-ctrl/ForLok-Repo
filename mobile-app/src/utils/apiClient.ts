@@ -5,6 +5,7 @@
 
 import { apiService } from '../services/api.service';
 import { API_CONFIG, replaceUrlParams } from '../config/api';
+import type { ApiResult } from '../services/api.service';
 
 /**
  * Make authenticated API request
@@ -18,7 +19,7 @@ export const apiCall = async <T = any>(
     query?: Record<string, string | number>; // Query string parameters
     requiresAuth?: boolean;
   } = {}
-): Promise<{ success: boolean; data?: T; error?: string; message?: string }> => {
+): Promise<ApiResult<T>> => {
   // Replace URL parameters
   let finalEndpoint = endpoint;
   if (options.params) {
@@ -58,7 +59,7 @@ export const apiCall = async <T = any>(
     method: options.method || 'GET',
     body: options.body,
     requiresAuth: options.requiresAuth !== false,
-  });
+  }) as Promise<ApiResult<T>>;
 };
 
 /**
@@ -428,6 +429,35 @@ export const poolingApi = {
       body: data,
       requiresAuth: true,
     }),
+
+  suggestWaypoints: (params: { fromLat: number; fromLng: number; toLat: number; toLng: number }) =>
+    apiCall(API_CONFIG.ENDPOINTS.POOLING.SUGGEST_WAYPOINTS, {
+      method: 'GET',
+      query: params,
+      requiresAuth: true,
+    }),
+
+  deleteOffer: (offerId: string) =>
+    apiCall(API_CONFIG.ENDPOINTS.POOLING.DELETE, {
+      method: 'DELETE',
+      params: { offerId },
+      requiresAuth: true,
+    }),
+
+  searchConnectedOffers: (params: {
+    fromLat: number;
+    fromLng: number;
+    toLat: number;
+    toLng: number;
+    date?: string;
+    time?: string;
+    vehicleType?: string;
+    pinkOnly?: boolean;
+  }) =>
+    apiCall(API_CONFIG.ENDPOINTS.POOLING.CONNECTED_SEARCH, {
+      method: 'GET',
+      query: params,
+    }),
 };
 
 /**
@@ -543,6 +573,12 @@ export const bookingApi = {
   createPoolingBooking: (data: {
     poolingOfferId: string;
     paymentMethod?: 'upi' | 'card' | 'wallet' | 'net_banking';
+    seatsBooked?: number;
+    coPassengers?: Array<{
+      name: string;
+      age: number;
+      gender: 'Male' | 'Female' | 'Other';
+    }>;
     passengerRoute: {
       from: { address: string; lat: number; lng: number; city?: string; state?: string };
       to: { address: string; lat: number; lng: number; city?: string; state?: string };
@@ -554,6 +590,28 @@ export const bookingApi = {
     };
   }) =>
     apiCall(API_CONFIG.ENDPOINTS.BOOKING.CREATE_POOLING, {
+      method: 'POST',
+      body: data,
+      requiresAuth: true,
+    }),
+
+  createConnectedBooking: (data: {
+    leg1OfferId: string;
+    leg2OfferId: string;
+    leg1Route: {
+      from: { address: string; lat: number; lng: number; city?: string };
+      to: { address: string; lat: number; lng: number; city?: string };
+    };
+    leg2Route: {
+      from: { address: string; lat: number; lng: number; city?: string };
+      to: { address: string; lat: number; lng: number; city?: string };
+    };
+    connectionPoint: { address: string; lat: number; lng: number; city?: string };
+    paymentMethod?: string;
+    leg1Price?: { finalPrice: number; platformFee: number; totalAmount: number };
+    leg2Price?: { finalPrice: number; platformFee: number; totalAmount: number };
+  }) =>
+    apiCall(API_CONFIG.ENDPOINTS.BOOKING.CREATE_CONNECTED, {
       method: 'POST',
       body: data,
       requiresAuth: true,
@@ -1016,6 +1074,49 @@ export const dashboardApi = {
   getFinancial: () =>
     apiCall(API_CONFIG.ENDPOINTS.DASHBOARD.FINANCIAL, {
       method: 'GET',
+      requiresAuth: true,
+    }),
+
+  getHomeData: (lat?: number, lng?: number) =>
+    apiCall(API_CONFIG.ENDPOINTS.DASHBOARD.HOME, {
+      method: 'GET',
+      query: {
+        ...(lat !== undefined ? { lat } : {}),
+        ...(lng !== undefined ? { lng } : {}),
+      },
+      requiresAuth: true,
+    }),
+};
+
+/**
+ * Saved Places API calls
+ */
+export const placesApi = {
+  getAll: () =>
+    apiCall(API_CONFIG.ENDPOINTS.PLACES.LIST, {
+      method: 'GET',
+      requiresAuth: true,
+    }),
+
+  save: (data: {
+    label: 'home' | 'work' | 'custom';
+    customLabel?: string;
+    address: string;
+    lat: number;
+    lng: number;
+    city?: string;
+    state?: string;
+  }) =>
+    apiCall(API_CONFIG.ENDPOINTS.PLACES.SAVE, {
+      method: 'POST',
+      body: data,
+      requiresAuth: true,
+    }),
+
+  delete: (placeId: string) =>
+    apiCall(API_CONFIG.ENDPOINTS.PLACES.DELETE, {
+      method: 'DELETE',
+      params: { placeId },
       requiresAuth: true,
     }),
 };

@@ -38,7 +38,7 @@ class RentalPricingService {
    * Calculate suggested rental price per hour
    */
   calculateRentalPrice(params: {
-    vehicleType: 'car' | 'bike';
+    vehicleType: 'car' | 'bike' | 'scooty';
     brand: string;
     model?: string;
     year?: number;
@@ -92,7 +92,7 @@ class RentalPricingService {
       let basePrice: number;
       if (vehicleType === 'car') {
         basePrice = (this.BASE_RATES.car as any)[category] || this.BASE_RATES.car.economy;
-      } else {
+      } else { // bike or scooty
         // For bikes, 'suv' category should not occur, but handle it safely
         const bikeCategory = category === 'suv' ? 'economy' : category;
         basePrice = (this.BASE_RATES.bike as any)[bikeCategory] || this.BASE_RATES.bike.economy;
@@ -104,9 +104,9 @@ class RentalPricingService {
       const ageMultiplier = Math.max(0.4, 1 - vehicleAge * 0.1); // 10% depreciation per year, minimum 40%
 
       // 3. Transmission multiplier (less impact for bikes)
-      const transmissionMultiplier = vehicleType === 'bike' 
-        ? (transmission === 'Automatic' ? 1.10 : 1.0) // +10% for scooters/CVT bikes
-        : (transmission === 'Automatic' ? 1.25 : 1.0); // +25% for automatic cars
+      const transmissionMultiplier = (vehicleType === 'bike' || vehicleType === 'scooty')
+        ? (transmission === 'Automatic' ? 1.10 : 1.0)
+        : (transmission === 'Automatic' ? 1.25 : 1.0);
 
       // 4. Fuel type multiplier
       const fuelMultiplier = this.getFuelMultiplier(fuelType);
@@ -174,7 +174,7 @@ class RentalPricingService {
     } catch (error) {
       logger.error('Error calculating rental price:', error);
       // Return default price if calculation fails
-      const defaultPrice = params.vehicleType === 'car' ? 300 : 80;
+      const defaultPrice = params.vehicleType === 'car' ? 300 : params.vehicleType === 'scooty' ? 60 : 80;
       return {
         suggestedPrice: defaultPrice,
         breakdown: {
@@ -198,7 +198,7 @@ class RentalPricingService {
    * Determine vehicle category based on brand, model, and seats
    */
   private determineCategory(
-    vehicleType: 'car' | 'bike',
+    vehicleType: 'car' | 'bike' | 'scooty',
     brand: string,
     _model: string | undefined, // Prefix with _ to indicate intentionally unused
     seats: number
@@ -240,7 +240,7 @@ class RentalPricingService {
   /**
    * Get seats multiplier
    */
-  private getSeatsMultiplier(vehicleType: 'car' | 'bike', seats: number): number {
+  private getSeatsMultiplier(vehicleType: 'car' | 'bike' | 'scooty', seats: number): number {
     if (vehicleType === 'car') {
       if (seats >= 7) return 1.35; // 7-seater SUVs
       if (seats === 5) return 1.0; // Standard sedans
@@ -365,7 +365,7 @@ class RentalPricingService {
    * Generate human-readable factors explanation
    */
   private generateFactorsExplanation(params: {
-    vehicleType: 'car' | 'bike';
+    vehicleType: 'car' | 'bike' | 'scooty';
     category: string;
     vehicleAge: number;
     transmission: string;
@@ -385,7 +385,7 @@ class RentalPricingService {
     }
 
     if (params.transmission === 'Automatic') {
-      if (params.vehicleType === 'bike') {
+      if (params.vehicleType === 'bike' || params.vehicleType === 'scooty') {
         factors.push('Transmission: Scooter/CVT (+10%)');
       } else {
         factors.push('Transmission: Automatic (+25%)');

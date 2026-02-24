@@ -4,7 +4,7 @@ import RentalOffer from '../models/RentalOffer';
 import User from '../models/User';
 import { NotFoundError, ConflictError } from '../utils/errors';
 import logger from '../utils/logger';
-import { calculatePlatformFee, timeSlotsOverlap, timeToMinutes, calculateDurationHours } from '../utils/helpers';
+import { calculatePlatformFee, timeSlotsOverlap, timeToMinutes, calculateDurationHours, generateUserId } from '../utils/helpers';
 import { BookingStatus, ServiceType, PaymentMethod, Route } from '../types';
 import { priceCalculationService } from './price-calculation.service';
 import { conversationService } from './conversation.service';
@@ -17,7 +17,13 @@ class BookingService {
   async createPoolingBooking(data: {
     userId: string;
     poolingOfferId: string;
-    paymentMethod: PaymentMethod;
+    paymentMethod?: PaymentMethod;
+    seatsBooked?: number;
+    coPassengers?: Array<{
+      name: string;
+      age: number;
+      gender: 'Male' | 'Female' | 'Other';
+    }>;
     passengerRoute: Route; // Required: passenger's specific route for dynamic pricing
     calculatedPrice?: {
       finalPrice: number;
@@ -35,6 +41,21 @@ class BookingService {
       // Check if offer is available
       if (offer.status !== 'active' && offer.status !== 'pending') {
         throw new ConflictError('Offer is not available for booking');
+      }
+
+      const seatsBooked = data.seatsBooked ?? 1;
+      const coPassengers = data.coPassengers ?? [];
+
+      if (seatsBooked < 1) {
+        throw new ConflictError('At least 1 seat must be booked');
+      }
+
+      if (coPassengers.length !== seatsBooked - 1) {
+        throw new ConflictError(`Please provide details for exactly ${seatsBooked - 1} co-passenger(s)`);
+      }
+
+      if (offer.availableSeats < seatsBooked) {
+        throw new ConflictError(`Only ${offer.availableSeats} seat(s) available`);
       }
 
       if (offer.availableSeats <= 0) {
@@ -58,7 +79,7 @@ class BookingService {
         throw new NotFoundError('User not found');
       }
 
-      // Calculate amounts using dynamic pricing
+      // Calculate per-seat amounts using dynamic pricing
       let amount: number;
       let platformFee: number;
       let totalAmount: number;
@@ -82,6 +103,10 @@ class BookingService {
         totalAmount = priceBreakdown.totalAmount;
       }
 
+      const totalBaseAmount = parseFloat((amount * seatsBooked).toFixed(2));
+      const totalPlatformFee = parseFloat((platformFee * seatsBooked).toFixed(2));
+      const totalBookingAmount = parseFloat((totalAmount * seatsBooked).toFixed(2));
+
       // Use passenger route (required for dynamic pricing)
       const bookingRoute = data.passengerRoute;
 
@@ -104,13 +129,17 @@ class BookingService {
           brand: offer.vehicle.brand,
           number: offer.vehicle.number,
         },
-        amount: amount,
-        platformFee: platformFee,
-        totalAmount: totalAmount,
+        amount: totalBaseAmount,
+        platformFee: totalPlatformFee,
+        totalAmount: totalBookingAmount,
         paymentMethod: data.paymentMethod,
         paymentStatus: 'pending', // Payment happens at trip end for all bookings
-        status: 'pending',
+        // Keep pooling aligned with the trip-end payment model:
+        // booking should be actionable before payment, same as rental.
+        status: 'confirmed',
         passengerStatus: 'waiting', // Initial status: waiting to get in
+        seatsBooked,
+        coPassengers,
         passengers: [
           {
             userId: data.userId,
@@ -122,14 +151,15 @@ class BookingService {
 
       // Update offer
       const wasFirstBooking = offer.passengers.length === 0; // Check before adding passenger
-      const allSeatsWillBeFilled = offer.availableSeats === 1; // Check before decrementing
+      const allSeatsWillBeFilled = offer.availableSeats === seatsBooked; // Check before decrementing
       
-      offer.availableSeats -= 1;
+      offer.availableSeats -= seatsBooked;
       offer.bookingRequests += 1;
       offer.passengers.push({
         userId: data.userId,
         name: user.name,
         status: 'confirmed',
+        seatsBooked,
       });
       
       // Update status based on bookings
@@ -799,7 +829,7 @@ class BookingService {
       if (booking.serviceType === 'pooling' && booking.poolingOfferId) {
         const offer = await PoolingOffer.findOne({ offerId: booking.poolingOfferId });
         if (offer) {
-          offer.availableSeats += 1;
+          offer.availableSeats += booking.seatsBooked || 1;
           offer.passengers = offer.passengers.filter(
             (p) => p.userId !== userId
           );
@@ -815,6 +845,11 @@ class BookingService {
 
       logger.info(`🚫 Booking cancelled: ${bookingId}`);
       logger.info(`   User: ${userId} | 1st cancel: ${isFirstCancellation} | Fee: ₹${cancellationFee} (${feePercentage}%)`);
+
+      // Handle connected ride cascading cancellation
+      if (booking.connectedGroupId) {
+        await this.handleConnectedCancellation(booking, 'user');
+      }
 
       return {
         ...booking.toJSON(),
@@ -938,6 +973,12 @@ class BookingService {
       await booking.save();
 
       logger.info(`Booking status updated: ${bookingId} - ${status} by ${userId}`);
+
+      // Handle connected ride cascading cancellation when driver cancels
+      if (status === 'cancelled' && booking.connectedGroupId) {
+        const cancelledBy = isDriver ? 'driver' : isOwner ? 'owner' : 'system';
+        await this.handleConnectedCancellation(booking, cancelledBy);
+      }
 
       // If booking is completed, check if all bookings for this offer are completed
       // If so, mark the offer as completed (this will remove it from My Offers)
@@ -1063,6 +1104,8 @@ class BookingService {
         bookingId: booking.bookingId,
         userId: booking.userId,
         passengerName: booking.passengers?.[0]?.name || 'Unknown',
+        seatsBooked: booking.seatsBooked || 1,
+        coPassengers: booking.coPassengers || [],
         passengerCode: booking.passengerCode,
         passengerStatus: booking.passengerStatus || 'waiting',
         status: booking.status,
@@ -1639,6 +1682,13 @@ class BookingService {
       const inProgressBookings = bookings.filter(b => b.status === 'in_progress');
       inProgressBookings.forEach(b => updatedBookings.push(b.toJSON()));
 
+      // Mark offer as in_progress
+      if (serviceType === 'pooling') {
+        await PoolingOffer.findOneAndUpdate({ offerId }, { status: 'in_progress' });
+      } else {
+        await RentalOffer.findOneAndUpdate({ offerId }, { status: 'in_progress' });
+      }
+
       logger.info(`✅ Trip started for offer ${offerId} with ${bookings.length} passengers`);
 
       return {
@@ -1802,6 +1852,186 @@ class BookingService {
    * Driver earnings are credited to wallet via walletService.creditDriverEarnings()
    * after Razorpay payment is verified at trip end.
    */
+
+  /**
+   * Create a connected (multi-hop) booking — 2 linked bookings.
+   * Atomic: if Leg 2 fails, Leg 1 is rolled back.
+   */
+  async createConnectedBooking(data: {
+    userId: string;
+    leg1OfferId: string;
+    leg2OfferId: string;
+    leg1Route: Route;
+    leg2Route: Route;
+    connectionPoint: { address: string; lat: number; lng: number; city?: string };
+    paymentMethod?: PaymentMethod;
+    leg1Price?: { finalPrice: number; platformFee: number; totalAmount: number };
+    leg2Price?: { finalPrice: number; platformFee: number; totalAmount: number };
+  }): Promise<any> {
+    const connectedGroupId = generateUserId('CG');
+    let booking1: any = null;
+
+    try {
+      // Validate both offers exist and are available
+      const offer1 = await PoolingOffer.findOne({ offerId: data.leg1OfferId });
+      const offer2 = await PoolingOffer.findOne({ offerId: data.leg2OfferId });
+
+      if (!offer1) throw new NotFoundError('Leg 1 offer not found');
+      if (!offer2) throw new NotFoundError('Leg 2 offer not found');
+
+      if (!['active', 'pending'].includes(offer1.status) || offer1.availableSeats <= 0) {
+        throw new ConflictError('Leg 1 offer is not available for booking');
+      }
+      if (!['active', 'pending'].includes(offer2.status) || offer2.availableSeats <= 0) {
+        throw new ConflictError('Leg 2 offer is not available for booking');
+      }
+
+      // Check wallet balance once (₹100 minimum)
+      try {
+        const { walletService } = await import('./wallet.service');
+        const wallet = await walletService.getOrCreateWallet(data.userId);
+        const { PRICING_CONFIG } = await import('../config/pricing.config');
+        if (wallet.balance < PRICING_CONFIG.WALLET.MINIMUM_TO_BOOK) {
+          throw new ConflictError(
+            `Minimum wallet balance of ₹${PRICING_CONFIG.WALLET.MINIMUM_TO_BOOK} required to book. Current: ₹${wallet.balance}`
+          );
+        }
+      } catch (err: any) {
+        if (err.name === 'ConflictError') throw err;
+        logger.warn('Wallet check failed (non-blocking):', err);
+      }
+
+      // Check user doesn't already have bookings for these offers
+      const existingBooking = await Booking.findOne({
+        userId: data.userId,
+        poolingOfferId: { $in: [data.leg1OfferId, data.leg2OfferId] },
+        status: { $in: ['pending', 'confirmed', 'in_progress'] },
+      });
+      if (existingBooking) {
+        throw new ConflictError('You already have a booking for one of these offers');
+      }
+
+      // Create Leg 1 booking
+      booking1 = await this.createPoolingBooking({
+        userId: data.userId,
+        poolingOfferId: data.leg1OfferId,
+        paymentMethod: data.paymentMethod || 'offline_cash',
+        passengerRoute: data.leg1Route,
+        calculatedPrice: data.leg1Price,
+      });
+
+      // Stamp connected ride fields on Leg 1
+      await Booking.updateOne(
+        { bookingId: booking1.bookingId },
+        {
+          $set: {
+            connectedGroupId,
+            legOrder: 1,
+            connectionPoint: data.connectionPoint,
+          },
+        }
+      );
+
+      // Create Leg 2 booking
+      let booking2: any;
+      try {
+        booking2 = await this.createPoolingBooking({
+          userId: data.userId,
+          poolingOfferId: data.leg2OfferId,
+          paymentMethod: data.paymentMethod || 'offline_cash',
+          passengerRoute: data.leg2Route,
+          calculatedPrice: data.leg2Price,
+        });
+      } catch (leg2Error) {
+        // Rollback Leg 1: cancel booking and restore seat
+        logger.error(`Leg 2 booking failed, rolling back Leg 1 (${booking1.bookingId}):`, leg2Error);
+        await Booking.updateOne(
+          { bookingId: booking1.bookingId },
+          { $set: { status: 'cancelled', cancelledBy: 'system', cancellationReason: 'Connected ride: Leg 2 booking failed' } }
+        );
+        const offer1Rollback = await PoolingOffer.findOne({ offerId: data.leg1OfferId });
+        if (offer1Rollback) {
+          offer1Rollback.availableSeats += booking1?.seatsBooked || 1;
+          offer1Rollback.passengers = offer1Rollback.passengers.filter((p) => p.userId !== data.userId);
+          await offer1Rollback.save();
+        }
+        throw leg2Error;
+      }
+
+      // Stamp connected ride fields on Leg 2
+      await Booking.updateOne(
+        { bookingId: booking2.bookingId },
+        {
+          $set: {
+            connectedGroupId,
+            legOrder: 2,
+            connectionPoint: data.connectionPoint,
+          },
+        }
+      );
+
+      // Fetch final bookings with connected fields
+      const finalBooking1 = await Booking.findOne({ bookingId: booking1.bookingId }).lean();
+      const finalBooking2 = await Booking.findOne({ bookingId: booking2.bookingId }).lean();
+
+      logger.info(`🔗 Connected booking created: group=${connectedGroupId}, leg1=${booking1.bookingId}, leg2=${booking2.bookingId}`);
+
+      return {
+        connectedGroupId,
+        bookings: [finalBooking1, finalBooking2],
+        connectionPoint: data.connectionPoint,
+        totalAmount: (finalBooking1?.totalAmount || 0) + (finalBooking2?.totalAmount || 0),
+      };
+    } catch (error) {
+      logger.error('Error creating connected booking:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Auto-cancel connected legs when one leg is cancelled by driver/system.
+   * Called internally after a booking with connectedGroupId is cancelled.
+   */
+  private async handleConnectedCancellation(
+    cancelledBooking: any,
+    cancelledBy: string
+  ): Promise<void> {
+    if (!cancelledBooking.connectedGroupId) return;
+
+    const isDriverOrSystem = ['driver', 'owner', 'system'].includes(cancelledBy);
+    const isLeg1 = cancelledBooking.legOrder === 1;
+
+    // If Leg 1 cancelled by driver/system → auto-cancel Leg 2
+    if (isLeg1 && isDriverOrSystem) {
+      const siblingBookings = await Booking.find({
+        connectedGroupId: cancelledBooking.connectedGroupId,
+        bookingId: { $ne: cancelledBooking.bookingId },
+        status: { $in: ['pending', 'confirmed'] },
+      });
+
+      for (const sibling of siblingBookings) {
+        sibling.status = 'cancelled';
+        sibling.cancelledBy = 'system';
+        sibling.cancelledAt = new Date();
+        sibling.cancellationReason = 'Connected ride disrupted — previous leg cancelled';
+        (sibling as any).cancellationFee = 0;
+        await sibling.save();
+
+        // Free up seat on the offer
+        if (sibling.poolingOfferId) {
+          const offer = await PoolingOffer.findOne({ offerId: sibling.poolingOfferId });
+          if (offer) {
+            offer.availableSeats += sibling.seatsBooked || 1;
+            offer.passengers = offer.passengers.filter((p) => p.userId !== sibling.userId);
+            await offer.save();
+          }
+        }
+
+        logger.info(`🔗 Auto-cancelled connected leg: ${sibling.bookingId} (group=${cancelledBooking.connectedGroupId})`);
+      }
+    }
+    // If Leg 2 cancelled by driver → don't auto-cancel Leg 1 (passenger decides)
+  }
 }
 
 export const bookingService = new BookingService();

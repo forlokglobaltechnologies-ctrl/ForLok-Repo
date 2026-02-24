@@ -4,11 +4,8 @@ import User from '../models/User';
 import { emailService } from './email.service';
 import { notificationService } from './notification.service';
 import { generateUserId } from '../utils/helpers';
+import { config } from '../config/env';
 import logger from '../utils/logger';
-
-// Dev mode: send SOS emails to this address
-// In production, replace with police/emergency API
-const SOS_EMAIL_TARGET = 'n210438@rguktn.ac.in';
 
 interface SOSTriggerData {
   userId: string;
@@ -85,11 +82,21 @@ class SOSService {
       });
 
       // 5. Send email
+      const sosTarget = (config as any).sos?.emailTarget || 'n210438@rguktn.ac.in';
+
+      if (!emailService.isReady()) {
+        logger.error('🚨 [SOS] Email service is NOT configured! Set EMAIL_USER and EMAIL_PASSWORD env vars.');
+      }
+
       const emailResult = await emailService.sendEmail({
-        to: SOS_EMAIL_TARGET,
+        to: sosTarget,
         subject: `🚨 EMERGENCY SOS ALERT - ${user.name || user.userId} needs help!`,
         html: htmlEmail,
       });
+
+      if (!emailResult.success) {
+        logger.error(`🚨 [SOS] Email delivery FAILED: ${emailResult.error}`);
+      }
 
       // 6. Save SOS event
       const sosId = generateUserId('SOS');
@@ -100,7 +107,7 @@ class SOSService {
         passengerLocation: data.location,
         driverLocation,
         status: 'triggered',
-        notifiedEmails: [SOS_EMAIL_TARGET],
+        notifiedEmails: [sosTarget],
       });
 
       // 7. Create in-app notification for the user

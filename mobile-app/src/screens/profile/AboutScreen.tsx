@@ -5,8 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
-  ImageBackground,
   Linking,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -27,62 +25,58 @@ import {
   Target,
   Zap,
 } from 'lucide-react-native';
-import { BlurView } from 'expo-blur';
-import { normalize, wp, hp } from '@utils/responsive';
-import { COLORS, FONTS, SPACING, SHADOWS } from '@constants/theme';
-import { useLanguage } from '@context/LanguageContext';
+import { normalize } from '@utils/responsive';
+import { FONTS } from '@constants/theme';
 import { useTheme } from '@context/ThemeContext';
-
 
 const AboutScreen = () => {
   const navigation = useNavigation<any>();
-  const { t } = useLanguage();
   const { theme } = useTheme();
 
   const features = [
     {
       icon: Users,
-      title: t('aboutScreen.feature1Title'),
-      description: t('aboutScreen.feature1Description'),
+      title: 'Ride Pooling',
+      description: 'Share rides with verified commuters heading your way.',
       color: '#4CAF50',
     },
     {
       icon: Shield,
-      title: t('aboutScreen.feature2Title'),
-      description: t('aboutScreen.feature2Description'),
+      title: 'Verified & Safe',
+      description: 'Every rider and driver is identity-verified for safety.',
       color: '#2196F3',
     },
     {
       icon: Leaf,
-      title: t('aboutScreen.feature3Title'),
-      description: t('aboutScreen.feature3Description'),
+      title: 'Eco Friendly',
+      description: 'Reduce carbon footprint by sharing rides together.',
       color: '#66BB6A',
     },
     {
       icon: Car,
-      title: t('aboutScreen.feature4Title'),
-      description: t('aboutScreen.feature4Description'),
+      title: 'Vehicle Rental',
+      description: 'Rent vehicles from trusted owners near you.',
       color: '#FF9800',
     },
   ];
 
   const stats = [
-    { value: '50K+', label: t('aboutScreen.users'), icon: Users },
-    { value: '120K+', label: t('aboutScreen.rides'), icon: Car },
-    { value: '4.8', label: t('aboutScreen.rating'), icon: Sparkles },
+    { value: '50K+', label: 'Users', icon: Users },
+    { value: '120K+', label: 'Rides', icon: Car },
+    { value: '4.8', label: 'Rating', icon: Sparkles },
   ];
 
   const contactItems = [
-    { icon: Mail, label: t('aboutScreen.email'), value: 'support@forlok.com', action: 'mailto:support@forlok.com' },
-    { icon: Phone, label: t('aboutScreen.phone'), value: '+91 98765 43210', action: 'tel:+919876543210' },
-    { icon: Globe, label: t('aboutScreen.website'), value: 'www.forlok.com', action: 'https://forlok.com' },
-    { icon: MapPin, label: t('aboutScreen.address'), value: 'Hyderabad, Telangana, India', action: null },
+    { icon: Mail, label: 'Email', value: 'support@forlok.com', action: 'mailto:support@forlok.com' },
+    { icon: Phone, label: 'Phone', value: '+91 98765 43210', action: 'tel:+919876543210' },
+    { icon: Globe, label: 'Website', value: 'www.forlok.com', action: 'https://forlok.com' },
+    { icon: MapPin, label: 'Address', value: 'Hyderabad, Telangana, India', action: null },
   ];
 
   const legalItems = [
-    { label: t('aboutScreen.termsOfService'), route: 'TermsConditions' },
-    { label: t('aboutScreen.privacyPolicy'), route: 'PrivacyPolicy' },
-    { label: t('aboutScreen.intellectualProperty'), route: 'IntellectualProperty' },
+    { label: 'Terms of Service', route: 'TermsConditions' },
+    { label: 'Privacy Policy', route: 'PrivacyPolicy' },
+    { label: 'Intellectual Property', route: 'IntellectualProperty' },
   ];
 
   const handleOpenLink = (url: string) => {
@@ -90,226 +84,201 @@ const AboutScreen = () => {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      {/* ── Hero Header ── */}
-      <ImageBackground
-        source={require('../../../assets/about.png')}
-        style={styles.headerImage}
-        resizeMode="cover"
-      >
-        <View style={[styles.headerOverlay, { backgroundColor: theme.colors.primary }]} />
-        <BlurView intensity={40} style={styles.blurContainer}>
-          <View style={styles.headerNav}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.navButton}>
-              <ArrowLeft size={22} color="#FFF" />
-            </TouchableOpacity>
-            <Text style={styles.navTitle}>{t('aboutScreen.title')}</Text>
-            <View style={{ width: normalize(38) }} />
-          </View>
-        </BlurView>
-      </ImageBackground>
+    <View style={[s.container, { backgroundColor: theme.colors.background }]}>
+      {/* Header */}
+      <View style={[s.header, { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.border }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn} activeOpacity={0.7}>
+          <ArrowLeft size={normalize(22)} color={theme.colors.text} />
+        </TouchableOpacity>
+        <Text style={[s.headerTitle, { color: theme.colors.text }]}>About</Text>
+        <View style={{ width: normalize(38) }} />
+      </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-
-        {/* ── Brand Card ── */}
-        <View style={[styles.brandCard, { backgroundColor: theme.colors.surface }]}>
-          <View style={[styles.logoCircle, { backgroundColor: theme.colors.primary }]}>
-            <Text style={styles.logoLetter}>F</Text>
+      <ScrollView contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Brand Card */}
+        <View style={[s.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, alignItems: 'center' }]}>
+          <View style={[s.logoCircle, { backgroundColor: theme.colors.primary }]}>
+            <Text style={s.logoLetter}>F</Text>
           </View>
-          <Text style={[styles.brandName, { color: theme.colors.text }]}>Forlok</Text>
-          <Text style={[styles.tagline, { color: theme.colors.textSecondary }]}>{t('aboutScreen.tagline')}</Text>
-          <View style={[styles.versionPill, { backgroundColor: theme.colors.primary + '12' }]}>
-            <Text style={[styles.versionText, { color: theme.colors.primary }]}>v1.0.0</Text>
+          <Text style={[s.brandName, { color: theme.colors.text }]}>Forlok</Text>
+          <Text style={[s.tagline, { color: theme.colors.textSecondary }]}>
+            Your everyday ride companion
+          </Text>
+          <View style={[s.versionPill, { backgroundColor: theme.colors.primary + '14' }]}>
+            <Text style={[s.versionText, { color: theme.colors.primary }]}>v1.0.0</Text>
           </View>
         </View>
 
-        {/* ── Stats Row ── */}
-        <View style={styles.statsRow}>
+        {/* Stats Row */}
+        <View style={s.statsRow}>
           {stats.map((stat, index) => (
-            <View key={index} style={[styles.statCard, { backgroundColor: theme.colors.surface }]}>
-              <stat.icon size={18} color={theme.colors.primary} />
-              <Text style={[styles.statValue, { color: theme.colors.text }]}>{stat.value}</Text>
-              <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>{stat.label}</Text>
+            <View key={index} style={[s.statCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+              <stat.icon size={normalize(16)} color={theme.colors.primary} />
+              <Text style={[s.statValue, { color: theme.colors.text }]}>{stat.value}</Text>
+              <Text style={[s.statLabel, { color: theme.colors.textSecondary }]}>{stat.label}</Text>
             </View>
           ))}
         </View>
 
-        {/* ── Mission Card ── */}
-        <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-          <View style={styles.cardTitleRow}>
-            <View style={[styles.cardTitleIcon, { backgroundColor: theme.colors.primary + '12' }]}>
-              <Target size={18} color={theme.colors.primary} />
+        {/* Mission */}
+        <View style={[s.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+          <View style={s.cardTitleRow}>
+            <View style={[s.cardTitleIcon, { backgroundColor: theme.colors.primary + '14' }]}>
+              <Target size={normalize(16)} color={theme.colors.primary} />
             </View>
-            <Text style={[styles.cardTitle, { color: theme.colors.text }]}>{t('aboutScreen.whoWeAre')}</Text>
+            <Text style={[s.cardTitle, { color: theme.colors.text }]}>Who We Are</Text>
           </View>
-          <Text style={[styles.bodyText, { color: theme.colors.textSecondary, marginBottom: 0 }]}>
-            {t('aboutScreen.missionText')}
+          <Text style={[s.bodyText, { color: theme.colors.textSecondary }]}>
+            Forlok is a community-driven mobility platform connecting riders and drivers for affordable, safe, and sustainable commutes across India.
           </Text>
         </View>
 
-        {/* ── Features Grid ── */}
-        <View style={styles.sectionTitleRow}>
-          <Zap size={18} color={theme.colors.primary} />
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t('aboutScreen.whyChoose')}</Text>
+        {/* Features */}
+        <View style={s.sectionTitleRow}>
+          <Zap size={normalize(16)} color={theme.colors.primary} />
+          <Text style={[s.sectionTitle, { color: theme.colors.text }]}>Why Choose Forlok</Text>
         </View>
-        <View style={styles.featuresGrid}>
+        <View style={[s.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, padding: 0 }]}>
           {features.map((feature, index) => {
             const Icon = feature.icon;
             return (
-              <View key={index} style={[styles.featureCard, { backgroundColor: theme.colors.surface }]}>
-                <View style={[styles.featureIconCircle, { backgroundColor: feature.color + '15' }]}>
-                  <Icon size={22} color={feature.color} />
+              <React.Fragment key={index}>
+                {index > 0 && <View style={[s.divider, { backgroundColor: theme.colors.border }]} />}
+                <View style={s.featureRow}>
+                  <View style={[s.featureIconCircle, { backgroundColor: feature.color + '14' }]}>
+                    <Icon size={normalize(20)} color={feature.color} />
+                  </View>
+                  <View style={s.featureInfo}>
+                    <Text style={[s.featureTitle, { color: theme.colors.text }]}>{feature.title}</Text>
+                    <Text style={[s.featureDesc, { color: theme.colors.textSecondary }]}>{feature.description}</Text>
+                  </View>
                 </View>
-                <Text style={[styles.featureTitle, { color: theme.colors.text }]}>{feature.title}</Text>
-                <Text style={[styles.featureDesc, { color: theme.colors.textSecondary }]}>{feature.description}</Text>
-              </View>
+              </React.Fragment>
             );
           })}
         </View>
 
-        {/* ── Contact Card ── */}
-        <View style={styles.sectionTitleRow}>
-          <Mail size={18} color={theme.colors.primary} />
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t('aboutScreen.contactUs')}</Text>
+        {/* Contact */}
+        <View style={s.sectionTitleRow}>
+          <Mail size={normalize(16)} color={theme.colors.primary} />
+          <Text style={[s.sectionTitle, { color: theme.colors.text }]}>Contact Us</Text>
         </View>
-        <View style={[styles.card, { backgroundColor: theme.colors.surface, padding: 0 }]}>
+        <View style={[s.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, padding: 0 }]}>
           {contactItems.map((item, index) => (
             <React.Fragment key={index}>
-              {index > 0 && <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />}
+              {index > 0 && <View style={[s.divider, { backgroundColor: theme.colors.border }]} />}
               <TouchableOpacity
-                style={styles.contactRow}
+                style={s.contactRow}
                 onPress={item.action ? () => handleOpenLink(item.action!) : undefined}
-                activeOpacity={item.action ? 0.7 : 1}
+                activeOpacity={item.action ? 0.6 : 1}
               >
-                <View style={[styles.contactIconWrap, { backgroundColor: theme.colors.primary + '12' }]}>
-                  <item.icon size={18} color={theme.colors.primary} />
+                <View style={[s.contactIconWrap, { backgroundColor: theme.colors.primary + '14' }]}>
+                  <item.icon size={normalize(16)} color={theme.colors.primary} />
                 </View>
-                <View style={styles.contactInfo}>
-                  <Text style={[styles.contactLabel, { color: theme.colors.textSecondary }]}>{item.label}</Text>
-                  <Text style={[styles.contactValue, { color: theme.colors.text }]}>{item.value}</Text>
+                <View style={s.contactInfo}>
+                  <Text style={[s.contactLabel, { color: theme.colors.textSecondary }]}>{item.label}</Text>
+                  <Text style={[s.contactValue, { color: theme.colors.text }]}>{item.value}</Text>
                 </View>
-                {item.action && <ExternalLink size={15} color={theme.colors.textSecondary} />}
+                {item.action && <ExternalLink size={normalize(14)} color={theme.colors.textSecondary} />}
               </TouchableOpacity>
             </React.Fragment>
           ))}
         </View>
 
-        {/* ── Legal Card ── */}
-        <View style={styles.sectionTitleRow}>
-          <Shield size={18} color={theme.colors.primary} />
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t('aboutScreen.legal')}</Text>
+        {/* Legal */}
+        <View style={s.sectionTitleRow}>
+          <Shield size={normalize(16)} color={theme.colors.primary} />
+          <Text style={[s.sectionTitle, { color: theme.colors.text }]}>Legal</Text>
         </View>
-        <View style={[styles.card, { backgroundColor: theme.colors.surface, padding: 0 }]}>
+        <View style={[s.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, padding: 0 }]}>
           {legalItems.map((item, index) => (
             <React.Fragment key={index}>
-              {index > 0 && <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />}
-              <TouchableOpacity style={styles.legalRow} onPress={() => navigation.navigate(item.route)}>
-                <Text style={[styles.legalText, { color: theme.colors.text }]}>{item.label}</Text>
-                <ChevronRight size={18} color={theme.colors.textSecondary} />
+              {index > 0 && <View style={[s.divider, { backgroundColor: theme.colors.border }]} />}
+              <TouchableOpacity style={s.legalRow} onPress={() => navigation.navigate(item.route)} activeOpacity={0.6}>
+                <Text style={[s.legalText, { color: theme.colors.text }]}>{item.label}</Text>
+                <ChevronRight size={normalize(18)} color={theme.colors.textSecondary} />
               </TouchableOpacity>
             </React.Fragment>
           ))}
         </View>
 
-        {/* ── Footer ── */}
-        <View style={styles.footer}>
-          <View style={styles.footerRow}>
-            <Text style={[styles.footerText, { color: theme.colors.textSecondary }]}>{t('aboutScreen.madeWith')}</Text>
-            <Heart size={14} color="#F44336" fill="#F44336" />
-            <Text style={[styles.footerText, { color: theme.colors.textSecondary }]}>{t('aboutScreen.inIndia')}</Text>
+        {/* Footer */}
+        <View style={s.footer}>
+          <View style={s.footerRow}>
+            <Text style={[s.footerText, { color: theme.colors.textSecondary }]}>Made with </Text>
+            <Heart size={normalize(13)} color="#E53935" fill="#E53935" />
+            <Text style={[s.footerText, { color: theme.colors.textSecondary }]}> in India</Text>
           </View>
-          <Text style={[styles.copyright, { color: theme.colors.textSecondary }]}>
-            {t('aboutScreen.copyright')}
+          <Text style={[s.copyright, { color: theme.colors.textSecondary }]}>
+            © 2025 Forlok. All rights reserved.
           </Text>
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
-const styles = StyleSheet.create({
-  /* ── Container ── */
+const s = StyleSheet.create({
   container: {
     flex: 1,
   },
-
-  /* ── Hero Header ── */
-  headerImage: {
-    width: '100%',
-    height: hp(20),
-  },
-  headerOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0.78,
-  },
-  blurContainer: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'flex-end',
-    paddingBottom: SPACING.lg,
-    paddingHorizontal: SPACING.md,
-  },
-  headerNav: {
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingTop: normalize(48),
+    paddingBottom: normalize(14),
+    paddingHorizontal: normalize(16),
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  navButton: {
+  backBtn: {
     width: normalize(38),
     height: normalize(38),
-    borderRadius: normalize(19),
-    backgroundColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  navTitle: {
+  headerTitle: {
     flex: 1,
     fontFamily: FONTS.regular,
-    fontSize: normalize(22),
-    color: '#FFF',
-    fontWeight: '800',
+    fontSize: normalize(18),
+    fontWeight: '700',
     textAlign: 'center',
-    letterSpacing: normalize(0.4),
   },
-
-  /* ── Scroll ── */
   scrollContent: {
-    padding: SPACING.md,
-    paddingBottom: SPACING.xl * 2,
+    padding: normalize(16),
+    paddingBottom: normalize(48),
   },
-
-  /* ── Brand Card ── */
-  brandCard: {
-    borderRadius: normalize(20),
-    padding: SPACING.xl,
-    alignItems: 'center',
-    marginBottom: SPACING.md,
-    ...SHADOWS.md,
+  card: {
+    borderRadius: normalize(12),
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: normalize(16),
+    marginBottom: normalize(16),
   },
   logoCircle: {
-    width: normalize(64),
-    height: normalize(64),
-    borderRadius: normalize(32),
+    width: normalize(60),
+    height: normalize(60),
+    borderRadius: normalize(30),
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: SPACING.sm,
+    marginBottom: normalize(10),
   },
   logoLetter: {
     fontFamily: FONTS.regular,
-    fontSize: normalize(30),
+    fontSize: normalize(28),
     fontWeight: '900',
     color: '#FFF',
   },
   brandName: {
     fontFamily: FONTS.regular,
-    fontSize: normalize(28),
+    fontSize: normalize(24),
     fontWeight: '800',
-    letterSpacing: 1,
+    letterSpacing: 0.5,
     marginBottom: normalize(4),
   },
   tagline: {
     fontFamily: FONTS.regular,
-    fontSize: normalize(14),
+    fontSize: normalize(13),
     fontWeight: '500',
-    marginBottom: SPACING.sm,
+    marginBottom: normalize(12),
   },
   versionPill: {
     paddingHorizontal: normalize(14),
@@ -321,24 +290,22 @@ const styles = StyleSheet.create({
     fontSize: normalize(12),
     fontWeight: '700',
   },
-
-  /* ── Stats Row ── */
   statsRow: {
     flexDirection: 'row',
-    gap: SPACING.sm,
-    marginBottom: SPACING.md,
+    gap: normalize(10),
+    marginBottom: normalize(16),
   },
   statCard: {
     flex: 1,
-    borderRadius: normalize(16),
+    borderRadius: normalize(12),
+    borderWidth: StyleSheet.hairlineWidth,
     paddingVertical: normalize(14),
     alignItems: 'center',
     gap: normalize(4),
-    ...SHADOWS.sm,
   },
   statValue: {
     fontFamily: FONTS.regular,
-    fontSize: normalize(20),
+    fontSize: normalize(18),
     fontWeight: '800',
   },
   statLabel: {
@@ -346,100 +313,79 @@ const styles = StyleSheet.create({
     fontSize: normalize(11),
     fontWeight: '500',
   },
-
-  /* ── Generic Card ── */
-  card: {
-    borderRadius: normalize(16),
-    padding: SPACING.lg,
-    marginBottom: SPACING.md,
-    ...SHADOWS.md,
-  },
   cardTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: normalize(10),
-    marginBottom: SPACING.md,
+    marginBottom: normalize(12),
   },
   cardTitleIcon: {
-    width: normalize(34),
-    height: normalize(34),
-    borderRadius: normalize(10),
+    width: normalize(32),
+    height: normalize(32),
+    borderRadius: normalize(8),
     alignItems: 'center',
     justifyContent: 'center',
   },
   cardTitle: {
     fontFamily: FONTS.regular,
-    fontSize: normalize(17),
+    fontSize: normalize(16),
     fontWeight: '700',
   },
   bodyText: {
     fontFamily: FONTS.regular,
-    fontSize: normalize(14),
-    lineHeight: normalize(22),
-    marginBottom: SPACING.sm,
+    fontSize: normalize(13),
+    lineHeight: normalize(20),
   },
-
-  /* ── Section Title ── */
   sectionTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: normalize(8),
-    marginBottom: SPACING.md,
-    marginTop: SPACING.sm,
+    marginBottom: normalize(12),
+    marginTop: normalize(4),
   },
   sectionTitle: {
     fontFamily: FONTS.regular,
-    fontSize: normalize(17),
+    fontSize: normalize(16),
     fontWeight: '700',
   },
-
-  /* ── Features Grid ── */
-  featuresGrid: {
+  featureRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.sm,
-    marginBottom: SPACING.md,
-  },
-  featureCard: {
-    width: (wp(100) - SPACING.md * 2 - SPACING.sm) / 2,
-    borderRadius: normalize(16),
-    padding: SPACING.md,
     alignItems: 'center',
-    ...SHADOWS.sm,
+    paddingHorizontal: normalize(16),
+    paddingVertical: normalize(14),
   },
   featureIconCircle: {
-    width: normalize(50),
-    height: normalize(50),
-    borderRadius: normalize(25),
+    width: normalize(40),
+    height: normalize(40),
+    borderRadius: normalize(20),
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: SPACING.sm,
+    marginRight: normalize(12),
+  },
+  featureInfo: {
+    flex: 1,
   },
   featureTitle: {
     fontFamily: FONTS.regular,
-    fontSize: normalize(13),
-    fontWeight: '700',
-    textAlign: 'center',
-    marginBottom: normalize(4),
+    fontSize: normalize(14),
+    fontWeight: '600',
+    marginBottom: normalize(2),
   },
   featureDesc: {
     fontFamily: FONTS.regular,
-    fontSize: normalize(11),
-    textAlign: 'center',
-    lineHeight: normalize(16),
+    fontSize: normalize(12),
+    lineHeight: normalize(17),
   },
-
-  /* ── Contact ── */
   contactRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: SPACING.lg,
+    paddingHorizontal: normalize(16),
     paddingVertical: normalize(14),
   },
   contactIconWrap: {
-    width: normalize(40),
-    height: normalize(40),
-    borderRadius: normalize(12),
+    width: normalize(36),
+    height: normalize(36),
+    borderRadius: normalize(10),
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: normalize(12),
@@ -455,20 +401,18 @@ const styles = StyleSheet.create({
   },
   contactValue: {
     fontFamily: FONTS.regular,
-    fontSize: normalize(14),
+    fontSize: normalize(13),
     fontWeight: '600',
   },
   divider: {
-    height: 1,
-    marginHorizontal: SPACING.lg,
+    height: StyleSheet.hairlineWidth,
+    marginHorizontal: normalize(16),
   },
-
-  /* ── Legal ── */
   legalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: SPACING.lg,
+    paddingHorizontal: normalize(16),
     paddingVertical: normalize(15),
   },
   legalText: {
@@ -476,17 +420,14 @@ const styles = StyleSheet.create({
     fontSize: normalize(14),
     fontWeight: '500',
   },
-
-  /* ── Footer ── */
   footer: {
     alignItems: 'center',
-    marginTop: SPACING.lg,
+    marginTop: normalize(20),
     gap: normalize(6),
   },
   footerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: normalize(5),
   },
   footerText: {
     fontFamily: FONTS.regular,

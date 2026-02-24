@@ -25,19 +25,17 @@ import {
   Bike,
   Edit,
   Eye,
-  Mail,
   Phone,
   Calendar,
   User,
   Cake,
-  CreditCard,
+
   BarChart,
   DollarSign,
   LogOut,
   ChevronRight,
   FileText,
   Shield,
-  Hash,
   Wallet,
   MessageSquare,
   Info,
@@ -53,19 +51,21 @@ import { COLORS, FONTS, SPACING, SHADOWS, BORDER_RADIUS } from '@constants/theme
 import { Card } from '@components/common/Card';
 import { useLanguage } from '@context/LanguageContext';
 import { useTheme } from '@context/ThemeContext';
+import { useSnackbar } from '@context/SnackbarContext';
 import { userApi, documentApi, uploadFile, vehicleApi } from '@utils/apiClient';
 import { apiService } from '@services/api.service';
 import { useAuth } from '@context/AuthContext';
 import * as ImagePicker from 'expo-image-picker';
-import { BottomTabNavigator } from '@components/navigation/BottomTabNavigator';
+import { getUserErrorMessage } from '@utils/errorUtils';
 
-const AVATAR_SIZE = normalize(80);
+const AVATAR_SIZE = normalize(60);
 
 const ProfileScreen = () => {
   const navigation = useNavigation();
   const { t } = useLanguage();
   const { theme } = useTheme();
   const { logout: authLogout } = useAuth();
+  const { showSnackbar } = useSnackbar();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [documents, setDocuments] = useState<any[]>([]);
@@ -107,7 +107,7 @@ const ProfileScreen = () => {
         console.error('Logout error:', error);
         setLoggingOut(false);
         setShowLogoutModal(false);
-        Alert.alert('Error', 'Failed to logout. Please try again.');
+        showSnackbar({ message: 'Failed to logout. Please try again.', type: 'error' });
       }
     }, 2000);
   };
@@ -157,10 +157,10 @@ const ProfileScreen = () => {
           }
         }
       } else {
-        Alert.alert('Error', response.error || 'Failed to load profile');
+        showSnackbar({ message: getUserErrorMessage(response as any, 'Failed to load profile'), type: 'error' });
       }
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to load profile');
+      showSnackbar({ message: error.message || 'Failed to load profile', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -200,9 +200,8 @@ const ProfileScreen = () => {
           onPress: async () => {
             const result = await ImagePicker.launchCameraAsync({
               mediaTypes: ImagePicker.MediaTypeOptions.Images,
-              allowsEditing: true,
+              allowsEditing: false,
               quality: 0.8,
-              aspect: [1, 1],
             });
             if (!result.canceled && result.assets[0]) {
               await uploadProfilePhoto(result.assets[0].uri);
@@ -214,9 +213,8 @@ const ProfileScreen = () => {
           onPress: async () => {
             const result = await ImagePicker.launchImageLibraryAsync({
               mediaTypes: ImagePicker.MediaTypeOptions.Images,
-              allowsEditing: true,
+              allowsEditing: false,
               quality: 0.8,
-              aspect: [1, 1],
             });
             if (!result.canceled && result.assets[0]) {
               await uploadProfilePhoto(result.assets[0].uri);
@@ -226,7 +224,7 @@ const ProfileScreen = () => {
         { text: 'Cancel', style: 'cancel' },
       ]);
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to open image picker');
+      showSnackbar({ message: error.message || 'Failed to open image picker', type: 'error' });
     }
   };
 
@@ -277,7 +275,7 @@ const ProfileScreen = () => {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <ImageBackground
-          source={require('../../../assets/profile.png')}
+          source={require('../../../assets/forlok_profile_banner_blue_bg_v1.png')}
           style={styles.headerImage}
           resizeMode="cover"
         >
@@ -315,7 +313,6 @@ const ProfileScreen = () => {
     { icon: Coins, label: 'Earn Coins', screen: 'EarnCoins', color: '#F5A623' },
     { icon: MessageSquare, label: 'My Reviews', screen: 'Reviews', params: { userId: user?.userId, userName: user?.name }, color: theme.colors.primary },
     { icon: Car, label: 'My Offers', screen: 'MyOffers', color: theme.colors.primary },
-    { icon: CreditCard, label: 'Payment Methods', screen: 'Payment', color: theme.colors.primary },
     { icon: Shield, label: 'Help & Support', screen: 'HelpSupport', color: theme.colors.primary },
     { icon: Info, label: 'About', screen: 'About', color: theme.colors.primary },
   ];
@@ -325,7 +322,7 @@ const ProfileScreen = () => {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* ── Hero Header with Image ── */}
         <ImageBackground
-          source={require('../../../assets/profile.png')}
+          source={require('../../../assets/forlok_profile_banner_blue_bg_v1.png')}
           style={styles.headerImage}
           resizeMode="cover"
         >
@@ -348,8 +345,8 @@ const ProfileScreen = () => {
 
         {/* ── Profile Card (overlapping header) ── */}
         <View style={[styles.profileCard, { backgroundColor: theme.colors.surface }]}>
-          {/* Avatar */}
-          <View style={styles.avatarSection}>
+          {/* Top row: Avatar + Name + Edit */}
+          <View style={styles.profileTopRow}>
             <View style={styles.avatarWrap}>
               {user.profilePhoto ? (
                 <Image
@@ -363,8 +360,8 @@ const ProfileScreen = () => {
                   }}
                 />
               ) : (
-                <View style={[styles.avatar, styles.avatarPlaceholder, { borderColor: theme.colors.surface, backgroundColor: theme.colors.primary + '20' }]}>
-                  <User size={44} color={theme.colors.primary} />
+                <View style={[styles.avatar, styles.avatarPlaceholder, { borderColor: theme.colors.surface, backgroundColor: theme.colors.primary + '15' }]}>
+                  <User size={28} color={theme.colors.primary} />
                 </View>
               )}
               <TouchableOpacity
@@ -373,66 +370,48 @@ const ProfileScreen = () => {
                 disabled={uploadingPhoto}
               >
                 {uploadingPhoto ? (
-                  <ActivityIndicator size={14} color="#FFF" />
+                  <ActivityIndicator size={10} color="#FFF" />
                 ) : (
-                  <Edit size={14} color="#FFF" />
+                  <Edit size={10} color="#FFF" />
                 )}
               </TouchableOpacity>
             </View>
-
-            {/* Name & ID */}
-            <Text style={[styles.userName, { color: theme.colors.text }]}>{user.name || 'User'}</Text>
-            <View style={styles.userIdRow}>
-              <Hash size={12} color={theme.colors.primary} />
-              <Text style={[styles.userIdText, { color: theme.colors.textSecondary }]}>{user.userId || 'N/A'}</Text>
-            </View>
-          </View>
-
-          {/* Badges Row */}
-          <View style={styles.badgesRow}>
-            {/* Verification */}
-            <View style={[
-              styles.profileBadge,
-              { backgroundColor: user.isVerified ? '#4CAF50' + '12' : '#FF9800' + '12' },
-            ]}>
-              <Shield
-                size={13}
-                color={user.isVerified ? '#4CAF50' : '#FF9800'}
-                fill={user.isVerified ? '#4CAF50' : 'none'}
-              />
-              <Text style={[styles.profileBadgeText, { color: user.isVerified ? '#4CAF50' : '#FF9800' }]}>
-                {user.isVerified ? 'Verified' : 'Unverified'}
-              </Text>
-            </View>
-            {/* Rating */}
-            <View style={[styles.profileBadge, { backgroundColor: '#FFB800' + '12' }]}>
-              <Star size={13} color="#FFB800" fill="#FFB800" />
-              <Text style={[styles.profileBadgeText, { color: '#8B6914' }]}>
-                {Number(user.rating || 0).toFixed(1)} ({user.totalReviews || 0})
-              </Text>
+            <View style={styles.profileNameSection}>
+              <Text style={[styles.userName, { color: theme.colors.text }]} numberOfLines={1}>{user.name || 'User'}</Text>
+              <Text style={[styles.userIdText, { color: theme.colors.textSecondary }]}>#{user.userId || 'N/A'}</Text>
+              <View style={styles.badgesRow}>
+                <View style={[styles.profileBadge, { backgroundColor: user.isVerified ? '#E8F5E9' : '#FFF3E0' }]}>
+                  <Shield size={11} color={user.isVerified ? '#4CAF50' : '#FF9800'} fill={user.isVerified ? '#4CAF50' : 'none'} />
+                  <Text style={[styles.profileBadgeText, { color: user.isVerified ? '#4CAF50' : '#FF9800' }]}>
+                    {user.isVerified ? 'Verified' : 'Unverified'}
+                  </Text>
+                </View>
+                <View style={[styles.profileBadge, { backgroundColor: '#FFF8E1' }]}>
+                  <Star size={11} color="#FFB800" fill="#FFB800" />
+                  <Text style={[styles.profileBadgeText, { color: '#8B6914' }]}>
+                    {Number(user.rating || 0).toFixed(1)}
+                  </Text>
+                </View>
+              </View>
             </View>
           </View>
 
           {/* Quick Stats */}
           <View style={[styles.quickStats, { borderTopColor: theme.colors.border }]}>
-            <View style={styles.quickStatItem}>
-              <Text style={[styles.quickStatValue, { color: theme.colors.text }]}>{user.totalTrips || 0}</Text>
-              <Text style={[styles.quickStatLabel, { color: theme.colors.textSecondary }]}>Trips</Text>
-            </View>
-            <View style={[styles.quickStatDivider, { backgroundColor: theme.colors.border }]} />
-            <View style={styles.quickStatItem}>
-              <Text style={[styles.quickStatValue, { color: theme.colors.text }]}>
-                {Number(user.rating || 0).toFixed(1)}
-              </Text>
-              <Text style={[styles.quickStatLabel, { color: theme.colors.textSecondary }]}>Rating</Text>
-            </View>
-            <View style={[styles.quickStatDivider, { backgroundColor: theme.colors.border }]} />
-            <View style={styles.quickStatItem}>
-              <Text style={[styles.quickStatValue, { color: theme.colors.text }]}>
-                ₹{user.totalEarnings || 0}
-              </Text>
-              <Text style={[styles.quickStatLabel, { color: theme.colors.textSecondary }]}>Earned</Text>
-            </View>
+            {[
+              { value: user.totalTrips || 0, label: 'Trips', color: theme.colors.text },
+              { value: Number(user.rating || 0).toFixed(1), label: 'Rating', color: theme.colors.text },
+              { value: `₹${user.totalEarnings || 0}`, label: 'Earned', color: theme.colors.text },
+              { value: Math.round((user.totalTrips || 0) * 5 * 0.12), label: 'kg CO₂', color: '#2E7D32' },
+            ].map((stat, i, arr) => (
+              <React.Fragment key={stat.label}>
+                <View style={styles.quickStatItem}>
+                  <Text style={[styles.quickStatValue, { color: stat.color }]}>{stat.value}</Text>
+                  <Text style={[styles.quickStatLabel, { color: theme.colors.textSecondary }]}>{stat.label}</Text>
+                </View>
+                {i < arr.length - 1 && <View style={[styles.quickStatDivider, { backgroundColor: theme.colors.border }]} />}
+              </React.Fragment>
+            ))}
           </View>
         </View>
 
@@ -457,20 +436,17 @@ const ProfileScreen = () => {
         {/* ── Personal Information ── */}
         <View style={[styles.sectionCard, { backgroundColor: theme.colors.surface }]}>
           <View style={styles.sectionHeader}>
-            <User size={18} color={theme.colors.primary} />
+            <User size={16} color={theme.colors.primary} />
             <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t('profile.personalInformation')}</Text>
           </View>
-          <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
           {[
-            { icon: Hash, label: 'User ID', value: user.userId || 'N/A' },
-            { icon: Mail, label: t('common.email'), value: user.email || 'N/A' },
             { icon: Phone, label: t('common.phone'), value: user.phone || 'N/A' },
             ...(user.dateOfBirth ? [{ icon: Cake, label: t('common.dateOfBirth'), value: new Date(user.dateOfBirth).toLocaleDateString() }] : []),
             ...(user.gender ? [{ icon: User, label: t('common.gender'), value: user.gender }] : []),
-          ].map((item, idx) => (
-            <View key={idx} style={styles.infoRow}>
-              <View style={[styles.infoIcon, { backgroundColor: theme.colors.primary + '10' }]}>
-                <item.icon size={16} color={theme.colors.primary} />
+          ].map((item, idx, arr) => (
+            <View key={idx} style={[styles.infoRow, idx < arr.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.colors.border }]}>
+              <View style={[styles.infoIcon, { backgroundColor: theme.colors.primary + '0D' }]}>
+                <item.icon size={14} color={theme.colors.primary} />
               </View>
               <View style={styles.infoContent}>
                 <Text style={[styles.infoLabel, { color: theme.colors.textSecondary }]}>{item.label}</Text>
@@ -483,10 +459,9 @@ const ProfileScreen = () => {
         {/* ── Documents ── */}
         <View style={[styles.sectionCard, { backgroundColor: theme.colors.surface }]}>
           <View style={styles.sectionHeader}>
-            <FileText size={18} color={theme.colors.primary} />
+            <FileText size={16} color={theme.colors.primary} />
             <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t('profile.documents')}</Text>
           </View>
-          <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
           {documentsLoading ? (
             <View style={styles.miniLoadingWrap}>
               <ActivityIndicator size="small" color={theme.colors.primary} />
@@ -532,7 +507,7 @@ const ProfileScreen = () => {
                         <TouchableOpacity
                           key={doc.documentId || doc._id}
                           style={[styles.docItem, { borderBottomColor: theme.colors.border }]}
-                          onPress={() => doc.url && Linking.openURL(doc.url).catch(() => Alert.alert('Error', 'Could not open document'))}
+                          onPress={() => doc.url && Linking.openURL(doc.url).catch(() => showSnackbar({ message: 'Could not open document', type: 'error' }))}
                         >
                           {isImage ? (
                             <View style={styles.docThumbWrap}>
@@ -581,7 +556,7 @@ const ProfileScreen = () => {
                     <TouchableOpacity
                       key={doc.documentId || doc._id}
                       style={[styles.docItem, { borderBottomColor: theme.colors.border }]}
-                      onPress={() => doc.url && Linking.openURL(doc.url).catch(() => Alert.alert('Error', 'Could not open document'))}
+                      onPress={() => doc.url && Linking.openURL(doc.url).catch(() => showSnackbar({ message: 'Could not open document', type: 'error' }))}
                     >
                       <View style={[styles.docIconWrap, { backgroundColor: theme.colors.primary + '10' }]}>
                         {doc.status === 'verified' ? (
@@ -616,7 +591,7 @@ const ProfileScreen = () => {
         {/* ── Vehicles ── */}
         <View style={[styles.sectionCard, { backgroundColor: theme.colors.surface }]}>
           <View style={styles.sectionHeader}>
-            <Car size={18} color={theme.colors.primary} />
+            <Car size={16} color={theme.colors.primary} />
             <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t('profile.myVehicles')}</Text>
             <TouchableOpacity
               onPress={() => navigation.navigate('AddVehicle' as never)}
@@ -625,7 +600,6 @@ const ProfileScreen = () => {
               <Text style={styles.addBtnText}>+ Add</Text>
             </TouchableOpacity>
           </View>
-          <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
           {loadingVehicles ? (
             <View style={styles.miniLoadingWrap}>
               <ActivityIndicator size="small" color={theme.colors.primary} />
@@ -682,41 +656,34 @@ const ProfileScreen = () => {
         </View>
 
         {/* ── Quick Menu ── */}
-        <View style={[styles.sectionCard, { backgroundColor: theme.colors.surface, paddingHorizontal: 0, paddingBottom: 0 }]}>
-          <View style={[styles.sectionHeader, { paddingHorizontal: SPACING.md }]}>
-            <Settings size={18} color={theme.colors.primary} />
-            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Quick Menu</Text>
-          </View>
-          <View style={[styles.divider, { backgroundColor: theme.colors.border, marginHorizontal: SPACING.md }]} />
+        <View style={[styles.sectionCard, { backgroundColor: theme.colors.surface, paddingHorizontal: 0, paddingBottom: normalize(4) }]}>
           {menuItems.map((item, idx) => (
             <TouchableOpacity
               key={idx}
-              style={[styles.menuItem, idx < menuItems.length - 1 && { borderBottomWidth: 1, borderBottomColor: theme.colors.border + '60' }]}
+              style={[styles.menuItem, idx < menuItems.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.colors.border + '50' }]}
               onPress={() => navigation.navigate(item.screen as never, (item as any).params as never)}
               activeOpacity={0.6}
             >
-              <View style={[styles.menuIconWrap, { backgroundColor: item.color + '12' }]}>
-                <item.icon size={20} color={item.color} />
+              <View style={[styles.menuIconWrap, { backgroundColor: item.color + '10' }]}>
+                <item.icon size={18} color={item.color} />
               </View>
               <Text style={[styles.menuLabel, { color: theme.colors.text }]}>{item.label}</Text>
-              <ChevronRight size={18} color={theme.colors.textSecondary} />
+              <ChevronRight size={16} color={theme.colors.textSecondary + '80'} />
             </TouchableOpacity>
           ))}
           {/* Logout */}
-          <TouchableOpacity style={[styles.menuItem, styles.logoutMenuItem]} onPress={handleLogout}>
-            <View style={[styles.menuIconWrap, { backgroundColor: '#F44336' + '12' }]}>
-              <LogOut size={20} color="#F44336" />
+          <TouchableOpacity style={[styles.menuItem, styles.logoutMenuItem]} onPress={handleLogout} activeOpacity={0.6}>
+            <View style={[styles.menuIconWrap, { backgroundColor: '#F44336' + '0D' }]}>
+              <LogOut size={18} color="#F44336" />
             </View>
             <Text style={[styles.menuLabel, { color: '#F44336', fontWeight: '600' }]}>{t('profile.logout')}</Text>
-            <ChevronRight size={18} color="#F44336" />
+            <ChevronRight size={16} color="#F44336" />
           </TouchableOpacity>
         </View>
 
         {/* Bottom spacing */}
         <View style={{ height: SPACING.xl }} />
       </ScrollView>
-      <BottomTabNavigator />
-
       {/* ── Logout Modal ── */}
       <Modal
         visible={showLogoutModal}
@@ -779,11 +746,11 @@ const styles = StyleSheet.create({
   // ── Header ──
   headerImage: {
     width: '100%',
-    height: hp(25),
+    height: hp(14),
   },
   headerOverlay: {
     ...StyleSheet.absoluteFillObject,
-    opacity: 0.65,
+    opacity: 0.75,
   },
   blurContainer: {
     flex: 1,
@@ -794,24 +761,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.xl,
+    paddingTop: SPACING.lg,
   },
   navButton: {
-    width: normalize(40),
-    height: normalize(40),
-    borderRadius: normalize(20),
+    width: normalize(36),
+    height: normalize(36),
+    borderRadius: normalize(18),
     backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   navTitle: {
     fontFamily: FONTS.regular,
-    fontSize: normalize(20),
-    fontWeight: 'bold',
+    fontSize: normalize(17),
+    fontWeight: '700',
     color: '#FFF',
   },
   navPlaceholder: {
-    width: normalize(40),
+    width: normalize(36),
   },
 
   // ── Scroll ──
@@ -823,23 +790,26 @@ const styles = StyleSheet.create({
   profileCard: {
     borderRadius: BORDER_RADIUS.lg,
     marginHorizontal: SPACING.md,
-    marginTop: -40,
+    marginTop: -normalize(28),
+    paddingHorizontal: SPACING.md,
     paddingTop: SPACING.md,
+    paddingBottom: 0,
     ...SHADOWS.md,
   },
-  avatarSection: {
+  profileTopRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingBottom: SPACING.sm,
+    gap: normalize(14),
+    paddingBottom: normalize(12),
   },
   avatarWrap: {
     position: 'relative',
-    marginBottom: SPACING.sm,
   },
   avatar: {
     width: AVATAR_SIZE,
     height: AVATAR_SIZE,
     borderRadius: AVATAR_SIZE / 2,
-    borderWidth: 4,
+    borderWidth: 3,
   },
   avatarPlaceholder: {
     justifyContent: 'center',
@@ -847,51 +817,47 @@ const styles = StyleSheet.create({
   },
   editAvatarBtn: {
     position: 'absolute',
-    bottom: 2,
-    right: 2,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    bottom: 0,
+    right: -2,
+    width: normalize(24),
+    height: normalize(24),
+    borderRadius: normalize(12),
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 3,
+    borderWidth: 2,
     ...SHADOWS.sm,
+  },
+  profileNameSection: {
+    flex: 1,
   },
   userName: {
     fontFamily: FONTS.regular,
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 2,
-  },
-  userIdRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginBottom: SPACING.sm,
+    fontSize: normalize(18),
+    fontWeight: '700',
   },
   userIdText: {
     fontFamily: FONTS.regular,
-    fontSize: 12,
+    fontSize: normalize(11),
+    marginTop: normalize(1),
+    marginBottom: normalize(6),
   },
 
   // ── Badges Row ──
   badgesRow: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    gap: SPACING.sm,
-    marginBottom: SPACING.md,
+    gap: normalize(6),
   },
   profileBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    gap: 3,
+    paddingHorizontal: normalize(8),
+    paddingVertical: normalize(3),
     borderRadius: BORDER_RADIUS.round,
   },
   profileBadgeText: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
+    fontSize: normalize(10),
     fontWeight: '600',
   },
 
@@ -899,8 +865,7 @@ const styles = StyleSheet.create({
   quickStats: {
     flexDirection: 'row',
     borderTopWidth: 1,
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.md,
+    paddingVertical: normalize(12),
   },
   quickStatItem: {
     flex: 1,
@@ -908,43 +873,43 @@ const styles = StyleSheet.create({
   },
   quickStatValue: {
     fontFamily: FONTS.regular,
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: normalize(16),
+    fontWeight: '700',
   },
   quickStatLabel: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
+    fontSize: normalize(10),
     marginTop: 2,
   },
   quickStatDivider: {
     width: 1,
-    height: '80%',
+    height: '70%',
     alignSelf: 'center',
   },
 
   // ── Section Card ──
   sectionCard: {
-    borderRadius: BORDER_RADIUS.lg,
+    borderRadius: normalize(14),
     marginHorizontal: SPACING.md,
-    marginTop: SPACING.md,
-    padding: SPACING.md,
+    marginTop: normalize(10),
+    padding: normalize(14),
     ...SHADOWS.sm,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.sm,
-    marginBottom: SPACING.sm,
+    gap: normalize(8),
+    marginBottom: normalize(10),
   },
   sectionTitle: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.lg,
-    fontWeight: 'bold',
+    fontSize: normalize(15),
+    fontWeight: '700',
     flex: 1,
   },
   divider: {
-    height: 1,
-    marginBottom: SPACING.sm,
+    height: StyleSheet.hairlineWidth,
+    marginBottom: normalize(8),
   },
 
   // ── Badges Scroll ──
@@ -974,13 +939,13 @@ const styles = StyleSheet.create({
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: normalize(8),
-    gap: SPACING.sm,
+    paddingVertical: normalize(10),
+    gap: normalize(10),
   },
   infoIcon: {
-    width: normalize(34),
-    height: normalize(34),
-    borderRadius: normalize(17),
+    width: normalize(32),
+    height: normalize(32),
+    borderRadius: normalize(16),
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -989,7 +954,7 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontFamily: FONTS.regular,
-    fontSize: normalize(11),
+    fontSize: normalize(10),
     marginBottom: normalize(1),
   },
   infoValue: {
@@ -1145,26 +1110,26 @@ const styles = StyleSheet.create({
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: normalize(12),
-    paddingHorizontal: SPACING.md,
-    gap: SPACING.sm,
+    paddingVertical: normalize(11),
+    paddingHorizontal: normalize(14),
+    gap: normalize(10),
   },
   menuIconWrap: {
-    width: normalize(40),
-    height: normalize(40),
-    borderRadius: normalize(20),
+    width: normalize(34),
+    height: normalize(34),
+    borderRadius: normalize(10),
     justifyContent: 'center',
     alignItems: 'center',
   },
   menuLabel: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
+    fontSize: normalize(14),
     flex: 1,
   },
   logoutMenuItem: {
-    borderTopWidth: 1,
+    borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: '#F44336' + '20',
-    marginTop: SPACING.xs,
+    marginTop: normalize(2),
   },
 
   // ── Logout Modal ──

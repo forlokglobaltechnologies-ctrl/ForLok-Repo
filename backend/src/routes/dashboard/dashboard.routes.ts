@@ -51,4 +51,33 @@ export async function dashboardRoutes(fastify: FastifyInstance) {
       return reply.status(200).send(response);
     }
   );
+
+  /**
+   * GET /api/dashboard/home
+   * Single endpoint for the home screen — returns everything in one call
+   */
+  fastify.get(
+    '/home',
+    {
+      preHandler: [authenticate],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const userId = (request as any).user.userId;
+      const { lat, lng } = request.query as { lat?: string; lng?: string };
+
+      const data = await dashboardService.getHomeScreenData(
+        userId,
+        lat ? parseFloat(lat) : undefined,
+        lng ? parseFloat(lng) : undefined
+      );
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Home screen data retrieved',
+        data,
+      };
+
+      return reply.status(200).send(response);
+    }
+  );
 }

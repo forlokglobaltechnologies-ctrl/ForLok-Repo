@@ -111,8 +111,8 @@ export function getCancellationFeePercentage(
   bookingStatus: string,
   cancelledBy: string
 ): number {
-  // Driver/owner cancels = no fee for passenger
-  if (cancelledBy === 'driver' || cancelledBy === 'owner') {
+  // Driver/owner/system cancels = no fee for passenger
+  if (cancelledBy === 'driver' || cancelledBy === 'owner' || cancelledBy === 'system') {
     return PRICING_CONFIG.CANCELLATION_FEE_POLICY.DRIVER_CANCELS;
   }
 

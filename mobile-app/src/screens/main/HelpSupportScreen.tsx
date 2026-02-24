@@ -5,12 +5,9 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
-  ImageBackground,
   TextInput,
   Linking,
   Modal,
-  Dimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import {
@@ -34,39 +31,34 @@ import {
   ExternalLink,
   X,
 } from 'lucide-react-native';
-import { BlurView } from 'expo-blur';
-import { COLORS, FONTS, SPACING, SHADOWS } from '@constants/theme';
+import { FONTS } from '@constants/theme';
 import { normalize } from '@utils/responsive';
-import { useLanguage } from '@context/LanguageContext';
 import { useTheme } from '@context/ThemeContext';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const HelpSupportScreen = () => {
   const navigation = useNavigation<any>();
-  const { t } = useLanguage();
   const { theme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
 
   const quickActions = [
     {
       icon: BookOpen,
-      label: t('helpSupport.faqs'),
-      desc: t('helpSupport.findQuickAnswers'),
+      label: 'FAQs',
+      desc: 'Find quick answers',
       color: '#2196F3',
       onPress: () => navigation.navigate('FAQ'),
     },
     {
       icon: Bug,
-      label: t('helpSupport.reportBug'),
-      desc: t('helpSupport.foundIssue'),
+      label: 'Report Bug',
+      desc: 'Found an issue?',
       color: '#F44336',
       onPress: () => navigation.navigate('ReportBug'),
     },
     {
       icon: MessageSquare,
-      label: t('helpSupport.feedback'),
-      desc: t('helpSupport.shareThoughts'),
+      label: 'Feedback',
+      desc: 'Share your thoughts',
       color: '#4CAF50',
       onPress: () => navigation.navigate('Feedback'),
     },
@@ -136,212 +128,197 @@ const HelpSupportScreen = () => {
   const contactOptions = [
     {
       icon: MessageCircle,
-      label: t('helpSupport.liveChat'),
-      desc: t('helpSupport.chatWithSupport'),
+      label: 'Live Chat',
+      desc: 'Chat with our support team',
       color: '#4CAF50',
       action: () => {},
     },
     {
       icon: Phone,
-      label: t('helpSupport.callUs'),
-      desc: t('helpSupport.tollFree'),
+      label: 'Call Us',
+      desc: 'Toll-free: 1800-XXX-XXXX',
       color: '#2196F3',
       action: () => Linking.openURL('tel:+911800XXXXXXX'),
     },
     {
       icon: Mail,
-      label: t('helpSupport.emailSupport'),
-      desc: t('helpSupport.supportEmail'),
+      label: 'Email Support',
+      desc: 'support@forlok.com',
       color: '#FF9800',
       action: () => Linking.openURL('mailto:support@forlok.com'),
     },
   ];
 
   const filteredTopics = searchQuery.trim()
-    ? popularTopics.filter(t => t.title.toLowerCase().includes(searchQuery.toLowerCase()))
+    ? popularTopics.filter(tp => tp.title.toLowerCase().includes(searchQuery.toLowerCase()))
     : popularTopics;
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      {/* ── Hero Header ── */}
-      <ImageBackground
-        source={require('../../../assets/help.png')}
-        style={styles.headerImage}
-        resizeMode="cover"
-      >
-        <View style={[styles.headerOverlay, { backgroundColor: theme.colors.primary }]} />
-        <BlurView intensity={40} style={styles.blurContainer}>
-          <View style={styles.headerNav}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.navButton}>
-              <ArrowLeft size={22} color="#FFF" />
-            </TouchableOpacity>
-            <Text style={styles.navTitle}>{t('helpSupport.title')}</Text>
-            <View style={{ width: 38 }} />
-          </View>
-        </BlurView>
-      </ImageBackground>
+    <View style={[s.container, { backgroundColor: theme.colors.background }]}>
+      {/* Header */}
+      <View style={[s.header, { borderBottomColor: theme.colors.border }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn}>
+          <ArrowLeft size={normalize(22)} color={theme.colors.text} />
+        </TouchableOpacity>
+        <Text style={[s.headerTitle, { color: theme.colors.text }]}>Help & Support</Text>
+        <View style={{ width: normalize(38) }} />
+      </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-
-        {/* ── Search Bar ── */}
-        <View style={[styles.searchCard, { backgroundColor: theme.colors.surface }]}>
-          <Search size={20} color={theme.colors.textSecondary} />
+      <ScrollView contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Search Bar */}
+        <View style={[s.searchCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+          <Search size={normalize(18)} color={theme.colors.textSecondary} />
           <TextInput
-            style={[styles.searchInput, { color: theme.colors.text }]}
+            style={[s.searchInput, { color: theme.colors.text }]}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholder={t('helpSupport.searchHelpTopics')}
+            placeholder="Search help topics..."
             placeholderTextColor={theme.colors.textSecondary}
           />
         </View>
 
-        {/* ── Quick Actions ── */}
-        <View style={styles.quickActionsRow}>
+        {/* Quick Actions */}
+        <View style={s.quickActionsRow}>
           {quickActions.map((action, index) => (
             <TouchableOpacity
               key={index}
-              style={[styles.quickActionCard, { backgroundColor: theme.colors.surface }]}
+              style={[s.quickActionCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
               onPress={action.onPress}
               activeOpacity={0.7}
             >
-              <View style={[styles.quickActionIcon, { backgroundColor: action.color + '12' }]}>
-                <action.icon size={22} color={action.color} />
+              <View style={[s.quickActionIcon, { backgroundColor: action.color + '14' }]}>
+                <action.icon size={normalize(20)} color={action.color} />
               </View>
-              <Text style={[styles.quickActionLabel, { color: theme.colors.text }]}>{action.label}</Text>
-              <Text style={[styles.quickActionDesc, { color: theme.colors.textSecondary }]}>{action.desc}</Text>
+              <Text style={[s.quickActionLabel, { color: theme.colors.text }]}>{action.label}</Text>
+              <Text style={[s.quickActionDesc, { color: theme.colors.textSecondary }]}>{action.desc}</Text>
             </TouchableOpacity>
           ))}
         </View>
 
-        {/* ── Popular Topics ── */}
-        <View style={styles.sectionTitleRow}>
-          <HelpCircle size={18} color={theme.colors.primary} />
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t('helpSupport.popularTopics')}</Text>
+        {/* Popular Topics */}
+        <View style={s.sectionTitleRow}>
+          <HelpCircle size={normalize(17)} color={theme.colors.primary} />
+          <Text style={[s.sectionTitle, { color: theme.colors.text }]}>Popular Topics</Text>
         </View>
-        <View style={[styles.card, { backgroundColor: theme.colors.surface, padding: 0 }]}>
+        <View style={[s.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
           {filteredTopics.map((topic, index) => (
             <React.Fragment key={index}>
-              {index > 0 && <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />}
+              {index > 0 && <View style={[s.divider, { backgroundColor: theme.colors.border }]} />}
               <TouchableOpacity
-                style={styles.topicRow}
+                style={s.topicRow}
                 onPress={() => setSelectedTopic(topic)}
                 activeOpacity={0.7}
               >
-                <View style={[styles.topicIconWrap, { backgroundColor: topic.color + '12' }]}>
-                  <topic.icon size={18} color={topic.color} />
+                <View style={[s.topicIconWrap, { backgroundColor: topic.color + '14' }]}>
+                  <topic.icon size={normalize(17)} color={topic.color} />
                 </View>
-                <View style={styles.topicInfo}>
-                  <Text style={[styles.topicTitle, { color: theme.colors.text }]}>{topic.title}</Text>
-                  <Text style={[styles.topicCategory, { color: theme.colors.textSecondary }]}>{topic.category}</Text>
+                <View style={s.topicInfo}>
+                  <Text style={[s.topicTitle, { color: theme.colors.text }]}>{topic.title}</Text>
+                  <Text style={[s.topicCategory, { color: theme.colors.textSecondary }]}>{topic.category}</Text>
                 </View>
-                <ChevronRight size={16} color={theme.colors.textSecondary} />
+                <ChevronRight size={normalize(16)} color={theme.colors.textSecondary} />
               </TouchableOpacity>
             </React.Fragment>
           ))}
           {filteredTopics.length === 0 && (
-            <View style={styles.emptyState}>
-              <Search size={24} color={theme.colors.textSecondary} />
-              <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>{t('helpSupport.noTopicsFound')}</Text>
+            <View style={s.emptyState}>
+              <Search size={normalize(24)} color={theme.colors.textSecondary} />
+              <Text style={[s.emptyText, { color: theme.colors.textSecondary }]}>No topics found</Text>
             </View>
           )}
         </View>
 
-        {/* ── Contact Support ── */}
-        <View style={styles.sectionTitleRow}>
-          <Headphones size={18} color={theme.colors.primary} />
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t('helpSupport.contactSupport')}</Text>
+        {/* Contact Support */}
+        <View style={s.sectionTitleRow}>
+          <Headphones size={normalize(17)} color={theme.colors.primary} />
+          <Text style={[s.sectionTitle, { color: theme.colors.text }]}>Contact Support</Text>
         </View>
-        <View style={[styles.card, { backgroundColor: theme.colors.surface, padding: 0 }]}>
+        <View style={[s.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
           {contactOptions.map((contact, index) => (
             <React.Fragment key={index}>
-              {index > 0 && <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />}
-              <TouchableOpacity style={styles.contactRow} onPress={contact.action} activeOpacity={0.7}>
-                <View style={[styles.contactIconWrap, { backgroundColor: contact.color + '12' }]}>
-                  <contact.icon size={20} color={contact.color} />
+              {index > 0 && <View style={[s.divider, { backgroundColor: theme.colors.border }]} />}
+              <TouchableOpacity style={s.contactRow} onPress={contact.action} activeOpacity={0.7}>
+                <View style={[s.contactIconWrap, { backgroundColor: contact.color + '14' }]}>
+                  <contact.icon size={normalize(19)} color={contact.color} />
                 </View>
-                <View style={styles.contactInfo}>
-                  <Text style={[styles.contactLabel, { color: theme.colors.text }]}>{contact.label}</Text>
-                  <Text style={[styles.contactDesc, { color: theme.colors.textSecondary }]}>{contact.desc}</Text>
+                <View style={s.contactInfo}>
+                  <Text style={[s.contactLabel, { color: theme.colors.text }]}>{contact.label}</Text>
+                  <Text style={[s.contactDesc, { color: theme.colors.textSecondary }]}>{contact.desc}</Text>
                 </View>
-                <ExternalLink size={15} color={theme.colors.textSecondary} />
+                <ExternalLink size={normalize(15)} color={theme.colors.textSecondary} />
               </TouchableOpacity>
             </React.Fragment>
           ))}
         </View>
 
-        {/* ── Support Hours ── */}
-        <View style={[styles.supportHoursCard, { backgroundColor: theme.colors.primary + '08', borderColor: theme.colors.primary + '20' }]}>
-          <Text style={[styles.supportHoursTitle, { color: theme.colors.text }]}>{t('helpSupport.supportHours')}</Text>
-          <Text style={[styles.supportHoursText, { color: theme.colors.textSecondary }]}>
+        {/* Support Hours */}
+        <View style={[s.supportHoursCard, { backgroundColor: theme.colors.primary + '08', borderColor: theme.colors.primary + '20' }]}>
+          <Text style={[s.supportHoursTitle, { color: theme.colors.text }]}>Support Hours</Text>
+          <Text style={[s.supportHoursText, { color: theme.colors.textSecondary }]}>
             Monday - Saturday: 9:00 AM - 9:00 PM IST{'\n'}
             Sunday: 10:00 AM - 6:00 PM IST{'\n'}
             Emergency SOS: Available 24/7
           </Text>
         </View>
-
       </ScrollView>
 
-      {/* ── Topic Detail Modal ── */}
+      {/* Topic Detail Modal */}
       <Modal
         visible={!!selectedTopic}
         transparent
         animationType="slide"
         onRequestClose={() => setSelectedTopic(null)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalSheet, { backgroundColor: theme.colors.surface }]}>
-            {/* Handle bar */}
-            <View style={[styles.modalHandle, { backgroundColor: theme.colors.border }]} />
+        <View style={s.modalOverlay}>
+          <View style={[s.modalSheet, { backgroundColor: theme.colors.surface }]}>
+            <View style={[s.modalHandle, { backgroundColor: theme.colors.border }]} />
 
-            {/* Header */}
             {selectedTopic && (
               <>
-                <View style={styles.modalHeader}>
-                  <View style={[styles.modalIconWrap, { backgroundColor: selectedTopic.color + '12' }]}>
-                    <selectedTopic.icon size={22} color={selectedTopic.color} />
+                <View style={s.modalHeader}>
+                  <View style={[s.modalIconWrap, { backgroundColor: selectedTopic.color + '14' }]}>
+                    <selectedTopic.icon size={normalize(22)} color={selectedTopic.color} />
                   </View>
-                  <View style={styles.modalTitleArea}>
-                    <Text style={[styles.modalTitle, { color: theme.colors.text }]}>{selectedTopic.title}</Text>
-                    <View style={[styles.modalCategoryPill, { backgroundColor: selectedTopic.color + '15' }]}>
-                      <Text style={[styles.modalCategoryText, { color: selectedTopic.color }]}>{selectedTopic.category}</Text>
+                  <View style={s.modalTitleArea}>
+                    <Text style={[s.modalTitle, { color: theme.colors.text }]}>{selectedTopic.title}</Text>
+                    <View style={[s.modalCategoryPill, { backgroundColor: selectedTopic.color + '15' }]}>
+                      <Text style={[s.modalCategoryText, { color: selectedTopic.color }]}>{selectedTopic.category}</Text>
                     </View>
                   </View>
                   <TouchableOpacity
-                    style={[styles.modalCloseBtn, { backgroundColor: theme.colors.background }]}
+                    style={[s.modalCloseBtn, { backgroundColor: theme.colors.background }]}
                     onPress={() => setSelectedTopic(null)}
                   >
-                    <X size={18} color={theme.colors.textSecondary} />
+                    <X size={normalize(18)} color={theme.colors.textSecondary} />
                   </TouchableOpacity>
                 </View>
 
-                {/* Content */}
                 <ScrollView
-                  style={styles.modalScroll}
-                  contentContainerStyle={styles.modalScrollContent}
+                  style={s.modalScroll}
+                  contentContainerStyle={s.modalScrollContent}
                   showsVerticalScrollIndicator={false}
                 >
-                  <Text style={[styles.modalBody, { color: theme.colors.textSecondary }]}>
+                  <Text style={[s.modalBody, { color: theme.colors.textSecondary }]}>
                     {selectedTopic.explanation}
                   </Text>
                 </ScrollView>
 
-                {/* Footer */}
-                <View style={[styles.modalFooter, { borderTopColor: theme.colors.border }]}>
+                <View style={[s.modalFooter, { borderTopColor: theme.colors.border }]}>
                   <TouchableOpacity
-                    style={[styles.modalFooterBtn, { backgroundColor: theme.colors.background }]}
+                    style={[s.modalFooterBtn, { backgroundColor: theme.colors.background }]}
                     onPress={() => {
                       setSelectedTopic(null);
                       navigation.navigate('FAQ');
                     }}
                   >
-                    <BookOpen size={16} color={theme.colors.primary} />
-                    <Text style={[styles.modalFooterBtnText, { color: theme.colors.primary }]}>{t('helpSupport.viewAllFaqs')}</Text>
+                    <BookOpen size={normalize(16)} color={theme.colors.primary} />
+                    <Text style={[s.modalFooterBtnText, { color: theme.colors.primary }]}>View All FAQs</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.modalFooterBtn, { backgroundColor: theme.colors.primary }]}
+                    style={[s.modalFooterBtn, { backgroundColor: theme.colors.primary }]}
                     onPress={() => setSelectedTopic(null)}
                   >
-                    <Text style={[styles.modalFooterBtnText, { color: '#FFF' }]}>{t('helpSupport.gotIt')}</Text>
+                    <Text style={[s.modalFooterBtnText, { color: '#FFF' }]}>Got It</Text>
                   </TouchableOpacity>
                 </View>
               </>
@@ -349,84 +326,78 @@ const HelpSupportScreen = () => {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 };
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   container: { flex: 1 },
 
-  /* ── Hero Header ── */
-  headerImage: { width: '100%', height: 160 },
-  headerOverlay: { ...StyleSheet.absoluteFillObject, opacity: 0.78 },
-  blurContainer: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'flex-end',
-    paddingBottom: SPACING.lg,
-    paddingHorizontal: SPACING.md,
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: normalize(48),
+    paddingBottom: normalize(14),
+    paddingHorizontal: normalize(16),
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  headerNav: { flexDirection: 'row', alignItems: 'center' },
-  navButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: 'rgba(255,255,255,0.18)',
+  backBtn: {
+    width: normalize(38),
+    height: normalize(38),
     alignItems: 'center',
     justifyContent: 'center',
   },
-  navTitle: {
+  headerTitle: {
     flex: 1,
-    fontFamily: FONTS.regular,
-    fontSize: 22,
-    color: '#FFF',
+    fontFamily: FONTS.bold,
+    fontSize: normalize(18),
     fontWeight: '800',
     textAlign: 'center',
-    letterSpacing: 0.4,
   },
 
-  /* ── Scroll ── */
-  scrollContent: { padding: SPACING.md, paddingBottom: SPACING.xl * 2 },
+  scrollContent: {
+    padding: normalize(16),
+    paddingBottom: normalize(40),
+  },
 
-  /* ── Search ── */
   searchCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 14,
-    paddingHorizontal: SPACING.md,
-    gap: 10,
-    marginBottom: SPACING.md,
-    ...SHADOWS.md,
+    borderRadius: normalize(12),
+    paddingHorizontal: normalize(14),
+    gap: normalize(10),
+    marginBottom: normalize(16),
+    borderWidth: StyleSheet.hairlineWidth,
   },
   searchInput: {
     flex: 1,
     fontFamily: FONTS.regular,
-    fontSize: 14,
-    paddingVertical: 14,
+    fontSize: normalize(14),
+    paddingVertical: normalize(13),
   },
 
-  /* ── Quick Actions ── */
   quickActionsRow: {
     flexDirection: 'row',
-    gap: SPACING.sm,
-    marginBottom: SPACING.md,
+    gap: normalize(10),
+    marginBottom: normalize(20),
   },
   quickActionCard: {
     flex: 1,
-    borderRadius: 16,
-    padding: SPACING.md,
+    borderRadius: normalize(12),
+    padding: normalize(14),
     alignItems: 'center',
-    ...SHADOWS.sm,
+    borderWidth: StyleSheet.hairlineWidth,
   },
   quickActionIcon: {
-    width: normalize(46),
-    height: normalize(46),
-    borderRadius: normalize(14),
+    width: normalize(44),
+    height: normalize(44),
+    borderRadius: normalize(12),
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: SPACING.sm,
+    marginBottom: normalize(8),
   },
   quickActionLabel: {
-    fontFamily: FONTS.regular,
+    fontFamily: FONTS.semiBold,
     fontSize: normalize(13),
     fontWeight: '700',
     marginBottom: normalize(2),
@@ -437,171 +408,164 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  /* ── Section Title ── */
   sectionTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: normalize(8),
-    marginBottom: SPACING.md,
-    marginTop: SPACING.sm,
+    marginBottom: normalize(12),
+    marginTop: normalize(4),
   },
   sectionTitle: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(17),
+    fontFamily: FONTS.semiBold,
+    fontSize: normalize(16),
     fontWeight: '700',
   },
 
-  /* ── Generic Card ── */
   card: {
-    borderRadius: 16,
-    padding: SPACING.lg,
-    marginBottom: SPACING.md,
-    ...SHADOWS.md,
+    borderRadius: normalize(12),
+    marginBottom: normalize(16),
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: 'hidden',
   },
 
-  /* ── Topics ── */
   topicRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: 14,
-    gap: 12,
+    paddingHorizontal: normalize(14),
+    paddingVertical: normalize(13),
+    gap: normalize(12),
   },
   topicIconWrap: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
+    width: normalize(36),
+    height: normalize(36),
+    borderRadius: normalize(10),
     alignItems: 'center',
     justifyContent: 'center',
   },
   topicInfo: { flex: 1 },
   topicTitle: {
     fontFamily: FONTS.regular,
-    fontSize: 14,
+    fontSize: normalize(14),
     fontWeight: '600',
   },
   topicCategory: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
-    marginTop: 1,
+    fontSize: normalize(11),
+    marginTop: normalize(1),
   },
-  divider: { height: 1, marginHorizontal: SPACING.lg },
+  divider: { height: StyleSheet.hairlineWidth, marginHorizontal: normalize(14) },
   emptyState: {
     alignItems: 'center',
-    paddingVertical: SPACING.xl,
-    gap: SPACING.sm,
+    paddingVertical: normalize(28),
+    gap: normalize(8),
   },
   emptyText: {
     fontFamily: FONTS.regular,
-    fontSize: 13,
+    fontSize: normalize(13),
   },
 
-  /* ── Contact ── */
   contactRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: 14,
-    gap: 12,
+    paddingHorizontal: normalize(14),
+    paddingVertical: normalize(13),
+    gap: normalize(12),
   },
   contactIconWrap: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
+    width: normalize(40),
+    height: normalize(40),
+    borderRadius: normalize(10),
     alignItems: 'center',
     justifyContent: 'center',
   },
   contactInfo: { flex: 1 },
   contactLabel: {
     fontFamily: FONTS.regular,
-    fontSize: 14,
+    fontSize: normalize(14),
     fontWeight: '600',
   },
   contactDesc: {
     fontFamily: FONTS.regular,
-    fontSize: 12,
-    marginTop: 1,
+    fontSize: normalize(12),
+    marginTop: normalize(1),
   },
 
-  /* ── Support Hours ── */
   supportHoursCard: {
-    borderRadius: 16,
-    padding: SPACING.lg,
+    borderRadius: normalize(12),
+    padding: normalize(16),
     borderWidth: 1,
-    marginTop: SPACING.sm,
-    marginBottom: SPACING.md,
+    marginTop: normalize(4),
+    marginBottom: normalize(16),
   },
   supportHoursTitle: {
-    fontFamily: FONTS.regular,
-    fontSize: 15,
+    fontFamily: FONTS.semiBold,
+    fontSize: normalize(15),
     fontWeight: '700',
-    marginBottom: SPACING.sm,
+    marginBottom: normalize(8),
   },
   supportHoursText: {
     fontFamily: FONTS.regular,
-    fontSize: 13,
-    lineHeight: 22,
+    fontSize: normalize(13),
+    lineHeight: normalize(22),
   },
 
-  /* ── Modal ── */
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.45)',
     justifyContent: 'flex-end',
   },
   modalSheet: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: normalize(20),
+    borderTopRightRadius: normalize(20),
     maxHeight: '80%',
-    ...SHADOWS.lg,
   },
   modalHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
+    width: normalize(40),
+    height: normalize(4),
+    borderRadius: normalize(2),
     alignSelf: 'center',
-    marginTop: 12,
-    marginBottom: 8,
+    marginTop: normalize(12),
+    marginBottom: normalize(8),
   },
   modalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.md,
-    gap: 12,
+    paddingHorizontal: normalize(18),
+    paddingVertical: normalize(14),
+    gap: normalize(12),
   },
   modalIconWrap: {
-    width: 46,
-    height: 46,
-    borderRadius: 14,
+    width: normalize(44),
+    height: normalize(44),
+    borderRadius: normalize(12),
     alignItems: 'center',
     justifyContent: 'center',
   },
   modalTitleArea: {
     flex: 1,
-    gap: 4,
+    gap: normalize(4),
   },
   modalTitle: {
-    fontFamily: FONTS.regular,
-    fontSize: 16,
+    fontFamily: FONTS.semiBold,
+    fontSize: normalize(16),
     fontWeight: '700',
-    lineHeight: 21,
+    lineHeight: normalize(21),
   },
   modalCategoryPill: {
     alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 2,
-    borderRadius: 10,
+    paddingHorizontal: normalize(10),
+    paddingVertical: normalize(2),
+    borderRadius: normalize(10),
   },
   modalCategoryText: {
     fontFamily: FONTS.regular,
-    fontSize: 11,
+    fontSize: normalize(11),
     fontWeight: '600',
   },
   modalCloseBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: normalize(34),
+    height: normalize(34),
+    borderRadius: normalize(17),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -609,8 +573,8 @@ const styles = StyleSheet.create({
     flexGrow: 0,
   },
   modalScrollContent: {
-    paddingHorizontal: SPACING.lg,
-    paddingBottom: SPACING.md,
+    paddingHorizontal: normalize(18),
+    paddingBottom: normalize(14),
   },
   modalBody: {
     fontFamily: FONTS.regular,
@@ -619,10 +583,10 @@ const styles = StyleSheet.create({
   },
   modalFooter: {
     flexDirection: 'row',
-    gap: SPACING.sm,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.md,
-    borderTopWidth: 1,
+    gap: normalize(10),
+    paddingHorizontal: normalize(18),
+    paddingVertical: normalize(14),
+    borderTopWidth: StyleSheet.hairlineWidth,
   },
   modalFooterBtn: {
     flex: 1,
@@ -634,7 +598,7 @@ const styles = StyleSheet.create({
     borderRadius: normalize(12),
   },
   modalFooterBtnText: {
-    fontFamily: FONTS.regular,
+    fontFamily: FONTS.semiBold,
     fontSize: normalize(14),
     fontWeight: '700',
   },

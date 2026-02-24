@@ -43,6 +43,12 @@ export interface IBooking extends Document {
     name: string;
     status: 'confirmed' | 'cancelled';
   }>;
+  seatsBooked?: number;
+  coPassengers?: Array<{
+    name: string;
+    age: number;
+    gender: 'Male' | 'Female' | 'Other';
+  }>;
   status: BookingStatus;
   cancellationReason?: string;
   cancelledAt?: Date;
@@ -76,6 +82,15 @@ export interface IBooking extends Document {
   };
   tripStartedAt?: Date; // When trip actually started
   tripCompletedAt?: Date; // When passenger reached destination
+  // Connected rides (multi-hop)
+  connectedGroupId?: string;
+  legOrder?: number;
+  connectionPoint?: {
+    address: string;
+    lat: number;
+    lng: number;
+    city?: string;
+  };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -166,7 +181,7 @@ const bookingSchema = new Schema<IBooking>(
     vehicle: {
       type: {
         type: String,
-        enum: ['car', 'bike'],
+        enum: ['car', 'bike', 'scooty'],
         required: true,
       },
       brand: {
@@ -218,6 +233,28 @@ const bookingSchema = new Schema<IBooking>(
         },
       },
     ],
+    seatsBooked: {
+      type: Number,
+      min: 1,
+      default: 1,
+    },
+    coPassengers: [
+      {
+        name: {
+          type: String,
+          trim: true,
+        },
+        age: {
+          type: Number,
+          min: 1,
+          max: 120,
+        },
+        gender: {
+          type: String,
+          enum: ['Male', 'Female', 'Other'],
+        },
+      },
+    ],
     status: {
       type: String,
       enum: ['pending', 'confirmed', 'in_progress', 'completed', 'cancelled'],
@@ -231,7 +268,7 @@ const bookingSchema = new Schema<IBooking>(
     },
     cancelledBy: {
       type: String,
-      enum: ['user', 'driver', 'owner', 'admin'],
+      enum: ['user', 'driver', 'owner', 'admin', 'system'],
     },
     cancellationFee: {
       type: Number,
@@ -292,6 +329,21 @@ const bookingSchema = new Schema<IBooking>(
     tripCompletedAt: {
       type: Date,
     },
+    // Connected rides (multi-hop)
+    connectedGroupId: {
+      type: String,
+    },
+    legOrder: {
+      type: Number,
+      min: 1,
+      max: 3,
+    },
+    connectionPoint: {
+      address: String,
+      lat: Number,
+      lng: Number,
+      city: String,
+    },
   },
   {
     timestamps: true,
@@ -308,6 +360,7 @@ bookingSchema.index({ poolingOfferId: 1 });
 bookingSchema.index({ rentalOfferId: 1 });
 bookingSchema.index({ paymentStatus: 1 });
 bookingSchema.index({ createdAt: -1 });
+bookingSchema.index({ connectedGroupId: 1 });
 
 // Ensure either poolingOfferId or rentalOfferId is present based on serviceType
 bookingSchema.pre('validate', function (next) {

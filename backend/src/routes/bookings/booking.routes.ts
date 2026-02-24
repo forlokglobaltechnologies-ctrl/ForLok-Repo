@@ -9,6 +9,14 @@ import { ApiResponse, PaymentMethod, Route } from '../../types';
 const createPoolingBookingSchema = z.object({
   poolingOfferId: z.string(),
   paymentMethod: z.enum(['upi', 'card', 'wallet', 'net_banking', 'offline_cash']).optional(), // Payment method selected at trip end
+  seatsBooked: z.number().int().min(1).max(6).optional(),
+  coPassengers: z.array(
+    z.object({
+      name: z.string().min(2).max(60),
+      age: z.number().int().min(1).max(120),
+      gender: z.enum(['Male', 'Female', 'Other']),
+    })
+  ).optional(),
   passengerRoute: z.object({
     from: z.object({
       address: z.string(),
@@ -30,6 +38,18 @@ const createPoolingBookingSchema = z.object({
     platformFee: z.number(),
     totalAmount: z.number(),
   }).optional(),
+}).superRefine((data, ctx) => {
+  const seatsBooked = data.seatsBooked ?? 1;
+  const expectedCompanions = seatsBooked - 1;
+  const companionsCount = data.coPassengers?.length ?? 0;
+
+  if (companionsCount !== expectedCompanions) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['coPassengers'],
+      message: `coPassengers must contain exactly ${expectedCompanions} passenger(s) for seatsBooked=${seatsBooked}`,
+    });
+  }
 });
 
 const createRentalBookingSchema = z.object({
@@ -63,7 +83,13 @@ export async function bookingRoutes(fastify: FastifyInstance) {
       const userId = (request as any).user.userId;
       const data = request.body as {
         poolingOfferId: string;
-        paymentMethod: PaymentMethod;
+        paymentMethod?: PaymentMethod;
+        seatsBooked?: number;
+        coPassengers?: Array<{
+          name: string;
+          age: number;
+          gender: 'Male' | 'Female' | 'Other';
+        }>;
         passengerRoute: Route;
         calculatedPrice?: {
           finalPrice: number;
@@ -115,6 +141,44 @@ export async function bookingRoutes(fastify: FastifyInstance) {
         success: true,
         message: 'Booking created successfully',
         data: booking,
+      };
+
+      return reply.status(201).send(response);
+    }
+  );
+
+  /**
+   * POST /api/bookings/connected
+   * Create connected (multi-hop) booking — books 2 linked legs (authenticated)
+   */
+  fastify.post(
+    '/connected',
+    {
+      preHandler: [authenticate],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const userId = (request as any).user.userId;
+      const data = request.body as {
+        leg1OfferId: string;
+        leg2OfferId: string;
+        leg1Route: Route;
+        leg2Route: Route;
+        connectionPoint: { address: string; lat: number; lng: number; city?: string };
+        paymentMethod?: string;
+        leg1Price?: { finalPrice: number; platformFee: number; totalAmount: number };
+        leg2Price?: { finalPrice: number; platformFee: number; totalAmount: number };
+      };
+
+      const result = await bookingService.createConnectedBooking({
+        userId,
+        ...data,
+        paymentMethod: (data.paymentMethod as PaymentMethod) || 'offline_cash',
+      });
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Connected ride booked successfully',
+        data: result,
       };
 
       return reply.status(201).send(response);

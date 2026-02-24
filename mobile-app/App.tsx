@@ -11,7 +11,10 @@ import {
   Text as RNText,
   TextInput as RNTextInput,
   Platform,
+  LogBox,
 } from 'react-native';
+
+LogBox.ignoreLogs(['Non-serializable values were found in the navigation state']);
 import { COLORS } from './src/constants/theme';
 
 /* ─────────────────────────────────────────────────────────────
@@ -115,6 +118,7 @@ import VehicleInformationScreen from './src/screens/main/VehicleInformationScree
 import VehicleDetailsScreen from './src/screens/profile/VehicleDetailsScreen';
 import FilterScreen from './src/screens/main/FilterScreen';
 import ForgotPasswordScreen from './src/screens/auth/ForgotPasswordScreen';
+import ChangePasswordScreen from './src/screens/auth/ChangePasswordScreen';
 import HelpSupportScreen from './src/screens/main/HelpSupportScreen';
 import FeedbackScreen from './src/screens/main/FeedbackScreen';
 import FAQScreen from './src/screens/main/FAQScreen';
@@ -150,8 +154,10 @@ import { LanguageProvider } from './src/context/LanguageContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { NotificationProvider } from './src/context/NotificationContext';
 import { SOSProvider, useSOS } from './src/context/SOSContext';
-import { AuthProvider } from './src/context/AuthContext';
+import { AuthProvider, useAuth } from './src/context/AuthContext';
+import { SnackbarProvider } from './src/context/SnackbarContext';
 import SOSButton from './src/components/common/SOSButton';
+import { BottomTabNavigator } from './src/components/navigation/BottomTabNavigator';
 import { websocketService } from './src/services/websocket.service';
 
 const Stack = createNativeStackNavigator();
@@ -172,6 +178,7 @@ const getActiveRouteName = (state: any): string => {
 // Inner app that uses SOS context for route tracking
 const AppNavigator = () => {
   const { setCurrentRoute } = useSOS();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const navigationRef = useRef<NavigationContainerRef<any>>(null);
 
   const onNavigationStateChange = (state: any) => {
@@ -195,113 +202,144 @@ const AppNavigator = () => {
       >
         <ThemedStatusBar />
         <Stack.Navigator
-          initialRouteName="Splash"
           screenOptions={{
             headerShown: false,
             animation: 'slide_from_right',
           }}
         >
-          {/* Auth Flow */}
-          <Stack.Screen name="Splash" component={SplashScreen} />
-          <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-          <Stack.Screen name="SignIn" component={SignInScreen} />
-          <Stack.Screen name="SignUp" component={SignUpScreen} />
-          <Stack.Screen name="UserTypeSelection" component={UserTypeSelectionScreen} />
-          
-          {/* Registration Flow */}
-          <Stack.Screen name="IndividualRegistration" component={IndividualRegistrationScreen} />
-          <Stack.Screen name="DocumentVerification" component={DocumentVerificationScreen} />
-          <Stack.Screen name="CompanyRegistration" component={CompanyRegistrationScreen} />
-          <Stack.Screen name="VerificationPending" component={VerificationPendingScreen} />
-          
-          {/* Main App */}
-          <Stack.Screen name="PinkPoolingSplash" component={PinkPoolingSplashScreen} />
-          <Stack.Screen name="MainDashboard" component={MainDashboardScreen} />
-          <Stack.Screen name="CompanyDashboard" component={CompanyDashboardScreen} />
-          
-          {/* Offer Services */}
-          <Stack.Screen name="OfferServices" component={OfferServicesScreen} />
-          <Stack.Screen name="CreatePoolingOffer" component={CreatePoolingOfferScreen} />
-          <Stack.Screen name="CreateRentalOffer" component={CreateRentalOfferScreen} />
-          <Stack.Screen name="MyOffers" component={MyOffersScreen} />
-          <Stack.Screen name="CompanyMyOffers" component={CompanyMyOffersScreen} />
-          <Stack.Screen name="CompanyOfferDetails" component={CompanyOfferDetailsScreen} />
-          <Stack.Screen name="CompanyVehicleManagement" component={CompanyVehicleManagementScreen} />
-          <Stack.Screen name="CompanyEarnings" component={CompanyEarningsScreen} />
-          <Stack.Screen name="OwnerRentalManagement" component={OwnerRentalManagementScreen} />
-          <Stack.Screen name="EndRental" component={EndRentalScreen} />
-          
-          {/* Take Services */}
-          <Stack.Screen name="TakeServices" component={TakeServicesScreen} />
-          <Stack.Screen name="SearchPooling" component={SearchPoolingScreen} />
-          <Stack.Screen name="SearchRental" component={SearchRentalScreen} />
-          <Stack.Screen name="PoolingDetails" component={PoolingDetailsScreen} />
-          <Stack.Screen name="RentalDetails" component={RentalDetailsScreen} />
-          
-          {/* Booking & Payment */}
-          <Stack.Screen name="Payment" component={PaymentScreen} />
-          <Stack.Screen name="PriceSummary" component={PriceSummaryScreen} />
-          <Stack.Screen name="BookingConfirmation" component={BookingConfirmationScreen} />
-          <Stack.Screen name="TripTracking" component={TripTrackingScreen} />
-          <Stack.Screen name="DriverTrip" component={DriverTripScreen} />
-          <Stack.Screen name="BookFood" component={BookFoodScreen} />
-          
-          {/* History */}
-          <Stack.Screen name="History" component={HistoryScreen} />
-          <Stack.Screen name="CompanyHistory" component={CompanyHistoryScreen} />
-          <Stack.Screen name="BookingDetails" component={BookingDetailsScreen} />
-          <Stack.Screen name="Rating" component={RatingScreen} />
-          
-          {/* Profile & Settings */}
-          <Stack.Screen name="Profile" component={ProfileScreen} />
-          <Stack.Screen name="CompanyProfile" component={CompanyProfileScreen} />
-          <Stack.Screen name="Settings" component={SettingsScreen} />
-          
-          {/* Utility Screens */}
-          <Stack.Screen name="LocationPicker" component={LocationPickerScreen} />
-          <Stack.Screen name="Notifications" component={NotificationsScreen} />
-          <Stack.Screen name="ChatList" component={ChatListScreen} />
-          <Stack.Screen name="Chat" component={ChatScreen} />
-          
-          {/* Company Screens */}
-          <Stack.Screen name="AddVehicle" component={AddVehicleScreen} />
-          <Stack.Screen name="VehicleInformation" component={VehicleInformationScreen} />
-          <Stack.Screen name="VehicleDetails" component={VehicleDetailsScreen} />
-          
-          {/* Additional Screens */}
-          <Stack.Screen name="Filter" component={FilterScreen} />
-          <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
-          <Stack.Screen name="HelpSupport" component={HelpSupportScreen} />
-          <Stack.Screen name="Feedback" component={FeedbackScreen} />
-          <Stack.Screen name="FAQ" component={FAQScreen} />
-          <Stack.Screen name="ReportBug" component={ReportBugScreen} />
-          <Stack.Screen name="Loading" component={LoadingScreen} />
-          <Stack.Screen name="Error" component={ErrorScreen} />
-          <Stack.Screen name="Withdrawal" component={WithdrawalScreen} />
-          <Stack.Screen name="Wallet" component={WalletScreen} />
-          <Stack.Screen name="EarnCoins" component={EarnCoinsScreen} />
-          <Stack.Screen name="Reviews" component={ReviewsScreen} />
-          <Stack.Screen name="BlockedUsers" component={BlockedUsersScreen} />
-          <Stack.Screen name="About" component={AboutScreen} />
-          <Stack.Screen name="IntellectualProperty" component={IntellectualPropertyScreen} />
-          <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
-          <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
-          
-          {/* Admin Screens */}
-          <Stack.Screen name="AdminLogin" component={AdminLoginScreen} />
-          <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
-          <Stack.Screen name="AdminPromoReview" component={AdminPromoReviewScreen} />
-          <Stack.Screen name="PoolingManagement" component={PoolingManagementScreen} />
-          <Stack.Screen name="RentalManagement" component={RentalManagementScreen} />
-          <Stack.Screen name="RidesHistory" component={RidesHistoryScreen} />
-          <Stack.Screen name="UserManagement" component={UserManagementScreen} />
-          <Stack.Screen name="FeedbackManagement" component={FeedbackManagementScreen} />
-          <Stack.Screen name="FeedbackDetails" component={FeedbackDetailsScreen} />
-          <Stack.Screen name="Analytics" component={AnalyticsScreen} />
-          <Stack.Screen name="AdminSettings" component={AdminSettingsScreen} />
-          <Stack.Screen name="AdminPendingPayments" component={AdminPendingPaymentsScreen} />
-          <Stack.Screen name="TransactionDetails" component={TransactionDetailsScreen} />
+          {isLoading ? (
+            /* Show splash while checking auth state */
+            <Stack.Screen name="Splash" component={SplashScreen} />
+          ) : !isAuthenticated ? (
+            /* Auth screens — user is NOT logged in */
+            <>
+              <Stack.Screen name="Splash" component={SplashScreen} />
+              <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+              <Stack.Screen name="SignIn" component={SignInScreen} />
+              <Stack.Screen name="SignUp" component={SignUpScreen} />
+              <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+              <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
+              <Stack.Screen name="UserTypeSelection" component={UserTypeSelectionScreen} />
+              <Stack.Screen name="IndividualRegistration" component={IndividualRegistrationScreen} />
+              <Stack.Screen name="DocumentVerification" component={DocumentVerificationScreen} />
+              <Stack.Screen name="CompanyRegistration" component={CompanyRegistrationScreen} />
+              <Stack.Screen name="VerificationPending" component={VerificationPendingScreen} />
+              <Stack.Screen name="AdminLogin" component={AdminLoginScreen} />
+            </>
+          ) : (
+            /* App screens — user IS logged in */
+            <>
+              {/* Initial dashboard — first screen = initial route after login */}
+              {user?.userType === 'admin' ? (
+                <>
+                  <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
+                  <Stack.Screen name="MainDashboard" component={MainDashboardScreen} />
+                  <Stack.Screen name="CompanyDashboard" component={CompanyDashboardScreen} />
+                </>
+              ) : user?.userType === 'company' ? (
+                <>
+                  <Stack.Screen name="CompanyDashboard" component={CompanyDashboardScreen} />
+                  <Stack.Screen name="MainDashboard" component={MainDashboardScreen} />
+                </>
+              ) : (
+                <>
+                  <Stack.Screen name="MainDashboard" component={MainDashboardScreen} />
+                  <Stack.Screen name="CompanyDashboard" component={CompanyDashboardScreen} />
+                </>
+              )}
+              <Stack.Screen name="PinkPoolingSplash" component={PinkPoolingSplashScreen} />
+              
+              {/* Offer Services */}
+              <Stack.Screen name="OfferServices" component={OfferServicesScreen} />
+              <Stack.Screen name="CreatePoolingOffer" component={CreatePoolingOfferScreen} />
+              <Stack.Screen name="CreateRentalOffer" component={CreateRentalOfferScreen} />
+              <Stack.Screen name="MyOffers" component={MyOffersScreen} />
+              <Stack.Screen name="CompanyMyOffers" component={CompanyMyOffersScreen} />
+              <Stack.Screen name="CompanyOfferDetails" component={CompanyOfferDetailsScreen} />
+              <Stack.Screen name="CompanyVehicleManagement" component={CompanyVehicleManagementScreen} />
+              <Stack.Screen name="CompanyEarnings" component={CompanyEarningsScreen} />
+              <Stack.Screen name="OwnerRentalManagement" component={OwnerRentalManagementScreen} />
+              <Stack.Screen name="EndRental" component={EndRentalScreen} />
+              
+              {/* Take Services */}
+              <Stack.Screen name="TakeServices" component={TakeServicesScreen} />
+              <Stack.Screen name="SearchPooling" component={SearchPoolingScreen} />
+              <Stack.Screen name="SearchRental" component={SearchRentalScreen} />
+              <Stack.Screen name="PoolingDetails" component={PoolingDetailsScreen} />
+              <Stack.Screen name="RentalDetails" component={RentalDetailsScreen} />
+              
+              {/* Booking & Payment */}
+              <Stack.Screen name="Payment" component={PaymentScreen} />
+              <Stack.Screen name="PriceSummary" component={PriceSummaryScreen} />
+              <Stack.Screen name="BookingConfirmation" component={BookingConfirmationScreen} />
+              <Stack.Screen name="TripTracking" component={TripTrackingScreen} />
+              <Stack.Screen name="DriverTrip" component={DriverTripScreen} />
+              <Stack.Screen name="BookFood" component={BookFoodScreen} />
+              
+              {/* History */}
+              <Stack.Screen name="History" component={HistoryScreen} />
+              <Stack.Screen name="CompanyHistory" component={CompanyHistoryScreen} />
+              <Stack.Screen name="BookingDetails" component={BookingDetailsScreen} />
+              <Stack.Screen name="Rating" component={RatingScreen} />
+              
+              {/* Profile & Settings */}
+              <Stack.Screen name="Profile" component={ProfileScreen} />
+              <Stack.Screen name="CompanyProfile" component={CompanyProfileScreen} />
+              <Stack.Screen name="Settings" component={SettingsScreen} />
+              
+              {/* Utility Screens */}
+              <Stack.Screen name="LocationPicker" component={LocationPickerScreen} />
+              <Stack.Screen name="Notifications" component={NotificationsScreen} />
+              <Stack.Screen name="ChatList" component={ChatListScreen} />
+              <Stack.Screen name="Chat" component={ChatScreen} />
+              
+              {/* Company Screens */}
+              <Stack.Screen name="AddVehicle" component={AddVehicleScreen} />
+              <Stack.Screen name="VehicleInformation" component={VehicleInformationScreen} />
+              <Stack.Screen name="VehicleDetails" component={VehicleDetailsScreen} />
+
+              {/* Registration (also needed post-login for document verification) */}
+              <Stack.Screen name="DocumentVerification" component={DocumentVerificationScreen} />
+              <Stack.Screen name="IndividualRegistration" component={IndividualRegistrationScreen} />
+              
+              {/* Additional Screens */}
+              <Stack.Screen name="Filter" component={FilterScreen} />
+              <Stack.Screen name="HelpSupport" component={HelpSupportScreen} />
+              <Stack.Screen name="Feedback" component={FeedbackScreen} />
+              <Stack.Screen name="FAQ" component={FAQScreen} />
+              <Stack.Screen name="ReportBug" component={ReportBugScreen} />
+              <Stack.Screen name="Loading" component={LoadingScreen} />
+              <Stack.Screen name="Error" component={ErrorScreen} />
+              <Stack.Screen name="Withdrawal" component={WithdrawalScreen} />
+              <Stack.Screen name="Wallet" component={WalletScreen} />
+              <Stack.Screen name="EarnCoins" component={EarnCoinsScreen} />
+              <Stack.Screen name="Reviews" component={ReviewsScreen} />
+              <Stack.Screen name="BlockedUsers" component={BlockedUsersScreen} />
+              <Stack.Screen name="About" component={AboutScreen} />
+              <Stack.Screen name="IntellectualProperty" component={IntellectualPropertyScreen} />
+              <Stack.Screen name="TermsConditions" component={TermsConditionsScreen} />
+              <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
+              
+              {/* Admin Screens */}
+              <Stack.Screen name="AdminLogin" component={AdminLoginScreen} />
+              {user?.userType !== 'admin' && (
+                <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
+              )}
+              <Stack.Screen name="AdminPromoReview" component={AdminPromoReviewScreen} />
+              <Stack.Screen name="PoolingManagement" component={PoolingManagementScreen} />
+              <Stack.Screen name="RentalManagement" component={RentalManagementScreen} />
+              <Stack.Screen name="RidesHistory" component={RidesHistoryScreen} />
+              <Stack.Screen name="UserManagement" component={UserManagementScreen} />
+              <Stack.Screen name="FeedbackManagement" component={FeedbackManagementScreen} />
+              <Stack.Screen name="FeedbackDetails" component={FeedbackDetailsScreen} />
+              <Stack.Screen name="Analytics" component={AnalyticsScreen} />
+              <Stack.Screen name="AdminSettings" component={AdminSettingsScreen} />
+              <Stack.Screen name="AdminPendingPayments" component={AdminPendingPaymentsScreen} />
+              <Stack.Screen name="TransactionDetails" component={TransactionDetailsScreen} />
+            </>
+          )}
         </Stack.Navigator>
+        <BottomTabNavigator enabled={isAuthenticated && user?.userType !== 'admin'} />
       </NavigationContainer>
       <SOSButton />
     </>
@@ -351,7 +389,9 @@ export default function App() {
           <NotificationProvider>
             <SOSProvider>
               <SafeAreaProvider>
-                <AppNavigator />
+                <SnackbarProvider>
+                  <AppNavigator />
+                </SnackbarProvider>
               </SafeAreaProvider>
             </SOSProvider>
           </NotificationProvider>

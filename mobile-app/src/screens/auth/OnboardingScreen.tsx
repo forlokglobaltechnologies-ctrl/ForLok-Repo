@@ -4,66 +4,94 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  ImageBackground,
+  Image,
   TouchableOpacity,
   StatusBar,
+  Dimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '@constants/theme';
-import { Button } from '@components/common/Button';
-import { useLanguage } from '@context/LanguageContext';
+import { Lock } from 'lucide-react-native';
+import { FONTS, SPACING } from '@constants/theme';
 import { normalize, wp, hp } from '@utils/responsive';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const ONBOARDING_KEY = '@forlok_onboarding_seen';
+
+const SLIDE_ACCENT: Record<number, string> = {
+  0: '#F9A825',
+  1: '#1565C0',
+  2: '#2E7D32',
+};
 
 const OnboardingScreen = () => {
   const navigation = useNavigation();
-  const { t } = useLanguage();
+  const scrollViewRef = useRef<ScrollView>(null);
+  const [currentPage, setCurrentPage] = useState(0);
 
   const markOnboardingSeen = async () => {
     await AsyncStorage.setItem(ONBOARDING_KEY, 'true');
   };
-  const scrollViewRef = useRef<ScrollView>(null);
-  const [currentPage, setCurrentPage] = useState(0);
 
   const slides = [
     {
       id: 1,
-      title: 'Share Your Journey',
-      description: 'Connect with travelers going to the same destination and split the cost of travel',
-      image: require('../../../assets/onboarding1.jpg'),
+      title: 'Find your dream\nride to start your\njourney',
+      image: require('../../../assets/onboarding_ride_sharing.png'),
     },
     {
       id: 2,
-      title: 'Rent Vehicles Easily',
-      description: 'Rent vehicles from trusted owners and companies. Flexible hours, competitive prices.',
-      image: require('../../../assets/onboarding2.jpg'),
+      title: 'Rent vehicles\neasily from\ntrusted owners',
+      image: require('../../../assets/onboarding_rental.png'),
+    },
+    {
+      id: 3,
+      title: 'Ride safe,\nwear a helmet,\narrive safe',
+      image: require('../../../assets/onboarding_safety.png'),
     },
   ];
 
   const handleScroll = (event: any) => {
     const offsetX = event.nativeEvent.contentOffset.x;
-    const page = Math.round(offsetX / wp(100));
-    setCurrentPage(page);
+    const page = Math.round(offsetX / SCREEN_WIDTH);
+    if (page !== currentPage) setCurrentPage(page);
   };
 
   const goToPage = (page: number) => {
-    scrollViewRef.current?.scrollTo({ x: page * wp(100), animated: true });
+    scrollViewRef.current?.scrollTo({ x: page * SCREEN_WIDTH, animated: true });
     setCurrentPage(page);
   };
 
+  const handleGetStarted = () => {
+    markOnboardingSeen();
+    navigation.navigate('SignUp' as never);
+  };
+
+  const handleNext = () => {
+    if (currentPage < slides.length - 1) {
+      goToPage(currentPage + 1);
+    } else {
+      handleGetStarted();
+    }
+  };
+
+  const accent = SLIDE_ACCENT[currentPage] ?? '#F9A825';
+
   return (
     <View style={styles.container}>
-      <StatusBar hidden />
-      <TouchableOpacity
-        style={styles.skipButton}
-        onPress={() => { markOnboardingSeen(); navigation.navigate('SignUp' as never); }}
-      >
-        <Text style={styles.skipText}>{t('onboarding.skip')}</Text>
-      </TouchableOpacity>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
+      {/* Top bar: brand + Next */}
+      <View style={styles.topBar}>
+        <Text style={[styles.brandText, { color: accent }]}>ForLok</Text>
+        <TouchableOpacity onPress={handleNext} activeOpacity={0.7}>
+          <Text style={[styles.nextText, { color: accent }]}>
+            {currentPage === slides.length - 1 ? 'Start' : 'Next'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Slides */}
       <ScrollView
         ref={scrollViewRef}
         horizontal
@@ -71,54 +99,43 @@ const OnboardingScreen = () => {
         showsHorizontalScrollIndicator={false}
         onScroll={handleScroll}
         scrollEventThrottle={16}
+        bounces={false}
+        style={styles.scrollView}
       >
-        {slides.map((slide, index) => (
-          <ImageBackground
-            key={slide.id}
-            source={slide.image}
-            style={styles.slide}
-            resizeMode="cover"
-          >
-            <LinearGradient
-              colors={[COLORS.primary + 'DD', COLORS.primaryDark + 'DD']}
-              style={styles.overlay}
-            >
-              <View style={styles.slideContent}>
-                <Text style={styles.slideTitle}>{slide.title}</Text>
-                <Text style={styles.slideDescription}>{slide.description}</Text>
-              </View>
-            </LinearGradient>
-          </ImageBackground>
+        {slides.map((slide) => (
+          <View key={slide.id} style={styles.slide}>
+            <Text style={styles.slideTitle}>{slide.title}</Text>
+            <View style={styles.imageWrap}>
+              <Image
+                source={slide.image}
+                style={styles.slideImage}
+                resizeMode="contain"
+              />
+            </View>
+          </View>
         ))}
       </ScrollView>
 
-      <View style={styles.buttonContainer}>
-        <View style={styles.pagination}>
-          {slides.map((_, index) => (
-            <TouchableOpacity
-              key={index}
-              style={[
-                styles.dot,
-                currentPage === index && styles.activeDot,
-              ]}
-              onPress={() => goToPage(index)}
-            />
-          ))}
+      {/* Bottom: capsule button */}
+      <View style={styles.bottomSection}>
+        <View style={[styles.capsuleBtn, { backgroundColor: accent }]}>
+          <View style={styles.lockCircle}>
+            <Lock size={normalize(16)} color={accent} strokeWidth={2.5} />
+          </View>
+
+          <TouchableOpacity
+            onPress={handleGetStarted}
+            activeOpacity={0.85}
+            style={styles.capsuleCenter}
+          >
+            <Text style={styles.capsuleBtnText}>Get Started</Text>
+            <Text style={styles.capsuleArrows}>  {'>>'}</Text>
+          </TouchableOpacity>
+
+          <View style={styles.lockCircle}>
+            <Lock size={normalize(16)} color={accent} strokeWidth={2.5} />
+          </View>
         </View>
-        <Button
-          title={t('common.signUp')}
-          onPress={() => { markOnboardingSeen(); navigation.navigate('SignUp' as never); }}
-          variant="primary"
-          size="large"
-          style={styles.signUpButton}
-        />
-        <Button
-          title={t('common.signIn')}
-          onPress={() => { markOnboardingSeen(); navigation.navigate('SignIn' as never); }}
-          variant="outline"
-          size="large"
-          style={styles.signInButton}
-        />
       </View>
     </View>
   );
@@ -127,95 +144,87 @@ const OnboardingScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.primary,
+    backgroundColor: '#FFFFFF',
   },
-  skipButton: {
-    position: 'absolute',
-    top: hp(6),
-    right: SPACING.md,
-    zIndex: 10,
-    padding: SPACING.sm,
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: hp(6),
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.sm,
   },
-  skipText: {
-    fontFamily: FONTS.regular,
+  brandText: {
+    fontFamily: FONTS.bold,
+    fontSize: normalize(28),
+  },
+  nextText: {
+    fontFamily: FONTS.semiBold,
     fontSize: FONTS.sizes.md,
-    color: COLORS.white,
+  },
+  scrollView: {
+    flex: 1,
   },
   slide: {
-    width: wp(100),
+    width: SCREEN_WIDTH,
     flex: 1,
-  },
-  overlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: SPACING.xl,
-  },
-  slideContent: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
+    paddingHorizontal: SPACING.lg,
   },
   slideTitle: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xxl,
-    color: COLORS.white,
-    textAlign: 'center',
-    marginBottom: SPACING.md,
+    fontFamily: FONTS.bold,
+    fontSize: normalize(30),
+    color: '#1A1A1A',
+    lineHeight: normalize(40),
+    marginTop: hp(4),
   },
-  slideDescription: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
-    color: COLORS.white,
-    textAlign: 'center',
-    opacity: 0.9,
-    paddingHorizontal: SPACING.xl,
-    lineHeight: normalize(24),
+  imageWrap: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: SPACING.md,
   },
-  pagination: {
+  slideImage: {
+    width: wp(80),
+    height: hp(35),
+  },
+  bottomSection: {
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: hp(5),
+    alignItems: 'center',
+  },
+  capsuleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: normalize(40),
+    paddingVertical: normalize(10),
+    paddingHorizontal: normalize(6),
+    width: '100%',
+  },
+  lockCircle: {
+    width: normalize(40),
+    height: normalize(40),
+    borderRadius: normalize(20),
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  capsuleCenter: {
+    flex: 1,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: SPACING.lg,
   },
-  dot: {
-    width: normalize(8),
-    height: normalize(8),
-    borderRadius: normalize(4),
-    backgroundColor: COLORS.primary,
-    opacity: 0.3,
-    marginHorizontal: normalize(4),
+  capsuleBtnText: {
+    fontFamily: FONTS.semiBold,
+    fontSize: FONTS.sizes.lg,
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
   },
-  activeDot: {
-    opacity: 1,
-    width: normalize(24),
-  },
-  buttonContainer: {
-    backgroundColor: COLORS.white,
-    padding: SPACING.md,
-    paddingTop: SPACING.lg,
-    paddingBottom: SPACING.xl,
-    borderTopLeftRadius: normalize(30),
-    borderTopRightRadius: normalize(30),
-    minHeight: hp(32),
-  },
-  signUpButton: {
-    marginBottom: SPACING.md,
-  },
-  signInButton: {
-    backgroundColor: 'transparent',
+  capsuleArrows: {
+    fontFamily: FONTS.bold,
+    fontSize: FONTS.sizes.lg,
+    color: '#FFFFFF',
   },
 });
 
 export default OnboardingScreen;
-
-
-
-
-
-
-
-
-
-
-

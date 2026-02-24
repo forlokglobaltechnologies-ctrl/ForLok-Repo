@@ -10,27 +10,32 @@ import {
   Alert,
   ActivityIndicator,
   Modal,
+  Image,
+  StatusBar,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { ArrowLeft } from 'lucide-react-native';
-import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
-import { normalize, wp } from '@utils/responsive';
-import { Button } from '@components/common/Button';
+import { ArrowLeft, Phone, User, Lock, Gift } from 'lucide-react-native';
+import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '@constants/theme';
+import { normalize, wp, hp } from '@utils/responsive';
 import { Input } from '@components/common/Input';
 import { PhoneInput } from '@components/common/PhoneInput';
 import { useLanguage } from '@context/LanguageContext';
 import { useAuth } from '@context/AuthContext';
 import { authApi } from '@utils/apiClient';
 import LottieView from 'lottie-react-native';
+import { useSnackbar } from '@context/SnackbarContext';
+import { getUserErrorMessage, mapFieldErrors } from '@utils/errorUtils';
+
+const ACCENT = '#F9A825';
 
 const IndividualRegistrationScreen = () => {
   const navigation = useNavigation();
   const { t } = useLanguage();
   const { login } = useAuth();
+  const { showSnackbar } = useSnackbar();
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 2;
 
-  // Step 1: Phone Verification
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
@@ -39,7 +44,6 @@ const IndividualRegistrationScreen = () => {
   const [verifying, setVerifying] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Step 2: Name and Password Entry
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -48,89 +52,64 @@ const IndividualRegistrationScreen = () => {
   const [gender, setGender] = useState<'Male' | 'Female' | 'Other' | null>(null);
   const [referralCode, setReferralCode] = useState('');
 
-  // Coin celebration
   const [showCoinCelebration, setShowCoinCelebration] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleNext = async () => {
     if (currentStep === 1) {
-      // Validate OTP before proceeding
+      if (errors.otp) setErrors((prev) => ({ ...prev, otp: '' }));
       if (!otp || otp.length !== 6) {
-        Alert.alert('Error', 'Please enter a valid 6-digit OTP');
+        setErrors((prev) => ({ ...prev, otp: 'Please enter a valid 6-digit OTP' }));
+        showSnackbar({ message: 'Please enter a valid 6-digit OTP', type: 'error' });
         return;
       }
-      
-      // Verify OTP with backend (format phone with +91)
       setVerifying(true);
       try {
         const formattedPhone = `+91${phone}`;
         const response = await authApi.verifyOTP(formattedPhone, otp, 'signup');
-        
         if (response.success) {
+          setErrors({});
           setCurrentStep(2);
         } else {
-          Alert.alert('Error', response.error || 'Invalid OTP. Please try again.');
+          const fieldErrors = mapFieldErrors(response as any, { otp: 'otp' });
+          setErrors((prev) => ({ ...prev, ...fieldErrors }));
+          showSnackbar({ message: getUserErrorMessage(response as any, 'Invalid OTP. Please try again.'), type: 'error' });
         }
       } catch (error: any) {
-        Alert.alert('Error', error.message || 'Failed to verify OTP. Please try again.');
+        showSnackbar({ message: error.message || 'Failed to verify OTP. Please try again.', type: 'error' });
       } finally {
         setVerifying(false);
       }
     } else if (currentStep === 2) {
-      // Validate name before proceeding
-      if (!name.trim()) {
-        Alert.alert('Error', 'Please enter your name');
+      const localErrors: Record<string, string> = {};
+      if (!name.trim()) localErrors.name = 'Please enter your name';
+      if (!password || password.length < 8) localErrors.password = 'Password must be at least 8 characters long';
+      else if (!/[A-Z]/.test(password)) localErrors.password = 'Password must contain at least one uppercase letter';
+      else if (!/[a-z]/.test(password)) localErrors.password = 'Password must contain at least one lowercase letter';
+      else if (!/[0-9]/.test(password)) localErrors.password = 'Password must contain at least one number';
+      if (password !== confirmPassword) localErrors.confirmPassword = 'Passwords do not match';
+      if (!gender) localErrors.gender = 'Please select your gender';
+
+      if (Object.keys(localErrors).length > 0) {
+        setErrors((prev) => ({ ...prev, ...localErrors }));
+        showSnackbar({ message: 'Please fix highlighted fields', type: 'error' });
         return;
       }
-      
-      // Validate password
-      if (!password || password.length < 8) {
-        Alert.alert('Error', 'Password must be at least 8 characters long');
-        return;
-      }
-      
-      // Check password requirements
-      if (!/[A-Z]/.test(password)) {
-        Alert.alert('Error', 'Password must contain at least one uppercase letter');
-        return;
-      }
-      if (!/[a-z]/.test(password)) {
-        Alert.alert('Error', 'Password must contain at least one lowercase letter');
-        return;
-      }
-      if (!/[0-9]/.test(password)) {
-        Alert.alert('Error', 'Password must contain at least one number');
-        return;
-      }
-      
-      // Validate confirm password
-      if (password !== confirmPassword) {
-        Alert.alert('Error', 'Passwords do not match');
-        return;
-      }
-      
-      // Validate gender
-      if (!gender) {
-        Alert.alert('Error', 'Please select your gender');
-        return;
-      }
-      
-      // Register user with backend
+
       setLoading(true);
       try {
-        // Format phone with +91 for backend
         const formattedPhone = `+91${phone}`;
         const response = await authApi.signup({
           phone: formattedPhone,
           name: name.trim(),
           userType: 'individual',
-          password: password,
-          confirmPassword: confirmPassword,
-          gender: gender,
+          password,
+          confirmPassword,
+          gender,
           ...(referralCode.trim() ? { referralCode: referralCode.trim().toUpperCase() } : {}),
         });
-        
+
         if (response.success) {
-          // Save auth state via AuthContext
           const userData = response.data?.user || response.data || {};
           const tokens = response.data?.tokens || {
             accessToken: response.data?.accessToken,
@@ -139,17 +118,27 @@ const IndividualRegistrationScreen = () => {
           if (tokens.accessToken && tokens.refreshToken) {
             await login(userData, tokens);
           }
-          // Show coin celebration, then navigate to dashboard
           setShowCoinCelebration(true);
           setTimeout(() => {
             setShowCoinCelebration(false);
             navigation.reset({ index: 0, routes: [{ name: 'MainDashboard' as never }] });
           }, 4000);
         } else {
-          Alert.alert('Error', response.error || 'Failed to register. Please try again.');
+          const fieldErrors = mapFieldErrors(response as any, {
+            phone: 'phone',
+            name: 'name',
+            password: 'password',
+            confirmPassword: 'confirmPassword',
+            gender: 'gender',
+          });
+          setErrors((prev) => ({ ...prev, ...fieldErrors }));
+          showSnackbar({
+            message: getUserErrorMessage(response as any, 'Failed to register. Please try again.'),
+            type: 'error',
+          });
         }
       } catch (error: any) {
-        Alert.alert('Error', error.message || 'Failed to register. Please try again.');
+        showSnackbar({ message: error.message || 'Failed to register. Please try again.', type: 'error' });
       } finally {
         setLoading(false);
       }
@@ -157,66 +146,52 @@ const IndividualRegistrationScreen = () => {
   };
 
   const handleBack = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
-    } else {
-      navigation.goBack();
-    }
+    if (currentStep > 1) setCurrentStep(currentStep - 1);
+    else if (navigation.canGoBack()) navigation.goBack();
+    else navigation.navigate('SignUp' as never);
+  };
+
+  const startOtpTimer = () => {
+    setOtpTimer(45);
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      setOtpTimer((prev) => {
+        if (prev <= 1) { if (timerRef.current) clearInterval(timerRef.current); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
   };
 
   const handleSendOtp = async () => {
     if (!phone || phone.length < 10) {
-      Alert.alert('Error', 'Please enter a valid phone number');
+      setErrors((prev) => ({ ...prev, phone: 'Please enter a valid phone number' }));
+      showSnackbar({ message: 'Please enter a valid phone number', type: 'error' });
       return;
     }
-    
+    setErrors((prev) => ({ ...prev, phone: '', otp: '' }));
     setLoading(true);
     try {
-      // Format phone number for backend (phone already contains only digits, add +91)
       const formattedPhone = `+91${phone}`;
-      
-      // Call backend to generate and store OTP
-      // Backend will generate 4-digit OTP and store it
-      // For Firebase SMS, you would use Firebase SDK here, but since we're using backend flow,
-      // we'll use the backend API which generates OTP
       const response = await authApi.sendOTP(formattedPhone, 'signup');
-      
       if (response.success) {
         setOtpSent(true);
-        setOtpTimer(45);
         setOtp('');
-        
-        // Start timer
-        if (timerRef.current) {
-          clearInterval(timerRef.current);
-        }
-        timerRef.current = setInterval(() => {
-          setOtpTimer((prev) => {
-            if (prev <= 1) {
-              if (timerRef.current) {
-                clearInterval(timerRef.current);
-              }
-              return 0;
-            }
-            return prev - 1;
-          });
-        }, 1000);
-        
-        // Show OTP in alert for development/testing
+        startOtpTimer();
         if (response.data?.otp) {
-          Alert.alert(
-            'OTP Sent Successfully',
-            `Your OTP is: ${response.data.otp}\n\n(Displayed for development. Configure SMS provider for production.)`,
-            [{ text: 'OK' }]
-          );
+          Alert.alert('OTP Sent Successfully', `Your OTP is: ${response.data.otp}\n\n(Displayed for development. Configure SMS provider for production.)`, [{ text: 'OK' }]);
         } else {
           Alert.alert('Success', 'OTP sent successfully to your phone');
         }
       } else {
-        Alert.alert('Error', response.error || 'Failed to send OTP. Please try again.');
+        const fieldErrors = mapFieldErrors(response as any, { phone: 'phone' });
+        setErrors((prev) => ({ ...prev, ...fieldErrors }));
+        showSnackbar({
+          message: getUserErrorMessage(response as any, 'Failed to send OTP. Please try again.'),
+          type: 'error',
+        });
       }
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to send OTP. Please try again.');
+      showSnackbar({ message: error.message || 'Failed to send OTP. Please try again.', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -224,294 +199,254 @@ const IndividualRegistrationScreen = () => {
 
   const handleResendOtp = async () => {
     if (otpTimer > 0) {
-      Alert.alert('Wait', `Please wait ${otpTimer} seconds before resending OTP`);
+      showSnackbar({ message: `Please wait ${otpTimer} seconds before resending OTP`, type: 'warning' });
       return;
     }
-    
     setLoading(true);
     try {
-      // Format phone number for backend (phone already contains only digits, add +91)
       const formattedPhone = `+91${phone}`;
-      
       const response = await authApi.sendOTP(formattedPhone, 'signup');
-      
       if (response.success) {
-        setOtpTimer(45);
         setOtp('');
-        
-        // Restart timer
-        if (timerRef.current) {
-          clearInterval(timerRef.current);
-        }
-        timerRef.current = setInterval(() => {
-          setOtpTimer((prev) => {
-            if (prev <= 1) {
-              if (timerRef.current) {
-                clearInterval(timerRef.current);
-              }
-              return 0;
-            }
-            return prev - 1;
-          });
-        }, 1000);
-        
-        // Show OTP in alert for development/testing
+        startOtpTimer();
         if (response.data?.otp) {
-          Alert.alert(
-            'OTP Resent Successfully',
-            `Your OTP is: ${response.data.otp}\n\n(Displayed for development. Configure SMS provider for production.)`,
-            [{ text: 'OK' }]
-          );
+          Alert.alert('OTP Resent', `Your OTP is: ${response.data.otp}\n\n(Displayed for development.)`, [{ text: 'OK' }]);
         } else {
           Alert.alert('Success', 'OTP resent successfully');
         }
       } else {
-        Alert.alert('Error', response.error || 'Failed to resend OTP. Please try again.');
+        showSnackbar({
+          message: getUserErrorMessage(response as any, 'Failed to resend OTP.'),
+          type: 'error',
+        });
       }
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to resend OTP. Please try again.');
+      showSnackbar({ message: error.message || 'Failed to resend OTP.', type: 'error' });
     } finally {
       setLoading(false);
     }
   };
 
-  // Cleanup timer on unmount
   React.useEffect(() => {
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-    };
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, []);
 
-  const renderProgressBar = () => {
-    const progress = (currentStep / totalSteps) * 100;
-    return (
-      <View style={styles.progressContainer}>
-        <Text style={styles.progressText}>{t('individualRegistration.step')} {currentStep} {t('individualRegistration.of')} {totalSteps}</Text>
-        <View style={styles.progressBar}>
-          <View style={[styles.progressFill, { width: `${progress}%` }]} />
-        </View>
-      </View>
-    );
-  };
+  const stepImages = [
+    require('../../../assets/reg_phone_verify.png'),
+    require('../../../assets/reg_profile_setup.png'),
+  ];
 
-  const renderStep1 = () => (
-    <View>
-      <Text style={styles.stepTitle}>{t('individualRegistration.step1Title')}</Text>
-      <Text style={styles.stepDescription}>
-        {t('individualRegistration.step1Description')}
-      </Text>
-      <PhoneInput
-        label={t('individualRegistration.phoneNumber')}
-        value={phone}
-        onChangeText={(text) => {
-          setPhone(text);
-          setOtpSent(false);
-        }}
-        placeholder="Enter your phone number"
-        containerStyle={styles.input}
-        editable={!otpSent}
-      />
-      {otpSent && (
-        <>
-          <Input
-            label={t('individualRegistration.enterOtp')}
-            value={otp}
-            onChangeText={setOtp}
-            placeholder="______"
-            keyboardType="number-pad"
-            maxLength={6}
-            containerStyle={styles.input}
-          />
-          <View style={styles.resendContainer}>
-            <TouchableOpacity onPress={handleResendOtp} disabled={otpTimer > 0}>
-              <Text style={[styles.resendText, otpTimer > 0 && styles.resendTextDisabled]}>
-                {t('individualRegistration.resendOtp')}
-              </Text>
-            </TouchableOpacity>
-            {otpTimer > 0 && (
-              <Text style={styles.timerText}>(00:{String(otpTimer).padStart(2, '0')})</Text>
-            )}
-          </View>
-        </>
-      )}
-    </View>
-  );
+  const canContinue =
+    currentStep === 1
+      ? otpSent ? otp.length === 6 : phone.length >= 10
+      : name.trim().length > 0 && password.length >= 8 && password === confirmPassword && !!gender;
 
-  const renderStep2 = () => (
-    <View>
-      <Text style={styles.stepTitle}>{t('individualRegistration.step2Title')}</Text>
-      <Text style={styles.stepDescription}>
-        {t('individualRegistration.step2Description')}
-      </Text>
-      <Input
-        label={t('individualRegistration.yourName')}
-        value={name}
-        onChangeText={setName}
-        placeholder={t('individualRegistration.enterYourName')}
-        containerStyle={styles.input}
-        autoCapitalize="words"
-      />
-      <Input
-        label="Password"
-        value={password}
-        onChangeText={setPassword}
-        placeholder="Enter your password"
-        containerStyle={styles.input}
-        secureTextEntry={!showPassword}
-        showPasswordToggle={true}
-        onPasswordToggle={() => setShowPassword(!showPassword)}
-      />
-      <Input
-        label="Confirm Password"
-        value={confirmPassword}
-        onChangeText={setConfirmPassword}
-        placeholder="Confirm your password"
-        containerStyle={styles.input}
-        secureTextEntry={!showConfirmPassword}
-        showPasswordToggle={true}
-        onPasswordToggle={() => setShowConfirmPassword(!showConfirmPassword)}
-      />
-      <View style={styles.infoBox}>
-        <Text style={styles.infoText}>
-          Password must be at least 8 characters with uppercase, lowercase, and a number.
-        </Text>
-      </View>
-      
-      {/* Gender Selection */}
-      <View style={styles.genderContainer}>
-        <Text style={styles.genderLabel}>Gender *</Text>
-        <View style={styles.genderOptions}>
-          <TouchableOpacity
-            style={[
-              styles.genderOption,
-              gender === 'Male' && styles.genderOptionSelected,
-            ]}
-            onPress={() => setGender('Male')}
-          >
-            <View style={[
-              styles.radioButton,
-              gender === 'Male' && styles.radioButtonSelected,
-            ]}>
-              {gender === 'Male' && <View style={styles.radioButtonInner} />}
-            </View>
-            <Text style={[
-              styles.genderOptionText,
-              gender === 'Male' && styles.genderOptionTextSelected,
-            ]}>Male</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.genderOption,
-              gender === 'Female' && styles.genderOptionSelected,
-            ]}
-            onPress={() => setGender('Female')}
-          >
-            <View style={[
-              styles.radioButton,
-              gender === 'Female' && styles.radioButtonSelected,
-            ]}>
-              {gender === 'Female' && <View style={styles.radioButtonInner} />}
-            </View>
-            <Text style={[
-              styles.genderOptionText,
-              gender === 'Female' && styles.genderOptionTextSelected,
-            ]}>Female</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.genderOption,
-              gender === 'Other' && styles.genderOptionSelected,
-            ]}
-            onPress={() => setGender('Other')}
-          >
-            <View style={[
-              styles.radioButton,
-              gender === 'Other' && styles.radioButtonSelected,
-            ]}>
-              {gender === 'Other' && <View style={styles.radioButtonInner} />}
-            </View>
-            <Text style={[
-              styles.genderOptionText,
-              gender === 'Other' && styles.genderOptionTextSelected,
-            ]}>Other</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Referral Code (Optional) */}
-      <View style={styles.referralContainer}>
-        <Text style={styles.genderLabel}>Referral Code (Optional)</Text>
-        <Input
-          placeholder="e.g. FORLOK-ABC123"
-          value={referralCode}
-          onChangeText={setReferralCode}
-          autoCapitalize="characters"
-        />
-        <Text style={[styles.infoText, { marginTop: normalize(4) }]}>
-          Have a friend's referral code? Enter it to earn bonus coins!
-        </Text>
-      </View>
-    </View>
-  );
+  const buttonLabel =
+    loading || verifying
+      ? 'Please wait...'
+      : currentStep === 1
+      ? otpSent ? t('individualRegistration.verifyContinue') : t('individualRegistration.sendOtp')
+      : t('individualRegistration.continue');
 
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+
+      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <ArrowLeft size={24} color={COLORS.primary} />
+        <TouchableOpacity style={styles.backBtn} onPress={handleBack} activeOpacity={0.7}>
+          <ArrowLeft size={22} color="#1A1A1A" />
         </TouchableOpacity>
       </View>
 
-      {renderProgressBar()}
+      {/* Progress dashes */}
+      <View style={styles.progressRow}>
+        {Array.from({ length: totalSteps }, (_, i) => (
+          <View
+            key={i}
+            style={[
+              styles.progressDash,
+              currentStep >= i + 1 && styles.progressDashActive,
+            ]}
+          />
+        ))}
+      </View>
 
       <ScrollView
-        style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
-        {currentStep === 1 && renderStep1()}
-        {currentStep === 2 && renderStep2()}
+        {/* Illustration */}
+        <View style={styles.illustrationWrap}>
+          <Image
+            source={stepImages[currentStep - 1]}
+            style={styles.illustration}
+            resizeMode="contain"
+          />
+        </View>
+
+        {/* Step 1 */}
+        {currentStep === 1 && (
+          <View>
+            <Text style={styles.stepTitle}>{t('individualRegistration.step1Title')}</Text>
+            <Text style={styles.stepDesc}>{t('individualRegistration.step1Description')}</Text>
+
+            <PhoneInput
+              label={t('individualRegistration.phoneNumber')}
+              value={phone}
+              onChangeText={(text) => {
+                setPhone(text);
+                setOtpSent(false);
+                if (errors.phone) setErrors((prev) => ({ ...prev, phone: '' }));
+              }}
+              placeholder="Enter your phone number"
+              containerStyle={styles.inputWrap}
+              editable={!otpSent}
+              error={errors.phone}
+            />
+
+            {otpSent && (
+              <>
+                <Input
+                  label={t('individualRegistration.enterOtp')}
+                  value={otp}
+                  onChangeText={(text) => {
+                    setOtp(text);
+                    if (errors.otp) setErrors((prev) => ({ ...prev, otp: '' }));
+                  }}
+                  placeholder="______"
+                  keyboardType="number-pad"
+                  maxLength={6}
+                  containerStyle={styles.inputWrap}
+                  error={errors.otp}
+                />
+                <View style={styles.resendRow}>
+                  <TouchableOpacity onPress={handleResendOtp} disabled={otpTimer > 0}>
+                    <Text style={[styles.resendText, otpTimer > 0 && { opacity: 0.4 }]}>
+                      {t('individualRegistration.resendOtp')}
+                    </Text>
+                  </TouchableOpacity>
+                  {otpTimer > 0 && (
+                    <Text style={styles.timerText}>(00:{String(otpTimer).padStart(2, '0')})</Text>
+                  )}
+                </View>
+              </>
+            )}
+          </View>
+        )}
+
+        {/* Step 2 */}
+        {currentStep === 2 && (
+          <View>
+            <Text style={styles.stepTitle}>{t('individualRegistration.step2Title')}</Text>
+            <Text style={styles.stepDesc}>{t('individualRegistration.step2Description')}</Text>
+
+            <Input
+              label={t('individualRegistration.yourName')}
+              value={name}
+              onChangeText={(text) => {
+                setName(text);
+                if (errors.name) setErrors((prev) => ({ ...prev, name: '' }));
+              }}
+              placeholder={t('individualRegistration.enterYourName')}
+              containerStyle={styles.inputWrap}
+              autoCapitalize="words"
+              leftIcon={<User size={18} color="#BBBBBB" />}
+              error={errors.name}
+            />
+            <Input
+              label="Password"
+              value={password}
+              onChangeText={(text) => {
+                setPassword(text);
+                if (errors.password) setErrors((prev) => ({ ...prev, password: '' }));
+              }}
+              placeholder="Enter your password"
+              containerStyle={styles.inputWrap}
+              secureTextEntry={!showPassword}
+              showPasswordToggle
+              onPasswordToggle={() => setShowPassword(!showPassword)}
+              leftIcon={<Lock size={18} color="#BBBBBB" />}
+              error={errors.password}
+            />
+            <Input
+              label="Confirm Password"
+              value={confirmPassword}
+              onChangeText={(text) => {
+                setConfirmPassword(text);
+                if (errors.confirmPassword) setErrors((prev) => ({ ...prev, confirmPassword: '' }));
+              }}
+              placeholder="Confirm your password"
+              containerStyle={styles.inputWrap}
+              secureTextEntry={!showConfirmPassword}
+              showPasswordToggle
+              onPasswordToggle={() => setShowConfirmPassword(!showConfirmPassword)}
+              leftIcon={<Lock size={18} color="#BBBBBB" />}
+              error={errors.confirmPassword}
+            />
+
+            <View style={styles.hintBox}>
+              <Text style={styles.hintText}>
+                8+ characters, uppercase, lowercase, and a number.
+              </Text>
+            </View>
+
+            {/* Gender */}
+            <Text style={styles.fieldLabel}>Gender *</Text>
+            <View style={styles.genderRow}>
+              {(['Male', 'Female', 'Other'] as const).map((g) => (
+                <TouchableOpacity
+                  key={g}
+                  style={[styles.genderChip, gender === g && styles.genderChipActive]}
+                  onPress={() => setGender(g)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.genderChipText, gender === g && styles.genderChipTextActive]}>
+                    {g}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            {!!errors.gender && <Text style={styles.inlineErrorText}>{errors.gender}</Text>}
+
+            {/* Referral */}
+            <Text style={styles.fieldLabel}>Referral Code (Optional)</Text>
+            <Input
+              placeholder="e.g. FORLOK-ABC123"
+              value={referralCode}
+              onChangeText={setReferralCode}
+              autoCapitalize="characters"
+              containerStyle={styles.inputWrap}
+              leftIcon={<Gift size={18} color="#BBBBBB" />}
+            />
+            <Text style={styles.hintText}>
+              Have a friend's referral code? Enter it to earn bonus coins!
+            </Text>
+          </View>
+        )}
       </ScrollView>
 
-      <View style={styles.buttonContainer}>
-        <Button
-          title={
-            loading || verifying
-              ? 'Please wait...'
-              : currentStep === 1
-              ? otpSent
-                ? t('individualRegistration.verifyContinue')
-                : t('individualRegistration.sendOtp')
-              : t('individualRegistration.continue')
-          }
+      {/* Bottom Button */}
+      <View style={styles.bottomBar}>
+        <TouchableOpacity
+          style={[styles.continueBtn, !canContinue && styles.continueBtnDisabled]}
           onPress={currentStep === 1 && !otpSent ? handleSendOtp : handleNext}
-          variant="primary"
-          size="large"
-          style={styles.continueButton}
-          disabled={
-            loading ||
-            verifying ||
-            (currentStep === 1
-              ? otpSent
-                ? !otp || otp.length !== 6
-                : !phone || phone.length < 10
-              : !name.trim() || !password || password.length < 8 || password !== confirmPassword || !gender)
-          }
-        />
-        {(loading || verifying) && (
-          <ActivityIndicator
-            size="small"
-            color={COLORS.primary}
-            style={styles.loader}
-          />
-        )}
+          activeOpacity={0.85}
+          disabled={!canContinue || loading || verifying}
+        >
+          {loading || verifying ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <Text style={styles.continueBtnText}>{buttonLabel}</Text>
+          )}
+        </TouchableOpacity>
       </View>
-      {/* ========== COIN SIGNUP CELEBRATION MODAL ========== */}
+
+      {/* Coin celebration modal */}
       <Modal
         visible={showCoinCelebration}
         transparent
@@ -551,179 +486,163 @@ const IndividualRegistrationScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.white,
+    backgroundColor: '#FFFFFF',
   },
   header: {
-    paddingTop: 50,
-    paddingHorizontal: SPACING.md,
-    backgroundColor: COLORS.white,
-  },
-  backButton: {
-    padding: SPACING.sm,
-    width: 40,
-  },
-  progressContainer: {
+    paddingTop: hp(6),
     paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.md,
-    backgroundColor: COLORS.white,
+    paddingBottom: SPACING.md,
   },
-  progressText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.primary,
-    marginBottom: SPACING.xs,
-    fontWeight: '600',
+  backBtn: {
+    width: normalize(40),
+    height: normalize(40),
+    borderRadius: normalize(20),
+    backgroundColor: '#F5F5F5',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  progressBar: {
-    height: 6,
-    backgroundColor: COLORS.lightGray,
-    borderRadius: 3,
-    overflow: 'hidden',
+  progressRow: {
+    flexDirection: 'row',
+    paddingHorizontal: SPACING.lg,
+    gap: SPACING.sm,
+    marginBottom: SPACING.sm,
   },
-  progressFill: {
-    height: '100%',
-    backgroundColor: COLORS.primary,
-    borderRadius: 3,
-  },
-  scrollView: {
+  progressDash: {
     flex: 1,
-    backgroundColor: COLORS.white,
+    height: normalize(4),
+    borderRadius: normalize(2),
+    backgroundColor: '#E0E0E0',
+  },
+  progressDashActive: {
+    backgroundColor: ACCENT,
   },
   scrollContent: {
-    padding: SPACING.lg,
-    paddingBottom: SPACING.xxl + 80,
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: normalize(100),
+  },
+  illustrationWrap: {
+    alignItems: 'center',
+    marginTop: SPACING.md,
+    marginBottom: SPACING.lg,
+  },
+  illustration: {
+    width: wp(65),
+    height: hp(20),
   },
   stepTitle: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xxl,
-    color: COLORS.primary,
-    marginBottom: SPACING.sm,
-    fontWeight: 'bold',
+    fontFamily: FONTS.bold,
+    fontSize: normalize(24),
+    color: '#1A1A1A',
+    marginBottom: SPACING.xs,
+    marginTop: SPACING.sm,
   },
-  stepDescription: {
+  stepDesc: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
-    color: COLORS.textSecondary,
+    fontSize: FONTS.sizes.sm,
+    color: '#888888',
     marginBottom: SPACING.lg,
-    lineHeight: normalize(22),
+    lineHeight: normalize(20),
+    marginTop: SPACING.xs,
   },
-  input: {
+  inputWrap: {
     marginBottom: SPACING.md,
   },
-  resendContainer: {
+  resendRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: SPACING.md,
   },
   resendText: {
-    fontFamily: FONTS.regular,
+    fontFamily: FONTS.semiBold,
     fontSize: FONTS.sizes.sm,
-    color: COLORS.primary,
-    fontWeight: '600',
-  },
-  resendTextDisabled: {
-    color: COLORS.textSecondary,
-    opacity: 0.5,
+    color: ACCENT,
   },
   timerText: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.sm,
-    color: COLORS.textSecondary,
+    color: '#999999',
   },
-  infoBox: {
-    backgroundColor: COLORS.lightGray + '40',
-    padding: SPACING.md,
+  hintBox: {
+    backgroundColor: '#FFFDE7',
+    padding: SPACING.sm,
     borderRadius: BORDER_RADIUS.md,
-    marginTop: SPACING.md,
+    marginBottom: SPACING.md,
   },
-  infoText: {
+  hintText: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.textSecondary,
-    lineHeight: normalize(20),
+    fontSize: FONTS.sizes.xs,
+    color: '#888888',
+    lineHeight: normalize(18),
   },
-  buttonContainer: {
+  fieldLabel: {
+    fontFamily: FONTS.semiBold,
+    fontSize: FONTS.sizes.sm,
+    color: '#1A1A1A',
+    marginBottom: SPACING.sm,
+    marginTop: SPACING.sm,
+  },
+  genderRow: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    marginBottom: SPACING.md,
+  },
+  genderChip: {
+    flex: 1,
+    paddingVertical: normalize(12),
+    borderRadius: normalize(24),
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#E0E0E0',
+    alignItems: 'center',
+    backgroundColor: '#FAFAFA',
+  },
+  genderChipActive: {
+    backgroundColor: ACCENT,
+    borderColor: ACCENT,
+  },
+  genderChipText: {
+    fontFamily: FONTS.semiBold,
+    fontSize: FONTS.sizes.sm,
+    color: '#666666',
+  },
+  genderChipTextActive: {
+    color: '#FFFFFF',
+  },
+  inlineErrorText: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.xs,
+    color: COLORS.error,
+    marginTop: -SPACING.xs,
+    marginBottom: SPACING.md,
+  },
+  bottomBar: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: COLORS.white,
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: SPACING.lg,
     paddingTop: SPACING.md,
-    paddingBottom: SPACING.lg,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    ...SHADOWS.md,
+    paddingBottom: hp(3),
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#E0E0E0',
   },
-  continueButton: {
-    width: '100%',
-  },
-  loader: {
-    marginTop: SPACING.sm,
-  },
-  genderContainer: {
-    marginTop: SPACING.md,
-    marginBottom: SPACING.md,
-  },
-  referralContainer: {
-    marginTop: SPACING.sm,
-    marginBottom: SPACING.md,
-  },
-  genderLabel: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
-    color: COLORS.text,
-    marginBottom: SPACING.sm,
-    fontWeight: '600',
-  },
-  genderOptions: {
-    flexDirection: 'row',
-    gap: SPACING.md,
-  },
-  genderOption: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: SPACING.md,
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.white,
-  },
-  genderOptionSelected: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.primary + '10',
-  },
-  radioButton: {
-    width: normalize(20),
-    height: normalize(20),
-    borderRadius: normalize(10),
-    borderWidth: 2,
-    borderColor: COLORS.border,
-    marginRight: SPACING.sm,
+  continueBtn: {
+    backgroundColor: ACCENT,
+    height: normalize(52),
+    borderRadius: normalize(26),
     justifyContent: 'center',
     alignItems: 'center',
   },
-  radioButtonSelected: {
-    borderColor: COLORS.primary,
+  continueBtnDisabled: {
+    opacity: 0.45,
   },
-  radioButtonInner: {
-    width: normalize(10),
-    height: normalize(10),
-    borderRadius: normalize(5),
-    backgroundColor: COLORS.primary,
+  continueBtnText: {
+    fontFamily: FONTS.semiBold,
+    fontSize: FONTS.sizes.lg,
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
   },
-  genderOptionText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
-    color: COLORS.text,
-  },
-  genderOptionTextSelected: {
-    color: COLORS.primary,
-    fontWeight: '600',
-  },
-  // Coin celebration modal styles
   celebrationOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.7)',
@@ -731,7 +650,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   celebrationContent: {
-    backgroundColor: COLORS.white,
+    backgroundColor: '#FFFFFF',
     borderRadius: normalize(24),
     padding: SPACING.xl,
     alignItems: 'center',
@@ -748,25 +667,24 @@ const styles = StyleSheet.create({
     height: wp(75),
   },
   celebrationTitle: {
-    fontFamily: FONTS.regular,
+    fontFamily: FONTS.bold,
     fontSize: normalize(24),
-    fontWeight: 'bold' as const,
-    color: '#F5A623',
+    color: ACCENT,
     marginTop: SPACING.sm,
   },
   celebrationText: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.md,
-    color: COLORS.text,
-    textAlign: 'center' as const,
+    color: '#333333',
+    textAlign: 'center',
     marginTop: SPACING.sm,
   },
   celebrationHint: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.sm,
-    color: COLORS.textSecondary,
+    color: '#999999',
     marginTop: SPACING.xs,
-    textAlign: 'center' as const,
+    textAlign: 'center',
   },
 });
 

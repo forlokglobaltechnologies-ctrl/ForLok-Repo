@@ -1,24 +1,20 @@
 /**
  * API Configuration
  * Backend API base URL and endpoints
+ *
+ * Environment is auto-detected via React Native's __DEV__ flag:
+ *   - DEV  (expo start / debug build) → local backend at DEV_API_URL
+ *   - PROD (eas build / release)      → deployed backend at PROD_API_URL
  */
 
-// Backend API Base URL
-// For development: 
-//   - Emulator/Simulator: Use http://localhost:3000 or http://10.0.2.2:3000 (Android emulator)
-//   - Physical Device: Use your computer's IP address (e.g., http://192.168.1.100:3000)
-//   - Find your IP: ipconfig (Windows) or ifconfig (Mac/Linux)
-// For production: Use your deployed backend URL
+const DEV_API_URL = 'http://10.72.83.16:3000';
+const PROD_API_URL = 'https://forlok-repo.onrender.com';
 
-// Default: localhost (works for emulator/simulator)
-// For physical device, change to your computer's IP address
-const API_BASE_URL = __DEV__
-  ? 'http://10.165.34.16:3000' // Local dev: your computer's IP
-  : 'https://forlok-repo.onrender.com'; // Production: Render deployment
+const API_BASE_URL = __DEV__ ? DEV_API_URL : PROD_API_URL;
 
 export const API_CONFIG = {
   BASE_URL: API_BASE_URL,
-  TIMEOUT: 30000, // 30 seconds
+  TIMEOUT: 60000,
   ENDPOINTS: {
     // Authentication
     AUTH: {
@@ -86,6 +82,8 @@ export const API_CONFIG = {
       UPDATE: '/api/pooling/offers/:offerId',
       DELETE: '/api/pooling/offers/:offerId',
       CALCULATE_PRICE: '/api/pooling/calculate-price',
+      SUGGEST_WAYPOINTS: '/api/pooling/suggest-waypoints',
+      CONNECTED_SEARCH: '/api/pooling/offers/connected-search',
     },
     // Rental Offers
     RENTAL: {
@@ -105,6 +103,7 @@ export const API_CONFIG = {
     // Bookings
     BOOKING: {
       CREATE_POOLING: '/api/bookings/pooling',
+      CREATE_CONNECTED: '/api/bookings/connected',
       CREATE_RENTAL: '/api/bookings/rental',
       LIST: '/api/bookings',
       GET: '/api/bookings/:bookingId',
@@ -209,6 +208,13 @@ export const API_CONFIG = {
     DASHBOARD: {
       STATS: '/api/dashboard/stats',
       FINANCIAL: '/api/dashboard/financial',
+      HOME: '/api/dashboard/home',
+    },
+    // Saved Places
+    PLACES: {
+      LIST: '/api/places',
+      SAVE: '/api/places',
+      DELETE: '/api/places/:placeId',
     },
     // Chat
     CHAT: {

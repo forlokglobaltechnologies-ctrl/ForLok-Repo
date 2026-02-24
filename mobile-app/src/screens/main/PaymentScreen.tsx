@@ -7,8 +7,10 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme
 import { Button } from '@components/common/Button';
 import { Card } from '@components/common/Card';
 import { useLanguage } from '@context/LanguageContext';
+import { useSnackbar } from '@context/SnackbarContext';
 import { paymentApi, bookingApi } from '@utils/apiClient';
 import { WebView } from 'react-native-webview';
+import { getUserErrorMessage } from '@utils/errorUtils';
 
 interface RouteParams {
   bookingId?: string;
@@ -26,6 +28,7 @@ const PaymentScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { t } = useLanguage();
+  const { showSnackbar } = useSnackbar();
   const params = (route.params as RouteParams) || {};
   
   const [paymentMethod, setPaymentMethod] = useState<'upi' | 'card' | 'wallet' | 'net_banking'>('upi');
@@ -76,13 +79,13 @@ const PaymentScreen = () => {
           currentBookingId = newBookingId;
           console.log('✅ Booking created:', newBookingId);
         } else {
-          Alert.alert('Error', bookingResponse.error || 'Failed to create booking');
+          showSnackbar({ message: getUserErrorMessage(bookingResponse as any, 'Failed to create booking'), type: 'error' });
           setLoading(false);
           return;
         }
       } catch (error: any) {
         console.error('❌ Error creating booking:', error);
-        Alert.alert('Error', error.message || 'Failed to create booking');
+        showSnackbar({ message: error.message || 'Failed to create booking', type: 'error' });
         setLoading(false);
         return;
       } finally {
@@ -118,13 +121,13 @@ const PaymentScreen = () => {
           currentBookingId = newBookingId;
           console.log('✅ Rental booking created:', newBookingId);
         } else {
-          Alert.alert('Error', bookingResponse.error || 'Failed to create booking');
+          showSnackbar({ message: getUserErrorMessage(bookingResponse as any, 'Failed to create booking'), type: 'error' });
           setLoading(false);
           return;
         }
       } catch (error: any) {
         console.error('❌ Error creating rental booking:', error);
-        Alert.alert('Error', error.message || 'Failed to create booking');
+        showSnackbar({ message: error.message || 'Failed to create booking', type: 'error' });
         setLoading(false);
         return;
       } finally {
@@ -133,7 +136,7 @@ const PaymentScreen = () => {
     }
 
     if (!currentBookingId) {
-      Alert.alert('Error', 'Booking information is missing');
+      showSnackbar({ message: 'Booking information is missing', type: 'error' });
       return;
     }
 
@@ -290,11 +293,11 @@ const PaymentScreen = () => {
           setShowWebView(true);
         }
       } else {
-        Alert.alert('Error', paymentResponse.error || 'Failed to create payment order');
+        showSnackbar({ message: getUserErrorMessage(paymentResponse as any, 'Failed to create payment order'), type: 'error' });
       }
     } catch (error: any) {
       console.error('❌ Error creating payment:', error);
-      Alert.alert('Error', error.message || 'Failed to initiate payment');
+      showSnackbar({ message: error.message || 'Failed to initiate payment', type: 'error' });
     } finally {
       setLoading(false);
     }

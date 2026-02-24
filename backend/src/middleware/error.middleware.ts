@@ -14,10 +14,19 @@ export async function errorHandler(
 
   // Handle validation errors
   if (error.validation) {
+    const fieldErrors = Array.isArray(error.validation)
+      ? error.validation.map((issue: any) => ({
+          field: issue.instancePath?.replace(/^\//, '').replace(/\//g, '.') || issue.params?.missingProperty || 'body',
+          message: issue.message || 'Invalid field',
+          code: 'INVALID_FIELD',
+        }))
+      : undefined;
+
     return reply.status(400).send({
       success: false,
-      message: 'Validation error',
+      message: 'Validation failed',
       error: 'VALIDATION_ERROR',
+      ...(fieldErrors ? { fieldErrors } : {}),
       details: error.validation,
     });
   }

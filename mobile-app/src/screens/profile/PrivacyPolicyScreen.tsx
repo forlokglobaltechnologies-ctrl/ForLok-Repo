@@ -5,247 +5,92 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
-  ImageBackground,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import {
-  ArrowLeft,
-  Lock,
-  Eye,
-  Database,
-  Share2,
-  Trash2,
-  ShieldCheck,
-  Bell,
-  MapPin,
-  Smartphone,
-  Cookie,
-  Baby,
-  RefreshCw,
-  Mail,
-} from 'lucide-react-native';
-import { BlurView } from 'expo-blur';
-import { normalize, wp, hp } from '@utils/responsive';
-import { COLORS, FONTS, SPACING, SHADOWS } from '@constants/theme';
-import { useLanguage } from '@context/LanguageContext';
+import { ArrowLeft } from 'lucide-react-native';
+import { normalize, wp } from '@utils/responsive';
+import { FONTS } from '@constants/theme';
 import { useTheme } from '@context/ThemeContext';
 
+const sections = [
+  {
+    title: 'Information We Collect',
+    content: `We collect the following categories of information to provide and improve our services:\n\nPersonal Information:\n\u2022 Full name, email address, phone number\n\u2022 Profile photo and date of birth\n\u2022 Government-issued ID (Aadhaar, PAN, Driving License) for verification\n\u2022 Bank account or UPI details for payment processing\n\nVehicle Information (Drivers):\n\u2022 Driving license details and expiry\n\u2022 Vehicle registration number, make, model, and year\n\u2022 Vehicle insurance and fitness certificate details\n\nUsage Information:\n\u2022 Ride history, booking details, and transaction records\n\u2022 In-app communications and support tickets\n\u2022 App usage patterns and feature interactions`,
+  },
+  {
+    title: 'Location Data',
+    content: `Location data is essential for our ride-sharing and rental services:\n\n\u2022 We collect precise GPS location when the app is in use\n\u2022 Background location is collected during active trips for safety and navigation\n\u2022 Pickup and drop-off locations are stored for ride matching\n\u2022 Location history is used to suggest frequently visited places\n\u2022 You can disable location services in your device settings, but this may limit core app functionality\n\nWe do not sell your location data to third parties. Location data is retained only as long as necessary for service delivery and regulatory compliance.`,
+  },
+  {
+    title: 'How We Use Your Information',
+    content: `Your information is used for the following purposes:\n\n\u2022 Matching drivers and passengers for pooling rides\n\u2022 Processing payments and facilitating transactions\n\u2022 Verifying user identity and driver credentials\n\u2022 Providing customer support and resolving disputes\n\u2022 Sending booking confirmations, ride alerts, and receipts\n\u2022 Improving our matching algorithms and route optimization\n\u2022 Detecting and preventing fraud, spam, and abuse\n\u2022 Complying with legal obligations and regulatory requirements\n\u2022 Personalizing the app experience based on preferences`,
+  },
+  {
+    title: 'Information Sharing',
+    content: `We share your information only when necessary:\n\nWith Other Users:\n\u2022 Your first name and profile photo are visible to ride partners\n\u2022 Drivers see pickup/drop-off locations for booked passengers\n\u2022 Your phone number may be shared temporarily during an active ride\n\nWith Service Providers:\n\u2022 Payment processors (Razorpay, PhonePe) for transaction handling\n\u2022 Cloud service providers (AWS) for data storage\n\u2022 SMS and notification providers for communications\n\u2022 Map services (Google Maps) for navigation\n\nWith Authorities:\n\u2022 When required by law, court order, or government request\n\u2022 To protect the safety of users and the public`,
+  },
+  {
+    title: 'Data Security',
+    content: `We implement robust security measures to protect your data:\n\n\u2022 All data transmitted between the app and servers is encrypted using TLS 1.3\n\u2022 Sensitive data (passwords, payment info) is encrypted at rest using AES-256\n\u2022 We conduct regular security audits and vulnerability assessments\n\u2022 Access to user data is restricted to authorized personnel only\n\u2022 Multi-factor authentication is available for account security\n\u2022 We maintain compliance with PCI-DSS for payment card data\n\u2022 Automated threat detection systems monitor for suspicious activities\n\nWhile we strive to protect your data, no method of transmission over the internet is 100% secure.`,
+  },
+  {
+    title: 'Device Permissions',
+    content: `The Forlok app requests the following device permissions:\n\n\u2022 Location: Required for ride matching, navigation, and live tracking\n\u2022 Camera: For profile photo upload and document scanning\n\u2022 Storage: For caching map data and saving receipts\n\u2022 Notifications: For ride updates, payment alerts, and messages\n\u2022 Phone: For direct calling between driver and passenger during rides\n\u2022 Contacts: Optional, for inviting friends and earning referral rewards\n\nYou can manage permissions through your device settings at any time.`,
+  },
+  {
+    title: 'Cookies & Analytics',
+    content: `We use cookies and analytics tools to improve our services:\n\n\u2022 Session cookies to maintain your login state\n\u2022 Preference cookies to remember your language and theme settings\n\u2022 Analytics cookies (Google Analytics, Firebase) for usage insights\n\u2022 Crash reporting tools (Sentry) for bug detection and fixes\n\nWe do not use cookies for cross-site advertising or tracking. You can disable non-essential cookies in the app settings.`,
+  },
+  {
+    title: 'Data Retention & Deletion',
+    content: `We retain your data for the following periods:\n\n\u2022 Account data: Retained while your account is active, plus 90 days after deletion\n\u2022 Transaction records: Retained for 7 years as required by Indian tax laws\n\u2022 Ride history: Retained for 3 years for dispute resolution\n\u2022 KYC documents: Retained as per RBI and government regulations\n\u2022 Communication logs: Retained for 1 year\n\nYou can request data deletion by:\n\u2022 Using the "Delete Account" option in Settings\n\u2022 Emailing privacy@forlok.com with your registered details\n\nWe will process deletion requests within 30 days, subject to legal retention requirements.`,
+  },
+  {
+    title: "Children's Privacy",
+    content: `Forlok is not intended for users under the age of 18:\n\n\u2022 We do not knowingly collect information from children under 18\n\u2022 If we discover that a child under 18 has provided personal information, we will delete it immediately\n\u2022 Parents or guardians who believe their child has provided information should contact us at privacy@forlok.com`,
+  },
+  {
+    title: 'Updates to This Policy',
+    content: `We may update this Privacy Policy from time to time:\n\n\u2022 Material changes will be communicated via email or in-app notification\n\u2022 Continued use of the app after changes constitutes acceptance\n\u2022 Previous versions of this policy are available upon request\n\u2022 The "Last Updated" date at the top reflects the most recent revision\n\nWe encourage you to review this policy periodically for any changes.`,
+  },
+];
+
+const rights = [
+  { title: 'Right to Access', desc: 'Request a copy of your personal data' },
+  { title: 'Right to Rectify', desc: 'Correct inaccurate or incomplete data' },
+  { title: 'Right to Delete', desc: 'Request deletion of your personal data' },
+  { title: 'Right to Restrict', desc: 'Limit how your data is processed' },
+  { title: 'Right to Portability', desc: 'Receive your data in a portable format' },
+  { title: 'Right to Object', desc: 'Object to certain processing activities' },
+];
 
 const PrivacyPolicyScreen = () => {
   const navigation = useNavigation<any>();
-  const { t } = useLanguage();
   const { theme } = useTheme();
 
-  const sections = [
-    {
-      icon: Database,
-      title: 'Information We Collect',
-      color: '#2196F3',
-      content: `We collect the following categories of information to provide and improve our services:
-
-Personal Information:
-\u2022 Full name, email address, phone number
-\u2022 Profile photo and date of birth
-\u2022 Government-issued ID (Aadhaar, PAN, Driving License) for verification
-\u2022 Bank account or UPI details for payment processing
-
-Vehicle Information (Drivers):
-\u2022 Driving license details and expiry
-\u2022 Vehicle registration number, make, model, and year
-\u2022 Vehicle insurance and fitness certificate details
-
-Usage Information:
-\u2022 Ride history, booking details, and transaction records
-\u2022 In-app communications and support tickets
-\u2022 App usage patterns and feature interactions`,
-    },
-    {
-      icon: MapPin,
-      title: 'Location Data',
-      color: '#4CAF50',
-      content: `Location data is essential for our ride-sharing and rental services:
-
-\u2022 We collect precise GPS location when the app is in use
-\u2022 Background location is collected during active trips for safety and navigation
-\u2022 Pickup and drop-off locations are stored for ride matching
-\u2022 Location history is used to suggest frequently visited places
-\u2022 You can disable location services in your device settings, but this may limit core app functionality
-
-We do not sell your location data to third parties. Location data is retained only as long as necessary for service delivery and regulatory compliance.`,
-    },
-    {
-      icon: Eye,
-      title: 'How We Use Your Information',
-      color: '#FF9800',
-      content: `Your information is used for the following purposes:
-
-\u2022 Matching drivers and passengers for pooling rides
-\u2022 Processing payments and facilitating transactions
-\u2022 Verifying user identity and driver credentials
-\u2022 Providing customer support and resolving disputes
-\u2022 Sending booking confirmations, ride alerts, and receipts
-\u2022 Improving our matching algorithms and route optimization
-\u2022 Detecting and preventing fraud, spam, and abuse
-\u2022 Complying with legal obligations and regulatory requirements
-\u2022 Personalizing the app experience based on preferences`,
-    },
-    {
-      icon: Share2,
-      title: 'Information Sharing',
-      color: '#9C27B0',
-      content: `We share your information only when necessary:
-
-With Other Users:
-\u2022 Your first name and profile photo are visible to ride partners
-\u2022 Drivers see pickup/drop-off locations for booked passengers
-\u2022 Your phone number may be shared temporarily during an active ride
-
-With Service Providers:
-\u2022 Payment processors (Razorpay, PhonePe) for transaction handling
-\u2022 Cloud service providers (AWS) for data storage
-\u2022 SMS and notification providers for communications
-\u2022 Map services (Google Maps) for navigation
-
-With Authorities:
-\u2022 When required by law, court order, or government request
-\u2022 To protect the safety of users and the public`,
-    },
-    {
-      icon: ShieldCheck,
-      title: 'Data Security',
-      color: '#00BCD4',
-      content: `We implement robust security measures to protect your data:
-
-\u2022 All data transmitted between the app and servers is encrypted using TLS 1.3
-\u2022 Sensitive data (passwords, payment info) is encrypted at rest using AES-256
-\u2022 We conduct regular security audits and vulnerability assessments
-\u2022 Access to user data is restricted to authorized personnel only
-\u2022 Multi-factor authentication is available for account security
-\u2022 We maintain compliance with PCI-DSS for payment card data
-\u2022 Automated threat detection systems monitor for suspicious activities
-
-While we strive to protect your data, no method of transmission over the internet is 100% secure.`,
-    },
-    {
-      icon: Smartphone,
-      title: 'Device Permissions',
-      color: '#795548',
-      content: `The Forlok app requests the following device permissions:
-
-\u2022 Location: Required for ride matching, navigation, and live tracking
-\u2022 Camera: For profile photo upload and document scanning
-\u2022 Storage: For caching map data and saving receipts
-\u2022 Notifications: For ride updates, payment alerts, and messages
-\u2022 Phone: For direct calling between driver and passenger during rides
-\u2022 Contacts: Optional, for inviting friends and earning referral rewards
-
-You can manage permissions through your device settings at any time.`,
-    },
-    {
-      icon: Cookie,
-      title: 'Cookies & Analytics',
-      color: '#FF5722',
-      content: `We use cookies and analytics tools to improve our services:
-
-\u2022 Session cookies to maintain your login state
-\u2022 Preference cookies to remember your language and theme settings
-\u2022 Analytics cookies (Google Analytics, Firebase) for usage insights
-\u2022 Crash reporting tools (Sentry) for bug detection and fixes
-
-We do not use cookies for cross-site advertising or tracking. You can disable non-essential cookies in the app settings.`,
-    },
-    {
-      icon: Trash2,
-      title: 'Data Retention & Deletion',
-      color: '#F44336',
-      content: `We retain your data for the following periods:
-
-\u2022 Account data: Retained while your account is active, plus 90 days after deletion
-\u2022 Transaction records: Retained for 7 years as required by Indian tax laws
-\u2022 Ride history: Retained for 3 years for dispute resolution
-\u2022 KYC documents: Retained as per RBI and government regulations
-\u2022 Communication logs: Retained for 1 year
-
-You can request data deletion by:
-\u2022 Using the "Delete Account" option in Settings
-\u2022 Emailing privacy@forlok.com with your registered details
-
-We will process deletion requests within 30 days, subject to legal retention requirements.`,
-    },
-    {
-      icon: Baby,
-      title: 'Children\'s Privacy',
-      color: '#E91E63',
-      content: `Forlok is not intended for users under the age of 18:
-
-\u2022 We do not knowingly collect information from children under 18
-\u2022 If we discover that a child under 18 has provided personal information, we will delete it immediately
-\u2022 Parents or guardians who believe their child has provided information should contact us at privacy@forlok.com`,
-    },
-    {
-      icon: RefreshCw,
-      title: 'Updates to This Policy',
-      color: '#607D8B',
-      content: `We may update this Privacy Policy from time to time:
-
-\u2022 Material changes will be communicated via email or in-app notification
-\u2022 Continued use of the app after changes constitutes acceptance
-\u2022 Previous versions of this policy are available upon request
-\u2022 The "Last Updated" date at the top reflects the most recent revision
-
-We encourage you to review this policy periodically for any changes.`,
-    },
-  ];
-
-  const rights = [
-    { title: 'Right to Access', desc: 'Request a copy of your personal data' },
-    { title: 'Right to Rectify', desc: 'Correct inaccurate or incomplete data' },
-    { title: 'Right to Delete', desc: 'Request deletion of your personal data' },
-    { title: 'Right to Restrict', desc: 'Limit how your data is processed' },
-    { title: 'Right to Portability', desc: 'Receive your data in a portable format' },
-    { title: 'Right to Object', desc: 'Object to certain processing activities' },
-  ];
-
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      {/* ── Hero Header ── */}
-      <ImageBackground
-        source={require('../../../assets/privacy.png')}
-        style={styles.headerImage}
-        resizeMode="cover"
-      >
-        <View style={[styles.headerOverlay, { backgroundColor: theme.colors.primary }]} />
-        <BlurView intensity={40} style={styles.blurContainer}>
-          <View style={styles.headerNav}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.navButton}>
-              <ArrowLeft size={22} color="#FFF" />
-            </TouchableOpacity>
-            <Text style={styles.navTitle}>Privacy Policy</Text>
-            <View style={{ width: normalize(38) }} />
-          </View>
-        </BlurView>
-      </ImageBackground>
+    <View style={[s.container, { backgroundColor: theme.colors.background }]}>
+      <View style={[s.header, { borderBottomColor: theme.colors.border }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <ArrowLeft size={normalize(22)} color={theme.colors.text} />
+        </TouchableOpacity>
+        <Text style={[s.headerTitle, { color: theme.colors.text }]}>Privacy Policy</Text>
+        <View style={{ width: normalize(22) }} />
+      </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-
-        {/* ── Title Card ── */}
-        <View style={[styles.titleCard, { backgroundColor: theme.colors.surface }]}>
-          <View style={[styles.titleIconCircle, { backgroundColor: theme.colors.primary + '12' }]}>
-            <Lock size={26} color={theme.colors.primary} />
-          </View>
-          <Text style={[styles.titleText, { color: theme.colors.text }]}>Privacy Policy</Text>
-          <Text style={[styles.subtitleText, { color: theme.colors.textSecondary }]}>
+      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+        <View style={[s.introCard, { backgroundColor: theme.colors.primary + '0A' }]}>
+          <Text style={[s.introTitle, { color: theme.colors.text }]}>Privacy Policy</Text>
+          <Text style={[s.introSub, { color: theme.colors.textSecondary }]}>
             Your privacy matters to us. Learn how we collect, use, and protect your data.
           </Text>
-          <View style={[styles.datePill, { backgroundColor: theme.colors.primary + '12' }]}>
-            <Text style={[styles.dateText, { color: theme.colors.primary }]}>Last Updated: January 2024</Text>
+          <View style={[s.datePill, { backgroundColor: theme.colors.primary + '14' }]}>
+            <Text style={[s.dateText, { color: theme.colors.primary }]}>Last Updated: January 2024</Text>
           </View>
         </View>
 
-        {/* ── Introduction ── */}
-        <View style={[styles.card, { backgroundColor: theme.colors.primary + '08', borderColor: theme.colors.primary + '20', borderWidth: 1 }]}>
-          <Text style={[styles.introText, { color: theme.colors.text }]}>
+        <View style={[s.card, { backgroundColor: theme.colors.primary + '08', borderColor: theme.colors.primary + '20' }]}>
+          <Text style={[s.bodyText, { color: theme.colors.text }]}>
             Forlok Technologies Pvt. Ltd. ("Forlok", "we", "us") respects your privacy and is committed
             to protecting the personal information you share with us. This Privacy Policy explains what
             data we collect, how we use it, and the choices you have regarding your information. This policy
@@ -254,216 +99,164 @@ We encourage you to review this policy periodically for any changes.`,
           </Text>
         </View>
 
-        {/* ── Sections ── */}
-        {sections.map((section, index) => {
-          const Icon = section.icon;
-          return (
-            <View key={index} style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-              <View style={styles.sectionHeader}>
-                <View style={[styles.sectionNum, { backgroundColor: section.color + '15' }]}>
-                  <Text style={[styles.sectionNumText, { color: section.color }]}>{index + 1}</Text>
-                </View>
-                <View style={styles.sectionTitleArea}>
-                  <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{section.title}</Text>
-                </View>
-                <View style={[styles.sectionIconWrap, { backgroundColor: section.color + '12' }]}>
-                  <Icon size={18} color={section.color} />
-                </View>
+        {sections.map((section, i) => (
+          <View key={i} style={[s.card, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}>
+            <View style={s.sectionHead}>
+              <View style={[s.badge, { backgroundColor: theme.colors.primary + '14' }]}>
+                <Text style={[s.badgeText, { color: theme.colors.primary }]}>{i + 1}</Text>
               </View>
-              <Text style={[styles.sectionContent, { color: theme.colors.textSecondary }]}>{section.content}</Text>
+              <Text style={[s.sectionTitle, { color: theme.colors.text }]}>{section.title}</Text>
             </View>
-          );
-        })}
-
-        {/* ── Your Rights ── */}
-        <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-          <View style={styles.sectionHeader}>
-            <View style={[styles.sectionIconWrap, { backgroundColor: '#4CAF50' + '12' }]}>
-              <ShieldCheck size={18} color="#4CAF50" />
-            </View>
-            <View style={styles.sectionTitleArea}>
-              <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Your Rights</Text>
-            </View>
+            <Text style={[s.bodyText, { color: theme.colors.textSecondary }]}>{section.content}</Text>
           </View>
-          <Text style={[styles.sectionContent, { color: theme.colors.textSecondary, marginBottom: SPACING.md }]}>
+        ))}
+
+        <View style={[s.card, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}>
+          <View style={s.sectionHead}>
+            <View style={[s.badge, { backgroundColor: theme.colors.primary + '14' }]}>
+              <Text style={[s.badgeText, { color: theme.colors.primary }]}>{'\u2713'}</Text>
+            </View>
+            <Text style={[s.sectionTitle, { color: theme.colors.text }]}>Your Rights</Text>
+          </View>
+          <Text style={[s.bodyText, { color: theme.colors.textSecondary, marginBottom: normalize(12) }]}>
             Under applicable Indian data protection laws, you have the following rights:
           </Text>
-          <View style={styles.rightsGrid}>
-            {rights.map((right, index) => (
-              <View key={index} style={[styles.rightChip, { backgroundColor: theme.colors.background, borderColor: theme.colors.border }]}>
-                <Text style={[styles.rightTitle, { color: theme.colors.text }]}>{right.title}</Text>
-                <Text style={[styles.rightDesc, { color: theme.colors.textSecondary }]}>{right.desc}</Text>
+          <View style={s.rightsGrid}>
+            {rights.map((r, i) => (
+              <View key={i} style={[s.rightChip, { backgroundColor: theme.colors.background, borderColor: theme.colors.border }]}>
+                <Text style={[s.rightTitle, { color: theme.colors.text }]}>{r.title}</Text>
+                <Text style={[s.rightDesc, { color: theme.colors.textSecondary }]}>{r.desc}</Text>
               </View>
             ))}
           </View>
         </View>
 
-        {/* ── Contact Footer ── */}
-        <View style={[styles.footerCard, { backgroundColor: theme.colors.surface }]}>
-          <Mail size={22} color={theme.colors.primary} />
-          <Text style={[styles.footerTitle, { color: theme.colors.text }]}>Data Protection Officer</Text>
-          <Text style={[styles.footerText, { color: theme.colors.textSecondary }]}>
+        <View style={[s.card, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface, alignItems: 'center' }]}>
+          <Text style={[s.footerTitle, { color: theme.colors.text }]}>Data Protection Officer</Text>
+          <Text style={[s.footerSub, { color: theme.colors.textSecondary }]}>
             For privacy-related inquiries, data requests, or complaints, contact our DPO:
           </Text>
-          <View style={[styles.contactPill, { backgroundColor: theme.colors.primary + '10' }]}>
-            <Text style={[styles.contactEmail, { color: theme.colors.primary }]}>privacy@forlok.com</Text>
+          <View style={[s.emailPill, { backgroundColor: theme.colors.primary + '10' }]}>
+            <Text style={[s.emailText, { color: theme.colors.primary }]}>privacy@forlok.com</Text>
           </View>
-          <Text style={[styles.footerSmall, { color: theme.colors.textSecondary }]}>
-            Forlok Technologies Pvt. Ltd.{'\n'}Hyderabad, Telangana 500081, India
-          </Text>
         </View>
 
-        {/* ── Disclaimer ── */}
-        <Text style={[styles.disclaimer, { color: theme.colors.textSecondary }]}>
+        <Text style={[s.copyright, { color: theme.colors.textSecondary }]}>
           {'\u00A9'} 2024 Forlok Technologies Pvt. Ltd. All rights reserved.
           {'\n'}This policy is governed by the laws of India.
         </Text>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   container: { flex: 1 },
 
-  /* ── Hero Header ── */
-  headerImage: { width: '100%', height: hp(20) },
-  headerOverlay: { ...StyleSheet.absoluteFillObject, opacity: 0.78 },
-  blurContainer: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'flex-end',
-    paddingBottom: SPACING.lg,
-    paddingHorizontal: SPACING.md,
-  },
-  headerNav: { flexDirection: 'row', alignItems: 'center' },
-  navButton: {
-    width: normalize(38),
-    height: normalize(38),
-    borderRadius: normalize(19),
-    backgroundColor: 'rgba(255,255,255,0.18)',
+  header: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    paddingTop: normalize(48),
+    paddingBottom: normalize(14),
+    paddingHorizontal: normalize(16),
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  navTitle: {
+  headerTitle: {
     flex: 1,
-    fontFamily: FONTS.regular,
-    fontSize: normalize(22),
-    color: '#FFF',
-    fontWeight: '800',
     textAlign: 'center',
-    letterSpacing: normalize(0.4),
+    fontFamily: FONTS.bold,
+    fontSize: normalize(17),
+    fontWeight: '700',
   },
 
-  /* ── Scroll ── */
-  scrollContent: { padding: SPACING.md, paddingBottom: SPACING.xl * 2 },
+  scroll: {
+    padding: normalize(16),
+    paddingBottom: normalize(40),
+  },
 
-  /* ── Title Card ── */
-  titleCard: {
-    borderRadius: normalize(20),
-    padding: SPACING.xl,
+  introCard: {
+    borderRadius: normalize(12),
+    padding: normalize(20),
     alignItems: 'center',
-    marginBottom: SPACING.md,
-    ...SHADOWS.md,
+    marginBottom: normalize(12),
   },
-  titleIconCircle: {
-    width: normalize(56),
-    height: normalize(56),
-    borderRadius: normalize(28),
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: SPACING.sm,
-  },
-  titleText: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(22),
-    fontWeight: '800',
+  introTitle: {
+    fontFamily: FONTS.bold,
+    fontSize: normalize(20),
+    fontWeight: '700',
     marginBottom: normalize(4),
   },
-  subtitleText: {
+  introSub: {
     fontFamily: FONTS.regular,
     fontSize: normalize(13),
     textAlign: 'center',
-    marginBottom: SPACING.sm,
     lineHeight: normalize(19),
+    marginBottom: normalize(10),
   },
   datePill: {
     paddingHorizontal: normalize(14),
-    paddingVertical: normalize(4),
+    paddingVertical: normalize(5),
     borderRadius: normalize(20),
   },
   dateText: {
-    fontFamily: FONTS.regular,
+    fontFamily: FONTS.medium,
     fontSize: normalize(12),
-    fontWeight: '700',
+    fontWeight: '600',
   },
 
-  /* ── Generic Card ── */
   card: {
-    borderRadius: normalize(16),
-    padding: SPACING.lg,
-    marginBottom: SPACING.md,
-    ...SHADOWS.md,
-  },
-  introText: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(14),
-    lineHeight: normalize(22),
+    borderRadius: normalize(12),
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: normalize(16),
+    marginBottom: normalize(12),
   },
 
-  /* ── Section ── */
-  sectionHeader: {
+  sectionHead: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: SPACING.md,
+    marginBottom: normalize(10),
     gap: normalize(10),
   },
-  sectionNum: {
-    width: normalize(32),
-    height: normalize(32),
-    borderRadius: normalize(10),
+  badge: {
+    width: normalize(28),
+    height: normalize(28),
+    borderRadius: normalize(8),
     alignItems: 'center',
     justifyContent: 'center',
   },
-  sectionNumText: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(14),
-    fontWeight: '800',
-  },
-  sectionTitleArea: { flex: 1 },
-  sectionTitle: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(16),
+  badgeText: {
+    fontFamily: FONTS.bold,
+    fontSize: normalize(13),
     fontWeight: '700',
   },
-  sectionIconWrap: {
-    width: normalize(34),
-    height: normalize(34),
-    borderRadius: normalize(10),
-    alignItems: 'center',
-    justifyContent: 'center',
+  sectionTitle: {
+    flex: 1,
+    fontFamily: FONTS.semiBold,
+    fontSize: normalize(15),
+    fontWeight: '600',
   },
-  sectionContent: {
+
+  bodyText: {
     fontFamily: FONTS.regular,
     fontSize: normalize(13),
     lineHeight: normalize(21),
   },
 
-  /* ── Rights Grid ── */
   rightsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: SPACING.sm,
+    gap: normalize(8),
   },
   rightChip: {
-    width: (wp(100) - SPACING.md * 2 - SPACING.lg * 2 - SPACING.sm) / 2,
-    borderRadius: normalize(12),
-    padding: SPACING.sm + 2,
-    borderWidth: 1,
+    width: (wp(100) - normalize(16) * 2 - normalize(16) * 2 - normalize(8)) / 2,
+    borderRadius: normalize(10),
+    padding: normalize(10),
+    borderWidth: StyleSheet.hairlineWidth,
   },
   rightTitle: {
-    fontFamily: FONTS.regular,
+    fontFamily: FONTS.semiBold,
     fontSize: normalize(12),
-    fontWeight: '700',
+    fontWeight: '600',
     marginBottom: normalize(2),
   },
   rightDesc: {
@@ -472,47 +265,35 @@ const styles = StyleSheet.create({
     lineHeight: normalize(15),
   },
 
-  /* ── Footer ── */
-  footerCard: {
-    borderRadius: normalize(16),
-    padding: SPACING.xl,
-    alignItems: 'center',
-    marginBottom: SPACING.md,
-    ...SHADOWS.md,
-    gap: normalize(6),
-  },
   footerTitle: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(17),
+    fontFamily: FONTS.bold,
+    fontSize: normalize(16),
     fontWeight: '700',
+    marginBottom: normalize(6),
   },
-  footerText: {
+  footerSub: {
     fontFamily: FONTS.regular,
     fontSize: normalize(13),
     textAlign: 'center',
+    marginBottom: normalize(12),
   },
-  contactPill: {
+  emailPill: {
     paddingHorizontal: normalize(18),
     paddingVertical: normalize(8),
     borderRadius: normalize(20),
   },
-  contactEmail: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(14),
-    fontWeight: '700',
+  emailText: {
+    fontFamily: FONTS.semiBold,
+    fontSize: normalize(13),
+    fontWeight: '600',
   },
-  footerSmall: {
+
+  copyright: {
     fontFamily: FONTS.regular,
     fontSize: normalize(11),
     textAlign: 'center',
-    lineHeight: normalize(16),
-  },
-  disclaimer: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(11),
-    textAlign: 'center',
-    lineHeight: normalize(18),
-    marginBottom: SPACING.xl,
+    lineHeight: normalize(17),
+    marginTop: normalize(4),
   },
 });
 

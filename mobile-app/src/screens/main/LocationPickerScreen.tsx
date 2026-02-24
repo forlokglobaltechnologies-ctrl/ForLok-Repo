@@ -13,10 +13,10 @@ const LocationPickerScreen = () => {
   };
 
   const handleLocationSelect = (location: LocationData) => {
-    if (onLocationSelect) {
-      onLocationSelect(location);
-    }
     navigation.goBack();
+    if (onLocationSelect) {
+      setTimeout(() => onLocationSelect(location), 150);
+    }
   };
 
   return (

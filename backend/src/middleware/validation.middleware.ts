@@ -19,12 +19,15 @@ export function validate(schema: ZodSchema) {
     } catch (error) {
       if (error instanceof z.ZodError) {
         const errors = error.errors.map((err) => ({
-          field: err.path.join('.'),
+          field: err.path.join('.') || 'body',
           message: err.message,
+          code: 'INVALID_FIELD',
         }));
 
         throw new ValidationError(
-          `Validation failed: ${errors.map((e) => e.message).join(', ')}`
+          'Validation failed',
+          errors,
+          error.errors
         );
       }
       throw error;

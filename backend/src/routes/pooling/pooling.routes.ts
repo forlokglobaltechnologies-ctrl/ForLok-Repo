@@ -23,6 +23,13 @@ const createOfferSchema = z.object({
       city: z.string().optional(),
       state: z.string().optional(),
     }),
+    waypoints: z.array(z.object({
+      address: z.string(),
+      lat: z.number(),
+      lng: z.number(),
+      city: z.string().optional(),
+      order: z.number().int().min(0),
+    })).max(5).optional(),
     distance: z.number().optional(),
     duration: z.number().optional(),
   }),
@@ -30,7 +37,7 @@ const createOfferSchema = z.object({
   time: z.string(),
   vehicleId: z.string(),
   availableSeats: z.number().min(1),
-  price: z.number().min(0).optional(), // Optional: Legacy field, not used for dynamic pricing
+  price: z.number().min(0).optional(),
   notes: z.string().optional(),
 });
 
@@ -50,6 +57,13 @@ const updateOfferSchema = z.object({
       city: z.string().optional(),
       state: z.string().optional(),
     }),
+    waypoints: z.array(z.object({
+      address: z.string(),
+      lat: z.number(),
+      lng: z.number(),
+      city: z.string().optional(),
+      order: z.number().int().min(0),
+    })).max(5).optional(),
     distance: z.number().optional(),
     duration: z.number().optional(),
   }).optional(),
@@ -196,6 +210,47 @@ export async function poolingRoutes(fastify: FastifyInstance) {
   );
 
   /**
+   * GET /api/pooling/offers/connected-search
+   * Search for direct + connected (multi-hop) pooling offers
+   */
+  fastify.get(
+    '/offers/connected-search',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const query = request.query as any;
+
+      const fromLat = parseFloat(query.fromLat);
+      const fromLng = parseFloat(query.fromLng);
+      const toLat = parseFloat(query.toLat);
+      const toLng = parseFloat(query.toLng);
+
+      if (isNaN(fromLat) || isNaN(fromLng) || isNaN(toLat) || isNaN(toLng)) {
+        return reply.status(400).send({
+          success: false,
+          message: 'fromLat, fromLng, toLat, toLng are required',
+        });
+      }
+
+      const filters: any = { fromLat, fromLng, toLat, toLng };
+      if (query.date) filters.date = new Date(query.date);
+      if (query.time) filters.time = query.time as string;
+      if (query.vehicleType) filters.vehicleType = query.vehicleType;
+      if (query.pinkOnly === 'true' || query.pinkOnly === true) {
+        filters.pinkOnly = true;
+      }
+
+      const result = await poolingService.searchConnectedOffers(filters);
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Connected search completed',
+        data: result,
+      };
+
+      return reply.status(200).send(response);
+    }
+  );
+
+  /**
    * GET /api/pooling/offers/nearby
    * Get nearby pooling offers
    */
@@ -276,11 +331,12 @@ export async function poolingRoutes(fastify: FastifyInstance) {
       const driverId = (request as any).user.userId;
       const { offerId } = request.params as { offerId: string };
 
-      await poolingService.cancelOffer(offerId, driverId);
+      const result = await poolingService.cancelOffer(offerId, driverId);
 
       const response: ApiResponse = {
         success: true,
-        message: 'Offer cancelled successfully',
+        message: result.deleted ? 'Offer deleted successfully' : 'Offer cancelled successfully',
+        data: result,
       };
 
       return reply.status(200).send(response);
@@ -372,6 +428,57 @@ export async function poolingRoutes(fastify: FastifyInstance) {
       };
 
       return reply.status(200).send(response);
+    }
+  );
+
+  /**
+   * GET /api/pooling/suggest-waypoints
+   * Returns suggested intermediate waypoints for a from/to pair
+   */
+  fastify.get(
+    '/suggest-waypoints',
+    {
+      preHandler: [authenticate],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { fromLat, fromLng, toLat, toLng } = request.query as {
+        fromLat: string;
+        fromLng: string;
+        toLat: string;
+        toLng: string;
+      };
+
+      const fLat = parseFloat(fromLat);
+      const fLng = parseFloat(fromLng);
+      const tLat = parseFloat(toLat);
+      const tLng = parseFloat(toLng);
+
+      if ([fLat, fLng, tLat, tLng].some((v) => !Number.isFinite(v))) {
+        return reply.status(400).send({
+          success: false,
+          message: 'Invalid coordinates. Provide fromLat, fromLng, toLat, toLng as numbers.',
+        });
+      }
+
+      const { getRoutePolyline, generateAutoWaypoints, getMinWaypointCount } = await import('../../utils/maps');
+      const { calculateDistance } = await import('../../utils/helpers');
+
+      const polyline = await getRoutePolyline(fLat, fLng, tLat, tLng);
+      const routeDistKm = calculateDistance(fLat, fLng, tLat, tLng);
+      const minRequired = getMinWaypointCount(routeDistKm);
+      const waypoints = await generateAutoWaypoints(polyline, routeDistKm);
+
+      const resp: ApiResponse = {
+        success: true,
+        message: 'Suggested waypoints generated',
+        data: {
+          waypoints,
+          routeDistanceKm: Math.round(routeDistKm),
+          minRequired,
+        },
+      };
+
+      return reply.status(200).send(resp);
     }
   );
 }

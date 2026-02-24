@@ -16,6 +16,8 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { ArrowLeft, Circle, Camera, Check, X, FileText } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
+
+const ACCENT = '#F9A825';
 import { Button } from '@components/common/Button';
 import { Input } from '@components/common/Input';
 import { PhoneInput } from '@components/common/PhoneInput';
@@ -23,11 +25,14 @@ import { useLanguage } from '@context/LanguageContext';
 import { useAuth } from '@context/AuthContext';
 import { authApi, companyApi, uploadFile } from '@utils/apiClient';
 import { normalize, wp, hp } from '@utils/responsive';
+import { useSnackbar } from '@context/SnackbarContext';
+import { getUserErrorMessage, mapFieldErrors } from '@utils/errorUtils';
 
 const CompanyRegistrationScreen = () => {
   const navigation = useNavigation();
   const { t } = useLanguage();
   const { login } = useAuth();
+  const { showSnackbar } = useSnackbar();
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 3;
 
@@ -71,13 +76,16 @@ const CompanyRegistrationScreen = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleSendPhoneOtp = async () => {
     if (!contactNumber || contactNumber.length < 10) {
-      Alert.alert('Error', 'Please enter a valid phone number');
+      setErrors((prev) => ({ ...prev, contactNumber: 'Please enter a valid phone number' }));
+      showSnackbar({ message: 'Please enter a valid phone number', type: 'error' });
       return;
     }
     
+    setErrors((prev) => ({ ...prev, contactNumber: '', phoneOtp: '' }));
     setPhoneLoading(true);
     try {
       const formattedPhone = `+91${contactNumber}`;
@@ -94,10 +102,12 @@ const CompanyRegistrationScreen = () => {
           );
         }
       } else {
-        Alert.alert('Error', response.error || 'Failed to send OTP');
+        const fieldErrors = mapFieldErrors(response as any, { phone: 'contactNumber' });
+        setErrors((prev) => ({ ...prev, ...fieldErrors }));
+        showSnackbar({ message: getUserErrorMessage(response as any, 'Failed to send OTP'), type: 'error' });
       }
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to send OTP');
+      showSnackbar({ message: error.message || 'Failed to send OTP', type: 'error' });
     } finally {
       setPhoneLoading(false);
     }
@@ -105,7 +115,8 @@ const CompanyRegistrationScreen = () => {
 
   const handleVerifyPhoneOtp = async () => {
     if (!phoneOtp || phoneOtp.length !== 6) {
-      Alert.alert('Error', 'Please enter a valid 6-digit OTP');
+      setErrors((prev) => ({ ...prev, phoneOtp: 'Please enter a valid 6-digit OTP' }));
+      showSnackbar({ message: 'Please enter a valid 6-digit OTP', type: 'error' });
       return;
     }
     
@@ -116,12 +127,15 @@ const CompanyRegistrationScreen = () => {
       
       if (response.success) {
         setPhoneVerified(true);
-        Alert.alert('Success', 'Phone number verified successfully');
+        setErrors((prev) => ({ ...prev, phoneOtp: '' }));
+        showSnackbar({ message: 'Phone number verified successfully', type: 'success' });
       } else {
-        Alert.alert('Error', response.error || 'Invalid OTP');
+        const fieldErrors = mapFieldErrors(response as any, { otp: 'phoneOtp' });
+        setErrors((prev) => ({ ...prev, ...fieldErrors }));
+        showSnackbar({ message: getUserErrorMessage(response as any, 'Invalid OTP'), type: 'error' });
       }
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to verify OTP');
+      showSnackbar({ message: error.message || 'Failed to verify OTP', type: 'error' });
     } finally {
       setPhoneVerifying(false);
     }
@@ -129,10 +143,12 @@ const CompanyRegistrationScreen = () => {
 
   const handleSendEmailOtp = async () => {
     if (!email || !email.includes('@')) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      setErrors((prev) => ({ ...prev, email: 'Please enter a valid email address' }));
+      showSnackbar({ message: 'Please enter a valid email address', type: 'error' });
       return;
     }
     
+    setErrors((prev) => ({ ...prev, email: '', emailOtp: '' }));
     setEmailLoading(true);
     try {
       const response = await authApi.sendEmailOTP(email, 'verify_email');
@@ -150,10 +166,12 @@ const CompanyRegistrationScreen = () => {
           Alert.alert('Success', 'OTP sent to your email');
         }
       } else {
-        Alert.alert('Error', response.error || 'Failed to send OTP');
+        const fieldErrors = mapFieldErrors(response as any, { email: 'email' });
+        setErrors((prev) => ({ ...prev, ...fieldErrors }));
+        showSnackbar({ message: getUserErrorMessage(response as any, 'Failed to send OTP'), type: 'error' });
       }
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to send OTP');
+      showSnackbar({ message: error.message || 'Failed to send OTP', type: 'error' });
     } finally {
       setEmailLoading(false);
     }
@@ -161,7 +179,8 @@ const CompanyRegistrationScreen = () => {
 
   const handleVerifyEmailOtp = async () => {
     if (!emailOtp || emailOtp.length !== 6) {
-      Alert.alert('Error', 'Please enter a valid 6-digit OTP');
+      setErrors((prev) => ({ ...prev, emailOtp: 'Please enter a valid 6-digit OTP' }));
+      showSnackbar({ message: 'Please enter a valid 6-digit OTP', type: 'error' });
       return;
     }
     
@@ -171,12 +190,15 @@ const CompanyRegistrationScreen = () => {
       
       if (response.success) {
         setEmailVerified(true);
-        Alert.alert('Success', 'Email verified successfully');
+        setErrors((prev) => ({ ...prev, emailOtp: '' }));
+        showSnackbar({ message: 'Email verified successfully', type: 'success' });
       } else {
-        Alert.alert('Error', response.error || 'Invalid OTP');
+        const fieldErrors = mapFieldErrors(response as any, { otp: 'emailOtp' });
+        setErrors((prev) => ({ ...prev, ...fieldErrors }));
+        showSnackbar({ message: getUserErrorMessage(response as any, 'Invalid OTP'), type: 'error' });
       }
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to verify OTP');
+      showSnackbar({ message: error.message || 'Failed to verify OTP', type: 'error' });
     } finally {
       setEmailVerifying(false);
     }
@@ -209,8 +231,7 @@ const CompanyRegistrationScreen = () => {
             onPress: async () => {
               const result = await ImagePicker.launchCameraAsync({
                 mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                allowsEditing: true,
-                aspect: [4, 3],
+                allowsEditing: false,
                 quality: 0.8,
               });
 
@@ -237,8 +258,7 @@ const CompanyRegistrationScreen = () => {
             onPress: async () => {
               const result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                allowsEditing: true,
-                aspect: [4, 3],
+                allowsEditing: false,
                 quality: 0.8,
               });
 
@@ -417,7 +437,7 @@ const CompanyRegistrationScreen = () => {
     if (currentStep === 1) {
       // Check if phone and email are verified
       if (!phoneVerified || !emailVerified) {
-        Alert.alert('Verification Required', 'Please verify both phone number and email before continuing');
+        showSnackbar({ message: 'Please verify both phone number and email before continuing', type: 'warning' });
         return;
       }
       // Validate required fields
@@ -433,7 +453,7 @@ const CompanyRegistrationScreen = () => {
     if (currentStep === 2) {
       // Check if all documents are uploaded
       if (!registrationCertificate || !gstCertificate || !businessLicense) {
-        Alert.alert('Documents Required', 'Please upload all required documents before continuing');
+        showSnackbar({ message: 'Please upload all required documents before continuing', type: 'warning' });
         return;
       }
       setCurrentStep(3);
@@ -450,31 +470,36 @@ const CompanyRegistrationScreen = () => {
     // Validate all fields
     if (!companyName.trim() || !registrationNumber.trim() || !businessType.trim() || 
         !address.trim() || !contactNumber || !email) {
-      Alert.alert('Error', 'Please fill in all required fields');
+      showSnackbar({ message: 'Please fill in all required fields', type: 'error' });
       return;
     }
 
     if (!password || password.length < 8) {
-      Alert.alert('Error', 'Password must be at least 8 characters');
+      setErrors((prev) => ({ ...prev, password: 'Password must be at least 8 characters' }));
+      showSnackbar({ message: 'Password must be at least 8 characters', type: 'error' });
       return;
     }
 
     // Check password requirements
     if (!/[A-Z]/.test(password)) {
-      Alert.alert('Error', 'Password must contain at least one uppercase letter');
+      setErrors((prev) => ({ ...prev, password: 'Password must contain at least one uppercase letter' }));
+      showSnackbar({ message: 'Password must contain at least one uppercase letter', type: 'error' });
       return;
     }
     if (!/[a-z]/.test(password)) {
-      Alert.alert('Error', 'Password must contain at least one lowercase letter');
+      setErrors((prev) => ({ ...prev, password: 'Password must contain at least one lowercase letter' }));
+      showSnackbar({ message: 'Password must contain at least one lowercase letter', type: 'error' });
       return;
     }
     if (!/[0-9]/.test(password)) {
-      Alert.alert('Error', 'Password must contain at least one number');
+      setErrors((prev) => ({ ...prev, password: 'Password must contain at least one number' }));
+      showSnackbar({ message: 'Password must contain at least one number', type: 'error' });
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      setErrors((prev) => ({ ...prev, confirmPassword: 'Passwords do not match' }));
+      showSnackbar({ message: 'Passwords do not match', type: 'error' });
       return;
     }
 
@@ -500,7 +525,14 @@ const CompanyRegistrationScreen = () => {
       console.log('📱 [COMPANY REG] User userType in response:', userResponse.data?.user?.userType);
 
       if (!userResponse.success || !userResponse.data?.user?.userId) {
-        Alert.alert('Error', userResponse.error || 'Failed to register user');
+        const fieldErrors = mapFieldErrors(userResponse as any, {
+          phone: 'contactNumber',
+          email: 'email',
+          password: 'password',
+          confirmPassword: 'confirmPassword',
+        });
+        setErrors((prev) => ({ ...prev, ...fieldErrors }));
+        showSnackbar({ message: getUserErrorMessage(userResponse as any, 'Failed to register user'), type: 'error' });
         return;
       }
 
@@ -539,7 +571,7 @@ const CompanyRegistrationScreen = () => {
 
       // Step 3: Register company
       if (!city.trim() || !state.trim() || !pincode.trim() || pincode.length !== 6) {
-        Alert.alert('Error', 'Please fill in city, state, and a valid 6-digit pincode');
+        showSnackbar({ message: 'Please fill in city, state, and a valid 6-digit pincode', type: 'error' });
         return;
       }
 
@@ -581,11 +613,11 @@ const CompanyRegistrationScreen = () => {
           ]
         );
       } else {
-        Alert.alert('Error', companyResponse.error || 'Failed to register company');
+        showSnackbar({ message: getUserErrorMessage(companyResponse as any, 'Failed to register company'), type: 'error' });
       }
     } catch (error: any) {
       console.error('Registration error:', error);
-      Alert.alert('Error', error.message || 'Failed to complete registration');
+      showSnackbar({ message: error.message || 'Failed to complete registration', type: 'error' });
     } finally {
       setRegistering(false);
     }
@@ -599,17 +631,19 @@ const CompanyRegistrationScreen = () => {
     }
   };
 
-  const renderProgressBar = () => {
-    const progress = (currentStep / totalSteps) * 100;
-    return (
-      <View style={styles.progressContainer}>
-        <Text style={styles.progressText}>{t('companyRegistration.step').replace('{current}', String(currentStep)).replace('{total}', String(totalSteps))}</Text>
-        <View style={styles.progressBar}>
-          <View style={[styles.progressFill, { width: `${progress}%` }]} />
-        </View>
-      </View>
-    );
-  };
+  const renderProgressDashes = () => (
+    <View style={styles.progressRow}>
+      {Array.from({ length: totalSteps }, (_, i) => (
+        <View
+          key={i}
+          style={[
+            styles.progressDash,
+            currentStep >= i + 1 && styles.progressDashActive,
+          ]}
+        />
+      ))}
+    </View>
+  );
 
   const renderStep1 = () => (
     <View>
@@ -679,10 +713,12 @@ const CompanyRegistrationScreen = () => {
             setContactNumber(text);
             setPhoneOtpSent(false);
             setPhoneVerified(false);
+            if (errors.contactNumber) setErrors((prev) => ({ ...prev, contactNumber: '' }));
           }}
           placeholder="Enter your phone number"
           containerStyle={styles.input}
           editable={!phoneVerified}
+          error={errors.contactNumber}
         />
         {phoneVerified && (
           <View style={styles.verifiedBadge}>
@@ -706,11 +742,15 @@ const CompanyRegistrationScreen = () => {
                 <Input
                   label="Enter OTP"
                   value={phoneOtp}
-                  onChangeText={setPhoneOtp}
+                  onChangeText={(text) => {
+                    setPhoneOtp(text);
+                    if (errors.phoneOtp) setErrors((prev) => ({ ...prev, phoneOtp: '' }));
+                  }}
                   placeholder="______"
                   keyboardType="number-pad"
                   maxLength={6}
                   containerStyle={styles.input}
+                  error={errors.phoneOtp}
                 />
                 <Button
                   title={phoneVerifying ? 'Verifying...' : 'Verify OTP'}
@@ -734,11 +774,13 @@ const CompanyRegistrationScreen = () => {
             setEmail(text);
             setEmailOtpSent(false);
             setEmailVerified(false);
+            if (errors.email) setErrors((prev) => ({ ...prev, email: '' }));
           }}
           placeholder={t('common.enter') + ' ' + t('common.email').toLowerCase()}
           keyboardType="email-address"
           containerStyle={styles.input}
           editable={!emailVerified}
+          error={errors.email}
         />
         {emailVerified && (
           <View style={styles.verifiedBadge}>
@@ -762,11 +804,15 @@ const CompanyRegistrationScreen = () => {
                 <Input
                   label="Enter Email OTP"
                   value={emailOtp}
-                  onChangeText={setEmailOtp}
+                  onChangeText={(text) => {
+                    setEmailOtp(text);
+                    if (errors.emailOtp) setErrors((prev) => ({ ...prev, emailOtp: '' }));
+                  }}
                   placeholder="______"
                   keyboardType="number-pad"
                   maxLength={6}
                   containerStyle={styles.input}
+                  error={errors.emailOtp}
                 />
                 <Button
                   title={emailVerifying ? 'Verifying...' : 'Verify Email OTP'}
@@ -941,12 +987,16 @@ const CompanyRegistrationScreen = () => {
       <Input
         label={t('companyRegistration.password')}
         value={password}
-        onChangeText={setPassword}
+        onChangeText={(text) => {
+          setPassword(text);
+          if (errors.password) setErrors((prev) => ({ ...prev, password: '' }));
+        }}
         placeholder={t('companyRegistration.createPassword')}
         secureTextEntry={!showPassword}
         showPasswordToggle
         onPasswordToggle={() => setShowPassword(!showPassword)}
         containerStyle={styles.input}
+        error={errors.password}
       />
       <View style={styles.passwordHint}>
         <View style={styles.hintItem}>
@@ -965,66 +1015,67 @@ const CompanyRegistrationScreen = () => {
       <Input
         label={t('companyRegistration.confirmPassword')}
         value={confirmPassword}
-        onChangeText={setConfirmPassword}
+        onChangeText={(text) => {
+          setConfirmPassword(text);
+          if (errors.confirmPassword) setErrors((prev) => ({ ...prev, confirmPassword: '' }));
+        }}
         placeholder={t('companyRegistration.confirmPasswordPlaceholder')}
         secureTextEntry={!showConfirmPassword}
         showPasswordToggle
         onPasswordToggle={() => setShowConfirmPassword(!showConfirmPassword)}
         containerStyle={styles.input}
+        error={errors.confirmPassword}
       />
     </View>
   );
+
+  const canContinue =
+    (currentStep === 1 && phoneVerified && emailVerified && companyName.trim() && registrationNumber.trim() && businessType.trim() && address.trim() && city.trim() && state.trim() && pincode.trim() && pincode.length === 6) ||
+    (currentStep === 2 && !!registrationCertificate && !!gstCertificate && !!businessLicense) ||
+    (currentStep === 3 && !!password && password.length >= 8 && password === confirmPassword);
 
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-          <ArrowLeft size={24} color={COLORS.primary} />
+        <TouchableOpacity style={styles.backBtn} onPress={handleBack} activeOpacity={0.7}>
+          <ArrowLeft size={22} color="#1A1A1A" />
         </TouchableOpacity>
       </View>
 
-      {renderProgressBar()}
+      {/* Progress dashes */}
+      {renderProgressDashes()}
 
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         {currentStep === 1 && renderStep1()}
         {currentStep === 2 && renderStep2()}
         {currentStep === 3 && renderStep3()}
       </ScrollView>
       
-      <View style={styles.buttonContainer}>
-        <Button
-          title={
-            registering
-              ? 'Registering...'
-              : currentStep === totalSteps
-              ? t('common.submit')
-              : t('common.continue')
-          }
+      {/* Bottom Button */}
+      <View style={styles.bottomBar}>
+        <TouchableOpacity
+          style={[styles.continueBtn, (!canContinue || registering) && styles.continueBtnDisabled]}
           onPress={handleNext}
-          variant="primary"
-          size="large"
-          style={styles.continueButton}
-          disabled={
-            registering ||
-            (currentStep === 1 && (!phoneVerified || !emailVerified || !companyName.trim() || !registrationNumber.trim() || !businessType.trim() || !address.trim() || !city.trim() || !state.trim() || !pincode.trim() || pincode.length !== 6)) ||
-            (currentStep === 2 && (!registrationCertificate || !gstCertificate || !businessLicense)) ||
-            (currentStep === 3 && (!password || password.length < 8 || password !== confirmPassword))
-          }
-        />
-        {registering && (
-          <ActivityIndicator
-            size="small"
-            color={COLORS.primary}
-            style={styles.loader}
-          />
-        )}
+          activeOpacity={0.85}
+          disabled={!canContinue || registering}
+        >
+          {registering ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <Text style={styles.continueBtnText}>
+              {currentStep === totalSteps ? t('common.submit') : t('common.continue')}
+            </Text>
+          )}
+        </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
   );
@@ -1033,54 +1084,48 @@ const CompanyRegistrationScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.white,
+    backgroundColor: '#FFFFFF',
   },
   header: {
     paddingTop: hp(6),
-    paddingHorizontal: SPACING.md,
-    backgroundColor: COLORS.white,
-  },
-  backButton: {
-    padding: SPACING.sm,
-    width: normalize(40),
-  },
-  progressContainer: {
     paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.md,
-    backgroundColor: COLORS.white,
+    paddingBottom: SPACING.md,
   },
-  progressText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.primary,
-    marginBottom: SPACING.xs,
-    fontWeight: '600',
+  backBtn: {
+    width: normalize(40),
+    height: normalize(40),
+    borderRadius: normalize(20),
+    backgroundColor: '#F5F5F5',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  progressBar: {
-    height: normalize(6),
-    backgroundColor: COLORS.lightGray,
-    borderRadius: normalize(3),
-    overflow: 'hidden',
+  progressRow: {
+    flexDirection: 'row',
+    paddingHorizontal: SPACING.lg,
+    gap: SPACING.sm,
+    marginBottom: SPACING.sm,
   },
-  progressFill: {
-    height: '100%',
-    backgroundColor: COLORS.primary,
-    borderRadius: normalize(3),
+  progressDash: {
+    flex: 1,
+    height: normalize(4),
+    borderRadius: normalize(2),
+    backgroundColor: '#E0E0E0',
+  },
+  progressDashActive: {
+    backgroundColor: ACCENT,
   },
   scrollView: {
     flex: 1,
-    backgroundColor: COLORS.white,
   },
   scrollContent: {
     padding: SPACING.lg,
-    paddingBottom: SPACING.xxl + normalize(80),
+    paddingBottom: normalize(100),
   },
   stepTitle: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xxl,
-    color: COLORS.primary,
+    fontFamily: FONTS.bold,
+    fontSize: normalize(22),
+    color: '#1A1A1A',
     marginBottom: SPACING.lg,
-    fontWeight: 'bold',
   },
   input: {
     marginBottom: SPACING.md,
@@ -1098,19 +1143,18 @@ const styles = StyleSheet.create({
   hintText: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.xs,
-    color: COLORS.textSecondary,
+    color: '#888888',
   },
   documentSection: {
-    marginBottom: SPACING.xl,
+    marginBottom: SPACING.lg,
     paddingBottom: SPACING.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.lightGray,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#E0E0E0',
   },
   documentTitle: {
-    fontFamily: FONTS.regular,
+    fontFamily: FONTS.semiBold,
     fontSize: FONTS.sizes.md,
-    color: COLORS.text,
-    fontWeight: 'bold',
+    color: '#1A1A1A',
     marginBottom: SPACING.md,
   },
   uploadButton: {
@@ -1119,33 +1163,44 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: SPACING.xs,
     padding: SPACING.md,
-    backgroundColor: COLORS.primary + '10',
-    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: '#FFFDE7',
+    borderRadius: BORDER_RADIUS.lg,
     borderWidth: 1,
-    borderColor: COLORS.primary + '30',
+    borderColor: ACCENT + '40',
     borderStyle: 'dashed',
   },
   uploadText: {
-    fontFamily: FONTS.regular,
+    fontFamily: FONTS.semiBold,
     fontSize: FONTS.sizes.md,
-    color: COLORS.primary,
-    fontWeight: '600',
+    color: ACCENT,
   },
-  buttonContainer: {
+  bottomBar: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: COLORS.white,
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: SPACING.lg,
     paddingTop: SPACING.md,
-    paddingBottom: SPACING.lg,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    ...SHADOWS.md,
+    paddingBottom: hp(3),
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#E0E0E0',
   },
-  continueButton: {
-    width: '100%',
+  continueBtn: {
+    backgroundColor: ACCENT,
+    height: normalize(52),
+    borderRadius: normalize(26),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  continueBtnDisabled: {
+    opacity: 0.45,
+  },
+  continueBtnText: {
+    fontFamily: FONTS.semiBold,
+    fontSize: FONTS.sizes.lg,
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
   },
   verifiedBadge: {
     flexDirection: 'row',
@@ -1153,12 +1208,14 @@ const styles = StyleSheet.create({
     gap: SPACING.xs,
     marginTop: SPACING.xs,
     marginBottom: SPACING.sm,
+    backgroundColor: '#E8F5E9',
+    padding: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md,
   },
   verifiedText: {
-    fontFamily: FONTS.regular,
+    fontFamily: FONTS.semiBold,
     fontSize: FONTS.sizes.sm,
-    color: COLORS.success,
-    fontWeight: '600',
+    color: '#4CAF50',
   },
   otpButton: {
     marginTop: SPACING.xs,

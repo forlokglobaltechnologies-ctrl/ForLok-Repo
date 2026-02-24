@@ -146,6 +146,12 @@ export interface Booking {
   paymentMethod: string;
   paymentStatus: 'paid' | 'pending' | 'failed';
   status: 'confirmed' | 'completed' | 'cancelled';
+  seatsBooked?: number;
+  coPassengers?: Array<{
+    name: string;
+    age: number;
+    gender: 'Male' | 'Female' | 'Other';
+  }>;
   passengers?: Passenger[];
 }
 

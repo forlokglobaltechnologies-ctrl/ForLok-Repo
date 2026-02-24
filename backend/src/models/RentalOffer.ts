@@ -71,7 +71,7 @@ const rentalOfferSchema = new Schema<IRentalOffer>(
     vehicle: {
       type: {
         type: String,
-        enum: ['car', 'bike'],
+        enum: ['car', 'bike', 'scooty'],
         required: true,
       },
       brand: {
@@ -163,7 +163,7 @@ const rentalOfferSchema = new Schema<IRentalOffer>(
     },
     status: {
       type: String,
-      enum: ['active', 'pending', 'expired', 'completed', 'cancelled', 'suspended', 'booked'],
+      enum: ['active', 'pending', 'expired', 'completed', 'cancelled', 'suspended', 'booked', 'in_progress'],
       default: 'pending',
     },
   },

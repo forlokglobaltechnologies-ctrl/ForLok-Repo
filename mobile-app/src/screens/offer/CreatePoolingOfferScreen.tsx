@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,66 +8,97 @@ import {
   SafeAreaView,
   KeyboardAvoidingView,
   Platform,
-  Image,
   Alert,
   StatusBar,
   ActivityIndicator,
+  Image,
+  TextInput,
 } from 'react-native';
-import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
-import { Video, ResizeMode } from 'expo-av';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { ArrowLeft, MapPin, Calendar, Clock, CheckCircle, IndianRupee, FileText, ChevronDown } from 'lucide-react-native';
+import { ArrowLeft, MapPin, Calendar, Clock, CheckCircle, IndianRupee, ChevronDown, ChevronRight, Car, Bike, Plus, X, GripVertical } from 'lucide-react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { normalize, wp, hp } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { Button } from '@components/common/Button';
 import { Input } from '@components/common/Input';
 import { useLanguage } from '@context/LanguageContext';
+import { useSnackbar } from '@context/SnackbarContext';
 import { poolingApi, vehicleApi } from '@utils/apiClient';
 import LocationPicker, { LocationData } from '@components/common/LocationPicker';
+import { getUserErrorMessage } from '@utils/errorUtils';
 
 const CreatePoolingOfferScreen = () => {
   const navigation = useNavigation();
   const { t } = useLanguage();
-  const videoRef = useRef<Video>(null);
+  const { showSnackbar } = useSnackbar();
   
   // ── All state declarations FIRST ──
   const [documentsUploaded, setDocumentsUploaded] = useState(false);
   const [isCheckingDocuments, setIsCheckingDocuments] = useState(true);
   const [allVehicles, setAllVehicles] = useState<any[]>([]);
   const [loadingVehicles, setLoadingVehicles] = useState(false);
+  const [lockedVehicleIds, setLockedVehicleIds] = useState<Set<string>>(new Set());
   const [fromLocation, setFromLocation] = useState<LocationData | null>(null);
   const [toLocation, setToLocation] = useState<LocationData | null>(null);
   const [date, setDate] = useState(new Date());
   const [time, setTime] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
-  const [vehicleType, setVehicleType] = useState<'Car' | 'Bike' | null>(null);
+  const [vehicleType, setVehicleType] = useState<'Car' | 'Bike' | 'Scooty' | null>(null);
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState<any | null>(null);
   const [showVehicleDropdown, setShowVehicleDropdown] = useState(false);
   const [availableSeats, setAvailableSeats] = useState(1);
   const [notes, setNotes] = useState('');
   const [creating, setCreating] = useState(false);
+  const [waypoints, setWaypoints] = useState<LocationData[]>([]);
+  const [suggestedWaypoints, setSuggestedWaypoints] = useState<Array<{ address: string; lat: number; lng: number; city?: string; order: number }>>([]);
+  const [selectedSuggestions, setSelectedSuggestions] = useState<Set<number>>(new Set());
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [minRequired, setMinRequired] = useState(0);
+  const [routeDistanceKm, setRouteDistanceKm] = useState(0);
   const route = useRoute();
 
   // ── Derived: filtered vehicles computed fresh every render ──
   const filteredVehicles = vehicleType
-    ? allVehicles.filter((v: any) => (v.type || '').toLowerCase() === vehicleType.toLowerCase())
+    ? allVehicles.filter((v: any) => {
+        const vType = (v.type || '').toLowerCase();
+        if (vehicleType === 'Scooty') return vType === 'scooty' || vType === 'scooter';
+        return vType === vehicleType.toLowerCase();
+      })
     : allVehicles;
 
   // ── Functions ──
   const loadVehicles = async () => {
     try {
       setLoadingVehicles(true);
-      const response = await vehicleApi.getVehicles();
-      if (response.success && response.data) {
-        console.log('🚗 [CreatePooling] Loaded vehicles:', response.data.map((v: any) => `${v.brand}(${v.type})`));
-        setAllVehicles(response.data);
+      const vehicleRes = await vehicleApi.getVehicles();
+      if (vehicleRes.success && vehicleRes.data) {
+        console.log('🚗 [CreatePooling] Loaded vehicles:', vehicleRes.data.map((v: any) => `${v.brand}(${v.type})`));
+        setAllVehicles(vehicleRes.data);
       }
     } catch (error: any) {
       console.error('Error loading vehicles:', error);
     } finally {
       setLoadingVehicles(false);
+    }
+    // Load locked vehicles in background (non-blocking)
+    try {
+      const offersRes = await poolingApi.getOffers();
+      if (offersRes.success && offersRes.data) {
+        const activeStatuses = ['active', 'pending', 'in_progress', 'booked'];
+        const lockedNumbers = new Set<string>(
+          offersRes.data
+            .filter((o: any) => activeStatuses.includes(o.status))
+            .map((o: any) => o.vehicle?.number)
+            .filter(Boolean)
+        );
+        console.log('🔒 Locked vehicle numbers:', [...lockedNumbers]);
+        setLockedVehicleIds(lockedNumbers);
+      }
+    } catch (err) {
+      console.warn('Could not check locked vehicles:', err);
     }
   };
 
@@ -110,12 +141,59 @@ const CreatePoolingOfferScreen = () => {
   };
 
   // ── Effects ──
-  useFocusEffect(
-    React.useCallback(() => {
-      checkDocumentsStatus();
-      loadVehicles();
-    }, [])
-  );
+  useEffect(() => {
+    checkDocumentsStatus();
+  }, []);
+
+  useEffect(() => {
+    loadVehicles();
+  }, []);
+
+  useEffect(() => {
+    if (fromLocation && toLocation) {
+      fetchSuggestedWaypoints();
+    } else {
+      setSuggestedWaypoints([]);
+      setSelectedSuggestions(new Set());
+    }
+  }, [fromLocation?.lat, fromLocation?.lng, toLocation?.lat, toLocation?.lng]);
+
+  const fetchSuggestedWaypoints = async () => {
+    if (!fromLocation || !toLocation) return;
+    try {
+      setLoadingSuggestions(true);
+      const res = await poolingApi.suggestWaypoints({
+        fromLat: fromLocation.lat,
+        fromLng: fromLocation.lng,
+        toLat: toLocation.lat,
+        toLng: toLocation.lng,
+      });
+      if (res.success && res.data) {
+        setSuggestedWaypoints(res.data.waypoints || []);
+        setMinRequired(res.data.minRequired || 0);
+        setRouteDistanceKm(res.data.routeDistanceKm || 0);
+        setSelectedSuggestions(new Set());
+      }
+    } catch (err) {
+      console.warn('Failed to fetch suggested waypoints:', err);
+    } finally {
+      setLoadingSuggestions(false);
+    }
+  };
+
+  const toggleSuggestion = (idx: number) => {
+    const next = new Set(selectedSuggestions);
+    const sw = suggestedWaypoints[idx];
+    if (next.has(idx)) {
+      next.delete(idx);
+      setWaypoints((prev) => prev.filter((wp) => wp.lat !== sw.lat || wp.lng !== sw.lng));
+    } else {
+      if (waypoints.length >= 5) return;
+      next.add(idx);
+      setWaypoints((prev) => [...prev, { address: sw.address, lat: sw.lat, lng: sw.lng, city: sw.city } as LocationData]);
+    }
+    setSelectedSuggestions(next);
+  };
 
   const formatDate = (date: Date) => {
     const day = date.getDate();
@@ -134,6 +212,8 @@ const CreatePoolingOfferScreen = () => {
     return `${hours}:${minutesStr} ${ampm}`;
   };
 
+  const cleanFieldLabel = (label: string) => label.replace(/\s*\*+\s*/g, '').trim();
+
   const onDateChange = (event: any, selectedDate?: Date) => {
     setShowDatePicker(Platform.OS === 'ios');
     if (selectedDate) {
@@ -146,6 +226,16 @@ const CreatePoolingOfferScreen = () => {
     if (selectedTime) {
       setTime(selectedTime);
     }
+  };
+
+  const handleAddWaypoint = (location: LocationData) => {
+    if (waypoints.length < 5) {
+      setWaypoints([...waypoints, location]);
+    }
+  };
+
+  const handleRemoveWaypoint = (index: number) => {
+    setWaypoints(waypoints.filter((_, i) => i !== index));
   };
 
   const handleCreate = async () => {
@@ -175,6 +265,23 @@ const CreatePoolingOfferScreen = () => {
       return;
     }
 
+    // Soft validation: warn if fewer waypoints than recommended
+    if (minRequired > 0 && waypoints.length < minRequired) {
+      return new Promise<void>((resolve) => {
+        Alert.alert(
+          'Add More Stops?',
+          `For a ${routeDistanceKm} km route, we recommend at least ${minRequired} stop${minRequired > 1 ? 's' : ''} to help passengers find your ride. You've added ${waypoints.length}.\n\nContinue anyway?`,
+          [
+            { text: 'Add Stops', style: 'cancel', onPress: () => resolve() },
+            { text: 'Continue', onPress: () => { proceedCreate(); resolve(); } },
+          ]
+        );
+      });
+    }
+    return proceedCreate();
+  };
+
+  const proceedCreate = async () => {
     try {
       setCreating(true);
 
@@ -186,7 +293,7 @@ const CreatePoolingOfferScreen = () => {
       dateTime.setMilliseconds(0);
 
       // Prepare offer data
-      const offerData = {
+      const offerData: any = {
         route: {
           from: {
             address: fromLocation.address,
@@ -210,6 +317,16 @@ const CreatePoolingOfferScreen = () => {
         notes: notes || undefined,
       };
 
+      if (waypoints.length > 0) {
+        offerData.route.waypoints = waypoints.map((wp, idx) => ({
+          address: wp.address,
+          lat: wp.lat,
+          lng: wp.lng,
+          city: wp.city,
+          order: idx,
+        }));
+      }
+
       console.log('Creating pooling offer:', offerData);
 
       const response = await poolingApi.createOffer(offerData);
@@ -230,11 +347,14 @@ const CreatePoolingOfferScreen = () => {
           ]
         );
       } else {
-        Alert.alert('Error', response.error || 'Failed to create offer. Please try again.');
+        showSnackbar({
+          message: getUserErrorMessage(response as any, 'Failed to create offer. Please try again.'),
+          type: 'error',
+        });
       }
     } catch (error: any) {
       console.error('Error creating offer:', error);
-      Alert.alert('Error', error.message || 'Failed to create offer. Please try again.');
+      showSnackbar({ message: error.message || 'Failed to create offer. Please try again.', type: 'error' });
     } finally {
       setCreating(false);
     }
@@ -263,6 +383,13 @@ const CreatePoolingOfferScreen = () => {
   return (
     <View style={styles.container}>
       <StatusBar hidden />
+      <View style={styles.stickyHeader}>
+        <TouchableOpacity style={styles.heroBackButton} onPress={() => navigation.goBack()}>
+          <ArrowLeft size={22} color={COLORS.text} />
+        </TouchableOpacity>
+        <Text style={styles.heroTitle}>Give a Ride</Text>
+        <View style={styles.heroRightSpacer} />
+      </View>
       <KeyboardAvoidingView
         style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -272,80 +399,183 @@ const CreatePoolingOfferScreen = () => {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Video Container */}
-          <View style={styles.videoContainer}>
-            <Video
-              ref={videoRef}
-              source={require('../../../assets/videos/craete_pooling.mp4')}
-              style={styles.video}
-              resizeMode={ResizeMode.COVER}
-              isLooping
-              isMuted
-              shouldPlay
+          {/* Uber/Rapido style clean header */}
+          <View style={styles.heroSection}>
+            <Image
+              source={require('../../../assets/forlok_give_ride_vector_blue_bg_v2.png')}
+              style={styles.heroImage}
+              resizeMode="contain"
             />
-            <View style={styles.videoOverlay}>
-              <TouchableOpacity
-                style={styles.backButton}
-                onPress={() => navigation.goBack()}
-              >
-                <ArrowLeft size={24} color={COLORS.white} />
-              </TouchableOpacity>
-              <Text style={styles.quote}>
-                "Share the journey, share the joy.{'\n'}Create your pool today!"
-              </Text>
-            </View>
           </View>
 
           {/* Form Fields */}
           <View style={styles.formContainer}>
-          <TouchableOpacity
-              onPress={() =>
-                navigation.navigate('LocationPicker' as never, {
-                  title: 'Select Pickup Location',
-                  onLocationSelect: handleFromLocationSelect,
-                  initialLocation: fromLocation || undefined,
-                } as never)
-              }
-          >
-            <Input
-                label={t('createPoolingOffer.from')}
-              value={fromLocation?.address || ''}
-                placeholder={t('createPoolingOffer.selectPickup')}
-              editable={false}
-              containerStyle={styles.input}
-                leftIcon={<MapPin size={20} color={COLORS.textSecondary} />}
-            />
-          </TouchableOpacity>
+            <View style={styles.sectionCard}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Route Details</Text>
+              </View>
 
-          <TouchableOpacity
-              onPress={() =>
-                navigation.navigate('LocationPicker' as never, {
-                  title: 'Select Destination',
-                  onLocationSelect: handleToLocationSelect,
-                  initialLocation: toLocation || undefined,
-                } as never)
-              }
-          >
-            <Input
-                label={t('createPoolingOffer.to')}
-              value={toLocation?.address || ''}
-                placeholder={t('createPoolingOffer.selectDestination')}
-              editable={false}
-              containerStyle={styles.input}
-                leftIcon={<MapPin size={20} color={COLORS.textSecondary} />}
-            />
-          </TouchableOpacity>
+              <View style={styles.routeRowsWrap}>
+                <TouchableOpacity
+                  style={styles.routeRow}
+                  onPress={() =>
+                    navigation.navigate('LocationPicker' as never, {
+                      title: 'Select Pickup Location',
+                      onLocationSelect: handleFromLocationSelect,
+                      initialLocation: fromLocation || undefined,
+                    } as never)
+                  }
+                >
+                  <View style={styles.routeMarkerCol}>
+                    <View style={[styles.routeIconBadge, styles.routeIconBadgeFrom]}>
+                      <MapPin size={14} color="#16A34A" />
+                    </View>
+                  </View>
+                  <View style={styles.routeTextWrap}>
+                    <Text style={styles.routeRowLabel}>{cleanFieldLabel(t('createPoolingOffer.from'))}</Text>
+                    <Text style={[styles.routeRowValue, !fromLocation && styles.routeRowPlaceholder]} numberOfLines={1}>
+                      {fromLocation?.address || t('createPoolingOffer.selectPickup')}
+                    </Text>
+                  </View>
+                  <ChevronRight size={16} color={COLORS.textSecondary} />
+                </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => setShowDatePicker(true)}>
-            <Input
-                label={t('createPoolingOffer.date')}
-                value={formatDate(date)}
-                placeholder={t('createPoolingOffer.date')}
-              editable={false}
-              containerStyle={styles.input}
-                leftIcon={<Calendar size={20} color={COLORS.textSecondary} />}
-            />
-          </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.routeRow}
+                  onPress={() =>
+                    navigation.navigate('LocationPicker' as never, {
+                      title: 'Select Destination',
+                      onLocationSelect: handleToLocationSelect,
+                      initialLocation: toLocation || undefined,
+                    } as never)
+                  }
+                >
+                  <View style={styles.routeMarkerCol}>
+                    <View style={[styles.routeIconBadge, styles.routeIconBadgeTo]}>
+                      <MapPin size={14} color="#DC2626" />
+                    </View>
+                  </View>
+                  <View style={styles.routeTextWrap}>
+                    <Text style={styles.routeRowLabel}>{cleanFieldLabel(t('createPoolingOffer.to'))}</Text>
+                    <Text style={[styles.routeRowValue, !toLocation && styles.routeRowPlaceholder]} numberOfLines={1}>
+                      {toLocation?.address || t('createPoolingOffer.selectDestination')}
+                    </Text>
+                  </View>
+                  <ChevronRight size={16} color={COLORS.textSecondary} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.waypointsSection}>
+                {suggestedWaypoints.length > 0 && (
+                  <View style={styles.suggestedBlock}>
+                    <Text style={styles.label}>Suggested Stops ({routeDistanceKm} km route)</Text>
+                    {minRequired > 0 && (
+                      <Text style={styles.suggestedHint}>
+                        At least {minRequired} stop{minRequired > 1 ? 's' : ''} recommended for better matching
+                      </Text>
+                    )}
+                    {suggestedWaypoints.map((sw, idx) => {
+                      const isSelected = selectedSuggestions.has(idx);
+                      return (
+                        <TouchableOpacity
+                          key={idx}
+                          style={[styles.suggestedRow, isSelected && styles.suggestedRowSelected]}
+                          onPress={() => toggleSuggestion(idx)}
+                          activeOpacity={0.7}
+                        >
+                          <View style={[styles.suggestedCheck, isSelected && styles.suggestedCheckActive]}>
+                            {isSelected && <CheckCircle size={18} color="#fff" />}
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.suggestedCity} numberOfLines={1}>
+                              {sw.city || sw.address.split(',')[0]}
+                            </Text>
+                            <Text style={styles.suggestedAddr} numberOfLines={1}>
+                              {sw.address}
+                            </Text>
+                          </View>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                )}
+
+                {loadingSuggestions && (
+                  <View style={styles.suggestedLoading}>
+                    <ActivityIndicator size="small" color={COLORS.primary} />
+                    <Text style={styles.suggestedLoadingText}>Finding stops along your route...</Text>
+                  </View>
+                )}
+
+                {waypoints.length > 0 && (
+                  <Text style={[styles.label, { marginTop: suggestedWaypoints.length > 0 ? SPACING.md : 0 }]}>
+                    Selected Stops ({waypoints.length})
+                  </Text>
+                )}
+
+                {waypoints.map((wp, idx) => (
+                  <View key={idx} style={styles.waypointRow}>
+                    <View style={styles.waypointDot}>
+                      <View style={styles.waypointDotInner} />
+                    </View>
+                    <Text style={styles.waypointAddress} numberOfLines={1}>{wp.address}</Text>
+                    <TouchableOpacity
+                      onPress={() => {
+                        const removed = waypoints[idx];
+                        handleRemoveWaypoint(idx);
+                        const sugIdx = suggestedWaypoints.findIndex((s) => s.lat === removed.lat && s.lng === removed.lng);
+                        if (sugIdx >= 0) {
+                          setSelectedSuggestions((prev) => { const n = new Set(prev); n.delete(sugIdx); return n; });
+                        }
+                      }}
+                      style={styles.waypointRemove}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <X size={16} color={COLORS.error || '#E53935'} />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+
+                {waypoints.length < 5 && (
+                  <TouchableOpacity
+                    style={styles.addWaypointBtn}
+                    onPress={() =>
+                      navigation.navigate('LocationPicker' as never, {
+                        title: `Add Stop ${waypoints.length + 1}`,
+                        onLocationSelect: handleAddWaypoint,
+                      } as never)
+                    }
+                  >
+                    <Plus size={18} color={COLORS.primary} />
+                    <Text style={styles.addWaypointText}>Add a way-point along the way</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+
+            <View style={styles.sectionCard}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Schedule</Text>
+              </View>
+              <View style={styles.scheduleRow}>
+                <TouchableOpacity style={styles.scheduleCol} onPress={() => setShowDatePicker(true)}>
+                  <Text style={styles.scheduleLabel}>{cleanFieldLabel(t('createPoolingOffer.date'))}</Text>
+                  <View style={styles.scheduleSmallBox}>
+                    <Calendar size={16} color={COLORS.textSecondary} />
+                    <Text style={styles.scheduleSmallText} numberOfLines={1}>{formatDate(date)}</Text>
+                  </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.scheduleCol} onPress={() => setShowTimePicker(true)}>
+                  <Text style={styles.scheduleLabel}>{cleanFieldLabel(t('createPoolingOffer.time'))}</Text>
+                  <View style={styles.scheduleSmallBox}>
+                    <Clock size={16} color={COLORS.textSecondary} />
+                    <Text style={styles.scheduleSmallText} numberOfLines={1}>{formatTime(time)}</Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
+            </View>
+
             {showDatePicker && (
               <DateTimePicker
                 value={date}
@@ -355,17 +585,6 @@ const CreatePoolingOfferScreen = () => {
                 minimumDate={new Date()}
               />
             )}
-
-            <TouchableOpacity onPress={() => setShowTimePicker(true)}>
-            <Input
-                label={t('createPoolingOffer.time')}
-                value={formatTime(time)}
-                placeholder={t('createPoolingOffer.time')}
-              editable={false}
-              containerStyle={styles.input}
-                leftIcon={<Clock size={20} color={COLORS.textSecondary} />}
-            />
-          </TouchableOpacity>
             {showTimePicker && (
               <DateTimePicker
                 value={time}
@@ -376,170 +595,182 @@ const CreatePoolingOfferScreen = () => {
               />
             )}
 
-            {/* Vehicle Type Selection */}
-          <View style={styles.vehicleTypeContainer}>
-              <Text style={styles.label}>{t('dashboard.selectYourVehicle')}</Text>
-            <View style={styles.vehicleTypeOptions}>
-              <TouchableOpacity
-                style={[
-                  styles.vehicleTypeButton,
-                  vehicleType === 'Car' && styles.vehicleTypeSelected,
-                ]}
-                  onPress={() => {
-                    console.log('🚗 [CreatePooling] Selected type: Car');
-                    setVehicleType('Car');
-                    setSelectedVehicle(null);
-                    setShowVehicleDropdown(false);
-                    setAvailableSeats(1);
-                  }}
-                >
-                  <Image
-                    source={require('../../../assets/car.jpg')}
-                    style={styles.vehicleImage}
-                    resizeMode="cover"
-                  />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.vehicleTypeButton,
-                  vehicleType === 'Bike' && styles.vehicleTypeSelected,
-                ]}
-                  onPress={() => {
-                    console.log('🚗 [CreatePooling] Selected type: Bike');
-                    setVehicleType('Bike');
-                    setSelectedVehicle(null);
-                    setShowVehicleDropdown(false);
-                    setAvailableSeats(1);
-                  }}
-                >
-                  <Image
-                    source={require('../../../assets/bike.jpg')}
-                    style={styles.vehicleImage}
-                    resizeMode="cover"
-                  />
-              </TouchableOpacity>
-            </View>
-          </View>
+            <View style={styles.sectionCard}>
+             
 
-          {/* Vehicle Selection */}
-          {vehicleType && (
-            <View style={styles.vehicleSelectContainer}>
-              <Text style={styles.label}>Select Vehicle *</Text>
-              {loadingVehicles ? (
-                <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="small" color={COLORS.primary} />
-                  <Text style={styles.loadingText}>Loading vehicles...</Text>
-                </View>
-              ) : filteredVehicles.length === 0 ? (
-                <TouchableOpacity
-                  style={styles.addVehicleButton}
-                  onPress={() => navigation.navigate('AddVehicle' as never)}
-                >
-                  <Text style={styles.addVehicleText}>+ Add {vehicleType}</Text>
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity
-                  style={styles.vehicleDropdown}
-                  onPress={() => setShowVehicleDropdown(!showVehicleDropdown)}
-                >
-                  <Text style={[styles.vehicleDropdownText, !selectedVehicle && styles.placeholderText]}>
-                    {selectedVehicle 
-                      ? `${selectedVehicle.brand || 'Vehicle'} - ${selectedVehicle.number}`
-                      : `Select a ${vehicleType.toLowerCase()}`}
-                  </Text>
-                  <ChevronDown size={20} color={COLORS.textSecondary} />
-                </TouchableOpacity>
-              )}
-              
-              {showVehicleDropdown && filteredVehicles.length > 0 && (
-                <View style={styles.vehicleDropdownList}>
-                  {filteredVehicles.map((vehicle) => (
-                    <TouchableOpacity
-                      key={vehicle.vehicleId}
-                      style={styles.vehicleDropdownItem}
-                      onPress={() => {
-                        setSelectedVehicle(vehicle);
-                        setShowVehicleDropdown(false);
-                        // Set max seats based on vehicle
-                        if (vehicle.seats && availableSeats > vehicle.seats) {
-                          setAvailableSeats(vehicle.seats);
-                        }
-                      }}
-                    >
-                      <Text style={styles.vehicleDropdownItemText}>
-                        {vehicle.brand || 'Vehicle'} - {vehicle.number}
-                      </Text>
-                      {vehicle.seats && (
-                        <Text style={styles.vehicleDropdownItemSubtext}>
-                          {vehicle.seats} seats
-                        </Text>
-                      )}
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
-            </View>
-          )}
-
-            {/* Available Seats */}
-          <View style={styles.seatsContainer}>
-              <Text style={styles.label}>{t('createPoolingOffer.availableSeats')}</Text>
-              <View style={styles.seatsRangeContainer}>
-                <View style={styles.seatsRangeRow}>
-                  {[1, 2, 3, 4, 5, 6].map((num) => (
-              <TouchableOpacity
-                      key={num}
-                      style={[
-                        styles.seatRangeButton,
-                        availableSeats === num && styles.seatRangeSelected,
-                        vehicleType === 'Bike' && num > 1 && styles.seatRangeDisabled,
-                      ]}
-                      onPress={() => {
-                        if (vehicleType === 'Bike' && num > 1) return;
-                        setAvailableSeats(num);
-                      }}
-                      disabled={vehicleType === 'Bike' && num > 1}
-                    >
-                      <Text
+              <View style={styles.vehicleTypeContainer}>
+                <Text style={styles.label}>{t('dashboard.selectYourVehicle')}</Text>
+                <View style={styles.vehicleTypeOptions}>
+                  {([
+                    { type: 'Car' as const, lucide: Car, color: '#1565C0', bg: '#E3F2FD', label: 'Car' },
+                    { type: 'Bike' as const, lucide: Bike, color: '#E65100', bg: '#FFF3E0', label: 'Bike' },
+                    { type: 'Scooty' as const, lucide: null, color: '#6A1B9A', bg: '#F3E5F5', label: 'Scooty' },
+                  ]).map((vt) => {
+                    const isSelected = vehicleType === vt.type;
+                    return (
+                      <TouchableOpacity
+                        key={vt.type}
                         style={[
-                          styles.seatRangeText,
-                          availableSeats === num && styles.seatRangeTextSelected,
-                          vehicleType === 'Bike' && num > 1 && styles.seatRangeTextDisabled,
+                          styles.vehicleTypeButton,
+                          { backgroundColor: isSelected ? vt.bg : '#F7FAFF', borderColor: isSelected ? vt.color : '#DDE6F5' },
                         ]}
+                        onPress={() => {
+                          setVehicleType(vt.type);
+                          setSelectedVehicle(null);
+                          setShowVehicleDropdown(false);
+                          setAvailableSeats(1);
+                        }}
+                        activeOpacity={0.7}
                       >
-                        {num}
-                      </Text>
-              </TouchableOpacity>
-                  ))}
+                        <View style={[styles.vehicleIconWrap, { backgroundColor: isSelected ? vt.color : vt.bg }]}>
+                          {vt.lucide ? (
+                            <vt.lucide size={22} color={isSelected ? '#FFF' : vt.color} />
+                          ) : (
+                            <MaterialCommunityIcons name="moped" size={22} color={isSelected ? '#FFF' : vt.color} />
+                          )}
+                        </View>
+                        <Text style={[styles.vehicleTypeLabel, { color: isSelected ? vt.color : COLORS.text }]}>{vt.label}</Text>
+                        {isSelected && <View style={[styles.vehicleCheckDot, { backgroundColor: vt.color }]} />}
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
-                {vehicleType === 'Bike' && (
-                  <Text style={styles.hint}>Only 1 seat available for Bike</Text>
-                )}
               </View>
-          </View>
 
+              {vehicleType && (
+                <View style={styles.vehicleSelectContainer}>
+                  <Text style={styles.label}>Select Vehicle</Text>
+                  {loadingVehicles ? (
+                    <View style={styles.loadingContainer}>
+                      <ActivityIndicator size="small" color={COLORS.primary} />
+                      <Text style={styles.loadingText}>Loading vehicles...</Text>
+                    </View>
+                  ) : filteredVehicles.length === 0 ? (
+                    <TouchableOpacity
+                      style={styles.addVehicleButton}
+                      onPress={() => navigation.navigate('AddVehicle' as never)}
+                    >
+                      <Text style={styles.addVehicleText}>+ Add {vehicleType}</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.vehicleDropdown}
+                      onPress={() => {
+                        console.log(`🔽 Dropdown toggled: was=${showVehicleDropdown}, filtered=${filteredVehicles.length}, allVehicles=${allVehicles.length}`);
+                        setShowVehicleDropdown(!showVehicleDropdown);
+                      }}
+                    >
+                      <Text style={[styles.vehicleDropdownText, !selectedVehicle && styles.placeholderText]}>
+                        {selectedVehicle
+                          ? `${selectedVehicle.brand || 'Vehicle'} - ${selectedVehicle.number}`
+                          : `Select a ${vehicleType.toLowerCase()}`}
+                      </Text>
+                      <ChevronDown size={20} color={COLORS.textSecondary} />
+                    </TouchableOpacity>
+                  )}
 
-          <View style={styles.notesContainer}>
-              <Text style={styles.label}>{t('createPoolingOffer.additionalNotes')}</Text>
-            <Input
-              value={notes}
-              onChangeText={setNotes}
-              placeholder={t('createPoolingOffer.additionalNotes')}
-              multiline
-              numberOfLines={4}
-              containerStyle={styles.notesInput}
-                leftIcon={<FileText size={20} color={COLORS.textSecondary} />}
-            />
-          </View>
+                  {showVehicleDropdown && filteredVehicles.length > 0 && (
+                    <View style={styles.vehicleDropdownList}>
+                      {filteredVehicles.map((vehicle) => {
+                        const isLocked = lockedVehicleIds.has(vehicle.number);
+                        console.log(`📋 Dropdown item: ${vehicle.brand} - ${vehicle.number}, locked=${isLocked}`);
+                        return (
+                          <TouchableOpacity
+                            key={vehicle.number || vehicle.vehicleId || vehicle._id}
+                            style={[
+                              styles.vehicleDropdownItem,
+                              isLocked && styles.vehicleDropdownItemLocked,
+                            ]}
+                            disabled={isLocked}
+                            onPress={() => {
+                              setSelectedVehicle(vehicle);
+                              setShowVehicleDropdown(false);
+                              if (vehicle.seats && availableSeats > vehicle.seats) {
+                                setAvailableSeats(vehicle.seats);
+                              }
+                            }}
+                          >
+                            <Text style={[styles.vehicleDropdownItemText, isLocked && { color: '#999' }]}>
+                              {vehicle.brand || 'Vehicle'} - {vehicle.number || 'N/A'}
+                            </Text>
+                            {isLocked ? (
+                              <Text style={styles.vehicleLockedText}>In active offer — not available</Text>
+                            ) : vehicle.seats ? (
+                              <Text style={styles.vehicleDropdownItemSubtext}>
+                                {vehicle.seats} seats
+                              </Text>
+                            ) : null}
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  )}
+                </View>
+              )}
 
-          <Button
+              <View style={styles.seatsContainer}>
+                <Text style={styles.label}>{cleanFieldLabel(t('createPoolingOffer.availableSeats'))}</Text>
+                <View style={styles.seatsRangeContainer}>
+                  <View style={styles.seatsRangeRow}>
+                    {[1, 2, 3, 4, 5, 6].map((num) => (
+                      <TouchableOpacity
+                        key={num}
+                        style={[
+                          styles.seatRangeButton,
+                          availableSeats === num && styles.seatRangeSelected,
+                          (vehicleType === 'Bike' || vehicleType === 'Scooty') && num > 1 && styles.seatRangeDisabled,
+                        ]}
+                        onPress={() => {
+                          if ((vehicleType === 'Bike' || vehicleType === 'Scooty') && num > 1) return;
+                          setAvailableSeats(num);
+                        }}
+                        disabled={(vehicleType === 'Bike' || vehicleType === 'Scooty') && num > 1}
+                      >
+                        <Text
+                          style={[
+                            styles.seatRangeText,
+                            availableSeats === num && styles.seatRangeTextSelected,
+                            (vehicleType === 'Bike' || vehicleType === 'Scooty') && num > 1 && styles.seatRangeTextDisabled,
+                          ]}
+                        >
+                          {num}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  {(vehicleType === 'Bike' || vehicleType === 'Scooty') && (
+                    <Text style={styles.hint}>Only 1 seat available for {vehicleType}</Text>
+                  )}
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.sectionCard}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Additional Notes</Text>
+              </View>
+              <View style={styles.notesContainer}>
+                <TextInput
+                  value={notes}
+                  onChangeText={setNotes}
+                  placeholder={t('createPoolingOffer.additionalNotes')}
+                  placeholderTextColor={COLORS.textSecondary}
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                  style={styles.notesTextArea}
+                />
+              </View>
+            </View>
+
+            <Button
               title={creating ? 'Creating...' : t('createPoolingOffer.createOffer')}
-            onPress={handleCreate}
-            variant="primary"
-            size="large"
-            style={styles.createButton}
-            disabled={creating}
-          />
+              onPress={handleCreate}
+              variant="primary"
+              size="large"
+              style={[styles.createButton, styles.createButtonModern]}
+              disabled={creating}
+            />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -550,92 +781,216 @@ const CreatePoolingOfferScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: '#F5F7FB',
+  },
+  stickyHeader: {
+    backgroundColor: '#F5F7FB',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.md,
+    paddingTop: normalize(24),
+    paddingBottom: normalize(2),
+    zIndex: 20,
   },
   keyboardView: {
     flex: 1,
   },
   scrollView: {
     flex: 1,
+    backgroundColor: '#F5F7FB',
   },
   scrollContent: {
-    paddingBottom: SPACING.xl,
+    paddingBottom: normalize(120),
+    backgroundColor: '#F5F7FB',
   },
-  videoContainer: {
+  heroSection: {
     width: '100%',
-    height: hp(30),
-    position: 'relative',
-    overflow: 'hidden',
+    backgroundColor: '#F5F7FB',
+    paddingHorizontal: 0,
+    paddingTop: 0,
+    paddingBottom: normalize(8),
   },
-  video: {
-    width: '100%',
-    height: '100%',
-  },
-  videoOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(7, 25, 82, 0.75)',
-    justifyContent: 'center',
+  heroBackButton: {
+    width: normalize(36),
+    height: normalize(36),
+    borderRadius: normalize(18),
+    borderWidth: 1,
+    borderColor: COLORS.border,
     alignItems: 'center',
-    padding: SPACING.lg,
-    paddingTop: normalize(40),
+    justifyContent: 'center',
   },
-  backButton: {
-    position: 'absolute',
-    top: normalize(40),
-    left: SPACING.md,
-    padding: SPACING.xs,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    borderRadius: normalize(20),
+  heroTitle: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(19),
+    fontWeight: '700',
+    color: COLORS.text,
   },
-  quote: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.lg,
-    color: COLORS.white,
-    textAlign: 'center',
-    lineHeight: normalize(26),
-    fontWeight: '500',
-    letterSpacing: 0.3,
-    paddingHorizontal: SPACING.sm,
+  heroRightSpacer: { width: normalize(36), height: normalize(36) },
+  heroImage: {
+    width: '100%',
+    height: normalize(138),
+    marginTop: 0,
+    marginBottom: 0,
   },
   formContainer: {
     padding: SPACING.md,
+    paddingTop: normalize(14),
+    gap: normalize(12),
+    backgroundColor: '#F5F7FB',
+  },
+  sectionCard: {
+    backgroundColor: '#FCFDFF',
+    borderRadius: normalize(12),
+    borderWidth: 1,
+    borderColor: '#E5EBF5',
+    padding: normalize(12),
+    ...SHADOWS.sm,
+  },
+  sectionHeader: {
+    marginBottom: normalize(6),
+  },
+  sectionTitle: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(15),
+    color: COLORS.text,
+    fontWeight: '700',
+  },
+  sectionSubtitle: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(11),
+    color: '#6E7A8A',
+    marginTop: normalize(2),
+  },
+  routeRowsWrap: {
+    gap: normalize(8),
+    marginBottom: normalize(8),
+  },
+  routeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: normalize(50),
+    paddingHorizontal: normalize(10),
+    borderWidth: 1,
+    borderColor: '#DDE6F5',
+    borderRadius: normalize(10),
+    backgroundColor: '#F7FAFF',
+  },
+  routeMarkerCol: {
+    width: normalize(28),
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: normalize(8),
+  },
+  routeIconBadge: {
+    width: normalize(24),
+    height: normalize(24),
+    borderRadius: normalize(12),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  routeIconBadgeFrom: {
+    backgroundColor: '#DCFCE7',
+  },
+  routeIconBadgeTo: {
+    backgroundColor: '#FEE2E2',
+  },
+  routeTextWrap: {
+    flex: 1,
+  },
+  routeRowLabel: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(10),
+    color: COLORS.textSecondary,
+  },
+  routeRowValue: {
+    marginTop: normalize(1),
+    fontFamily: FONTS.medium,
+    fontSize: normalize(12),
+    color: COLORS.text,
+  },
+  routeRowPlaceholder: {
+    color: COLORS.textSecondary,
+  },
+  scheduleRow: {
+    flexDirection: 'row',
+    gap: normalize(10),
+  },
+  scheduleCol: {
+    flex: 1,
+  },
+  scheduleLabel: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(12),
+    color: COLORS.textSecondary,
+    marginBottom: normalize(5),
+  },
+  scheduleSmallBox: {
+    height: normalize(42),
+    borderWidth: 1,
+    borderColor: '#DDE6F5',
+    borderRadius: normalize(10),
+    paddingHorizontal: normalize(10),
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: normalize(7),
+    backgroundColor: '#F7FAFF',
+  },
+  scheduleSmallText: {
+    flex: 1,
+    fontFamily: FONTS.medium,
+    fontSize: normalize(13),
+    color: COLORS.text,
   },
   input: {
     marginBottom: SPACING.md,
+  },
+  cardInput: {
+    marginBottom: normalize(10),
+  },
+  compactInput: {
+    marginBottom: 0,
   },
   vehicleTypeContainer: {
     marginBottom: SPACING.md,
   },
   label: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
+    fontSize: normalize(13),
     color: COLORS.text,
-    marginBottom: SPACING.sm,
+    marginBottom: normalize(6),
     fontWeight: '600',
   },
   vehicleTypeOptions: {
     flexDirection: 'row',
-    gap: SPACING.md,
+    gap: normalize(8),
   },
   vehicleTypeButton: {
     flex: 1,
-    borderRadius: BORDER_RADIUS.lg,
-    borderWidth: 2,
-    borderColor: COLORS.border,
-    overflow: 'hidden',
-    ...SHADOWS.sm,
+    alignItems: 'center',
+    paddingVertical: normalize(10),
+    paddingHorizontal: normalize(8),
+    borderRadius: normalize(12),
+    borderWidth: 1.4,
   },
-  vehicleTypeSelected: {
-    borderColor: COLORS.primary,
-    borderWidth: 3,
+  vehicleIconWrap: {
+    width: normalize(34),
+    height: normalize(34),
+    borderRadius: normalize(17),
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: normalize(5),
   },
-  vehicleImage: {
-    width: '100%',
-    height: hp(17),
+  vehicleTypeLabel: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(12),
+    fontWeight: '600',
+  },
+  vehicleCheckDot: {
+    width: normalize(8),
+    height: normalize(8),
+    borderRadius: normalize(4),
+    marginTop: normalize(6),
   },
   seatsContainer: {
     marginBottom: SPACING.md,
@@ -646,17 +1001,17 @@ const styles = StyleSheet.create({
   seatsRangeRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: SPACING.sm,
+    gap: normalize(8),
   },
   seatRangeButton: {
-    width: normalize(50),
-    height: normalize(50),
-    borderRadius: BORDER_RADIUS.md,
+    width: normalize(38),
+    height: normalize(38),
+    borderRadius: normalize(19),
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: '#DDE6F5',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: COLORS.white,
+    backgroundColor: '#F7FAFF',
   },
   seatRangeSelected: {
     backgroundColor: COLORS.primary,
@@ -668,7 +1023,7 @@ const styles = StyleSheet.create({
   },
   seatRangeText: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
+    fontSize: normalize(14),
     color: COLORS.text,
     fontWeight: '600',
   },
@@ -692,9 +1047,25 @@ const styles = StyleSheet.create({
   notesInput: {
     minHeight: normalize(100),
   },
+  notesTextArea: {
+    minHeight: normalize(92),
+    borderWidth: 1,
+    borderColor: '#DDE6F5',
+    borderRadius: normalize(10),
+    paddingHorizontal: normalize(12),
+    paddingVertical: normalize(10),
+    fontFamily: FONTS.regular,
+    fontSize: normalize(14),
+    color: COLORS.text,
+    backgroundColor: '#F8FAFF',
+  },
   createButton: {
-    marginTop: SPACING.md,
+    marginTop: normalize(4),
     marginBottom: SPACING.xl,
+  },
+  createButtonModern: {
+    borderRadius: normalize(14),
+    ...SHADOWS.md,
   },
   loadingContainer: {
     flex: 1,
@@ -714,9 +1085,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: COLORS.white,
+    backgroundColor: '#F7FAFF',
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: '#DDE6F5',
     borderRadius: BORDER_RADIUS.md,
     padding: SPACING.md,
     marginTop: SPACING.sm,
@@ -736,12 +1107,15 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     borderRadius: BORDER_RADIUS.md,
     marginTop: SPACING.xs,
-    maxHeight: normalize(200),
+    overflow: 'visible',
   },
   vehicleDropdownItem: {
-    padding: SPACING.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
+    minHeight: normalize(48),
+    justifyContent: 'center',
   },
   vehicleDropdownItemText: {
     fontSize: normalize(16),
@@ -752,6 +1126,17 @@ const styles = StyleSheet.create({
     fontSize: normalize(14),
     fontFamily: FONTS.regular,
     color: COLORS.textSecondary,
+    marginTop: normalize(2),
+  },
+  vehicleDropdownItemLocked: {
+    backgroundColor: '#FFF3F3',
+    borderLeftWidth: 3,
+    borderLeftColor: '#E53935',
+  },
+  vehicleLockedText: {
+    fontSize: normalize(12),
+    fontFamily: FONTS.medium,
+    color: '#E53935',
     marginTop: normalize(2),
   },
   addVehicleButton: {
@@ -765,6 +1150,121 @@ const styles = StyleSheet.create({
     color: COLORS.white,
     fontSize: normalize(16),
     fontFamily: FONTS.medium,
+  },
+  waypointsSection: {
+    marginBottom: SPACING.md,
+  },
+  waypointRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+    borderRadius: BORDER_RADIUS.md,
+    paddingVertical: normalize(10),
+    paddingHorizontal: SPACING.sm,
+    marginBottom: normalize(8),
+  },
+  waypointDot: {
+    width: normalize(20),
+    height: normalize(20),
+    borderRadius: normalize(10),
+    backgroundColor: '#E8F5E9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: normalize(10),
+  },
+  waypointDotInner: {
+    width: normalize(8),
+    height: normalize(8),
+    borderRadius: normalize(4),
+    backgroundColor: '#43A047',
+  },
+  waypointAddress: {
+    flex: 1,
+    fontFamily: FONTS.regular,
+    fontSize: normalize(14),
+    color: COLORS.text,
+  },
+  waypointRemove: {
+    padding: normalize(4),
+    marginLeft: normalize(8),
+  },
+  addWaypointBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: normalize(12),
+    paddingHorizontal: SPACING.sm,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    borderStyle: 'dashed',
+    borderRadius: BORDER_RADIUS.md,
+  },
+  addWaypointText: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(14),
+    color: COLORS.primary,
+    marginLeft: normalize(8),
+  },
+  suggestedBlock: {
+    marginBottom: SPACING.sm,
+  },
+  suggestedHint: {
+    fontFamily: FONTS.regular,
+    fontSize: normalize(12),
+    color: COLORS.primary,
+    marginBottom: normalize(8),
+    fontStyle: 'italic',
+  },
+  suggestedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FAFAFA',
+    borderRadius: BORDER_RADIUS.md,
+    paddingVertical: normalize(10),
+    paddingHorizontal: SPACING.sm,
+    marginBottom: normalize(6),
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  suggestedRowSelected: {
+    backgroundColor: '#E8F5E9',
+    borderColor: '#43A047',
+  },
+  suggestedCheck: {
+    width: normalize(26),
+    height: normalize(26),
+    borderRadius: normalize(13),
+    borderWidth: 2,
+    borderColor: COLORS.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: normalize(10),
+  },
+  suggestedCheckActive: {
+    backgroundColor: '#43A047',
+    borderColor: '#43A047',
+  },
+  suggestedCity: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(14),
+    color: COLORS.text,
+    fontWeight: '600',
+  },
+  suggestedAddr: {
+    fontFamily: FONTS.regular,
+    fontSize: normalize(11),
+    color: COLORS.textSecondary,
+    marginTop: normalize(2),
+  },
+  suggestedLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: normalize(12),
+    gap: normalize(8),
+  },
+  suggestedLoadingText: {
+    fontFamily: FONTS.regular,
+    fontSize: normalize(13),
+    color: COLORS.textSecondary,
   },
 });
 

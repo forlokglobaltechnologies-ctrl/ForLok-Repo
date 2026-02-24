@@ -16,6 +16,23 @@ interface RequestOptions {
   requiresAuth?: boolean;
 }
 
+export interface ApiFieldError {
+  field: string;
+  message: string;
+  code?: string;
+}
+
+export interface ApiResult<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  message?: string;
+  statusCode?: number;
+  errorCode?: string;
+  fieldErrors?: ApiFieldError[];
+  details?: any;
+}
+
 class ApiService {
   /**
    * Get access token from storage
@@ -71,7 +88,7 @@ class ApiService {
   async request<T = any>(
     endpoint: string,
     options: RequestOptions = {}
-  ): Promise<{ success: boolean; data?: T; error?: string; message?: string }> {
+  ): Promise<ApiResult<T>> {
     try {
       const {
         method = 'GET',
@@ -108,8 +125,17 @@ class ApiService {
         requestOptions.body = JSON.stringify(body);
       }
 
-      // Make request
-      const response = await fetch(url, requestOptions);
+      // Make request with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.TIMEOUT);
+      requestOptions.signal = controller.signal;
+
+      let response: Response;
+      try {
+        response = await fetch(url, requestOptions);
+      } finally {
+        clearTimeout(timeoutId);
+      }
 
       // Handle 401 Unauthorized - try to refresh token
       if (response.status === 401 && requiresAuth) {
@@ -133,10 +159,18 @@ class ApiService {
 
       return this.handleResponse<T>(response);
     } catch (error: any) {
-      console.error('API Request Error:', error);
+      const isTimeout = error.name === 'AbortError';
+      if (isTimeout) {
+        // AbortError is expected for timeout/cancel scenarios; avoid noisy red errors in UI logs.
+        console.warn('API request aborted (timeout/cancel).');
+      } else {
+        console.error('API Request Error:', error);
+      }
       return {
         success: false,
-        error: error.message || 'Network error. Please check your connection.',
+        error: isTimeout
+          ? 'Request timed out. Make sure the backend is running and reachable.'
+          : error.message || 'Network error. Please check your connection.',
       };
     }
   }
@@ -149,6 +183,10 @@ class ApiService {
     data?: T;
     error?: string;
     message?: string;
+    statusCode?: number;
+    errorCode?: string;
+    fieldErrors?: ApiFieldError[];
+    details?: any;
   }> {
     try {
       const data = await response.json();
@@ -156,8 +194,12 @@ class ApiService {
       if (!response.ok) {
         return {
           success: false,
-          error: data.error || data.message || 'Request failed',
+          statusCode: response.status,
+          errorCode: data.error,
+          error: data.message || data.error || 'Request failed',
           message: data.message,
+          fieldErrors: Array.isArray(data.fieldErrors) ? data.fieldErrors : undefined,
+          details: data.details,
         };
       }
 
@@ -172,10 +214,12 @@ class ApiService {
         success: true,
         data: data.data || data,
         message: data.message,
+        statusCode: response.status,
       };
     } catch (error: any) {
       return {
         success: false,
+        statusCode: response.status,
         error: 'Failed to parse response',
       };
     }
@@ -219,7 +263,7 @@ class ApiService {
     endpoint: string,
     file: { uri: string; type: string; name: string },
     additionalData?: Record<string, any>
-  ): Promise<{ success: boolean; data?: any; error?: string }> {
+  ): Promise<ApiResult<any>> {
     try {
       const token = await this.getAccessToken();
       if (!token) {

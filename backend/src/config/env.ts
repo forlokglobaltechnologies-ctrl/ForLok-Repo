@@ -85,6 +85,9 @@ const envSchema = z.object({
   EMAIL_SECURE: z.string().default('false'),
   EMAIL_USER: z.string().optional(),
   EMAIL_PASSWORD: z.string().optional(),
+
+  // SOS
+  SOS_EMAIL_TARGET: z.string().email().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -248,5 +251,8 @@ export const config = {
     secure: env.EMAIL_SECURE === 'true',
     user: env.EMAIL_USER || '',
     password: env.EMAIL_PASSWORD || '',
+  },
+  sos: {
+    emailTarget: env.SOS_EMAIL_TARGET || 'n210438@rguktn.ac.in',
   },
 };

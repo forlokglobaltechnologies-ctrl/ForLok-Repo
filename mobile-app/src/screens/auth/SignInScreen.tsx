@@ -7,172 +7,190 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  ImageBackground,
   Image,
-  Alert,
   ActivityIndicator,
+  StatusBar,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { BlurView } from 'expo-blur';
-import { ArrowLeft } from 'lucide-react-native';
+import { ArrowLeft, Lock, Mail } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '@constants/theme';
-import { Button } from '@components/common/Button';
 import { Input } from '@components/common/Input';
 import { useLanguage } from '@context/LanguageContext';
 import { authApi } from '@utils/apiClient';
 import { normalize, wp, hp } from '@utils/responsive';
 import { useAuth } from '@context/AuthContext';
+import { useSnackbar } from '@context/SnackbarContext';
+import { getUserErrorMessage, mapFieldErrors } from '@utils/errorUtils';
+
+const ACCENT = '#F9A825';
 
 const SignInScreen = () => {
   const navigation = useNavigation();
   const { t } = useLanguage();
   const { login } = useAuth();
+  const { showSnackbar } = useSnackbar();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<{ username?: string; password?: string }>({});
 
   const handleSignIn = async () => {
+    const nextErrors: { username?: string; password?: string } = {};
     if (!username.trim()) {
-      Alert.alert(t('signIn.errorTitle'), t('signIn.enterUsernameError'));
-      return;
+      nextErrors.username = t('signIn.enterUsernameError');
     }
-
     if (!password) {
-      Alert.alert(t('signIn.errorTitle'), t('signIn.enterPasswordError'));
+      nextErrors.password = t('signIn.enterPasswordError');
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
+      showSnackbar({ message: t('signIn.errorTitle'), type: 'error' });
       return;
     }
 
+    setErrors({});
     setLoading(true);
     try {
       const response = await authApi.signin(username.trim(), password);
-      
       if (response.success) {
-        // Save auth state via AuthContext
         const userData = response.data?.user || {};
         const tokens = response.data?.tokens;
         if (tokens) {
           await login(userData, tokens);
         }
-
-        // Check userType and navigate to appropriate dashboard
-        const userType = userData.userType || 'individual';
-        
-        if (userType === 'company') {
-          navigation.reset({ index: 0, routes: [{ name: 'CompanyDashboard' as never }] });
-        } else if (userType === 'admin') {
-          navigation.reset({ index: 0, routes: [{ name: 'AdminDashboard' as never }] });
-        } else {
-          navigation.reset({ index: 0, routes: [{ name: 'MainDashboard' as never }] });
-        }
       } else {
-        Alert.alert(t('signIn.errorTitle'), response.error || t('signIn.loginFailed'));
+        const mapped = mapFieldErrors(response as any, { username: 'username', password: 'password' });
+        setErrors((prev) => ({ ...prev, ...mapped }));
+        showSnackbar({
+          message: getUserErrorMessage(response as any, t('signIn.loginFailed')),
+          type: 'error',
+        });
       }
     } catch (error: any) {
-      Alert.alert(t('signIn.errorTitle'), error.message || t('signIn.signInFailed'));
+      showSnackbar({ message: error.message || t('signIn.signInFailed'), type: 'error' });
     } finally {
       setLoading(false);
     }
   };
+
+  const canSubmit = username.trim().length > 0 && password.length > 0 && !loading;
 
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ImageBackground
-        source={require('../../../assets/signin.jpg')}
-        style={styles.backgroundImage}
-        resizeMode="cover"
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={() => {
+            if (navigation.canGoBack()) navigation.goBack();
+            else navigation.navigate('Onboarding' as never);
+          }}
+          activeOpacity={0.7}
+        >
+          <ArrowLeft size={22} color="#1A1A1A" />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.adminPill}
+          onPress={() => navigation.navigate('AdminLogin' as never)}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.adminPillText}>{t('signIn.adminLogin')}</Text>
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.overlay} />
-        <BlurView intensity={50} style={styles.blurContainer}>
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
+        {/* Logo */}
+        <View style={styles.logoWrap}>
+          <Image
+            source={require('../../../assets/signin_forlok_logo.png')}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        </View>
+
+        {/* Title */}
+        <Text style={styles.title}>{t('signIn.title')}</Text>
+        <Text style={styles.subtitle}>Sign in to continue your journey</Text>
+
+        {/* Form */}
+        <View style={styles.form}>
+          <Input
+            label={t('signIn.username') || 'Username/Email/Phone'}
+            value={username}
+            onChangeText={(text) => {
+              setUsername(text);
+              if (errors.username) setErrors((prev) => ({ ...prev, username: undefined }));
+            }}
+            placeholder={t('signIn.enterUsernamePlaceholder')}
+            autoCapitalize="none"
+            containerStyle={styles.inputWrap}
+            leftIcon={<Mail size={18} color="#BBBBBB" />}
+            error={errors.username}
+          />
+
+          <Input
+            label={t('signIn.password')}
+            value={password}
+            onChangeText={(text) => {
+              setPassword(text);
+              if (errors.password) setErrors((prev) => ({ ...prev, password: undefined }));
+            }}
+            placeholder={t('signIn.enterPassword')}
+            secureTextEntry={!showPassword}
+            showPasswordToggle
+            containerStyle={styles.inputWrap}
+            leftIcon={<Lock size={18} color="#BBBBBB" />}
+            error={errors.password}
+          />
+
+          <TouchableOpacity
+            style={styles.forgotBtn}
+            onPress={() => navigation.navigate('ForgotPassword' as never)}
+            activeOpacity={0.7}
           >
-            <View style={styles.headerRow}>
-              <TouchableOpacity
-                style={styles.backButton}
-                onPress={() => navigation.goBack()}
-              >
-                <ArrowLeft size={24} color={COLORS.white} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.adminButton}
-                onPress={() => navigation.navigate('AdminLogin' as never)}
-              >
-                <Text style={styles.adminButtonText}>{t('signIn.adminLogin')}</Text>
-              </TouchableOpacity>
-            </View>
+            <Text style={styles.forgotText}>{t('signIn.forgotPassword')}</Text>
+          </TouchableOpacity>
 
-            <View style={styles.logoContainer}>
-              <Image
-                source={require('../../../assets/signin_logo.png')}
-                style={styles.logoImage}
-                resizeMode="contain"
-              />
-            </View>
+          {/* Sign In Button */}
+          <TouchableOpacity
+            style={[
+              styles.signInBtn,
+              !canSubmit && styles.signInBtnDisabled,
+            ]}
+            onPress={handleSignIn}
+            activeOpacity={0.85}
+            disabled={!canSubmit}
+          >
+            {loading ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Text style={styles.signInBtnText}>
+                {t('signIn.signInButton')}
+              </Text>
+            )}
+          </TouchableOpacity>
 
-            <Text style={styles.title}>{t('signIn.title')}</Text>
-
-            <View style={styles.formContainer}>
-              <Input
-                label={t('signIn.username') || 'Username/Email/Phone'}
-                value={username}
-                onChangeText={setUsername}
-                placeholder={t('signIn.enterUsernamePlaceholder')}
-                autoCapitalize="none"
-                containerStyle={styles.input}
-                labelColor={COLORS.white}
-              />
-
-              <Input
-                label={t('signIn.password')}
-                value={password}
-                onChangeText={setPassword}
-                placeholder={t('signIn.enterPassword')}
-                secureTextEntry={!showPassword}
-                showPasswordToggle
-                containerStyle={styles.input}
-                labelColor={COLORS.white}
-              />
-
-              <TouchableOpacity
-                style={styles.forgotPassword}
-                onPress={() => navigation.navigate('ForgotPassword' as never)}
-              >
-                <Text style={styles.forgotPasswordText}>{t('signIn.forgotPassword')}</Text>
-              </TouchableOpacity>
-
-              <Button
-                title={loading ? t('signIn.signingIn') : t('signIn.signInButton')}
-                onPress={handleSignIn}
-                variant="outline"
-                size="large"
-                style={styles.signInButton}
-                textStyle={styles.whiteButtonText}
-                disabled={loading || !username.trim() || !password}
-              />
-              
-              {loading && (
-                <ActivityIndicator
-                  size="small"
-                  color={COLORS.white}
-                  style={styles.loader}
-                />
-              )}
-
-              <View style={styles.signUpContainer}>
-                <Text style={styles.signUpText}>{t('signIn.dontHaveAccount')} </Text>
-                <TouchableOpacity onPress={() => navigation.navigate('SignUp' as never)}>
-                  <Text style={styles.signUpLink}>{t('signIn.signUpLink')}</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </ScrollView>
-        </BlurView>
-      </ImageBackground>
+          {/* Sign Up link */}
+          <View style={styles.signUpRow}>
+            <Text style={styles.signUpText}>{t('signIn.dontHaveAccount')} </Text>
+            <TouchableOpacity onPress={() => navigation.navigate('SignUp' as never)}>
+              <Text style={styles.signUpLink}>{t('signIn.signUpLink')}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 };
@@ -180,130 +198,108 @@ const SignInScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#FFFFFF',
   },
-  backgroundImage: {
-    flex: 1,
-    width: '100%',
-    height: '100%',
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: COLORS.primary,
-    opacity: 0.6,
-  },
-  blurContainer: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    padding: SPACING.lg,
-    paddingTop: hp(10),
-  },
-  headerRow: {
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingTop: hp(6),
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.sm,
+  },
+  backBtn: {
+    width: normalize(40),
+    height: normalize(40),
+    borderRadius: normalize(20),
+    backgroundColor: '#F5F5F5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  adminPill: {
+    backgroundColor: '#F5F5F5',
+    paddingHorizontal: normalize(14),
+    paddingVertical: normalize(8),
+    borderRadius: normalize(20),
+  },
+  adminPillText: {
+    fontFamily: FONTS.semiBold,
+    fontSize: FONTS.sizes.xs,
+    color: '#555555',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: hp(4),
+  },
+  logoWrap: {
+    alignItems: 'center',
+    marginTop: SPACING.lg,
     marginBottom: SPACING.lg,
   },
-  backButton: {
-    // No margin needed as headerRow handles spacing
-  },
-  adminButton: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderRadius: BORDER_RADIUS.md,
-    backgroundColor: COLORS.white + '20',
-    borderWidth: 1,
-    borderColor: COLORS.white + '40',
-  },
-  adminButtonText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.white,
-    fontWeight: '600',
-  },
-  logoContainer: {
-    alignItems: 'center',
-    marginBottom: SPACING.xl,
-  },
-  logoImage: {
-    width: normalize(120),
-    height: normalize(120),
-    borderRadius: normalize(60),
+  logo: {
+    width: wp(70),
+    height: hp(22),
   },
   title: {
+    fontFamily: FONTS.bold,
+    fontSize: normalize(26),
+    color: '#1A1A1A',
+    marginBottom: SPACING.xs,
+  },
+  subtitle: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xxl,
-    color: COLORS.white,
-    textAlign: 'center',
+    fontSize: FONTS.sizes.sm,
+    color: '#888888',
+    marginBottom: SPACING.xl,
+  },
+  form: {
+    flex: 1,
+  },
+  inputWrap: {
     marginBottom: SPACING.md,
   },
-  formContainer: {
-    marginTop: SPACING.sm,
-  },
-  input: {
-    marginBottom: SPACING.md,
-  },
-  forgotPassword: {
+  forgotBtn: {
     alignSelf: 'flex-end',
     marginBottom: SPACING.lg,
   },
-  forgotPasswordText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.white,
+  forgotText: {
+    fontFamily: FONTS.semiBold,
+    fontSize: FONTS.sizes.xs,
+    color: ACCENT,
   },
-  signInButton: {
-    marginBottom: SPACING.md,
-    borderColor: COLORS.white,
-  },
-  whiteButtonText: {
-    color: COLORS.white,
-  },
-  divider: {
-    flexDirection: 'row',
+  signInBtn: {
+    backgroundColor: ACCENT,
+    height: normalize(52),
+    borderRadius: normalize(26),
+    justifyContent: 'center',
     alignItems: 'center',
-    marginVertical: SPACING.lg,
+    marginBottom: SPACING.lg,
   },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: COLORS.white,
-    opacity: 0.3,
+  signInBtnDisabled: {
+    opacity: 0.5,
   },
-  dividerText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.white,
-    marginHorizontal: SPACING.md,
+  signInBtnText: {
+    fontFamily: FONTS.semiBold,
+    fontSize: FONTS.sizes.lg,
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
   },
-  socialButton: {
-    marginBottom: SPACING.md,
-    borderColor: COLORS.white,
-  },
-  signUpContainer: {
+  signUpRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: SPACING.md,
   },
   signUpText: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
-    color: COLORS.white,
-    lineHeight: FONTS.sizes.md * 1.4,
+    fontSize: FONTS.sizes.sm,
+    color: '#999999',
   },
   signUpLink: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
-    color: COLORS.primary,
-    fontWeight: 'bold',
-    lineHeight: FONTS.sizes.md * 1.4,
-  },
-  loader: {
-    marginTop: SPACING.md,
+    fontFamily: FONTS.semiBold,
+    fontSize: FONTS.sizes.sm,
+    color: ACCENT,
   },
 });
 
 export default SignInScreen;
-

@@ -10,15 +10,12 @@ import {
   Alert,
   Modal,
   TextInput,
-  ImageBackground,
+  Dimensions,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { ArrowLeft, MapPin, Clock, Navigation, Play, Square, Phone, MessageCircle, Users, LogIn, LogOut, KeyRound, X, ArrowRight, Route, Timer, Gauge, User, CircleDot, ChevronDown } from 'lucide-react-native';
-import { BlurView } from 'expo-blur';
+import { ArrowLeft, MapPin, Clock, Navigation, Play, Phone, MessageCircle, Users, LogIn, LogOut, KeyRound, X, ArrowRight, Route, Timer, Gauge, User, CircleDot, ChevronDown, Shield, CheckCircle } from 'lucide-react-native';
 import { normalize, wp, hp, SCREEN_WIDTH } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
-import { Card } from '@components/common/Card';
-import { Button } from '@components/common/Button';
 import { useLanguage } from '@context/LanguageContext';
 import { useTheme } from '@context/ThemeContext';
 import { trackingApi, bookingApi } from '@utils/apiClient';
@@ -42,6 +39,19 @@ const DriverTripScreen = () => {
   const bookingId = params.bookingId || params.booking?.bookingId;
 
   const [booking, setBooking] = useState<any>(params.booking || null);
+  const resolvedOfferId =
+    params.offerId ||
+    params.booking?.poolingOfferId ||
+    params.booking?.rentalOfferId ||
+    booking?.poolingOfferId ||
+    booking?.rentalOfferId;
+
+  const resolvedServiceType: 'pooling' | 'rental' =
+    (booking?.serviceType as 'pooling' | 'rental') ||
+    (params.offer?.type as 'pooling' | 'rental') ||
+    ((params.offer?.pricePerHour || params.offer?.minimumHours || params.booking?.rentalOfferId || booking?.rentalOfferId)
+      ? 'rental'
+      : 'pooling');
   const [currentBookingId, setCurrentBookingId] = useState<string | null>(params.bookingId || null);
   const [isTracking, setIsTracking] = useState(false);
   const [currentLocation, setCurrentLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -149,24 +159,33 @@ const DriverTripScreen = () => {
     // If offerId is provided, find the booking for that offer
     if (bookingId) {
       loadBooking();
-    } else if (params.offerId) {
+    } else if (resolvedOfferId) {
       findBookingForOffer();
     } else if (params.offer) {
-      // If offer is provided but no booking yet, initialize with offer data
       initializeWithOffer(params.offer);
+    }
+
+    // If the offer is already in_progress, auto-resume tracking
+    if (params.offer?.status === 'in_progress') {
+      (async () => {
+        await requestLocationPermission();
+        startLocationTracking();
+        setIsTracking(true);
+        if (resolvedOfferId) loadPassengers();
+      })();
     }
 
     return () => {
       stopLocationTracking();
     };
-  }, [bookingId, params.offerId, params.offer]);
+  }, [bookingId, params.offerId, params.offer, resolvedOfferId]);
 
   // Load passengers when trip is in progress
   useEffect(() => {
-    if (isTracking && params.offerId) {
+    if (isTracking && resolvedOfferId) {
       loadPassengers();
     }
-  }, [isTracking, params.offerId]);
+  }, [isTracking, params.offerId, resolvedOfferId]);
 
   // Recalculate metrics when booking or offer data changes
   useEffect(() => {
@@ -180,17 +199,17 @@ const DriverTripScreen = () => {
   }, [booking?.route?.from?.lat, booking?.route?.from?.lng, booking?.route?.to?.lat, booking?.route?.to?.lng, params.offer?.route?.from?.lat, params.offer?.route?.from?.lng, params.offer?.route?.to?.lat, params.offer?.route?.to?.lng]);
 
   const findBookingForOffer = async () => {
-    if (!params.offerId) return;
+    if (!resolvedOfferId) return;
 
     try {
       setLoading(true);
       // Determine service type from offer - check if it has rental-specific fields
       // If offer has 'pricePerHour' or 'minimumHours', it's a rental, otherwise pooling
-      const serviceType = (params.offer?.pricePerHour || params.offer?.minimumHours) ? 'rental' : 'pooling';
+      const serviceType = resolvedServiceType;
       
-      console.log(`🔍 Looking for booking: offerId=${params.offerId}, serviceType=${serviceType}`);
+      console.log(`🔍 Looking for booking: offerId=${resolvedOfferId}, serviceType=${serviceType}`);
       
-      const response = await bookingApi.getBookingByOffer(params.offerId, serviceType);
+      const response = await bookingApi.getBookingByOffer(resolvedOfferId, serviceType);
       
       console.log(`📦 Booking API response:`, response);
       
@@ -243,8 +262,8 @@ const DriverTripScreen = () => {
             
             const matchingBooking = bookings.find(
               (b: any) => {
-                const matches = (serviceType === 'pooling' && b.poolingOfferId === params.offerId) ||
-                                (serviceType === 'rental' && b.rentalOfferId === params.offerId);
+                const matches = (serviceType === 'pooling' && b.poolingOfferId === resolvedOfferId) ||
+                                (serviceType === 'rental' && b.rentalOfferId === resolvedOfferId);
                 console.log(`🔍 Fallback check: bookingId=${b.bookingId}, poolingOfferId=${b.poolingOfferId}, rentalOfferId=${b.rentalOfferId}, matches=${matches}`);
                 return matches;
               }
@@ -361,11 +380,11 @@ const DriverTripScreen = () => {
   };
 
   const loadPassengers = async () => {
-    if (!params.offerId) return;
+    if (!resolvedOfferId) return;
 
     try {
-      const serviceType = (params.offer?.pricePerHour || params.offer?.minimumHours) ? 'rental' : 'pooling';
-      const response = await bookingApi.getTripPassengers(params.offerId, serviceType);
+      const serviceType = resolvedServiceType;
+      const response = await bookingApi.getTripPassengers(resolvedOfferId, serviceType);
 
       if (response.success && response.data) {
         const passengersList = response.data;
@@ -542,14 +561,14 @@ const DriverTripScreen = () => {
     let activeBookingId = currentBookingId || bookingId;
     
     // If no booking ID, try to find booking for the offer
-    if (!activeBookingId && params.offerId) {
+    if (!activeBookingId && resolvedOfferId) {
       try {
         // Determine service type from offer - check if it has rental-specific fields
-        const serviceType = (params.offer?.pricePerHour || params.offer?.minimumHours) ? 'rental' : 'pooling';
+        const serviceType = resolvedServiceType;
         
-        console.log(`🚀 Start Trip: Looking for booking - offerId=${params.offerId}, serviceType=${serviceType}`);
+        console.log(`🚀 Start Trip: Looking for booking - offerId=${resolvedOfferId}, serviceType=${serviceType}`);
         
-        const response = await bookingApi.getBookingByOffer(params.offerId, serviceType);
+        const response = await bookingApi.getBookingByOffer(resolvedOfferId, serviceType);
         
         console.log(`📦 Start Trip API response:`, response);
         
@@ -562,7 +581,7 @@ const DriverTripScreen = () => {
           console.log(`⚠️ Start Trip: No booking found - success=${response.success}, data=${response.data}`);
           // Try alternative: get driver bookings and find one matching this offer
           try {
-            console.log(`🔄 Fallback: Searching driver bookings for offer ${params.offerId}`);
+            console.log(`🔄 Fallback: Searching driver bookings for offer ${resolvedOfferId}`);
             // Search all driver bookings (no status filter) to find any booking for this offer
             const driverBookingsResponse = await bookingApi.getDriverBookings({ 
               serviceType: serviceType 
@@ -580,8 +599,8 @@ const DriverTripScreen = () => {
               // Find booking matching this offer, prioritizing active statuses
               const matchingBookings = bookings.filter(
                 (b: any) => {
-                  const matches = (serviceType === 'pooling' && b.poolingOfferId === params.offerId) ||
-                                  (serviceType === 'rental' && b.rentalOfferId === params.offerId);
+                  const matches = (serviceType === 'pooling' && b.poolingOfferId === resolvedOfferId) ||
+                                  (serviceType === 'rental' && b.rentalOfferId === resolvedOfferId);
                   if (matches) {
                     console.log(`🔍 Found matching booking ${b.bookingId}: status=${b.status}, poolingOfferId=${b.poolingOfferId}, rentalOfferId=${b.rentalOfferId}`);
                   }
@@ -668,8 +687,8 @@ const DriverTripScreen = () => {
         }
         
         // Start trip using new API
-        const serviceType = (params.offer?.pricePerHour || params.offer?.minimumHours) ? 'rental' : 'pooling';
-        const startTripResponse = await bookingApi.startTrip(params.offerId || '', serviceType);
+        const serviceType = resolvedServiceType;
+        const startTripResponse = await bookingApi.startTrip(resolvedOfferId || '', serviceType);
         
         if (startTripResponse.success) {
         // Start location tracking
@@ -698,7 +717,7 @@ const DriverTripScreen = () => {
   };
 
   const endTrip = async () => {
-    if (!params.offerId) {
+    if (!resolvedOfferId) {
       Alert.alert('Error', 'Offer ID not found');
       return;
     }
@@ -716,10 +735,10 @@ const DriverTripScreen = () => {
               stopLocationTracking();
               setIsTracking(false);
               
-              const serviceType = params.offer?.type === 'rental' ? 'rental' : 'pooling';
+              const serviceType = resolvedServiceType;
               
               // End entire trip (marks all bookings as completed and offer as completed)
-              const response = await bookingApi.endTrip(params.offerId || '', serviceType);
+              const response = await bookingApi.endTrip(resolvedOfferId || '', serviceType);
               
               if (response.success) {
                 Alert.alert('Trip Ended', 'Trip has been completed successfully. The offer has been removed from My Offers.');
@@ -1033,127 +1052,232 @@ const DriverTripScreen = () => {
     );
   }
 
+  const SCREEN_H = Dimensions.get('window').height;
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      {/* ── Hero Header ── */}
-      <ImageBackground
-        source={require('../../../assets/track.png')}
-        style={styles.headerImage}
-        resizeMode="cover"
-      >
-        <View style={[styles.headerOverlay, { backgroundColor: theme.colors.primary }]} />
-        <BlurView intensity={40} style={styles.blurContainer}>
-          <View style={styles.headerNav}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.navButton}>
-              <ArrowLeft size={22} color="#FFF" />
-            </TouchableOpacity>
-            <View style={styles.headerCenter}>
-              <Text style={styles.navTitle}>Driver Trip</Text>
-              <Text style={styles.navSubtitle}>
-                {isTracking ? 'Trip in progress' : 'Ready to start'}
-              </Text>
-            </View>
-            {/* Live Indicator */}
-            <View style={[styles.liveIndicator, { backgroundColor: isTracking ? '#4CAF50' : 'rgba(255,255,255,0.25)' }]}>
-              <View style={[styles.liveDot, { backgroundColor: isTracking ? '#FFF' : 'rgba(255,255,255,0.5)' }]} />
-              <Text style={styles.liveText}>{isTracking ? 'LIVE' : 'OFF'}</Text>
-            </View>
-          </View>
-        </BlurView>
-      </ImageBackground>
-
-      {/* ── Map ── */}
-      <View style={[styles.mapContainer, { borderColor: theme.colors.border }]}>
+      {/* ── Map (full top area, Uber-style) ── */}
+      <View style={[styles.mapWrap, { height: SCREEN_H * 0.32 }]}>
         {mapHTML ? (
-          <WebView
-            source={{ html: mapHTML }}
-            style={styles.webView}
-            javaScriptEnabled={true}
-          />
+          <WebView source={{ html: mapHTML }} style={styles.webView} javaScriptEnabled />
         ) : (
-          <View style={styles.mapPlaceholder}>
+          <View style={[styles.mapPlaceholder, { backgroundColor: theme.colors.background }]}>
             <ActivityIndicator size="large" color={theme.colors.primary} />
-            <Text style={[styles.mapHint, { color: theme.colors.textSecondary }]}>Loading map...</Text>
           </View>
         )}
+
+        {/* Floating header over map */}
+        <View style={styles.floatingHeader}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.floatingBtn, { backgroundColor: theme.colors.surface }]}>
+            <ArrowLeft size={20} color={theme.colors.text} />
+          </TouchableOpacity>
+          <View style={[styles.liveChip, { backgroundColor: isTracking ? '#4CAF50' : theme.colors.surface }]}>
+            <View style={[styles.liveDot, { backgroundColor: isTracking ? '#FFF' : theme.colors.textSecondary }]} />
+            <Text style={[styles.liveText, { color: isTracking ? '#FFF' : theme.colors.textSecondary }]}>
+              {isTracking ? 'LIVE' : 'IDLE'}
+            </Text>
+          </View>
+        </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      {/* ── Bottom Sheet Content ── */}
+      <ScrollView style={styles.sheet} contentContainerStyle={styles.sheetContent} showsVerticalScrollIndicator={false}>
+        {/* Drag Handle */}
+        <View style={styles.sheetHandle} />
 
-        {/* ── Metric Strip (below map) ── */}
+        {/* ── Metric Strip ── */}
         <View style={[styles.metricStrip, { backgroundColor: theme.colors.surface }]}>
           <View style={styles.metricItem}>
-            <Route size={14} color={theme.colors.primary} />
-            <Text style={[styles.metricValue, { color: theme.colors.text }]}>{distance || 0} km</Text>
-            <Text style={[styles.metricLabel, { color: theme.colors.textSecondary }]}>Distance</Text>
+            <Text style={[styles.metricValue, { color: theme.colors.text }]}>{distance || 0}</Text>
+            <Text style={[styles.metricUnit, { color: theme.colors.textSecondary }]}>km</Text>
           </View>
           <View style={[styles.metricDivider, { backgroundColor: theme.colors.border }]} />
           <View style={styles.metricItem}>
-            <Timer size={14} color={theme.colors.primary} />
             <Text style={[styles.metricValue, { color: theme.colors.text }]}>{duration || '0m'}</Text>
-            <Text style={[styles.metricLabel, { color: theme.colors.textSecondary }]}>Duration</Text>
+            <Text style={[styles.metricUnit, { color: theme.colors.textSecondary }]}>est.</Text>
           </View>
           <View style={[styles.metricDivider, { backgroundColor: theme.colors.border }]} />
           <View style={styles.metricItem}>
-            <Gauge size={14} color={theme.colors.primary} />
-            <Text style={[styles.metricValue, { color: theme.colors.text }]}>{eta || 0} min</Text>
-            <Text style={[styles.metricLabel, { color: theme.colors.textSecondary }]}>ETA</Text>
+            <Text style={[styles.metricValue, { color: theme.colors.text }]}>{eta || 0}</Text>
+            <Text style={[styles.metricUnit, { color: theme.colors.textSecondary }]}>min ETA</Text>
           </View>
         </View>
 
-        {/* ── Route Card ── */}
+        {/* ── Route Timeline ── */}
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-          <Text style={[styles.cardTitle, { color: theme.colors.text }]}>Route</Text>
-          <View style={styles.routeSection}>
-            <View style={[styles.routeBox, { backgroundColor: theme.colors.background, borderColor: theme.colors.border }]}>
-              <MapPin size={16} color={theme.colors.primary} />
-              <Text style={[styles.routeText, { color: theme.colors.text }]} numberOfLines={2}>
-                {getFromAddr()}
-              </Text>
+          <View style={styles.routeTimeline}>
+            <View style={styles.routeStop}>
+              <View style={[styles.routeDot, { backgroundColor: '#4CAF50' }]} />
+              <View style={styles.routeStopInfo}>
+                <Text style={[styles.routeLabel, { color: theme.colors.textSecondary }]}>PICKUP</Text>
+                <Text style={[styles.routeAddr, { color: theme.colors.text }]} numberOfLines={2}>{getFromAddr()}</Text>
+              </View>
             </View>
-            <View style={[styles.routeArrowCircle, { backgroundColor: theme.colors.primary + '15' }]}>
-              <ArrowRight size={16} color={theme.colors.primary} />
+            <View style={styles.routeLineWrap}>
+              <View style={[styles.routeLine, { borderColor: theme.colors.border }]} />
             </View>
-            <View style={[styles.routeBox, { backgroundColor: theme.colors.background, borderColor: theme.colors.border }]}>
-              <MapPin size={16} color="#F44336" />
-              <Text style={[styles.routeText, { color: theme.colors.text }]} numberOfLines={2}>
-                {getToAddr()}
-              </Text>
+            <View style={styles.routeStop}>
+              <View style={[styles.routeDot, { backgroundColor: '#E53E3E' }]} />
+              <View style={styles.routeStopInfo}>
+                <Text style={[styles.routeLabel, { color: theme.colors.textSecondary }]}>DROP-OFF</Text>
+                <Text style={[styles.routeAddr, { color: theme.colors.text }]} numberOfLines={2}>{getToAddr()}</Text>
+              </View>
             </View>
           </View>
         </View>
 
-        {/* ── Stopping Locations ── */}
-        {stoppingLocations.length > 0 && (
+        {/* ── Passengers ── */}
+        {passengers.length > 0 && (
           <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-            <View style={styles.cardTitleRow}>
-              <MapPin size={18} color={theme.colors.primary} />
-              <Text style={[styles.cardTitle, { color: theme.colors.text, marginBottom: 0 }]}>Stops</Text>
-              <View style={[styles.countBadge, { backgroundColor: theme.colors.primary + '15' }]}>
-                <Text style={[styles.countBadgeText, { color: theme.colors.primary }]}>{stoppingLocations.length}</Text>
+            <View style={styles.cardHeader}>
+              <Users size={16} color={theme.colors.primary} />
+              <Text style={[styles.cardTitle, { color: theme.colors.text }]}>Passengers</Text>
+              <View style={[styles.countPill, { backgroundColor: theme.colors.primary }]}>
+                <Text style={styles.countPillText}>{passengers.length}</Text>
               </View>
             </View>
 
+            {passengers.map((passenger: any, index: number) => {
+              const pStatus = getPassengerStatusStyle(passenger.passengerStatus);
+              const bookedSeats = Math.max(1, Number(passenger?.seatsBooked || 1));
+              const isWaiting = passenger.passengerStatus === 'waiting';
+              const isInVehicle = passenger.passengerStatus === 'got_in';
+              const isDroppedOff = passenger.passengerStatus === 'got_out';
+              const isDone = passenger.status === 'completed';
+
+              return (
+                <View key={index} style={[styles.pCard, { backgroundColor: theme.colors.background }, index > 0 && { marginTop: normalize(8) }]}>
+                  {/* Top: Avatar + Info + Status */}
+                  <View style={styles.pTopRow}>
+                    <View style={[styles.pAvatar, { backgroundColor: pStatus.color + '15' }]}>
+                      <User size={18} color={pStatus.color} />
+                    </View>
+                    <View style={styles.pInfo}>
+                      <View style={styles.pNameRow}>
+                        <Text style={[styles.pName, { color: theme.colors.text }]}>
+                          {bookedSeats > 1 ? 'Group Booking' : (passenger.passengerName || 'Passenger')}
+                        </Text>
+                        <View style={[styles.seatBadge, { backgroundColor: theme.colors.primary + '15' }]}>
+                          <Users size={11} color={theme.colors.primary} />
+                          <Text style={[styles.seatBadgeText, { color: theme.colors.primary }]}>
+                            {bookedSeats} member{bookedSeats > 1 ? 's' : ''}
+                          </Text>
+                        </View>
+                      </View>
+                      {bookedSeats > 1 && (
+                        <Text style={[styles.pSub, { color: theme.colors.textSecondary }]}>
+                          Contact: {passenger.passengerName || 'Passenger'}
+                        </Text>
+                      )}
+                      <Text style={[styles.pRoute, { color: theme.colors.textSecondary }]} numberOfLines={1}>
+                        {typeof passenger.route?.from === 'object' ? passenger.route.from.address?.split(',')[0] : 'From'}
+                        {' → '}
+                        {typeof passenger.route?.to === 'object' ? passenger.route.to.address?.split(',')[0] : 'To'}
+                      </Text>
+                    </View>
+                    <View style={[styles.pStatusChip, { backgroundColor: pStatus.bg }]}>
+                      <View style={[styles.pStatusDot, { backgroundColor: pStatus.color }]} />
+                      <Text style={[styles.pStatusLabel, { color: pStatus.color }]}>{pStatus.label}</Text>
+                    </View>
+                  </View>
+
+                  {/* Actions row */}
+                  <View style={styles.pActions}>
+                    {isWaiting && (
+                      <TouchableOpacity
+                        style={[styles.pBtn, { backgroundColor: '#4CAF50' }]}
+                        onPress={() => handleGetIn(passenger.bookingId)}
+                        activeOpacity={0.8}
+                      >
+                        <LogIn size={15} color="#FFF" />
+                        <Text style={styles.pBtnText}>Picked Up</Text>
+                      </TouchableOpacity>
+                    )}
+
+                    {isInVehicle && (
+                      <TouchableOpacity
+                        style={[styles.pBtn, { backgroundColor: '#FF9800' }]}
+                        onPress={() => handleGetOut(passenger.bookingId)}
+                        activeOpacity={0.8}
+                      >
+                        <LogOut size={15} color="#FFF" />
+                        <Text style={styles.pBtnText}>Drop Off</Text>
+                      </TouchableOpacity>
+                    )}
+
+                    {isDroppedOff && !isDone && (
+                      <TouchableOpacity
+                        style={[styles.pBtn, { backgroundColor: theme.colors.primary }]}
+                        onPress={() => {
+                          if (passenger.paymentMethod === 'offline_cash' && passenger.passengerCode) {
+                            setSelectedPassenger({ bookingId: passenger.bookingId, waitingForPayment: false, cashMode: true });
+                            setShowCodeModal(true);
+                          } else {
+                            setSelectedPassenger({ bookingId: passenger.bookingId, waitingForPayment: true });
+                            setShowCodeModal(true);
+                            startPaymentPolling(passenger.bookingId);
+                          }
+                        }}
+                        activeOpacity={0.8}
+                      >
+                        <KeyRound size={15} color="#FFF" />
+                        <Text style={styles.pBtnText}>Verify Payment</Text>
+                      </TouchableOpacity>
+                    )}
+
+                    {isDone && !passenger.settlementStatus && (
+                      <View style={[styles.pDoneBadge, { backgroundColor: '#E8F5E9' }]}>
+                        <CheckCircle size={14} color="#4CAF50" />
+                        <Text style={styles.pDoneText}>Completed</Text>
+                      </View>
+                    )}
+
+                    {isDone && passenger.settlementStatus === 'driver_requested' && (
+                      <TouchableOpacity
+                        style={[styles.pBtn, { backgroundColor: theme.colors.primary }]}
+                        onPress={() => handleWithdraw(passenger.bookingId)}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={styles.pBtnText}>Withdraw</Text>
+                      </TouchableOpacity>
+                    )}
+
+                    {/* Quick call */}
+                    {passenger.passengerPhone && (
+                      <TouchableOpacity style={[styles.pIconBtn, { backgroundColor: '#E8F5E9' }]}>
+                        <Phone size={16} color="#4CAF50" />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+              );
+            })}
+          </View>
+        )}
+
+        {/* ── Stops Timeline ── */}
+        {stoppingLocations.length > 0 && (
+          <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+            <View style={styles.cardHeader}>
+              <MapPin size={16} color={theme.colors.primary} />
+              <Text style={[styles.cardTitle, { color: theme.colors.text }]}>Stops</Text>
+            </View>
             {stoppingLocations.map((stop, index) => {
               const isPickup = stop.type === 'pickup';
               return (
                 <View key={index} style={styles.stopRow}>
-                  <View style={styles.stopTimeline}>
-                    <View style={[styles.stopDot, { backgroundColor: isPickup ? '#4CAF50' : '#F44336' }]} />
-                    {index < stoppingLocations.length - 1 && (
-                      <View style={[styles.stopLine, { backgroundColor: theme.colors.border }]} />
-                    )}
+                  <View style={styles.stopTimelineCol}>
+                    <View style={[styles.stopDot, { backgroundColor: isPickup ? '#4CAF50' : '#E53E3E' }]} />
+                    {index < stoppingLocations.length - 1 && <View style={[styles.stopConnector, { backgroundColor: theme.colors.border }]} />}
                   </View>
-                  <View style={[styles.stopContent, { backgroundColor: theme.colors.background }]}>
-                    <View style={styles.stopHeader}>
-                      <View style={[styles.stopTypeBadge, { backgroundColor: (isPickup ? '#4CAF50' : '#F44336') + '15' }]}>
-                        <Text style={[styles.stopTypeText, { color: isPickup ? '#4CAF50' : '#F44336' }]}>
-                          {isPickup ? 'Pickup' : 'Dropoff'}
-                        </Text>
+                  <View style={[styles.stopCard, { backgroundColor: theme.colors.background }]}>
+                    <View style={styles.stopTopRow}>
+                      <View style={[styles.stopBadge, { backgroundColor: (isPickup ? '#4CAF50' : '#E53E3E') + '12' }]}>
+                        <Text style={[styles.stopBadgeText, { color: isPickup ? '#4CAF50' : '#E53E3E' }]}>{isPickup ? 'Pick' : 'Drop'}</Text>
                       </View>
-                      <Text style={[styles.stopPassengerName, { color: theme.colors.text }]}>{stop.passengerName}</Text>
+                      <Text style={[styles.stopName, { color: theme.colors.text }]}>{stop.passengerName}</Text>
                     </View>
-                    <Text style={[styles.stopAddress, { color: theme.colors.textSecondary }]} numberOfLines={2}>
+                    <Text style={[styles.stopAddr, { color: theme.colors.textSecondary }]} numberOfLines={1}>
                       {typeof stop.location === 'object' ? stop.location.address : stop.location}
                     </Text>
                   </View>
@@ -1163,223 +1287,73 @@ const DriverTripScreen = () => {
           </View>
         )}
 
-        {/* ── Passengers ── */}
-        {passengers.length > 0 && (
-          <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-            <View style={styles.cardTitleRow}>
-              <Users size={18} color={theme.colors.primary} />
-              <Text style={[styles.cardTitle, { color: theme.colors.text, marginBottom: 0 }]}>Passengers</Text>
-              <View style={[styles.countBadge, { backgroundColor: theme.colors.primary + '15' }]}>
-                <Text style={[styles.countBadgeText, { color: theme.colors.primary }]}>{passengers.length}</Text>
-              </View>
-            </View>
-
-            {passengers.map((passenger: any, index: number) => {
-              const pStatus = getPassengerStatusStyle(passenger.passengerStatus);
-              return (
-                <View key={index} style={[styles.passengerCard, { backgroundColor: theme.colors.background }]}>
-                  <View style={styles.passengerTop}>
-                    <View style={[styles.passengerAvatar, { backgroundColor: theme.colors.primary + '15' }]}>
-                      <User size={18} color={theme.colors.primary} />
-                    </View>
-                    <View style={styles.passengerInfo}>
-                      <Text style={[styles.passengerName, { color: theme.colors.text }]}>{passenger.passengerName}</Text>
-                      <View style={styles.passengerRouteRow}>
-                        <Text style={[styles.passengerRouteText, { color: theme.colors.textSecondary }]} numberOfLines={1}>
-                          {typeof passenger.route?.from === 'object'
-                            ? passenger.route.from.address?.split(',')[0]
-                            : 'From'}
-                        </Text>
-                        <ArrowRight size={12} color={theme.colors.textSecondary} />
-                        <Text style={[styles.passengerRouteText, { color: theme.colors.textSecondary }]} numberOfLines={1}>
-                          {typeof passenger.route?.to === 'object'
-                            ? passenger.route.to.address?.split(',')[0]
-                            : 'To'}
-                        </Text>
-                      </View>
-                    </View>
-                    <View style={[styles.pStatusBadge, { backgroundColor: pStatus.bg }]}>
-                      <Text style={[styles.pStatusText, { color: pStatus.color }]}>{pStatus.label}</Text>
-                    </View>
-                  </View>
-
-                  {/* Action Buttons */}
-                  <View style={styles.passengerActions}>
-                    {passenger.passengerStatus === 'waiting' && (
-                      <TouchableOpacity
-                        style={[styles.pActionBtn, { backgroundColor: theme.colors.primary }]}
-                        onPress={() => handleGetIn(passenger.bookingId)}
-                      >
-                        <LogIn size={15} color="#FFF" />
-                        <Text style={styles.pActionBtnText}>Get In</Text>
-                      </TouchableOpacity>
-                    )}
-                    {(passenger.passengerStatus === 'got_in' || (passenger.passengerStatus === 'got_out' && passenger.status !== 'completed')) && (
-                      <TouchableOpacity
-                        style={[styles.pActionBtn, {
-                          backgroundColor: passenger.passengerStatus === 'got_out' ? theme.colors.primary : 'transparent',
-                          borderWidth: passenger.passengerStatus === 'got_out' ? 0 : 1.5,
-                          borderColor: theme.colors.primary,
-                        }]}
-                        onPress={() => {
-                          if (passenger.passengerStatus === 'got_out') {
-                            if (passenger.paymentMethod === 'offline_cash' && passenger.passengerCode) {
-                              setSelectedPassenger({ bookingId: passenger.bookingId, waitingForPayment: false, cashMode: true });
-                              setShowCodeModal(true);
-                            } else if (passenger.status === 'completed') {
-                              Alert.alert('Completed', 'This trip is already completed.');
-                            } else {
-                              setSelectedPassenger({ bookingId: passenger.bookingId, waitingForPayment: true });
-                              setShowCodeModal(true);
-                              startPaymentPolling(passenger.bookingId);
-                            }
-                          } else {
-                            handleGetOut(passenger.bookingId);
-                          }
-                        }}
-                      >
-                        {passenger.passengerStatus === 'got_out'
-                          ? <KeyRound size={15} color="#FFF" />
-                          : <LogOut size={15} color={theme.colors.primary} />}
-                        <Text style={[styles.pActionBtnText, {
-                          color: passenger.passengerStatus === 'got_out' ? '#FFF' : theme.colors.primary,
-                        }]}>
-                          {passenger.passengerStatus === 'got_out' ? 'Verify Code' : 'Get Out'}
-                        </Text>
-                      </TouchableOpacity>
-                    )}
-                    {passenger.status === 'completed' && passenger.settlementStatus === 'driver_requested' && (
-                      <TouchableOpacity
-                        style={[styles.pActionBtn, { backgroundColor: theme.colors.primary }]}
-                        onPress={() => handleWithdraw(passenger.bookingId)}
-                      >
-                        <KeyRound size={15} color="#FFF" />
-                        <Text style={styles.pActionBtnText}>Withdraw</Text>
-                      </TouchableOpacity>
-                    )}
-                    {passenger.status === 'completed' && !passenger.settlementStatus && (
-                      <View style={[styles.completedBadge, { backgroundColor: '#4CAF50' + '15' }]}>
-                        <Text style={[styles.completedBadgeText, { color: '#4CAF50' }]}>Completed</Text>
-                      </View>
-                    )}
-                  </View>
-                </View>
-              );
-            })}
-          </View>
-        )}
-
-        {/* ── Start / End Trip Button ── */}
-        <View style={styles.tripActionContainer}>
+        {/* ── Start / End Trip ── */}
+        <View style={styles.tripActionWrap}>
           {!isTracking ? (
-            <TouchableOpacity
-              style={[styles.tripStartBtn, { backgroundColor: theme.colors.primary }]}
-              onPress={startTrip}
-              activeOpacity={0.85}
-            >
-              <Play size={22} color="#FFF" />
-              <Text style={styles.tripStartBtnText}>Start Trip & Begin Tracking</Text>
+            <TouchableOpacity style={[styles.startBtn, { backgroundColor: theme.colors.primary }]} onPress={startTrip} activeOpacity={0.85}>
+              <Play size={20} color="#FFF" />
+              <Text style={styles.startBtnText}>Start Trip</Text>
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity
-              style={[styles.tripEndBtn]}
-              onPress={endTrip}
-              activeOpacity={0.85}
-            >
-              <Square size={20} color="#F44336" />
-              <Text style={styles.tripEndBtnText}>End Trip</Text>
+            <TouchableOpacity style={styles.endBtn} onPress={endTrip} activeOpacity={0.85}>
+              <View style={styles.stopIcon} />
+              <Text style={styles.endBtnText}>End Trip</Text>
             </TouchableOpacity>
           )}
         </View>
+
+        <View style={{ height: normalize(20) }} />
       </ScrollView>
 
       {/* ── Payment / Code Modal ── */}
-      <Modal
-        visible={showCodeModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => {
-          if (paymentPollRef.current) clearInterval(paymentPollRef.current);
-          setShowCodeModal(false);
-          setPassengerCode('');
-          setSelectedPassenger(null);
-        }}
+      <Modal visible={showCodeModal} transparent animationType="slide"
+        onRequestClose={() => { if (paymentPollRef.current) clearInterval(paymentPollRef.current); setShowCodeModal(false); setPassengerCode(''); setSelectedPassenger(null); }}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: theme.colors.surface }]}>
+          <View style={[styles.modalSheet, { backgroundColor: theme.colors.surface }]}>
             <View style={styles.modalHandle} />
-            <TouchableOpacity
-              style={styles.modalCloseButton}
-              onPress={() => {
-                if (paymentPollRef.current) clearInterval(paymentPollRef.current);
-                setShowCodeModal(false);
-                setPassengerCode('');
-                setSelectedPassenger(null);
-              }}
-            >
+            <TouchableOpacity style={styles.modalClose} onPress={() => { if (paymentPollRef.current) clearInterval(paymentPollRef.current); setShowCodeModal(false); setPassengerCode(''); setSelectedPassenger(null); }}>
               <X size={22} color={theme.colors.textSecondary} />
             </TouchableOpacity>
 
-            {/* STATE 1: Waiting for passenger to choose payment */}
             {selectedPassenger?.waitingForPayment && (
               <>
-                <View style={[styles.modalIconCircle, { backgroundColor: theme.colors.primary + '12' }]}>
-                  <Clock size={32} color={theme.colors.primary} />
+                <View style={[styles.modalIcon, { backgroundColor: theme.colors.primary + '12' }]}>
+                  <Clock size={28} color={theme.colors.primary} />
                 </View>
                 <Text style={[styles.modalTitle, { color: theme.colors.text }]}>Waiting for Payment</Text>
-                <Text style={[styles.modalSubtitle, { color: theme.colors.textSecondary }]}>
-                  Passenger has been notified to pay.{'\n'}Waiting for them to choose Online or Cash.
+                <Text style={[styles.modalSub, { color: theme.colors.textSecondary }]}>
+                  Passenger is choosing payment method...
                 </Text>
-                <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginVertical: 24 }} />
-                <Text style={[styles.modalHint, { color: theme.colors.textSecondary }]}>
-                  This screen will update automatically
-                </Text>
+                <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginVertical: normalize(20) }} />
+                <Text style={[styles.modalHint, { color: theme.colors.textSecondary }]}>Auto-updates when ready</Text>
               </>
             )}
 
-            {/* STATE 2: Passenger chose CASH — enter code */}
             {selectedPassenger?.cashMode && (
               <>
-                <View style={[styles.modalIconCircle, { backgroundColor: '#4CAF50' + '12' }]}>
-                  <KeyRound size={32} color="#4CAF50" />
+                <View style={[styles.modalIcon, { backgroundColor: '#E8F5E9' }]}>
+                  <KeyRound size={28} color="#4CAF50" />
                 </View>
                 <Text style={[styles.modalTitle, { color: theme.colors.text }]}>Enter Cash Code</Text>
-                <Text style={[styles.modalSubtitle, { color: theme.colors.textSecondary }]}>
-                  Passenger chose to pay cash.{'\n'}Ask them for the 4-digit code.
+                <Text style={[styles.modalSub, { color: theme.colors.textSecondary }]}>
+                  Ask the passenger for their 4-digit code
                 </Text>
-
                 <TextInput
                   style={[styles.codeInput, { borderColor: theme.colors.primary, backgroundColor: theme.colors.background, color: theme.colors.text }]}
-                  value={passengerCode}
-                  onChangeText={setPassengerCode}
-                  placeholder="0000"
-                  placeholderTextColor={theme.colors.textSecondary}
-                  keyboardType="number-pad"
-                  maxLength={4}
-                  autoFocus
+                  value={passengerCode} onChangeText={setPassengerCode}
+                  placeholder="0000" placeholderTextColor={theme.colors.textSecondary}
+                  keyboardType="number-pad" maxLength={4} autoFocus
                 />
-
-                <View style={styles.modalButtons}>
-                  <TouchableOpacity
-                    style={[styles.modalCancelBtn, { borderColor: theme.colors.border }]}
-                    onPress={() => {
-                      if (paymentPollRef.current) clearInterval(paymentPollRef.current);
-                      setShowCodeModal(false);
-                      setPassengerCode('');
-                      setSelectedPassenger(null);
-                    }}
-                  >
+                <View style={styles.modalBtns}>
+                  <TouchableOpacity style={[styles.modalCancelBtn, { borderColor: theme.colors.border }]}
+                    onPress={() => { if (paymentPollRef.current) clearInterval(paymentPollRef.current); setShowCodeModal(false); setPassengerCode(''); setSelectedPassenger(null); }}>
                     <Text style={[styles.modalCancelText, { color: theme.colors.textSecondary }]}>Cancel</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.modalConfirmBtn, {
-                      backgroundColor: theme.colors.primary,
-                      opacity: verifyingCode || passengerCode.length !== 4 ? 0.5 : 1,
-                    }]}
-                    onPress={handleVerifyCode}
-                    disabled={verifyingCode || passengerCode.length !== 4}
-                  >
-                    <Text style={styles.modalConfirmText}>{verifyingCode ? 'Verifying...' : 'Verify Code'}</Text>
+                    style={[styles.modalConfirmBtn, { backgroundColor: theme.colors.primary, opacity: verifyingCode || passengerCode.length !== 4 ? 0.5 : 1 }]}
+                    onPress={handleVerifyCode} disabled={verifyingCode || passengerCode.length !== 4}>
+                    <Text style={styles.modalConfirmText}>{verifyingCode ? 'Verifying...' : 'Verify'}</Text>
                   </TouchableOpacity>
                 </View>
               </>
@@ -1392,494 +1366,116 @@ const DriverTripScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  /* ── Container ── */
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
 
-  /* ── Hero Header ── */
-  headerImage: {
-    width: '100%',
-    height: hp(18),
-  },
-  headerOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    opacity: 0.78,
-  },
-  blurContainer: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'flex-end',
-    paddingBottom: SPACING.md,
-    paddingHorizontal: SPACING.md,
-  },
-  headerNav: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: SPACING.md,
-  },
-  navButton: {
-    width: normalize(38),
-    height: normalize(38),
-    borderRadius: normalize(19),
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
-    paddingHorizontal: SPACING.md,
-  },
-  navTitle: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(22),
-    color: '#FFF',
-    fontWeight: '800',
-    letterSpacing: normalize(0.4),
-    textAlign: 'center',
-  },
-  navSubtitle: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(12),
-    color: 'rgba(255,255,255,0.7)',
-    fontWeight: '500',
-    marginTop: 2,
-    textAlign: 'center',
-  },
-  liveIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  liveDot: {
-    width: normalize(7),
-    height: normalize(7),
-    borderRadius: normalize(4),
-  },
-  liveText: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(11),
-    color: '#FFF',
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
+  // Map
+  mapWrap: { position: 'relative' },
+  webView: { flex: 1 },
+  mapPlaceholder: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
-  /* ── Metric Strip (card below map) ── */
-  metricStrip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: normalize(14),
-    paddingVertical: normalize(12),
-    paddingHorizontal: normalize(6),
-    marginBottom: SPACING.md,
-    ...SHADOWS.sm,
-  },
-  metricItem: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 2,
-  },
-  metricValue: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(16),
-    fontWeight: '800',
-  },
-  metricLabel: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(10),
-    fontWeight: '500',
-  },
-  metricDivider: {
-    width: 1,
-    height: 28,
-  },
+  // Floating header
+  floatingHeader: { position: 'absolute', top: normalize(40), left: normalize(14), right: normalize(14), flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 },
+  floatingBtn: { width: normalize(40), height: normalize(40), borderRadius: normalize(20), alignItems: 'center', justifyContent: 'center', ...SHADOWS.md },
+  liveChip: { flexDirection: 'row', alignItems: 'center', gap: normalize(5), paddingHorizontal: normalize(12), paddingVertical: normalize(7), borderRadius: normalize(16), ...SHADOWS.md },
+  liveDot: { width: normalize(7), height: normalize(7), borderRadius: normalize(4) },
+  liveText: { fontFamily: FONTS.medium, fontSize: normalize(11), fontWeight: '800', letterSpacing: 1 },
 
-  /* ── Map ── */
-  mapContainer: {
-    height: hp(32),
-    marginHorizontal: SPACING.md,
-    marginTop: normalize(23),
-    borderRadius: normalize(16),
-    overflow: 'hidden',
-    ...SHADOWS.md,
-  },
-  webView: {
-    flex: 1,
-    height: hp(32),
-  },
-  mapPlaceholder: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F0F0F0',
-  },
-  mapHint: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(13),
-    marginTop: SPACING.sm,
-  },
+  // Sheet
+  sheet: { flex: 1, borderTopLeftRadius: normalize(20), borderTopRightRadius: normalize(20), backgroundColor: 'transparent' },
+  sheetContent: { paddingHorizontal: normalize(14), paddingBottom: normalize(20) },
+  sheetHandle: { width: normalize(36), height: normalize(4), borderRadius: normalize(2), backgroundColor: '#D1D5DB', alignSelf: 'center', marginTop: normalize(10), marginBottom: normalize(14) },
 
-  /* ── Scroll ── */
-  scrollContent: {
-    padding: SPACING.md,
-    paddingBottom: SPACING.xl,
-  },
+  // Metrics
+  metricStrip: { flexDirection: 'row', borderRadius: normalize(14), padding: normalize(14), marginBottom: normalize(10), ...SHADOWS.sm },
+  metricItem: { flex: 1, alignItems: 'center' },
+  metricValue: { fontFamily: FONTS.medium, fontSize: normalize(20), fontWeight: '800' },
+  metricUnit: { fontFamily: FONTS.regular, fontSize: normalize(10), marginTop: normalize(1) },
+  metricDivider: { width: 1, height: normalize(28), alignSelf: 'center' },
 
-  /* ── Shared Card ── */
-  card: {
-    borderRadius: normalize(16),
-    padding: SPACING.lg,
-    marginBottom: SPACING.md,
-    ...SHADOWS.md,
-  },
-  cardTitle: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(16),
-    fontWeight: '700',
-    marginBottom: SPACING.md,
-    letterSpacing: normalize(0.2),
-  },
-  cardTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: SPACING.md,
-  },
-  countBadge: {
-    marginLeft: 'auto',
-    width: normalize(26),
-    height: normalize(26),
-    borderRadius: normalize(13),
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  countBadgeText: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(12),
-    fontWeight: '800',
-  },
+  // Card
+  card: { borderRadius: normalize(14), padding: normalize(14), marginBottom: normalize(10), ...SHADOWS.sm },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: normalize(8), marginBottom: normalize(10) },
+  cardTitle: { fontFamily: FONTS.medium, fontSize: normalize(15), fontWeight: '700', flex: 1 },
+  countPill: { width: normalize(22), height: normalize(22), borderRadius: normalize(11), alignItems: 'center', justifyContent: 'center' },
+  countPillText: { fontFamily: FONTS.medium, fontSize: normalize(11), fontWeight: '700', color: '#FFF' },
 
-  /* ── Route Display ── */
-  routeSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  routeBox: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: normalize(12),
-    paddingHorizontal: normalize(10),
-    paddingVertical: normalize(11),
-    gap: normalize(6),
-  },
-  routeText: {
-    flex: 1,
-    fontFamily: FONTS.regular,
-    fontSize: normalize(12),
-    fontWeight: '500',
-    lineHeight: normalize(16),
-  },
-  routeArrowCircle: {
-    width: normalize(30),
-    height: normalize(30),
-    borderRadius: normalize(15),
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  // Route Timeline
+  routeTimeline: {},
+  routeStop: { flexDirection: 'row', alignItems: 'flex-start', gap: normalize(12) },
+  routeDot: { width: normalize(10), height: normalize(10), borderRadius: normalize(5), marginTop: normalize(4) },
+  routeStopInfo: { flex: 1, paddingBottom: normalize(4) },
+  routeLabel: { fontFamily: FONTS.regular, fontSize: normalize(10), fontWeight: '600', letterSpacing: 0.8, marginBottom: normalize(2) },
+  routeAddr: { fontFamily: FONTS.medium, fontSize: normalize(13), fontWeight: '600', lineHeight: normalize(19) },
+  routeLineWrap: { paddingLeft: normalize(4), paddingVertical: normalize(2) },
+  routeLine: { width: 0, height: normalize(22), borderLeftWidth: 1.5, borderStyle: 'dashed' as any },
 
-  /* ── Stopping Locations (Timeline) ── */
-  stopRow: {
-    flexDirection: 'row',
-    marginBottom: 2,
-  },
-  stopTimeline: {
-    width: 24,
-    alignItems: 'center',
-  },
-  stopDot: {
-    width: normalize(12),
-    height: normalize(12),
-    borderRadius: normalize(6),
-    marginTop: normalize(10),
-  },
-  stopLine: {
-    width: 2,
-    flex: 1,
-    marginTop: 4,
-  },
-  stopContent: {
-    flex: 1,
-    borderRadius: normalize(12),
-    padding: normalize(12),
-    marginLeft: normalize(8),
-    marginBottom: normalize(8),
-  },
-  stopHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 4,
-  },
-  stopTypeBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-  },
-  stopTypeText: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(10),
-    fontWeight: '700',
-    letterSpacing: normalize(0.3),
-  },
-  stopPassengerName: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(13),
-    fontWeight: '600',
-  },
-  stopAddress: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(12),
-    lineHeight: normalize(17),
-  },
-
-  /* ── Passengers ── */
-  passengerCard: {
-    borderRadius: normalize(14),
-    padding: normalize(14),
-    marginBottom: normalize(8),
-  },
-  passengerTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  passengerAvatar: {
-    width: normalize(40),
-    height: normalize(40),
-    borderRadius: normalize(20),
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: normalize(10),
-  },
-  passengerInfo: {
-    flex: 1,
-  },
-  passengerName: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(14),
-    fontWeight: '600',
-  },
-  passengerRouteRow: {
+  // Passengers
+  pCard: { borderRadius: normalize(12), padding: normalize(12) },
+  pTopRow: { flexDirection: 'row', alignItems: 'center', gap: normalize(10) },
+  pAvatar: { width: normalize(38), height: normalize(38), borderRadius: normalize(19), alignItems: 'center', justifyContent: 'center' },
+  pInfo: { flex: 1 },
+  pNameRow: { flexDirection: 'row', alignItems: 'center', gap: normalize(6), flexWrap: 'wrap' },
+  pName: { fontFamily: FONTS.medium, fontSize: normalize(14), fontWeight: '600' },
+  pSub: { fontFamily: FONTS.regular, fontSize: normalize(11), marginTop: normalize(2) },
+  seatBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: normalize(4),
-    marginTop: normalize(3),
+    paddingHorizontal: normalize(7),
+    paddingVertical: normalize(3),
+    borderRadius: normalize(8),
   },
-  passengerRouteText: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(11),
-    maxWidth: wp(25),
-  },
-  pStatusBadge: {
-    paddingHorizontal: normalize(10),
-    paddingVertical: normalize(4),
-    borderRadius: normalize(12),
-  },
-  pStatusText: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(10),
-    fontWeight: '700',
-    letterSpacing: normalize(0.3),
-  },
-  passengerActions: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 10,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.06)',
-  },
-  pActionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: normalize(6),
-    paddingHorizontal: normalize(16),
-    paddingVertical: normalize(9),
-    borderRadius: normalize(10),
-  },
-  pActionBtnText: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(13),
-    fontWeight: '600',
-    color: '#FFF',
-  },
-  completedBadge: {
-    paddingHorizontal: normalize(14),
-    paddingVertical: normalize(8),
-    borderRadius: normalize(10),
-  },
-  completedBadgeText: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(12),
-    fontWeight: '700',
-  },
+  seatBadgeText: { fontFamily: FONTS.medium, fontSize: normalize(10), fontWeight: '700' },
+  pRoute: { fontFamily: FONTS.regular, fontSize: normalize(11), marginTop: normalize(2) },
+  pStatusChip: { flexDirection: 'row', alignItems: 'center', gap: normalize(4), paddingHorizontal: normalize(8), paddingVertical: normalize(4), borderRadius: normalize(8) },
+  pStatusDot: { width: normalize(6), height: normalize(6), borderRadius: normalize(3) },
+  pStatusLabel: { fontFamily: FONTS.medium, fontSize: normalize(10), fontWeight: '700' },
+  pActions: { flexDirection: 'row', alignItems: 'center', gap: normalize(8), marginTop: normalize(10), paddingTop: normalize(10), borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(0,0,0,0.06)' },
+  pBtn: { flexDirection: 'row', alignItems: 'center', gap: normalize(6), paddingHorizontal: normalize(16), paddingVertical: normalize(9), borderRadius: normalize(10) },
+  pBtnText: { fontFamily: FONTS.medium, fontSize: normalize(13), fontWeight: '600', color: '#FFF' },
+  pIconBtn: { width: normalize(36), height: normalize(36), borderRadius: normalize(10), alignItems: 'center', justifyContent: 'center', marginLeft: 'auto' },
+  pDoneBadge: { flexDirection: 'row', alignItems: 'center', gap: normalize(5), paddingHorizontal: normalize(12), paddingVertical: normalize(8), borderRadius: normalize(10) },
+  pDoneText: { fontFamily: FONTS.medium, fontSize: normalize(12), fontWeight: '600', color: '#4CAF50' },
 
-  /* ── Trip Action Buttons ── */
-  tripActionContainer: {
-    marginTop: SPACING.sm,
-  },
-  tripStartBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: normalize(10),
-    paddingVertical: normalize(16),
-    borderRadius: normalize(16),
-    ...SHADOWS.md,
-  },
-  tripStartBtnText: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(16),
-    color: '#FFF',
-    fontWeight: '700',
-    letterSpacing: normalize(0.3),
-  },
-  tripEndBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: normalize(10),
-    paddingVertical: normalize(16),
-    borderRadius: normalize(16),
-    borderWidth: 2,
-    borderColor: '#F44336',
-    backgroundColor: '#F44336' + '08',
-  },
-  tripEndBtnText: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(16),
-    color: '#F44336',
-    fontWeight: '700',
-    letterSpacing: normalize(0.3),
-  },
+  // Stops
+  stopRow: { flexDirection: 'row', marginBottom: normalize(2) },
+  stopTimelineCol: { width: normalize(24), alignItems: 'center' },
+  stopDot: { width: normalize(10), height: normalize(10), borderRadius: normalize(5), marginTop: normalize(10) },
+  stopConnector: { width: 2, flex: 1, marginTop: normalize(4) },
+  stopCard: { flex: 1, borderRadius: normalize(10), padding: normalize(10), marginLeft: normalize(8), marginBottom: normalize(6) },
+  stopTopRow: { flexDirection: 'row', alignItems: 'center', gap: normalize(6), marginBottom: normalize(3) },
+  stopBadge: { paddingHorizontal: normalize(6), paddingVertical: normalize(2), borderRadius: normalize(6) },
+  stopBadgeText: { fontFamily: FONTS.medium, fontSize: normalize(9), fontWeight: '700' },
+  stopName: { fontFamily: FONTS.medium, fontSize: normalize(12), fontWeight: '600' },
+  stopAddr: { fontFamily: FONTS.regular, fontSize: normalize(11) },
 
-  /* ── Loading ── */
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: SPACING.xl,
-  },
-  loadingText: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(14),
-    marginTop: SPACING.md,
-  },
+  // Trip Actions
+  tripActionWrap: { marginTop: normalize(4) },
+  startBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: normalize(10), paddingVertical: normalize(16), borderRadius: normalize(14), ...SHADOWS.md },
+  startBtnText: { fontFamily: FONTS.medium, fontSize: normalize(16), fontWeight: '700', color: '#FFF' },
+  endBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: normalize(10), paddingVertical: normalize(16), borderRadius: normalize(14), backgroundColor: '#E53E3E' },
+  endBtnText: { fontFamily: FONTS.medium, fontSize: normalize(16), fontWeight: '700', color: '#FFF' },
+  stopIcon: { width: normalize(14), height: normalize(14), borderRadius: normalize(3), backgroundColor: '#FFF' },
 
-  /* ── Modal ── */
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: SPACING.xl,
-    paddingTop: SPACING.md,
-    alignItems: 'center',
-    ...SHADOWS.lg,
-  },
-  modalHandle: {
-    width: normalize(40),
-    height: normalize(4),
-    borderRadius: normalize(2),
-    backgroundColor: 'rgba(0,0,0,0.15)',
-    marginBottom: SPACING.lg,
-  },
-  modalCloseButton: {
-    position: 'absolute',
-    top: SPACING.md,
-    right: SPACING.md,
-    padding: SPACING.xs,
-    zIndex: 1,
-  },
-  modalIconCircle: {
-    width: normalize(64),
-    height: normalize(64),
-    borderRadius: normalize(32),
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: SPACING.md,
-  },
-  modalTitle: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(20),
-    fontWeight: '700',
-    marginBottom: normalize(6),
-    textAlign: 'center',
-  },
-  modalSubtitle: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(13),
-    textAlign: 'center',
-    lineHeight: normalize(20),
-    marginBottom: SPACING.lg,
-  },
-  modalHint: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(11),
-    textAlign: 'center',
-  },
-  codeInput: {
-    width: '100%',
-    borderWidth: 2,
-    borderRadius: normalize(14),
-    padding: SPACING.md,
-    fontSize: normalize(28),
-    fontFamily: FONTS.regular,
-    fontWeight: '800',
-    textAlign: 'center',
-    letterSpacing: normalize(16),
-    marginBottom: SPACING.lg,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    gap: SPACING.md,
-    width: '100%',
-  },
-  modalCancelBtn: {
-    flex: 1,
-    paddingVertical: normalize(14),
-    borderRadius: normalize(14),
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalCancelText: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(15),
-    fontWeight: '600',
-  },
-  modalConfirmBtn: {
-    flex: 1,
-    paddingVertical: normalize(14),
-    borderRadius: normalize(14),
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalConfirmText: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(15),
-    fontWeight: '700',
-    color: '#FFF',
-  },
+  // Loading
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: normalize(12) },
+  loadingText: { fontFamily: FONTS.regular, fontSize: normalize(14) },
+
+  // Modal
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalSheet: { borderTopLeftRadius: normalize(24), borderTopRightRadius: normalize(24), padding: SPACING.xl, paddingTop: SPACING.md, alignItems: 'center', ...SHADOWS.lg },
+  modalHandle: { width: normalize(36), height: normalize(4), borderRadius: normalize(2), backgroundColor: '#D1D5DB', marginBottom: SPACING.lg },
+  modalClose: { position: 'absolute', top: SPACING.md, right: SPACING.md, padding: SPACING.xs, zIndex: 1 },
+  modalIcon: { width: normalize(56), height: normalize(56), borderRadius: normalize(28), alignItems: 'center', justifyContent: 'center', marginBottom: normalize(12) },
+  modalTitle: { fontFamily: FONTS.medium, fontSize: normalize(18), fontWeight: '700', marginBottom: normalize(6), textAlign: 'center' },
+  modalSub: { fontFamily: FONTS.regular, fontSize: normalize(13), textAlign: 'center', lineHeight: normalize(20), marginBottom: SPACING.md },
+  modalHint: { fontFamily: FONTS.regular, fontSize: normalize(11), textAlign: 'center' },
+  codeInput: { width: '100%', borderWidth: 2, borderRadius: normalize(14), padding: SPACING.md, fontSize: normalize(28), fontWeight: '800', textAlign: 'center', letterSpacing: normalize(16), marginBottom: SPACING.lg },
+  modalBtns: { flexDirection: 'row', gap: SPACING.md, width: '100%' },
+  modalCancelBtn: { flex: 1, paddingVertical: normalize(14), borderRadius: normalize(14), borderWidth: 1.5, alignItems: 'center' },
+  modalCancelText: { fontFamily: FONTS.medium, fontSize: normalize(15), fontWeight: '600' },
+  modalConfirmBtn: { flex: 1, paddingVertical: normalize(14), borderRadius: normalize(14), alignItems: 'center' },
+  modalConfirmText: { fontFamily: FONTS.medium, fontSize: normalize(15), fontWeight: '700', color: '#FFF' },
 });
 
 export default DriverTripScreen;

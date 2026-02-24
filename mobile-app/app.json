@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "FORLOK",
-    "slug": "forlok-mobile",
+    "slug": "yaaryatra-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "newArchEnabled": true,
@@ -45,6 +45,7 @@
       "eas": {
         "projectId": "faf2cd58-b758-4f8e-89bb-0c4981e14fc2"
       }
-    }
+    },
+    "owner": "saodvenky"
   }
 }

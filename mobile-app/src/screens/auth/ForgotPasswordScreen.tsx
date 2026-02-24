@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -7,34 +7,34 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  Alert,
-  ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowLeft } from 'lucide-react-native';
-import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '@constants/theme';
+import { COLORS, FONTS, SPACING } from '@constants/theme';
 import { Button } from '@components/common/Button';
 import { Input } from '@components/common/Input';
-import { Card } from '@components/common/Card';
-import { useLanguage } from '@context/LanguageContext';
+import { PhoneInput } from '@components/common/PhoneInput';
 import { authApi } from '@utils/apiClient';
-import { normalize, wp, hp } from '@utils/responsive';
+import { normalize, hp } from '@utils/responsive';
+import { useSnackbar } from '@context/SnackbarContext';
+import { getUserErrorMessage, mapFieldErrors } from '@utils/errorUtils';
 
 const ForgotPasswordScreen = () => {
   const navigation = useNavigation();
-  const { t } = useLanguage();
-  const [step, setStep] = useState(1); // 1: email/phone, 2: OTP, 3: new password
-  const [phoneEmail, setPhoneEmail] = useState('');
+  const { showSnackbar } = useSnackbar();
+  const [step, setStep] = useState<'phone' | 'otp'>('phone');
+  const totalSteps = 2;
+  const currentStep = step === 'phone' ? 1 : 2;
+  const [phone, setPhone] = useState('');
+  const [formattedPhone, setFormattedPhone] = useState('');
   const [otp, setOtp] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [otpTimer, setOtpTimer] = useState(45);
   const [loading, setLoading] = useState(false);
-  const [verifying, setVerifying] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   React.useEffect(() => {
-    if (step === 2 && otpTimer > 0) {
+    if (step === 'otp' && otpTimer > 0) {
       const timer = setInterval(() => {
         setOtpTimer((prev) => prev - 1);
       }, 1000);
@@ -42,90 +42,71 @@ const ForgotPasswordScreen = () => {
     }
   }, [step, otpTimer]);
 
-  const handleSendResetLink = async () => {
-    if (!phoneEmail || phoneEmail.length < 10) {
-      Alert.alert('Error', 'Please enter a valid phone number');
+  const normalizeIndianPhone = (value: string): string => {
+    const digits = value.replace(/\D/g, '');
+    return digits.length === 10 ? `+91${digits}` : '';
+  };
+
+  const handleSendOtp = async () => {
+    const normalizedPhone = normalizeIndianPhone(phone);
+    if (!normalizedPhone) {
+      setErrors((prev) => ({ ...prev, phone: 'Please enter a valid 10-digit phone number' }));
+      showSnackbar({ message: 'Please enter a valid 10-digit phone number', type: 'error' });
       return;
     }
-    
+    setErrors((prev) => ({ ...prev, phone: '' }));
+
     setLoading(true);
     try {
-      const response = await authApi.sendOTP(phoneEmail, 'reset_password');
-      
+      const response = await authApi.sendOTP(normalizedPhone, 'reset_password');
+
       if (response.success) {
-        setStep(2);
+        setFormattedPhone(normalizedPhone);
+        setStep('otp');
         setOtpTimer(45);
         setOtp('');
-        
-        // Show OTP in alert for development/testing
         if (response.data?.otp) {
-          Alert.alert(
-            'OTP Sent Successfully',
-            `Your OTP is: ${response.data.otp}\n\n(Displayed for development. Configure SMS provider for production.)`,
-            [{ text: 'OK' }]
-          );
-        } else {
-          Alert.alert('Success', 'OTP sent successfully to your phone');
+          showSnackbar({
+            message: `OTP sent. Dev OTP: ${response.data.otp}`,
+            type: 'success',
+          });
+          return;
         }
+        showSnackbar({ message: 'OTP sent to your phone number', type: 'success' });
       } else {
-        Alert.alert('Error', response.error || 'Failed to send OTP. Please try again.');
+        const fieldErrors = mapFieldErrors(response as any, { phone: 'phone' });
+        setErrors((prev) => ({ ...prev, ...fieldErrors }));
+        showSnackbar({ message: getUserErrorMessage(response as any, 'Failed to send OTP. Please try again.'), type: 'error' });
       }
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to send OTP. Please try again.');
+      showSnackbar({ message: error.message || 'Failed to send OTP. Please try again.', type: 'error' });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleVerifyOtp = async () => {
+  const handleVerifyOtpAndContinue = async () => {
     if (!otp || otp.length !== 6) {
-      Alert.alert('Error', 'Please enter a valid 6-digit OTP');
+      setErrors((prev) => ({ ...prev, otp: 'Please enter a valid 6-digit OTP' }));
+      showSnackbar({ message: 'Please enter a valid 6-digit OTP', type: 'error' });
       return;
     }
-    
-    setVerifying(true);
-    try {
-      const response = await authApi.verifyOTP(phoneEmail, otp, 'reset_password');
-      
-      if (response.success) {
-        setStep(3);
-      } else {
-        Alert.alert('Error', response.error || 'Invalid OTP. Please try again.');
-      }
-    } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to verify OTP. Please try again.');
-    } finally {
-      setVerifying(false);
-    }
-  };
+    setErrors((prev) => ({ ...prev, otp: '' }));
 
-  const handleResetPassword = async () => {
-    if (!newPassword || newPassword.length < 8) {
-      Alert.alert('Error', 'Password must be at least 8 characters long');
-      return;
-    }
-    
-    if (newPassword !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
-      return;
-    }
-    
-    setLoading(true);
     try {
-      const response = await authApi.resetPassword(phoneEmail, newPassword);
-      
+      setLoading(true);
+      const response = await authApi.verifyOTP(formattedPhone, otp, 'reset_password');
+
       if (response.success) {
-        Alert.alert('Success', 'Password reset successfully. Please login with your new password.', [
-          {
-            text: 'OK',
-            onPress: () => navigation.navigate('SignIn' as never),
-          },
-        ]);
+        showSnackbar({ message: 'OTP verified successfully', type: 'success' });
+        navigation.navigate('ChangePassword' as never, { phone: formattedPhone } as never);
       } else {
-        Alert.alert('Error', response.error || 'Failed to reset password. Please try again.');
+        const fieldErrors = mapFieldErrors(response as any, { otp: 'otp' });
+        setErrors((prev) => ({ ...prev, ...fieldErrors }));
+        showSnackbar({ message: getUserErrorMessage(response as any, 'Invalid OTP. Please try again.'), type: 'error' });
       }
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to reset password. Please try again.');
+      showSnackbar({ message: error.message || 'Failed to verify OTP. Please try again.', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -133,36 +114,30 @@ const ForgotPasswordScreen = () => {
 
   const handleResendOtp = async () => {
     if (otpTimer > 0) {
-      Alert.alert('Wait', `Please wait ${otpTimer} seconds before resending OTP`);
+      showSnackbar({ message: `Please wait ${otpTimer} seconds before resending OTP`, type: 'warning' });
       return;
     }
     
     setLoading(true);
     try {
-      // Format phone number for backend
-      const formattedPhone = phoneEmail.startsWith('+') ? phoneEmail : `+91${phoneEmail.replace(/\D/g, '')}`;
-      
       const response = await authApi.sendOTP(formattedPhone, 'reset_password');
       
       if (response.success) {
         setOtpTimer(45);
         setOtp('');
-        
-        // Show OTP in alert for development/testing
         if (response.data?.otp) {
-          Alert.alert(
-            'OTP Resent Successfully',
-            `Your OTP is: ${response.data.otp}\n\n(Displayed for development. Configure SMS provider for production.)`,
-            [{ text: 'OK' }]
-          );
-        } else {
-          Alert.alert('Success', 'OTP resent successfully');
+          showSnackbar({
+            message: `OTP resent. Dev OTP: ${response.data.otp}`,
+            type: 'success',
+          });
+          return;
         }
+        showSnackbar({ message: 'OTP resent successfully', type: 'success' });
       } else {
-        Alert.alert('Error', response.error || 'Failed to resend OTP. Please try again.');
+        showSnackbar({ message: getUserErrorMessage(response as any, 'Failed to resend OTP. Please try again.'), type: 'error' });
       }
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to resend OTP. Please try again.');
+      showSnackbar({ message: error.message || 'Failed to resend OTP. Please try again.', type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -173,179 +148,183 @@ const ForgotPasswordScreen = () => {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <LinearGradient
-        colors={[COLORS.primary, COLORS.primaryDark]}
-        style={styles.gradient}
-      >
+      <View style={styles.background}>
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
-            <ArrowLeft size={24} color={COLORS.white} />
+            <ArrowLeft size={22} color={COLORS.text} />
           </TouchableOpacity>
+        </View>
+
+        <View style={styles.progressRow}>
+          {Array.from({ length: totalSteps }, (_, i) => (
+            <View
+              key={i}
+              style={[
+                styles.progressDash,
+                currentStep >= i + 1 && styles.progressDashActive,
+              ]}
+            />
+          ))}
         </View>
 
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.title}>{t('forgotPassword.title')}</Text>
+          <View style={styles.heroSection}>
+            <Image
+              source={require('../../../assets/forlok_forgot_password_blue_bg_v1.png')}
+              style={styles.heroImage}
+              resizeMode="cover"
+            />
+          </View>
+          <Text style={styles.title}>Forgot Password</Text>
           <Text style={styles.subtitle}>
-            {step === 1
-              ? t('forgotPassword.step1Description')
-              : step === 2
-              ? t('forgotPassword.step2Description')
-              : t('forgotPassword.step3Description')}
+            {step === 'phone'
+              ? 'Enter your phone number to receive OTP'
+              : `Enter the OTP sent to ${formattedPhone}`}
           </Text>
 
-          <Card style={styles.formCard}>
-            {step === 1 && (
+          <View style={styles.formCard}>
+            {step === 'phone' && (
               <>
-                <Input
-                  label={t('forgotPassword.phoneEmail')}
-                  value={phoneEmail}
-                  onChangeText={setPhoneEmail}
-                  placeholder={t('forgotPassword.enterPhoneEmail')}
-                  keyboardType="email-address"
+                <PhoneInput
+                  label="Phone Number"
+                  value={phone}
+                  onChangeText={(text) => {
+                    setPhone(text);
+                    if (errors.phone) setErrors((prev) => ({ ...prev, phone: '' }));
+                  }}
+                  placeholder="Enter 10-digit phone number"
                   containerStyle={styles.input}
+                  error={errors.phone}
                 />
                 <Button
-                  title={t('forgotPassword.sendResetLink')}
-                  onPress={handleSendResetLink}
+                  title={loading ? 'Sending OTP...' : 'Send OTP'}
+                  onPress={handleSendOtp}
                   variant="primary"
                   size="large"
                   style={styles.button}
+                  disabled={loading}
                 />
-                <View style={styles.divider}>
-                  <View style={styles.dividerLine} />
-                  <Text style={styles.dividerText}>{t('common.or')}</Text>
-                  <View style={styles.dividerLine} />
-                </View>
               </>
             )}
 
-            {step === 2 && (
+            {step === 'otp' && (
               <>
                 <Input
-                  label={t('forgotPassword.enterOtp')}
+                  label="Enter OTP"
                   value={otp}
-                  onChangeText={setOtp}
+                  onChangeText={(text) => {
+                    setOtp(text);
+                    if (errors.otp) setErrors((prev) => ({ ...prev, otp: '' }));
+                  }}
                   placeholder="______"
                   keyboardType="number-pad"
                   maxLength={6}
                   containerStyle={styles.input}
+                  error={errors.otp}
                 />
                 <View style={styles.resendContainer}>
                   <TouchableOpacity onPress={handleResendOtp} disabled={loading || otpTimer > 0}>
                     <Text style={[styles.resendText, (loading || otpTimer > 0) && { opacity: 0.5 }]}>
-                      {t('forgotPassword.resendOtp')}
+                      Resend OTP
                     </Text>
                   </TouchableOpacity>
                   <Text style={styles.timerText}>(00:{String(otpTimer).padStart(2, '0')})</Text>
                 </View>
                 <Button
-                  title={verifying ? 'Verifying...' : t('forgotPassword.verifyOtp')}
-                  onPress={handleVerifyOtp}
+                  title={loading ? 'Verifying...' : 'Verify OTP'}
+                  onPress={handleVerifyOtpAndContinue}
                   variant="primary"
                   size="large"
                   style={styles.button}
-                  disabled={verifying || otp.length !== 6}
+                  disabled={loading || otp.length !== 6}
                 />
               </>
             )}
-
-            {step === 3 && (
-              <>
-                <Input
-                  label={t('forgotPassword.newPassword')}
-                  value={newPassword}
-                  onChangeText={setNewPassword}
-                  placeholder={t('forgotPassword.enterNewPassword')}
-                  secureTextEntry
-                  showPasswordToggle
-                  containerStyle={styles.input}
-                />
-                <Input
-                  label={t('forgotPassword.confirmPassword')}
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  placeholder={t('forgotPassword.confirmNewPassword')}
-                  secureTextEntry
-                  showPasswordToggle
-                  containerStyle={styles.input}
-                />
-                <Button
-                  title={t('forgotPassword.resetPassword')}
-                  onPress={handleResetPassword}
-                  variant="primary"
-                  size="large"
-                  style={styles.button}
-                  disabled={!newPassword || newPassword !== confirmPassword}
-                />
-              </>
-            )}
-          </Card>
+          </View>
         </ScrollView>
-      </LinearGradient>
+      </View>
     </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  gradient: { flex: 1 },
+  container: { flex: 1, backgroundColor: '#F5F7FB' },
+  background: { flex: 1, backgroundColor: '#F5F7FB' },
   header: {
     paddingTop: hp(6),
     paddingHorizontal: SPACING.md,
   },
   backButton: {
-    padding: SPACING.sm,
+    width: normalize(40),
+    height: normalize(40),
+    borderRadius: normalize(20),
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: '#DDE6F5',
   },
   scrollContent: {
     flexGrow: 1,
     padding: SPACING.lg,
-    paddingTop: SPACING.xl,
+    paddingTop: 0,
+    paddingBottom: normalize(64),
+  },
+  progressRow: {
+    flexDirection: 'row',
+    paddingHorizontal: SPACING.lg,
+    gap: SPACING.sm,
+    marginBottom: SPACING.md,
+  },
+  progressDash: {
+    flex: 1,
+    height: normalize(4),
+    borderRadius: normalize(2),
+    backgroundColor: '#D9E2F2',
+  },
+  progressDashActive: {
+    backgroundColor: COLORS.primary,
+  },
+  heroSection: {
+    borderRadius: normalize(18),
+    overflow: 'hidden',
+    marginBottom: SPACING.lg,
+    backgroundColor: '#EAF1FF',
+    borderWidth: 1,
+    borderColor: '#DDE6F5',
+  },
+  heroImage: {
+    width: '100%',
+    height: normalize(170),
   },
   title: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xxl,
-    color: COLORS.white,
-    textAlign: 'center',
-    marginBottom: SPACING.sm,
+    fontFamily: FONTS.medium,
+    fontSize: normalize(24),
+    color: COLORS.text,
+    marginBottom: normalize(6),
   },
   subtitle: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.white,
-    textAlign: 'center',
-    opacity: 0.9,
-    marginBottom: SPACING.xl,
+    fontSize: normalize(13),
+    color: COLORS.textSecondary,
+    marginBottom: SPACING.lg,
   },
   formCard: {
+    backgroundColor: COLORS.white,
     padding: SPACING.lg,
+    borderRadius: normalize(16),
+    borderWidth: 1,
+    borderColor: '#DDE6F5',
   },
-  input: {
-    marginBottom: SPACING.md,
-  },
+  input: { marginBottom: SPACING.md },
   button: {
-    marginTop: SPACING.md,
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: SPACING.lg,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: COLORS.border,
-  },
-  dividerText: {
-    fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: COLORS.textSecondary,
-    marginHorizontal: SPACING.md,
+    marginTop: normalize(4),
   },
   resendContainer: {
     flexDirection: 'row',
@@ -355,12 +334,12 @@ const styles = StyleSheet.create({
   },
   resendText: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
+    fontSize: normalize(13),
     color: COLORS.primary,
   },
   timerText: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
+    fontSize: normalize(13),
     color: COLORS.textSecondary,
   },
 });

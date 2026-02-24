@@ -2,23 +2,38 @@ import { FastifyReply } from 'fastify';
 import { AppError } from '../types';
 import logger from './logger';
 
+export interface FieldError {
+  field: string;
+  message: string;
+  code?: string;
+}
+
 export class CustomError extends Error implements AppError {
   statusCode: number;
   code: string;
   isOperational: boolean;
+  fieldErrors?: FieldError[];
+  details?: unknown;
 
-  constructor(message: string, statusCode: number = 500, code?: string) {
+  constructor(
+    message: string,
+    statusCode: number = 500,
+    code?: string,
+    options?: { fieldErrors?: FieldError[]; details?: unknown }
+  ) {
     super(message);
     this.statusCode = statusCode;
     this.code = code || 'INTERNAL_ERROR';
     this.isOperational = true;
+    this.fieldErrors = options?.fieldErrors;
+    this.details = options?.details;
     Error.captureStackTrace(this, this.constructor);
   }
 }
 
 export class ValidationError extends CustomError {
-  constructor(message: string) {
-    super(message, 400, 'VALIDATION_ERROR');
+  constructor(message: string, fieldErrors?: FieldError[], details?: unknown) {
+    super(message, 400, 'VALIDATION_ERROR', { fieldErrors, details });
   }
 }
 
@@ -41,8 +56,8 @@ export class NotFoundError extends CustomError {
 }
 
 export class ConflictError extends CustomError {
-  constructor(message: string = 'Resource already exists') {
-    super(message, 409, 'CONFLICT');
+  constructor(message: string = 'Resource already exists', fieldErrors?: FieldError[]) {
+    super(message, 409, 'CONFLICT', { fieldErrors });
   }
 }
 
@@ -59,6 +74,8 @@ export function handleError(error: Error | CustomError, reply: FastifyReply) {
       success: false,
       message: error.message,
       error: error.code,
+      ...(error.fieldErrors ? { fieldErrors: error.fieldErrors } : {}),
+      ...(error.details ? { details: error.details } : {}),
     });
   }
 

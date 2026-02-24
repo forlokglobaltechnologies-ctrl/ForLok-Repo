@@ -6,7 +6,7 @@ import { Route } from '../types';
 interface PriceCalculationParams {
   passengerRoute: Route;
   offerId: string;
-  vehicleType: 'car' | 'bike';
+  vehicleType: 'car' | 'bike' | 'scooty';
   offerDate: Date;
   offerTime: string;
 }
@@ -40,6 +40,7 @@ class PriceCalculationService {
   // Base rates per km (in INR)
   private readonly BASE_RATE_CAR = 8; // ₹8 per km for car
   private readonly BASE_RATE_BIKE = 5; // ₹5 per km for bike
+  private readonly BASE_RATE_SCOOTY = 4; // ₹4 per km for scooty
 
   // Time-based multipliers
   private readonly DAY_TIME_MULTIPLIER = 1.0; // 6 AM - 10 PM
@@ -70,7 +71,7 @@ class PriceCalculationService {
       );
 
       // 2. Get base rate based on vehicle type
-      const baseRatePerKm = vehicleType === 'car' ? this.BASE_RATE_CAR : this.BASE_RATE_BIKE;
+      const baseRatePerKm = vehicleType === 'car' ? this.BASE_RATE_CAR : vehicleType === 'scooty' ? this.BASE_RATE_SCOOTY : this.BASE_RATE_BIKE;
 
       // 3. Calculate base price
       const basePrice = distance * baseRatePerKm;

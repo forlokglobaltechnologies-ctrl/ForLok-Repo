@@ -11,20 +11,22 @@ class WalletService {
    */
   async getOrCreateWallet(userId: string): Promise<IWallet> {
     try {
-      let wallet = await Wallet.findOne({ userId });
+      const wallet = await Wallet.findOneAndUpdate(
+        { userId },
+        {
+          $setOnInsert: {
+            walletId: generateUserId('WAL'),
+            userId,
+            balance: 0,
+            totalCredits: 0,
+            totalDebits: 0,
+            transactions: [],
+          },
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
 
-      if (!wallet) {
-        // Create new wallet
-        wallet = await Wallet.create({
-          walletId: generateUserId('WAL'),
-          userId,
-          balance: 0,
-          transactions: [],
-        });
-        logger.info(`Wallet created for user: ${userId}`);
-      }
-
-      return wallet;
+      return wallet!;
     } catch (error) {
       logger.error('Error getting/creating wallet:', error);
       throw error;

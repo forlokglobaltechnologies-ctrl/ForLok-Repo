@@ -2,10 +2,14 @@ import User from '../models/User';
 import Booking from '../models/Booking';
 import PoolingOffer from '../models/PoolingOffer';
 import RentalOffer from '../models/RentalOffer';
+import SavedPlace from '../models/SavedPlace';
+import Document from '../models/Document';
+import ReferralCode from '../models/ReferralCode';
 import { NotFoundError } from '../utils/errors';
 import logger from '../utils/logger';
 import { walletService } from './wallet.service';
 import { coinService } from './coin.service';
+import { calculateDistance } from '../utils/helpers';
 
 class DashboardService {
   /**
@@ -136,6 +140,179 @@ class DashboardService {
       };
     } catch (error) {
       logger.error('Error getting financial summary:', error);
+      throw error;
+    }
+  }
+  /**
+   * Get all data needed for the home screen in a single call
+   */
+  async getHomeScreenData(
+    userId: string,
+    lat?: number,
+    lng?: number
+  ): Promise<any> {
+    try {
+      const userFilter = {
+        $or: [{ userId }, { 'driver.userId': userId }, { 'owner.userId': userId }],
+      };
+
+      const now = new Date();
+
+      const [
+        user,
+        walletSummary,
+        coinBalance,
+        completedBookings,
+        activeRide,
+        savedPlaces,
+        nearbyOffers,
+        completedDistances,
+        referralCode,
+        verifiedDocs,
+      ] = await Promise.all([
+        User.findOne({ userId }),
+        walletService.getWalletSummary(userId),
+        coinService.getBalance(userId),
+        Booking.countDocuments({ ...userFilter, status: 'completed' }),
+        Booking.findOne({
+          $or: [{ userId }, { 'driver.userId': userId }],
+          status: { $in: ['confirmed', 'in_progress'] },
+        }).sort({ createdAt: -1 }),
+        SavedPlace.find({ userId }).sort({ label: 1, usageCount: -1 }).limit(12),
+        PoolingOffer.find({
+          status: { $in: ['active', 'pending'] },
+          driverId: { $ne: userId },
+          date: { $gte: now },
+          availableSeats: { $gt: 0 },
+        })
+          .sort({ date: 1 })
+          .limit(20)
+          .lean(),
+        Booking.find({ ...userFilter, status: 'completed' })
+          .select('route.distance')
+          .lean(),
+        ReferralCode.findOne({ userId }).lean(),
+        Document.find({ userId, status: 'verified' }).select('type').lean(),
+      ]);
+
+      if (!user) {
+        throw new NotFoundError('User not found');
+      }
+
+      // Filter nearby offers by distance if location provided
+      let filteredNearby = nearbyOffers;
+      if (lat && lng) {
+        filteredNearby = nearbyOffers
+          .map((offer: any) => {
+            const dist = calculateDistance(
+              lat,
+              lng,
+              offer.route?.from?.lat,
+              offer.route?.from?.lng
+            );
+            return { ...offer, distanceFromUser: Math.round(dist * 10) / 10 };
+          })
+          .filter((o: any) => o.distanceFromUser <= 30)
+          .sort((a: any, b: any) => a.distanceFromUser - b.distanceFromUser)
+          .slice(0, 6);
+      } else {
+        filteredNearby = nearbyOffers.slice(0, 6);
+      }
+
+      // Calculate green impact — use real distances from completed bookings
+      // Fallback: if no distance data, estimate 15km avg per ride
+      const rawDistanceKm = completedDistances.reduce(
+        (sum: number, b: any) => sum + (b.route?.distance || 0),
+        0
+      );
+      const ridesCount = Math.max(completedBookings, user.totalTrips || 0);
+      const totalDistanceKm = rawDistanceKm > 0 ? rawDistanceKm : ridesCount * 15;
+      // Average car emits ~0.12 kg CO2 per km; carpooling saves roughly that per passenger
+      const co2SavedKg = Math.round(totalDistanceKm * 0.12 * 10) / 10;
+
+      const ecoLevel =
+        ridesCount >= 50
+          ? 'Eco Champion'
+          : ridesCount >= 20
+          ? 'Green Warrior'
+          : ridesCount >= 10
+          ? 'Earth Friend'
+          : ridesCount >= 5
+          ? 'Eco Starter'
+          : 'Newcomer';
+
+      // Verification badges
+      const verifiedTypes = verifiedDocs.map((d: any) => d.type);
+
+      return {
+        user: {
+          name: user.name,
+          gender: user.gender,
+          rating: user.rating,
+          totalTrips: user.totalTrips,
+          profilePhoto: user.profilePhoto,
+          isVerified: user.isVerified,
+          badges: user.badges || [],
+        },
+        financial: {
+          walletBalance: parseFloat(walletSummary.balance.toFixed(2)),
+        },
+        coins: {
+          balance: coinBalance.balance,
+          totalEarned: coinBalance.totalEarned,
+          worthInRupees: coinBalance.worthInRupees,
+        },
+        activeRide: activeRide
+          ? {
+              bookingId: activeRide.bookingId,
+              status: activeRide.status,
+              serviceType: activeRide.serviceType,
+              route: activeRide.route,
+              date: activeRide.date,
+              driver: activeRide.driver,
+              vehicle: activeRide.vehicle,
+              isDriver: activeRide.driver?.userId === userId,
+            }
+          : null,
+        savedPlaces: savedPlaces.map((p) => p.toJSON()),
+        nearbyRides: filteredNearby.map((offer: any) => ({
+          offerId: offer.offerId,
+          driverName: offer.driverName,
+          driverPhoto: offer.driverPhoto,
+          rating: offer.rating,
+          totalReviews: offer.totalReviews,
+          from: offer.route?.from,
+          to: offer.route?.to,
+          date: offer.date,
+          time: offer.time,
+          price: offer.price,
+          availableSeats: offer.availableSeats,
+          vehicleType: offer.vehicle?.type,
+          distanceFromUser: offer.distanceFromUser || null,
+          isPinkPooling: offer.isPinkPooling || false,
+        })),
+        greenImpact: {
+          co2SavedKg,
+          totalRidesShared: ridesCount,
+          totalDistanceKm: Math.round(totalDistanceKm),
+          ecoLevel,
+        },
+        referral: {
+          code: referralCode?.code || user.referralCode || null,
+          totalReferrals: referralCode?.totalReferrals || 0,
+          totalCoinsEarned: referralCode?.totalCoinsEarned || 0,
+        },
+        verification: {
+          phone: true,
+          email: !!user.email,
+          aadhaar: verifiedTypes.includes('aadhaar'),
+          pan: verifiedTypes.includes('pan'),
+          license: verifiedTypes.includes('driving_license'),
+          idVerified: user.isVerified,
+        },
+      };
+    } catch (error) {
+      logger.error('Error getting home screen data:', error);
       throw error;
     }
   }

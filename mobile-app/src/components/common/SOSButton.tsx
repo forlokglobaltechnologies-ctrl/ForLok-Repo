@@ -48,7 +48,7 @@ const HOLD_DURATION = 3000; // 3 seconds to confirm
 const TICK_INTERVAL = 50; // Update progress every 50ms
 
 const SOSButton: React.FC = () => {
-  const { triggerSOS, isSending, currentRoute } = useSOS();
+  const { triggerSOS, isSending, currentRoute, sosVisible } = useSOS();
   const [showModal, setShowModal] = useState(false);
   const [holdProgress, setHoldProgress] = useState(0);
   const [sosResult, setSOSResult] = useState<{ success: boolean; message: string } | null>(null);
@@ -58,8 +58,7 @@ const SOSButton: React.FC = () => {
   const holdStartRef = useRef<number>(0);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Should hide on auth screens
-  const shouldHide = !currentRoute || HIDDEN_SCREENS.includes(currentRoute);
+  const shouldHide = !currentRoute || HIDDEN_SCREENS.includes(currentRoute) || !sosVisible;
   if (shouldHide) return null;
 
   const handlePress = () => {
