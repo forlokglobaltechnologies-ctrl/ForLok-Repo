@@ -7,6 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const ONBOARDING_KEY = '@forlok_onboarding_seen';
 const BRAND_TEXT = 'ForLok';
+const DEBUG_ENDPOINT = 'http://127.0.0.1:7775/ingest/9bdd2fd3-ac77-45be-b342-a40ab02f34f7';
 
 const SplashScreen = () => {
   const navigation = useNavigation();
@@ -18,11 +19,20 @@ const SplashScreen = () => {
 
   // Check if user has seen onboarding before
   useEffect(() => {
+    // #region agent log
+    fetch(DEBUG_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9d349f'},body:JSON.stringify({sessionId:'9d349f',runId:'startup',hypothesisId:'H9',location:'SplashScreen.tsx:mount',message:'Splash screen mounted',data:{},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     const checkOnboarding = async () => {
       try {
         const seen = await AsyncStorage.getItem(ONBOARDING_KEY);
         setHasSeenOnboarding(seen === 'true');
+        // #region agent log
+        fetch(DEBUG_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9d349f'},body:JSON.stringify({sessionId:'9d349f',runId:'startup',hypothesisId:'H9',location:'SplashScreen.tsx:checkOnboarding:success',message:'Onboarding state read',data:{hasSeenOnboarding:seen === 'true'},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
       } catch (error) {
+        // #region agent log
+        fetch(DEBUG_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9d349f'},body:JSON.stringify({sessionId:'9d349f',runId:'startup',hypothesisId:'H9',location:'SplashScreen.tsx:checkOnboarding:catch',message:'Onboarding state read failed',data:{errorMessage:(error as any)?.message || 'unknown'},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
         console.warn('Unable to read onboarding state from storage:', error);
         setHasSeenOnboarding(false);
       } finally {
@@ -61,6 +71,9 @@ const SplashScreen = () => {
       hasNavigatedRef.current = true;
 
       if (isAuthenticated) {
+        // #region agent log
+        fetch(DEBUG_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9d349f'},body:JSON.stringify({sessionId:'9d349f',runId:'startup',hypothesisId:'H10',location:'SplashScreen.tsx:navigate:main',message:'Splash navigating to MainDashboard',data:{},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
         // User has valid tokens — go straight to dashboard
         console.log('🚀 [Splash] → MainDashboard (authenticated)');
         navigation.reset({
@@ -68,6 +81,9 @@ const SplashScreen = () => {
           routes: [{ name: 'MainDashboard' as never }],
         });
       } else if (hasSeenOnboarding) {
+        // #region agent log
+        fetch(DEBUG_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9d349f'},body:JSON.stringify({sessionId:'9d349f',runId:'startup',hypothesisId:'H10',location:'SplashScreen.tsx:navigate:signin',message:'Splash navigating to SignIn',data:{},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
         // Returning user (logged out) — skip onboarding, go to sign in
         console.log('🚀 [Splash] → SignIn (seen onboarding, not authenticated)');
         navigation.reset({
@@ -75,6 +91,9 @@ const SplashScreen = () => {
           routes: [{ name: 'SignIn' as never }],
         });
       } else {
+        // #region agent log
+        fetch(DEBUG_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9d349f'},body:JSON.stringify({sessionId:'9d349f',runId:'startup',hypothesisId:'H10',location:'SplashScreen.tsx:navigate:onboarding',message:'Splash navigating to Onboarding',data:{},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
         // First time user — show onboarding
         console.log('🚀 [Splash] → Onboarding (first time user)');
         navigation.reset({

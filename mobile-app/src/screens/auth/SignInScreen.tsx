@@ -23,6 +23,7 @@ import { useSnackbar } from '@context/SnackbarContext';
 import { getUserErrorMessage, mapFieldErrors } from '@utils/errorUtils';
 
 const ACCENT = '#F9A825';
+const DEBUG_ENDPOINT = 'http://127.0.0.1:7775/ingest/9bdd2fd3-ac77-45be-b342-a40ab02f34f7';
 type SignInErrors = { username?: string; password?: string };
 
 const SignInScreen = () => {
@@ -35,6 +36,12 @@ const SignInScreen = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<SignInErrors>({});
+
+  React.useEffect(() => {
+    // #region agent log
+    fetch(DEBUG_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9d349f'},body:JSON.stringify({sessionId:'9d349f',runId:'startup',hypothesisId:'H11',location:'SignInScreen.tsx:mount',message:'SignIn screen mounted',data:{},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+  }, []);
 
   const handleSignIn = async () => {
     const nextErrors: SignInErrors = {};

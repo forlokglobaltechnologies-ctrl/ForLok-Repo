@@ -17,6 +17,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const ONBOARDING_KEY = '@forlok_onboarding_seen';
+const DEBUG_ENDPOINT = 'http://127.0.0.1:7775/ingest/9bdd2fd3-ac77-45be-b342-a40ab02f34f7';
 
 const SLIDE_ACCENT: Record<number, string> = {
   0: '#F9A825',
@@ -28,6 +29,12 @@ const OnboardingScreen = () => {
   const navigation = useNavigation();
   const scrollViewRef = useRef<ScrollView>(null);
   const [currentPage, setCurrentPage] = useState(0);
+
+  React.useEffect(() => {
+    // #region agent log
+    fetch(DEBUG_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9d349f'},body:JSON.stringify({sessionId:'9d349f',runId:'startup',hypothesisId:'H12',location:'OnboardingScreen.tsx:mount',message:'Onboarding screen mounted',data:{},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+  }, []);
 
   const markOnboardingSeen = async () => {
     await AsyncStorage.setItem(ONBOARDING_KEY, 'true');

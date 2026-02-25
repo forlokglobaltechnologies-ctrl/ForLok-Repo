@@ -1,0 +1,15 @@
+{"sessionId":"9d349f","runId":"startup","hypothesisId":"H4","location":"index.js:startup","message":"Index bootstrap executed","data":{"updatesDisabled":true},"timestamp":1771997555914}
+{"sessionId":"9d349f","runId":"startup","hypothesisId":"H1","location":"theme.ts:patch-applied","message":"StyleSheet.create monkey patch installed","data":{"platform":"android"},"timestamp":1771997555998}
+{"sessionId":"9d349f","runId":"startup","hypothesisId":"H6","location":"index.js:requireApp:success","message":"App module loaded successfully","data":{"hasDefaultExport":true},"timestamp":1771997558469}
+{"sessionId":"9d349f","runId":"startup","hypothesisId":"H1","location":"App.tsx:useEffect:init","message":"App mounted and starting initialization","data":{"platform":"android"},"timestamp":1771997558870}
+{"sessionId":"9d349f","runId":"startup","hypothesisId":"H3","location":"App.tsx:loadFonts:start","message":"Starting font load","data":{"font":"MomoTrustDisplay-Regular"},"timestamp":1771997558872}
+{"sessionId":"9d349f","runId":"startup","hypothesisId":"H2","location":"App.tsx:applyGlobalFont:start","message":"Applying global font patches","data":{"platform":"android"},"timestamp":1771997559013}
+{"sessionId":"9d349f","runId":"startup","hypothesisId":"H3","location":"App.tsx:loadFonts:success","message":"Font load succeeded","data":{"fontLoaded":true},"timestamp":1771997559012}
+{"sessionId":"9d349f","runId":"startup","hypothesisId":"H2","location":"App.tsx:applyGlobalFont:end","message":"Global font patches applied","data":{"patchedCreateElement":true},"timestamp":1771997559022}
+{"sessionId":"9d349f","runId":"startup","hypothesisId":"H4","location":"App.tsx:render:fontsLoaded","message":"Root app passed font gate","data":{"fontsLoaded":true},"timestamp":1771997559044}
+{"sessionId":"9d349f","runId":"startup","hypothesisId":"H7","location":"AuthContext.tsx:checkAuthState:start","message":"Auth state bootstrap started","data":{},"timestamp":1771997559164}
+{"sessionId":"9d349f","runId":"startup","hypothesisId":"H7","location":"AuthContext.tsx:checkAuthState:noTokens","message":"No auth tokens found; unauthenticated path","data":{},"timestamp":1771997559188}
+{"sessionId":"9d349f","runId":"startup","hypothesisId":"H9","location":"SplashScreen.tsx:mount","message":"Splash screen mounted","data":{},"timestamp":1771997559935}
+{"sessionId":"9d349f","runId":"startup","hypothesisId":"H9","location":"SplashScreen.tsx:checkOnboarding:success","message":"Onboarding state read","data":{"hasSeenOnboarding":true},"timestamp":1771997559964}
+{"sessionId":"9d349f","runId":"startup","hypothesisId":"H10","location":"SplashScreen.tsx:navigate:signin","message":"Splash navigating to SignIn","data":{},"timestamp":1771997563050}
+{"sessionId":"9d349f","runId":"startup","hypothesisId":"H11","location":"SignInScreen.tsx:mount","message":"SignIn screen mounted","data":{},"timestamp":1771997563248}

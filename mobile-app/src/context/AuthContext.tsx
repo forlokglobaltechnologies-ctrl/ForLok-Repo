@@ -7,6 +7,7 @@ import { API_CONFIG } from '../config/api';
 const TOKEN_KEY = '@forlok_access_token';
 const REFRESH_TOKEN_KEY = '@forlok_refresh_token';
 const USER_KEY = '@forlok_user';
+const DEBUG_ENDPOINT = 'http://127.0.0.1:7775/ingest/9bdd2fd3-ac77-45be-b342-a40ab02f34f7';
 
 interface User {
   userId: string;
@@ -51,16 +52,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const checkAuthState = async () => {
     try {
+      // #region agent log
+      fetch(DEBUG_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9d349f'},body:JSON.stringify({sessionId:'9d349f',runId:'startup',hypothesisId:'H7',location:'AuthContext.tsx:checkAuthState:start',message:'Auth state bootstrap started',data:{},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       const token = await AsyncStorage.getItem(TOKEN_KEY);
       const refreshToken = await AsyncStorage.getItem(REFRESH_TOKEN_KEY);
       const storedUser = await AsyncStorage.getItem(USER_KEY);
 
       if (token && refreshToken) {
         if (storedUser) {
-          setUser(JSON.parse(storedUser));
+          try {
+            setUser(JSON.parse(storedUser));
+          } catch (parseError: any) {
+            // #region agent log
+            fetch(DEBUG_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9d349f'},body:JSON.stringify({sessionId:'9d349f',runId:'startup',hypothesisId:'H8',location:'AuthContext.tsx:checkAuthState:parseUser:catch',message:'Stored user JSON parse failed',data:{errorMessage:parseError?.message || 'unknown'},timestamp:Date.now()})}).catch(()=>{});
+            // #endregion
+            await AsyncStorage.removeItem(USER_KEY);
+            setUser(null);
+          }
         }
         setIsAuthenticated(true);
         setIsLoading(false);
+        // #region agent log
+        fetch(DEBUG_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9d349f'},body:JSON.stringify({sessionId:'9d349f',runId:'startup',hypothesisId:'H7',location:'AuthContext.tsx:checkAuthState:tokensFound',message:'Auth tokens found; user marked authenticated',data:{hasStoredUser:!!storedUser},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
 
         websocketService.connect();
 
@@ -85,8 +100,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsAuthenticated(false);
         setUser(null);
         setIsLoading(false);
+        // #region agent log
+        fetch(DEBUG_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9d349f'},body:JSON.stringify({sessionId:'9d349f',runId:'startup',hypothesisId:'H7',location:'AuthContext.tsx:checkAuthState:noTokens',message:'No auth tokens found; unauthenticated path',data:{},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
       }
     } catch (error) {
+      // #region agent log
+      fetch(DEBUG_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9d349f'},body:JSON.stringify({sessionId:'9d349f',runId:'startup',hypothesisId:'H7',location:'AuthContext.tsx:checkAuthState:catch',message:'Auth bootstrap failed',data:{errorMessage:(error as any)?.message || 'unknown'},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       console.error('Error checking auth state:', error);
       setIsAuthenticated(false);
       setUser(null);

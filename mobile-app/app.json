@@ -43,11 +43,12 @@
       "expo-asset",
       "expo-router"
     ],
+    "owner": "n210438",
     "extra": {
+      "router": {},
       "eas": {
-        "projectId": "faf2cd58-b758-4f8e-89bb-0c4981e14fc2"
+        "projectId": "b4816090-409d-4aff-84a1-3e33efc03375"
       }
-    },
-    "owner": "saodvenky"
+    }
   }
 }

@@ -554,7 +554,3 @@ const styles = StyleSheet.create({
 });
 
 export default PriceSummaryScreen;
-
-export default PriceSummaryScreen;
-
-

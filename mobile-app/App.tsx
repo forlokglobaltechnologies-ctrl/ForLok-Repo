@@ -8,8 +8,6 @@ import {
   ActivityIndicator,
   View,
   StyleSheet,
-  Text as RNText,
-  TextInput as RNTextInput,
   Platform,
   LogBox,
 } from 'react-native';
@@ -26,54 +24,7 @@ import { COLORS } from './src/constants/theme';
    This module handles INLINE styles (ones that bypass StyleSheet.create)
    by patching React.createElement to intercept <Text> / <TextInput>.
    ───────────────────────────────────────────────────────────── */
-const GLOBAL_FONT = 'MomoTrustDisplay-Regular';
-const IS_ANDROID = Platform.OS === 'android';
-
-const patchInlineStyle = (incoming: any) => {
-  if (!incoming) return { fontFamily: GLOBAL_FONT };
-  if (IS_ANDROID) {
-    const flat = { ...(StyleSheet.flatten(incoming) || {}) };
-    delete flat.fontWeight;
-    flat.fontFamily = GLOBAL_FONT;
-    return flat;
-  }
-  if (Array.isArray(incoming)) return [{ fontFamily: GLOBAL_FONT }, ...incoming];
-  return [{ fontFamily: GLOBAL_FONT }, incoming];
-};
-
-const applyGlobalFont = () => {
-  // #region agent log
-  fetch(DEBUG_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9d349f'},body:JSON.stringify({sessionId:'9d349f',runId:'startup',hypothesisId:'H2',location:'App.tsx:applyGlobalFont:start',message:'Applying global font patches',data:{platform:Platform.OS},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
-  // ── defaultProps: base-layer font for unstyled text ──
-  const textDefaults = (RNText as any).defaultProps || {};
-  (RNText as any).defaultProps = { ...textDefaults, style: { fontFamily: GLOBAL_FONT } };
-
-  const inputDefaults = (RNTextInput as any).defaultProps || {};
-  (RNTextInput as any).defaultProps = { ...inputDefaults, style: { fontFamily: GLOBAL_FONT } };
-
-  // ── Patch React.createElement for inline styles (RN 0.81+ / Fabric) ──
-  const _origCE = React.createElement;
-  (React as any).createElement = function (type: any, props: any, ...children: any[]) {
-    if (
-      props &&
-      (type === RNText || type === RNTextInput ||
-        (type && type.displayName === 'Text') ||
-        (type && type.displayName === 'TextInput'))
-    ) {
-      return _origCE.call(
-        this,
-        type,
-        { ...props, style: patchInlineStyle(props.style) },
-        ...children,
-      );
-    }
-    return _origCE.call(this, type, props, ...children);
-  };
-  // #region agent log
-  fetch(DEBUG_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9d349f'},body:JSON.stringify({sessionId:'9d349f',runId:'startup',hypothesisId:'H2',location:'App.tsx:applyGlobalFont:end',message:'Global font patches applied',data:{patchedCreateElement:true},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
-};
+const applyGlobalFont = () => {};
 
 // Import screens
 import SplashScreen from './src/screens/auth/SplashScreen';

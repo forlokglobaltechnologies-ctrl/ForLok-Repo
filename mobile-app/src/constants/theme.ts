@@ -9,55 +9,6 @@ const normalize = (size: number): number => {
   return Math.round(PixelRatio.roundToNearestPixel(newSize));
 };
 
-/* ─────────────────────────────────────────────────────────────
-   GLOBAL FONT FIX – StyleSheet.create patch
-   
-   On Android, specifying fontWeight (700, 800, bold …) alongside
-   a custom fontFamily causes the OS to look for a bold-variant
-   font file.  If it cannot find one it silently falls back to
-   the SYSTEM font (Roboto).
-   
-   Because we ship only a single-weight file (MomoTrustDisplay-
-   Regular), the fix is to:
-     1. Inject fontFamily into every text-related style
-     2. Strip fontWeight on Android so the OS never attempts
-        a bold-variant lookup
-   
-   This patch runs BEFORE any screen module calls StyleSheet.create
-   (theme.ts is imported first in App.tsx's dependency tree).
-   ───────────────────────────────────────────────────────────── */
-const _GLOBAL_FONT = 'MomoTrustDisplay-Regular';
-const _IS_ANDROID = Platform.OS === 'android';
-
-const _isTextStyle = (s: Record<string, any>): boolean =>
-  s.fontSize !== undefined ||
-  s.fontWeight !== undefined ||
-  s.fontFamily !== undefined ||
-  s.fontStyle !== undefined ||
-  s.lineHeight !== undefined ||
-  s.letterSpacing !== undefined ||
-  s.textAlign !== undefined ||
-  s.textDecorationLine !== undefined ||
-  s.textTransform !== undefined;
-
-const _origCreate = StyleSheet.create;
-(StyleSheet as any).create = function (styles: Record<string, any>) {
-  const patched: Record<string, any> = {};
-  for (const key of Object.keys(styles)) {
-    const style = styles[key];
-    if (style && typeof style === 'object' && !Array.isArray(style) && _isTextStyle(style)) {
-      patched[key] = { ...style, fontFamily: _GLOBAL_FONT };
-      if (_IS_ANDROID) delete patched[key].fontWeight;
-    } else {
-      patched[key] = style;
-    }
-  }
-  return _origCreate(patched);
-};
-// #region agent log
-fetch('http://127.0.0.1:7775/ingest/9bdd2fd3-ac77-45be-b342-a40ab02f34f7',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9d349f'},body:JSON.stringify({sessionId:'9d349f',runId:'startup',hypothesisId:'H1',location:'theme.ts:patch-applied',message:'StyleSheet.create monkey patch installed',data:{platform:Platform.OS},timestamp:Date.now()})}).catch(()=>{});
-// #endregion
-
 /* ───────────────────────────────────────────────────────────── */
 
 export const COLORS = {
