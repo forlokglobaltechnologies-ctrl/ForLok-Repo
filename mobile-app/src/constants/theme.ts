@@ -54,6 +54,9 @@ const _origCreate = StyleSheet.create;
   }
   return _origCreate(patched);
 };
+// #region agent log
+fetch('http://127.0.0.1:7775/ingest/9bdd2fd3-ac77-45be-b342-a40ab02f34f7',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9d349f'},body:JSON.stringify({sessionId:'9d349f',runId:'startup',hypothesisId:'H1',location:'theme.ts:patch-applied',message:'StyleSheet.create monkey patch installed',data:{platform:Platform.OS},timestamp:Date.now()})}).catch(()=>{});
+// #endregion
 
 /* ───────────────────────────────────────────────────────────── */
 

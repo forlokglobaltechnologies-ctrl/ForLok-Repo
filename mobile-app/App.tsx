@@ -42,6 +42,9 @@ const patchInlineStyle = (incoming: any) => {
 };
 
 const applyGlobalFont = () => {
+  // #region agent log
+  fetch(DEBUG_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9d349f'},body:JSON.stringify({sessionId:'9d349f',runId:'startup',hypothesisId:'H2',location:'App.tsx:applyGlobalFont:start',message:'Applying global font patches',data:{platform:Platform.OS},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
   // ── defaultProps: base-layer font for unstyled text ──
   const textDefaults = (RNText as any).defaultProps || {};
   (RNText as any).defaultProps = { ...textDefaults, style: { fontFamily: GLOBAL_FONT } };
@@ -67,6 +70,9 @@ const applyGlobalFont = () => {
     }
     return _origCE.call(this, type, props, ...children);
   };
+  // #region agent log
+  fetch(DEBUG_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9d349f'},body:JSON.stringify({sessionId:'9d349f',runId:'startup',hypothesisId:'H2',location:'App.tsx:applyGlobalFont:end',message:'Global font patches applied',data:{patchedCreateElement:true},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
 };
 
 // Import screens
@@ -161,6 +167,7 @@ import { BottomTabNavigator } from './src/components/navigation/BottomTabNavigat
 import { websocketService } from './src/services/websocket.service';
 
 const Stack = createNativeStackNavigator();
+const DEBUG_ENDPOINT = 'http://127.0.0.1:7775/ingest/9bdd2fd3-ac77-45be-b342-a40ab02f34f7';
 
 // StatusBar component — transparent so screens span the full height
 const ThemedStatusBar = () => {
@@ -348,8 +355,23 @@ const AppNavigator = () => {
 
 export default function App() {
   const [fontsLoaded, setFontsLoaded] = useState(false);
+  const bootLoggedRef = useRef(false);
 
   useEffect(() => {
+    // #region agent log
+    fetch(DEBUG_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9d349f'},body:JSON.stringify({sessionId:'9d349f',runId:'startup',hypothesisId:'H1',location:'App.tsx:useEffect:init',message:'App mounted and starting initialization',data:{platform:Platform.OS},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    const previousGlobalHandler = (global as any).ErrorUtils?.getGlobalHandler?.();
+    if ((global as any).ErrorUtils?.setGlobalHandler) {
+      (global as any).ErrorUtils.setGlobalHandler((error: any, isFatal?: boolean) => {
+        // #region agent log
+        fetch(DEBUG_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9d349f'},body:JSON.stringify({sessionId:'9d349f',runId:'startup',hypothesisId:'H5',location:'App.tsx:globalErrorHandler',message:'Unhandled runtime error captured',data:{isFatal:!!isFatal,errorMessage:error?.message || 'unknown',errorName:error?.name || 'unknown'},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+        if (previousGlobalHandler) {
+          previousGlobalHandler(error, isFatal);
+        }
+      });
+    }
     loadFonts();
     
     // WebSocket is now connected after auth (not on app start)
@@ -361,18 +383,34 @@ export default function App() {
 
   const loadFonts = async () => {
     try {
+      // #region agent log
+      fetch(DEBUG_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9d349f'},body:JSON.stringify({sessionId:'9d349f',runId:'startup',hypothesisId:'H3',location:'App.tsx:loadFonts:start',message:'Starting font load',data:{font:'MomoTrustDisplay-Regular'},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       await Font.loadAsync({
         'MomoTrustDisplay-Regular': require('./assets/fonts/MomoTrustDisplay-Regular.ttf'),
       });
+      // #region agent log
+      fetch(DEBUG_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9d349f'},body:JSON.stringify({sessionId:'9d349f',runId:'startup',hypothesisId:'H3',location:'App.tsx:loadFonts:success',message:'Font load succeeded',data:{fontLoaded:true},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       // Apply the custom font globally to ALL Text & TextInput components
       applyGlobalFont();
     } catch (error) {
+      // #region agent log
+      fetch(DEBUG_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9d349f'},body:JSON.stringify({sessionId:'9d349f',runId:'startup',hypothesisId:'H3',location:'App.tsx:loadFonts:catch',message:'Font loading or global font patch failed',data:{errorMessage:(error as any)?.message || 'unknown'},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       console.warn('Font loading error:', error);
       // Fallback to system font if custom font fails
     } finally {
       setFontsLoaded(true);
     }
   };
+
+  if (fontsLoaded && !bootLoggedRef.current) {
+    bootLoggedRef.current = true;
+    // #region agent log
+    fetch(DEBUG_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9d349f'},body:JSON.stringify({sessionId:'9d349f',runId:'startup',hypothesisId:'H4',location:'App.tsx:render:fontsLoaded',message:'Root app passed font gate',data:{fontsLoaded:true},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+  }
 
   if (!fontsLoaded) {
     return (
