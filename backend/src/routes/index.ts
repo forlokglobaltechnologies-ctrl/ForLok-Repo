@@ -28,6 +28,7 @@ import { referralRoutes } from './referrals/referral.routes';
 import { promoRoutes } from './promos/promo.routes';
 import { sosRoutes } from './sos/sos.routes';
 import { placeRoutes } from './places/place.routes';
+import { loadRoutes } from './loads/load.routes';
 
 export async function registerRoutes(app: FastifyInstance) {
   // Auth routes
@@ -113,6 +114,9 @@ export async function registerRoutes(app: FastifyInstance) {
 
   // Saved places routes
   await app.register(placeRoutes, { prefix: '/api/places' });
+
+  // Loads routes
+  await app.register(loadRoutes, { prefix: '/api/loads' });
 
   // Other routes will be registered here as we implement them
   // await app.register(userRoutes, { prefix: '/api/users' });

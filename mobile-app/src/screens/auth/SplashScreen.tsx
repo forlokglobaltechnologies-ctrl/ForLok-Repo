@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ActivityIndicator, StatusBar, Text, Animated } from 'react-native';
+import { View, StyleSheet, StatusBar, Text, Animated } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { normalize, hp } from '@utils/responsive';
 import { useAuth } from '@context/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AppLoader } from '@components/common/AppLoader';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const ONBOARDING_KEY = '@forlok_onboarding_seen';
 const BRAND_TEXT = 'ForLok';
@@ -108,8 +110,8 @@ const SplashScreen = () => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#F4AB04" />
-      <View style={styles.gradient}>
+      <StatusBar barStyle="light-content" backgroundColor="#F99E3C" />
+      <LinearGradient colors={['#F99E3C', '#D47B1B']} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} style={styles.gradient}>
         <View style={styles.brandTag}>
           {BRAND_TEXT.split('').map((char, index) => (
             <Animated.Text
@@ -135,10 +137,10 @@ const SplashScreen = () => {
         </View>
 
         <View style={styles.loaderWrap}>
-          <ActivityIndicator size="small" color="#FFFFFF" style={styles.loader} />
+          <AppLoader size="small" color="#FFFFFF" style={styles.loader} />
           <Text style={styles.loadingText}>Loading</Text>
         </View>
-      </View>
+      </LinearGradient>
     </View>
   );
 };
@@ -146,13 +148,12 @@ const SplashScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F4AB04',
+    backgroundColor: '#F99E3C',
   },
   gradient: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F4AB04',
   },
   brandTag: {
     flexDirection: 'row',
@@ -163,7 +164,7 @@ const styles = StyleSheet.create({
   brandLetter: {
     color: '#FFFFFF',
     fontSize: normalize(42),
-    fontWeight: '700',
+    fontFamily: 'MomoTrustDisplay-Regular',
     letterSpacing: 0.6,
   },
   loaderWrap: {
@@ -179,6 +180,7 @@ const styles = StyleSheet.create({
   loadingText: {
     color: '#FFFFFF',
     fontSize: normalize(12),
+    fontFamily: 'MomoTrustDisplay-Regular',
     letterSpacing: 0.2,
     alignSelf: 'center',
   },

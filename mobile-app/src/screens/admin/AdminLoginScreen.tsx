@@ -20,10 +20,12 @@ import { Input } from '@components/common/Input';
 import { useLanguage } from '@context/LanguageContext';
 import { adminApi } from '@utils/apiClient';
 import { normalize } from '@utils/responsive';
+import { useAuth } from '@context/AuthContext';
 
 const AdminLoginScreen = () => {
   const navigation = useNavigation();
   const { t } = useLanguage();
+  const { login } = useAuth();
   const [adminId, setAdminId] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -44,8 +46,24 @@ const AdminLoginScreen = () => {
       const response = await adminApi.login(adminId.trim(), password);
       
       if (response.success) {
-        // Tokens are automatically saved by apiService
-        navigation.navigate('AdminDashboard' as never);
+        const adminData = response.data?.admin || {};
+        const tokens = response.data?.tokens;
+
+        if (!tokens?.accessToken || !tokens?.refreshToken) {
+          Alert.alert(t('common.error'), t('admin.login.loginError'));
+          return;
+        }
+
+        // Reuse app auth flow so admin routes become available by userType.
+        await login(
+          {
+            ...adminData,
+            userId: adminData.adminId || adminData.userId,
+            userType: 'admin',
+            name: adminData.name || adminData.username || 'Admin',
+          },
+          tokens
+        );
       } else {
         Alert.alert(t('common.error'), response.error || t('admin.login.invalidCredentials'));
       }

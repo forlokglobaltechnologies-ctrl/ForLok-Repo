@@ -9,7 +9,6 @@ import {
   ImageBackground,
   TextInput,
   Alert,
-  ActivityIndicator,
   Dimensions,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
@@ -31,6 +30,7 @@ import { normalize, wp, hp } from '@utils/responsive';
 import { useLanguage } from '@context/LanguageContext';
 import { useTheme } from '@context/ThemeContext';
 import { feedbackApi } from '@utils/apiClient';
+import { AppLoader } from '@components/common/AppLoader';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -255,7 +255,7 @@ const FeedbackScreen = () => {
           activeOpacity={0.8}
         >
           {submitting ? (
-            <ActivityIndicator size="small" color="#FFF" />
+            <AppLoader size="small" color="#FFF" />
           ) : (
             <>
               <Send size={18} color="#FFF" />

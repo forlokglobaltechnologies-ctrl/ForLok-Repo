@@ -9,7 +9,35 @@ export interface IBooking extends Document {
   serviceType: ServiceType;
   poolingOfferId?: string; // Reference to PoolingOffer
   rentalOfferId?: string; // Reference to RentalOffer
+  loadOfferId?: string; // Reference to LoadOffer
   route?: Route;
+  loadDetails?: {
+    receiver: {
+      name: string;
+      phone: string;
+      alternatePhone?: string;
+    };
+    parcel: {
+      category: 'documents' | 'food' | 'fragile' | 'electronics' | 'other';
+      description?: string;
+      weightKg: number;
+      fragile: boolean;
+      dimensionsCm?: {
+        length: number;
+        width: number;
+        height: number;
+      };
+      declaredValue?: number;
+    };
+    pickupOtp?: string;
+    pickupOtpVerifiedAt?: Date;
+    dropOtp?: string;
+    dropOtpVerifiedAt?: Date;
+    pickupProofUrl?: string;
+    dropProofUrl?: string;
+    pickupStatus?: 'pending' | 'reached' | 'verified';
+    dropStatus?: 'pending' | 'reached' | 'verified';
+  };
   date: Date;
   time?: string;
   duration?: number; // For rental, in hours
@@ -34,6 +62,11 @@ export interface IBooking extends Document {
   amount: number;
   platformFee: number;
   totalAmount: number;
+  coinsUsed?: number;
+  coinDiscountAmount?: number;
+  finalPayableAmount?: number;
+  coinCompensationCredited?: boolean;
+  coinCompensationCreditedAt?: Date;
   paymentMethod?: PaymentMethod; // Set at trip end when passenger chooses online or cash
   passengerStatus?: 'waiting' | 'got_in' | 'got_out'; // Track passenger boarding status
   paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
@@ -116,7 +149,7 @@ const bookingSchema = new Schema<IBooking>(
     },
     serviceType: {
       type: String,
-      enum: ['pooling', 'rental'],
+      enum: ['pooling', 'rental', 'loads'],
       required: true,
     },
     poolingOfferId: {
@@ -126,6 +159,10 @@ const bookingSchema = new Schema<IBooking>(
     rentalOfferId: {
       type: String,
       ref: 'RentalOffer',
+    },
+    loadOfferId: {
+      type: String,
+      ref: 'LoadOffer',
     },
     route: {
       from: {
@@ -149,6 +186,44 @@ const bookingSchema = new Schema<IBooking>(
         lng: Number,
         index: Number,
       }], // Polyline coordinates for route matching
+    },
+    loadDetails: {
+      receiver: {
+        name: String,
+        phone: String,
+        alternatePhone: String,
+      },
+      parcel: {
+        category: {
+          type: String,
+          enum: ['documents', 'food', 'fragile', 'electronics', 'other'],
+        },
+        description: String,
+        weightKg: Number,
+        fragile: Boolean,
+        dimensionsCm: {
+          length: Number,
+          width: Number,
+          height: Number,
+        },
+        declaredValue: Number,
+      },
+      pickupOtp: String,
+      pickupOtpVerifiedAt: Date,
+      dropOtp: String,
+      dropOtpVerifiedAt: Date,
+      pickupProofUrl: String,
+      dropProofUrl: String,
+      pickupStatus: {
+        type: String,
+        enum: ['pending', 'reached', 'verified'],
+        default: 'pending',
+      },
+      dropStatus: {
+        type: String,
+        enum: ['pending', 'reached', 'verified'],
+        default: 'pending',
+      },
     },
     date: {
       type: Date,
@@ -207,6 +282,27 @@ const bookingSchema = new Schema<IBooking>(
       type: Number,
       required: true,
       min: 0,
+    },
+    coinsUsed: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    coinDiscountAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    finalPayableAmount: {
+      type: Number,
+      min: 0,
+    },
+    coinCompensationCredited: {
+      type: Boolean,
+      default: false,
+    },
+    coinCompensationCreditedAt: {
+      type: Date,
     },
     paymentMethod: {
       type: String,
@@ -358,16 +454,19 @@ bookingSchema.index({ date: 1, status: 1 });
 bookingSchema.index({ serviceType: 1, status: 1 });
 bookingSchema.index({ poolingOfferId: 1 });
 bookingSchema.index({ rentalOfferId: 1 });
+bookingSchema.index({ loadOfferId: 1 });
 bookingSchema.index({ paymentStatus: 1 });
 bookingSchema.index({ createdAt: -1 });
 bookingSchema.index({ connectedGroupId: 1 });
 
-// Ensure either poolingOfferId or rentalOfferId is present based on serviceType
+// Ensure correct offer id is present based on serviceType
 bookingSchema.pre('validate', function (next) {
   if (this.serviceType === 'pooling' && !this.poolingOfferId) {
     next(new Error('poolingOfferId is required for pooling service'));
   } else if (this.serviceType === 'rental' && !this.rentalOfferId) {
     next(new Error('rentalOfferId is required for rental service'));
+  } else if (this.serviceType === 'loads' && !this.loadOfferId) {
+    next(new Error('loadOfferId is required for loads service'));
   } else {
     next();
   }

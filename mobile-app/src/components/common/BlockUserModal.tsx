@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
-  ActivityIndicator,
   Alert,
 } from 'react-native';
 import {
@@ -19,6 +18,11 @@ import {
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '@constants/theme';
 import { normalize } from '@utils/responsive';
 import { blockApi } from '@utils/apiClient';
+import { AppLoader } from '@components/common/AppLoader';
+import { LinearGradient } from 'expo-linear-gradient';
+
+const MODAL_BLUE_GRADIENT: [string, string] = ['#51A7EA', '#0284C7'];
+const MODAL_ORANGE_GRADIENT: [string, string] = ['#F99E3C', '#E08E35'];
 
 interface BlockUserModalProps {
   visible: boolean;
@@ -206,7 +210,14 @@ const BlockUserModal: React.FC<BlockUserModalProps> = ({
           {/* Footer Buttons */}
           <View style={styles.footer}>
             <TouchableOpacity style={styles.cancelBtn} onPress={handleClose}>
-              <Text style={styles.cancelBtnText}>Cancel</Text>
+              <LinearGradient
+                colors={MODAL_BLUE_GRADIENT}
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+                style={styles.footerBtnGradient}
+              >
+                <Text style={styles.cancelBtnText}>Cancel</Text>
+              </LinearGradient>
             </TouchableOpacity>
             <TouchableOpacity
               style={[
@@ -216,14 +227,21 @@ const BlockUserModal: React.FC<BlockUserModalProps> = ({
               onPress={handleBlock}
               disabled={loading || !selectedCategory}
             >
-              {loading ? (
-                <ActivityIndicator color={COLORS.white} />
-              ) : (
-                <>
-                  <UserX size={18} color={COLORS.white} />
-                  <Text style={styles.blockBtnText}>Block User</Text>
-                </>
-              )}
+              <LinearGradient
+                colors={MODAL_ORANGE_GRADIENT}
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+                style={styles.footerBtnGradient}
+              >
+                {loading ? (
+                  <AppLoader color={COLORS.white} size="small" />
+                ) : (
+                  <>
+                    <UserX size={18} color={COLORS.white} />
+                    <Text style={styles.blockBtnText}>Block User</Text>
+                  </>
+                )}
+              </LinearGradient>
             </TouchableOpacity>
           </View>
         </View>
@@ -391,30 +409,29 @@ const styles = StyleSheet.create({
   },
   cancelBtn: {
     flex: 1,
-    paddingVertical: SPACING.md,
     borderRadius: BORDER_RADIUS.md,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    overflow: 'hidden',
   },
   cancelBtnText: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.md,
-    color: COLORS.text,
+    color: COLORS.white,
     fontWeight: '500',
   },
   blockBtn: {
     flex: 1,
-    backgroundColor: COLORS.error,
-    paddingVertical: SPACING.md,
     borderRadius: BORDER_RADIUS.md,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: SPACING.xs,
+    overflow: 'hidden',
   },
   blockBtnDisabled: {
-    backgroundColor: COLORS.lightGray,
+    opacity: 0.5,
+  },
+  footerBtnGradient: {
+    paddingVertical: SPACING.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: SPACING.xs,
   },
   blockBtnText: {
     fontFamily: FONTS.regular,

@@ -44,33 +44,16 @@ class TripSchedulerService {
   private async checkAndStartTrips(): Promise<void> {
     try {
       const now = new Date();
-      const currentTime = this.getTimeString(now);
-
-      // Find all offers that should start
-      // Get offers with status pending/active, date today, time <= current time
-      const todayStart = new Date(now);
-      todayStart.setHours(0, 0, 0, 0);
-      const todayEnd = new Date(now);
-      todayEnd.setHours(23, 59, 59, 999);
 
       const offersToStart = await PoolingOffer.find({
         status: { $in: ['pending', 'active'] },
-        date: {
-          $gte: todayStart,
-          $lt: todayEnd,
-        },
+        date: { $lte: now },
       });
 
       for (const offer of offersToStart) {
         try {
-          // Check if trip time has arrived
-          const tripTime = this.parseTimeString(offer.time);
-          const currentTimeObj = this.parseTimeString(currentTime);
-
-          if (tripTime <= currentTimeObj) {
-            // Time has arrived, start the trip for all bookings of this offer
-            await this.startTrip(offer.offerId);
-          }
+          // Exact start-time check based on stored offer datetime
+          await this.startTrip(offer.offerId);
         } catch (error) {
           logger.error(`Error processing offer ${offer.offerId}:`, error);
         }
@@ -120,31 +103,14 @@ class TripSchedulerService {
       // Update offer status
       const offer = await PoolingOffer.findOne({ offerId });
       if (offer) {
-        offer.status = 'active';
+        offer.status = 'in_progress';
         await offer.save();
-        logger.info(`✅ Offer ${offerId} status updated to active`);
+        logger.info(`✅ Offer ${offerId} status updated to in_progress`);
       }
     } catch (error) {
       logger.error(`Error starting trip for offer ${offerId}:`, error);
       throw error;
     }
-  }
-
-  /**
-   * Parse time string (HH:mm) to minutes since midnight
-   */
-  private parseTimeString(timeStr: string): number {
-    const [hours, minutes] = timeStr.split(':').map(Number);
-    return hours * 60 + minutes;
-  }
-
-  /**
-   * Get time string from Date (HH:mm)
-   */
-  private getTimeString(date: Date): string {
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    return `${hours}:${minutes}`;
   }
 }
 

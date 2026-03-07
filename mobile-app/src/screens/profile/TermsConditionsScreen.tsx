@@ -30,8 +30,8 @@ const sections = [
     content: `Forlok's rental service allows users to rent vehicles for personal or commercial use. By using rental services:\n\n\u2022 The renter must provide a valid driving license and identity proof\n\u2022 Vehicles must be returned in the same condition as received\n\u2022 Fuel charges, toll fees, and any fines incurred are the renter's responsibility\n\u2022 Insurance coverage is provided as per the vehicle's existing policy\n\u2022 The security deposit is refundable upon satisfactory vehicle return\n\u2022 Any damage beyond normal wear and tear will be charged to the renter`,
   },
   {
-    title: 'Payments & Pricing',
-    content: `All payments on the Forlok platform are processed securely:\n\n\u2022 Fares and rental charges are displayed before booking confirmation\n\u2022 Payment methods include UPI, debit/credit cards, net banking, and Forlok Wallet\n\u2022 Forlok charges a service fee (commission) on each transaction\n\u2022 Drivers receive payouts after deduction of the platform commission\n\u2022 All prices are in Indian Rupees (INR) and inclusive of applicable GST\n\u2022 Refunds are processed within 5-7 business days to the original payment method\n\u2022 Surge pricing may apply during peak demand periods`,
+    title: 'Pricing, Wallet & Coins',
+    content: `Forlok provides transparent fare and trip-cost visibility:\n\n\u2022 Fares and rental charges are displayed before booking confirmation\n\u2022 Pooling settlement is done manually between passenger and driver\n\u2022 Wallet features may be used for eligible app-side credits and adjustments\n\u2022 Coins can be redeemed for fare discounts as per in-app limits\n\u2022 All prices are in Indian Rupees (INR)\n\u2022 Cancellation/refund outcomes are shown per booking policy in-app`,
   },
   {
     title: 'Safety & Conduct',

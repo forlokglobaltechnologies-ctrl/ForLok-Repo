@@ -265,7 +265,7 @@ const RidesHistoryScreen = () => {
                 key={bookingId}
                 style={styles.txCard}
                 activeOpacity={0.7}
-                onPress={() => navigation.navigate('TransactionDetails' as never, { transactionId: bookingId } as never)}
+                onPress={() => navigation.navigate('BookingDetails' as never, { bookingId } as never)}
               >
                 <View style={styles.txHeader}>
                   <View style={[styles.txServiceIcon, { backgroundColor: svcConf.bg }]}>

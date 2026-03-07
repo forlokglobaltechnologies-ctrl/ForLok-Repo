@@ -83,7 +83,7 @@ const FAQScreen = () => {
         },
         {
           question: 'How do I delete my account?',
-          answer: 'Go to Settings > Account > Delete Account. Please note that this action is irreversible. Your data will be retained for 90 days as per our privacy policy before permanent deletion. Any pending wallet balance should be withdrawn first.',
+          answer: 'Go to Settings > Account > Delete Account. Please note that this action is irreversible. Your data will be retained for 90 days as per our privacy policy before permanent deletion.',
         },
       ],
     },
@@ -102,7 +102,7 @@ const FAQScreen = () => {
         },
         {
           question: 'How do I book a pooling ride as a passenger?',
-          answer: 'Go to "Take Services" > "Search Pooling". Enter your pickup and drop locations, select your travel date, and browse available offers. Choose a ride that matches your route, review driver details and ratings, then confirm your booking with payment.',
+          answer: 'Go to "Take Services" > "Search Pooling". Enter your pickup and drop locations, select your travel date, and browse available offers. Choose a ride that matches your route, review driver details and ratings, then confirm your booking.',
         },
         {
           question: 'Can I set stopping points along my route?',
@@ -110,11 +110,11 @@ const FAQScreen = () => {
         },
         {
           question: 'What happens if the driver cancels my ride?',
-          answer: 'If a driver cancels your confirmed booking, you will receive a full refund to your original payment method or Forlok Wallet within 24 hours. You will also be notified immediately so you can find an alternative ride.',
+          answer: 'If a driver cancels your confirmed booking, the trip is cancelled in-app and you are notified immediately so you can find an alternative ride.',
         },
         {
           question: 'How is the pooling fare calculated?',
-          answer: 'The fare is set by the driver when creating the offer, based on distance and route. Forlok shows a suggested price range. The total you pay includes the seat fare plus a small Forlok service fee. All prices include GST.',
+          answer: 'The fare is calculated using route distance, timing, and ride parameters. You see the final fare in the trip summary before confirming your booking.',
         },
       ],
     },
@@ -125,7 +125,7 @@ const FAQScreen = () => {
       items: [
         {
           question: 'How does vehicle rental work on Forlok?',
-          answer: 'Vehicle owners list their vehicles for rent with pricing, availability, and pickup location. Renters browse available vehicles, select dates, and book. After verification and payment, the vehicle is handed over at the agreed location.',
+          answer: 'Vehicle owners list their vehicles for rent with pricing, availability, and pickup location. Renters browse available vehicles, select dates, and book. After verification and confirmation, the vehicle is handed over at the agreed location.',
         },
         {
           question: 'What types of vehicles are available for rent?',
@@ -143,24 +143,24 @@ const FAQScreen = () => {
     },
     {
       icon: CreditCard,
-      title: 'Payments & Wallet',
+      title: 'Wallet & Coins',
       color: '#FF9800',
       items: [
         {
-          question: 'What payment methods does Forlok accept?',
-          answer: 'Forlok accepts UPI (PhonePe, Google Pay, Paytm), debit/credit cards (Visa, Mastercard, RuPay), net banking, and Forlok Wallet. All transactions are processed through secure, RBI-compliant payment gateways.',
+          question: 'How does manual settlement work in Forlok?',
+          answer: 'For pooling rides, settlement is done manually between passenger and driver after trip completion. The app handles booking, fare visibility, trip tracking, and completion confirmation.',
         },
         {
           question: 'How does Forlok Wallet work?',
-          answer: 'Forlok Wallet is a digital wallet within the app. You can add money via UPI or cards, earn Forlok Coins through referrals and ride completions, and use the balance for bookings. Wallet payments are instant with no additional fees.',
+          answer: 'Forlok Wallet is used to track app-side credits and coin-related adjustments. It remains available alongside the Coins system.',
         },
         {
           question: 'How do I get a refund?',
-          answer: 'Refunds are automatically processed for eligible cancellations. The amount is credited to your original payment method within 5-7 business days, or instantly to your Forlok Wallet if you choose that option. You can track refund status in your booking history.',
+          answer: 'If a cancellation policy applies to your booking, the app shows the cancellation impact directly in the booking flow and history.',
         },
         {
           question: 'How do drivers receive their earnings?',
-          answer: 'Driver earnings are credited to their Forlok Wallet after each completed ride, minus the platform commission. Drivers can withdraw to their linked bank account at any time. Withdrawals are processed within 1-2 business days.',
+          answer: 'For manual settlement rides, drivers collect fare directly from passengers. If coins reduced passenger payable fare, eligible compensation is handled through the app wallet logic.',
         },
         {
           question: 'What are Forlok Coins?',
@@ -221,7 +221,7 @@ const FAQScreen = () => {
         },
         {
           question: 'How do I view my ride history?',
-          answer: 'Go to the History tab in the app. You can view all past pooling rides and rental bookings, filter by date and status, see ride details including route and payment info, and download receipts for completed trips.',
+          answer: 'Go to the History tab in the app. You can view all past pooling rides and rental bookings, filter by date and status, and see ride details including route and completion info.',
         },
       ],
     },

@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Home, Search, Clock, User, Car } from 'lucide-react-native';
+import { Home, Search, User, Car, Coins } from 'lucide-react-native';
 import { FONTS, SPACING, SHADOWS } from '@constants/theme';
 import { useTheme } from '@context/ThemeContext';
 import { useSOS } from '@context/SOSContext';
@@ -26,7 +26,7 @@ const tabs: TabItem[] = [
   { name: 'Take', label: 'Find Ride', icon: Search, screen: 'SearchPooling' },
   { name: 'Offer', label: 'Give Ride', icon: Car, screen: 'CreatePoolingOffer' },
   { name: 'Home', label: 'Home', icon: Home, screen: 'MainDashboard' },
-  { name: 'History', label: 'History', icon: Clock, screen: 'History' },
+  { name: 'Coins', label: 'Coins', icon: Coins, screen: 'EarnCoins' },
   { name: 'Profile', label: 'Profile', icon: User, screen: 'Profile' },
 ];
 
@@ -39,8 +39,7 @@ const MOTION = {
 } as const;
 
 const TAB_ITEM_HEIGHT = 64;
-const NAV_COLLAPSE_TRANSLATE_Y = 70;
-
+const NAV_ORANGE = '#F99E3C';
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
 type AnimatedTabItemProps = {
@@ -89,7 +88,7 @@ const AnimatedTabItem = React.memo(({
     color: interpolateColor(
       activeProgress.value,
       [0, 1],
-      [theme.colors.textSecondary, theme.colors.primary]
+      ['#111111', NAV_ORANGE]
     ),
   }));
 
@@ -97,12 +96,12 @@ const AnimatedTabItem = React.memo(({
     borderColor: interpolateColor(
       activeProgress.value,
       [0, 1],
-      [theme.colors.border + '70', theme.colors.primary + 'CC']
+      [theme.colors.border + '70', NAV_ORANGE + 'CC']
     ),
     backgroundColor: interpolateColor(
       activeProgress.value,
       [0, 1],
-      ['rgba(64, 134, 255, 0.00)', 'rgba(64, 134, 255, 0.24)']
+      ['rgba(249, 158, 60, 0.00)', 'rgba(249, 158, 60, 0.24)']
     ),
   }));
 
@@ -132,10 +131,10 @@ const AnimatedTabItem = React.memo(({
     >
       <Animated.View style={[styles.iconWrap, iconAnimatedStyle, iconRingStyle]}>
         <Animated.View style={[styles.iconLayer, inactiveIconStyle]}>
-          <IconComponent size={20} color={theme.colors.textSecondary} strokeWidth={2.2} />
+          <IconComponent size={20} color="#111111" strokeWidth={2.2} />
         </Animated.View>
         <Animated.View style={[styles.iconLayer, activeIconStyle]}>
-          <IconComponent size={20} color={theme.colors.primary} strokeWidth={2.35} />
+          <IconComponent size={20} color={NAV_ORANGE} strokeWidth={2.35} />
         </Animated.View>
       </Animated.View>
       <Animated.Text numberOfLines={1} style={[styles.tabLabel, labelAnimatedStyle]}>
@@ -156,26 +155,11 @@ export const BottomTabNavigator = ({ enabled = true }: BottomTabNavigatorProps) 
   const { theme } = useTheme();
   const { showSOS, currentRoute } = useSOS();
   const insets = useSafeAreaInsets();
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const collapseProgress = useSharedValue(0);
   const routeName = currentRoute || '';
-  const tabScreens = tabs.map((tab) => tab.screen);
-  const shouldShowOnRoute = tabScreens.includes(routeName);
   const activeIndex = Math.max(0, tabs.findIndex((tab) => tab.screen === routeName));
+  const hideTabBarOnRoutes = new Set(['LocationPicker', 'Chat']);
 
-  useEffect(() => {
-    collapseProgress.value = withTiming(isCollapsed ? 1 : 0, {
-      duration: 260,
-      easing: MOTION.easing,
-    });
-  }, [isCollapsed, collapseProgress]);
-
-  const navAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: interpolate(collapseProgress.value, [0, 1], [0, NAV_COLLAPSE_TRANSLATE_Y + 52]) }],
-    opacity: interpolate(collapseProgress.value, [0, 1], [1, 0]),
-  }));
-
-  if (!enabled || !shouldShowOnRoute) {
+  if (!enabled || hideTabBarOnRoutes.has(routeName)) {
     return null;
   }
 
@@ -184,19 +168,13 @@ export const BottomTabNavigator = ({ enabled = true }: BottomTabNavigatorProps) 
       pointerEvents="box-none"
       style={[styles.outer, { paddingBottom: Math.max(insets.bottom - 2, 6) }]}
     >
-      <TouchableOpacity
-        style={[styles.gestureZone, { bottom: Math.max(insets.bottom, 6) }]}
-        onPress={() => setIsCollapsed((prev) => !prev)}
-        activeOpacity={1}
-      />
-
-      <Animated.View style={[styles.containerWrap, navAnimatedStyle]} pointerEvents={isCollapsed ? 'none' : 'auto'}>
+      <Animated.View style={styles.containerWrap}>
         <View
           style={[
             styles.container,
             {
               backgroundColor: 'rgba(245, 247, 251, 0.94)',
-              borderColor: theme.colors.border + '70',
+              borderColor: NAV_ORANGE + '70',
             },
           ]}
         >
@@ -244,13 +222,6 @@ const styles = StyleSheet.create({
   },
   containerWrap: {
     width: '100%',
-  },
-  gestureZone: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    height: 28,
-    zIndex: 30,
   },
   tab: {
     flex: 1,

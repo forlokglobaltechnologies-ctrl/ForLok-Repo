@@ -21,7 +21,16 @@ import { useTheme } from '@context/ThemeContext';
 import { trackingApi, bookingApi } from '@utils/apiClient';
 import * as Location from 'expo-location';
 import { WebView } from 'react-native-webview';
+import { LinearGradient } from 'expo-linear-gradient';
 
+const BLUE_ACCENT = '#0284C7';
+const BLUE_LIGHT = '#51A7EA';
+const BLUE_GRADIENT: [string, string] = [BLUE_LIGHT, BLUE_ACCENT];
+const GREEN_LIGHT = '#04645E';
+const GREEN_DARK = '#013532';
+const GREEN_GRADIENT: [string, string] = [GREEN_LIGHT, GREEN_DARK];
+const MODAL_BLUE_GRADIENT: [string, string] = ['#51A7EA', '#0284C7'];
+const MODAL_ORANGE_GRADIENT: [string, string] = ['#F99E3C', '#E08E35'];
 
 interface RouteParams {
   bookingId?: string;
@@ -65,6 +74,7 @@ const DriverTripScreen = () => {
   const [passengers, setPassengers] = useState<any[]>([]);
   const [stoppingLocations, setStoppingLocations] = useState<any[]>([]);
   const [showCodeModal, setShowCodeModal] = useState(false);
+  const [showEndTripConfirmModal, setShowEndTripConfirmModal] = useState(false);
   const [selectedPassenger, setSelectedPassenger] = useState<any>(null);
   const [passengerCode, setPassengerCode] = useState('');
   const [verifyingCode, setVerifyingCode] = useState(false);
@@ -447,7 +457,7 @@ const DriverTripScreen = () => {
     }
   };
 
-  // Poll booking to detect payment choice by passenger
+  // Poll booking to detect completion-code generation by passenger
   const paymentPollRef = useRef<NodeJS.Timeout | null>(null);
 
   const startPaymentPolling = (passengerBookingId: string) => {
@@ -467,20 +477,20 @@ const DriverTripScreen = () => {
             // Keep modal open, switch to code entry view
           }
 
-          // If passenger chose ONLINE and payment completed
+          // Trip completed
           if (b.status === 'completed') {
             if (paymentPollRef.current) clearInterval(paymentPollRef.current);
             setShowCodeModal(false);
             setSelectedPassenger(null);
             Alert.alert(
-              'Payment Received',
-              `₹${b.totalAmount || ''} paid online. Trip completed!\n\nEarnings credited to your wallet.`,
+              'Trip Completed',
+              `Ride marked complete successfully.`,
               [{ text: 'OK', onPress: () => loadPassengers() }]
             );
           }
         }
       } catch (err) {
-        console.error('Payment poll error:', err);
+        console.error('Trip status poll error:', err);
       }
     }, 3000); // Poll every 3 seconds
   };
@@ -510,7 +520,7 @@ const DriverTripScreen = () => {
       if (response.success) {
         Alert.alert(
           'Trip Completed',
-          `Cash payment recorded. Platform fee deducted from wallet.`,
+          `Trip completion verified successfully.`,
           [{
             text: 'OK',
             onPress: () => {
@@ -529,32 +539,6 @@ const DriverTripScreen = () => {
     } finally {
       setVerifyingCode(false);
     }
-  };
-
-  const handleWithdraw = async (passengerBookingId: string) => {
-    Alert.alert(
-      'Request Withdrawal',
-      'Are you sure you want to request withdrawal for this booking?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Request',
-          onPress: async () => {
-            try {
-              const response = await bookingApi.requestWithdrawal(passengerBookingId);
-              if (response.success) {
-                Alert.alert('Success', 'Withdrawal request submitted. Admin will process it.');
-                loadPassengers();
-              } else {
-                Alert.alert('Error', response.error || 'Failed to request withdrawal');
-              }
-            } catch (error: any) {
-              Alert.alert('Error', error.message || 'Failed to request withdrawal');
-            }
-          },
-        },
-      ]
-    );
   };
 
   const startTrip = async () => {
@@ -721,39 +705,28 @@ const DriverTripScreen = () => {
       Alert.alert('Error', 'Offer ID not found');
       return;
     }
+    setShowEndTripConfirmModal(true);
+  };
 
-    Alert.alert(
-      'End Trip',
-      'Are you sure you want to end this trip? All remaining bookings will be marked as completed.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'End Trip',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              stopLocationTracking();
-              setIsTracking(false);
-              
-              const serviceType = resolvedServiceType;
-              
-              // End entire trip (marks all bookings as completed and offer as completed)
-              const response = await bookingApi.endTrip(resolvedOfferId || '', serviceType);
-              
-              if (response.success) {
-                Alert.alert('Trip Ended', 'Trip has been completed successfully. The offer has been removed from My Offers.');
-                navigation.goBack();
-              } else {
-                Alert.alert('Error', response.error || 'Failed to end trip');
-              }
-            } catch (error: any) {
-              console.error('Error ending trip:', error);
-              Alert.alert('Error', error.message || 'Failed to end trip');
-            }
-          },
-        },
-      ]
-    );
+  const confirmEndTrip = async () => {
+    try {
+      stopLocationTracking();
+      setIsTracking(false);
+      setShowEndTripConfirmModal(false);
+
+      const serviceType = resolvedServiceType;
+      const response = await bookingApi.endTrip(resolvedOfferId || '', serviceType);
+
+      if (response.success) {
+        Alert.alert('Trip Ended', 'Trip has been completed successfully. The offer has been removed from My Offers.');
+        navigation.goBack();
+      } else {
+        Alert.alert('Error', response.error || 'Failed to end trip');
+      }
+    } catch (error: any) {
+      console.error('Error ending trip:', error);
+      Alert.alert('Error', error.message || 'Failed to end trip');
+    }
   };
 
   const requestLocationPermission = async (): Promise<boolean> => {
@@ -1034,8 +1007,8 @@ const DriverTripScreen = () => {
   const getPassengerStatusStyle = (status: string) => {
     switch (status) {
       case 'waiting': return { bg: '#FF9800' + '15', color: '#FF9800', label: 'Waiting' };
-      case 'got_in': return { bg: '#4CAF50' + '15', color: '#4CAF50', label: 'In Vehicle' };
-      case 'got_out': return { bg: '#2196F3' + '15', color: '#2196F3', label: 'Dropped Off' };
+      case 'got_in': return { bg: GREEN_LIGHT + '18', color: GREEN_LIGHT, label: 'In Vehicle' };
+      case 'got_out': return { bg: BLUE_ACCENT + '18', color: BLUE_ACCENT, label: 'Dropped Off' };
       default: return { bg: '#9E9E9E' + '15', color: '#9E9E9E', label: status || 'Unknown' };
     }
   };
@@ -1045,7 +1018,7 @@ const DriverTripScreen = () => {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <ActivityIndicator size="large" color={BLUE_ACCENT} />
           <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading trip details...</Text>
         </View>
       </SafeAreaView>
@@ -1062,7 +1035,7 @@ const DriverTripScreen = () => {
           <WebView source={{ html: mapHTML }} style={styles.webView} javaScriptEnabled />
         ) : (
           <View style={[styles.mapPlaceholder, { backgroundColor: theme.colors.background }]}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
+            <ActivityIndicator size="large" color={BLUE_ACCENT} />
           </View>
         )}
 
@@ -1071,12 +1044,22 @@ const DriverTripScreen = () => {
           <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.floatingBtn, { backgroundColor: theme.colors.surface }]}>
             <ArrowLeft size={20} color={theme.colors.text} />
           </TouchableOpacity>
-          <View style={[styles.liveChip, { backgroundColor: isTracking ? '#4CAF50' : theme.colors.surface }]}>
-            <View style={[styles.liveDot, { backgroundColor: isTracking ? '#FFF' : theme.colors.textSecondary }]} />
-            <Text style={[styles.liveText, { color: isTracking ? '#FFF' : theme.colors.textSecondary }]}>
-              {isTracking ? 'LIVE' : 'IDLE'}
-            </Text>
-          </View>
+          {isTracking ? (
+            <LinearGradient
+              colors={GREEN_GRADIENT}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.liveChip}
+            >
+              <View style={[styles.liveDot, { backgroundColor: '#FFF' }]} />
+              <Text style={[styles.liveText, { color: '#FFF' }]}>LIVE</Text>
+            </LinearGradient>
+          ) : (
+            <View style={[styles.liveChip, { backgroundColor: theme.colors.surface }]}>
+              <View style={[styles.liveDot, { backgroundColor: theme.colors.textSecondary }]} />
+              <Text style={[styles.liveText, { color: theme.colors.textSecondary }]}>IDLE</Text>
+            </View>
+          )}
         </View>
       </View>
 
@@ -1107,7 +1090,7 @@ const DriverTripScreen = () => {
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
           <View style={styles.routeTimeline}>
             <View style={styles.routeStop}>
-              <View style={[styles.routeDot, { backgroundColor: '#4CAF50' }]} />
+              <View style={[styles.routeDot, { backgroundColor: GREEN_LIGHT }]} />
               <View style={styles.routeStopInfo}>
                 <Text style={[styles.routeLabel, { color: theme.colors.textSecondary }]}>PICKUP</Text>
                 <Text style={[styles.routeAddr, { color: theme.colors.text }]} numberOfLines={2}>{getFromAddr()}</Text>
@@ -1130,9 +1113,9 @@ const DriverTripScreen = () => {
         {passengers.length > 0 && (
           <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
             <View style={styles.cardHeader}>
-              <Users size={16} color={theme.colors.primary} />
+              <Users size={16} color={BLUE_ACCENT} />
               <Text style={[styles.cardTitle, { color: theme.colors.text }]}>Passengers</Text>
-              <View style={[styles.countPill, { backgroundColor: theme.colors.primary }]}>
+              <View style={[styles.countPill, { backgroundColor: BLUE_ACCENT }]}>
                 <Text style={styles.countPillText}>{passengers.length}</Text>
               </View>
             </View>
@@ -1157,9 +1140,9 @@ const DriverTripScreen = () => {
                         <Text style={[styles.pName, { color: theme.colors.text }]}>
                           {bookedSeats > 1 ? 'Group Booking' : (passenger.passengerName || 'Passenger')}
                         </Text>
-                        <View style={[styles.seatBadge, { backgroundColor: theme.colors.primary + '15' }]}>
-                          <Users size={11} color={theme.colors.primary} />
-                          <Text style={[styles.seatBadgeText, { color: theme.colors.primary }]}>
+                        <View style={[styles.seatBadge, { backgroundColor: BLUE_ACCENT + '15' }]}>
+                          <Users size={11} color={BLUE_ACCENT} />
+                          <Text style={[styles.seatBadgeText, { color: BLUE_ACCENT }]}>
                             {bookedSeats} member{bookedSeats > 1 ? 's' : ''}
                           </Text>
                         </View>
@@ -1185,12 +1168,19 @@ const DriverTripScreen = () => {
                   <View style={styles.pActions}>
                     {isWaiting && (
                       <TouchableOpacity
-                        style={[styles.pBtn, { backgroundColor: '#4CAF50' }]}
+                        style={styles.pBtn}
                         onPress={() => handleGetIn(passenger.bookingId)}
                         activeOpacity={0.8}
                       >
-                        <LogIn size={15} color="#FFF" />
-                        <Text style={styles.pBtnText}>Picked Up</Text>
+                        <LinearGradient
+                          colors={GREEN_GRADIENT}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                          style={styles.pBtnGradient}
+                        >
+                          <LogIn size={15} color="#FFF" />
+                          <Text style={styles.pBtnText}>Picked Up</Text>
+                        </LinearGradient>
                       </TouchableOpacity>
                     )}
 
@@ -1207,7 +1197,7 @@ const DriverTripScreen = () => {
 
                     {isDroppedOff && !isDone && (
                       <TouchableOpacity
-                        style={[styles.pBtn, { backgroundColor: theme.colors.primary }]}
+                        style={[styles.pBtn, styles.pBtnSolid, { backgroundColor: BLUE_ACCENT }]}
                         onPress={() => {
                           if (passenger.paymentMethod === 'offline_cash' && passenger.passengerCode) {
                             setSelectedPassenger({ bookingId: passenger.bookingId, waitingForPayment: false, cashMode: true });
@@ -1221,31 +1211,28 @@ const DriverTripScreen = () => {
                         activeOpacity={0.8}
                       >
                         <KeyRound size={15} color="#FFF" />
-                        <Text style={styles.pBtnText}>Verify Payment</Text>
+                        <Text style={styles.pBtnText}>Verify Completion</Text>
                       </TouchableOpacity>
                     )}
 
                     {isDone && !passenger.settlementStatus && (
-                      <View style={[styles.pDoneBadge, { backgroundColor: '#E8F5E9' }]}>
-                        <CheckCircle size={14} color="#4CAF50" />
+                      <View style={[styles.pDoneBadge, { backgroundColor: GREEN_LIGHT + '15' }]}>
+                        <CheckCircle size={14} color={GREEN_LIGHT} />
                         <Text style={styles.pDoneText}>Completed</Text>
                       </View>
                     )}
 
                     {isDone && passenger.settlementStatus === 'driver_requested' && (
-                      <TouchableOpacity
-                        style={[styles.pBtn, { backgroundColor: theme.colors.primary }]}
-                        onPress={() => handleWithdraw(passenger.bookingId)}
-                        activeOpacity={0.8}
-                      >
-                        <Text style={styles.pBtnText}>Withdraw</Text>
-                      </TouchableOpacity>
+                      <View style={[styles.pDoneBadge, { backgroundColor: GREEN_LIGHT + '15' }]}>
+                        <CheckCircle size={14} color={GREEN_LIGHT} />
+                        <Text style={styles.pDoneText}>Completed</Text>
+                      </View>
                     )}
 
                     {/* Quick call */}
                     {passenger.passengerPhone && (
-                      <TouchableOpacity style={[styles.pIconBtn, { backgroundColor: '#E8F5E9' }]}>
-                        <Phone size={16} color="#4CAF50" />
+                      <TouchableOpacity style={[styles.pIconBtn, { backgroundColor: GREEN_LIGHT + '15' }]}>
+                        <Phone size={16} color={GREEN_LIGHT} />
                       </TouchableOpacity>
                     )}
                   </View>
@@ -1259,7 +1246,7 @@ const DriverTripScreen = () => {
         {stoppingLocations.length > 0 && (
           <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
             <View style={styles.cardHeader}>
-              <MapPin size={16} color={theme.colors.primary} />
+              <MapPin size={16} color={BLUE_ACCENT} />
               <Text style={[styles.cardTitle, { color: theme.colors.text }]}>Stops</Text>
             </View>
             {stoppingLocations.map((stop, index) => {
@@ -1267,13 +1254,13 @@ const DriverTripScreen = () => {
               return (
                 <View key={index} style={styles.stopRow}>
                   <View style={styles.stopTimelineCol}>
-                    <View style={[styles.stopDot, { backgroundColor: isPickup ? '#4CAF50' : '#E53E3E' }]} />
+                    <View style={[styles.stopDot, { backgroundColor: isPickup ? GREEN_LIGHT : '#E53E3E' }]} />
                     {index < stoppingLocations.length - 1 && <View style={[styles.stopConnector, { backgroundColor: theme.colors.border }]} />}
                   </View>
                   <View style={[styles.stopCard, { backgroundColor: theme.colors.background }]}>
                     <View style={styles.stopTopRow}>
-                      <View style={[styles.stopBadge, { backgroundColor: (isPickup ? '#4CAF50' : '#E53E3E') + '12' }]}>
-                        <Text style={[styles.stopBadgeText, { color: isPickup ? '#4CAF50' : '#E53E3E' }]}>{isPickup ? 'Pick' : 'Drop'}</Text>
+                      <View style={[styles.stopBadge, { backgroundColor: (isPickup ? GREEN_LIGHT : '#E53E3E') + '12' }]}>
+                        <Text style={[styles.stopBadgeText, { color: isPickup ? GREEN_LIGHT : '#E53E3E' }]}>{isPickup ? 'Pick' : 'Drop'}</Text>
                       </View>
                       <Text style={[styles.stopName, { color: theme.colors.text }]}>{stop.passengerName}</Text>
                     </View>
@@ -1290,9 +1277,16 @@ const DriverTripScreen = () => {
         {/* ── Start / End Trip ── */}
         <View style={styles.tripActionWrap}>
           {!isTracking ? (
-            <TouchableOpacity style={[styles.startBtn, { backgroundColor: theme.colors.primary }]} onPress={startTrip} activeOpacity={0.85}>
-              <Play size={20} color="#FFF" />
-              <Text style={styles.startBtnText}>Start Trip</Text>
+            <TouchableOpacity style={styles.startBtn} onPress={startTrip} activeOpacity={0.85}>
+              <LinearGradient
+                colors={BLUE_GRADIENT}
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+                style={styles.startBtnGradient}
+              >
+                <Play size={20} color="#FFF" />
+                <Text style={styles.startBtnText}>Start Trip</Text>
+              </LinearGradient>
             </TouchableOpacity>
           ) : (
             <TouchableOpacity style={styles.endBtn} onPress={endTrip} activeOpacity={0.85}>
@@ -1302,10 +1296,10 @@ const DriverTripScreen = () => {
           )}
         </View>
 
-        <View style={{ height: normalize(20) }} />
+        <View style={{ height: normalize(120) }} />
       </ScrollView>
 
-      {/* ── Payment / Code Modal ── */}
+      {/* ── Completion Code Modal ── */}
       <Modal visible={showCodeModal} transparent animationType="slide"
         onRequestClose={() => { if (paymentPollRef.current) clearInterval(paymentPollRef.current); setShowCodeModal(false); setPassengerCode(''); setSelectedPassenger(null); }}
       >
@@ -1318,46 +1312,106 @@ const DriverTripScreen = () => {
 
             {selectedPassenger?.waitingForPayment && (
               <>
-                <View style={[styles.modalIcon, { backgroundColor: theme.colors.primary + '12' }]}>
-                  <Clock size={28} color={theme.colors.primary} />
+                <View style={[styles.modalIcon, { backgroundColor: BLUE_ACCENT + '12' }]}>
+                  <Clock size={28} color={BLUE_ACCENT} />
                 </View>
-                <Text style={[styles.modalTitle, { color: theme.colors.text }]}>Waiting for Payment</Text>
+                <Text style={[styles.modalTitle, { color: theme.colors.text }]}>Waiting for Passenger</Text>
                 <Text style={[styles.modalSub, { color: theme.colors.textSecondary }]}>
-                  Passenger is choosing payment method...
+                  Passenger is generating completion code...
                 </Text>
-                <ActivityIndicator size="large" color={theme.colors.primary} style={{ marginVertical: normalize(20) }} />
+                <ActivityIndicator size="large" color={BLUE_ACCENT} style={{ marginVertical: normalize(20) }} />
                 <Text style={[styles.modalHint, { color: theme.colors.textSecondary }]}>Auto-updates when ready</Text>
               </>
             )}
 
             {selectedPassenger?.cashMode && (
               <>
-                <View style={[styles.modalIcon, { backgroundColor: '#E8F5E9' }]}>
-                  <KeyRound size={28} color="#4CAF50" />
+                <View style={[styles.modalIcon, { backgroundColor: GREEN_LIGHT + '15' }]}>
+                  <KeyRound size={28} color={GREEN_LIGHT} />
                 </View>
-                <Text style={[styles.modalTitle, { color: theme.colors.text }]}>Enter Cash Code</Text>
+                <Text style={[styles.modalTitle, { color: theme.colors.text }]}>Enter Completion Code</Text>
                 <Text style={[styles.modalSub, { color: theme.colors.textSecondary }]}>
                   Ask the passenger for their 4-digit code
                 </Text>
                 <TextInput
-                  style={[styles.codeInput, { borderColor: theme.colors.primary, backgroundColor: theme.colors.background, color: theme.colors.text }]}
+                  style={[styles.codeInput, { borderColor: BLUE_ACCENT, backgroundColor: theme.colors.background, color: theme.colors.text }]}
                   value={passengerCode} onChangeText={setPassengerCode}
                   placeholder="0000" placeholderTextColor={theme.colors.textSecondary}
                   keyboardType="number-pad" maxLength={4} autoFocus
                 />
                 <View style={styles.modalBtns}>
-                  <TouchableOpacity style={[styles.modalCancelBtn, { borderColor: theme.colors.border }]}
+                  <TouchableOpacity style={styles.modalCancelBtn}
                     onPress={() => { if (paymentPollRef.current) clearInterval(paymentPollRef.current); setShowCodeModal(false); setPassengerCode(''); setSelectedPassenger(null); }}>
-                    <Text style={[styles.modalCancelText, { color: theme.colors.textSecondary }]}>Cancel</Text>
+                    <LinearGradient
+                      colors={MODAL_BLUE_GRADIENT}
+                      start={{ x: 0.5, y: 0 }}
+                      end={{ x: 0.5, y: 1 }}
+                      style={styles.modalBtnGradient}
+                    >
+                      <Text style={styles.modalCancelText}>Cancel</Text>
+                    </LinearGradient>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.modalConfirmBtn, { backgroundColor: theme.colors.primary, opacity: verifyingCode || passengerCode.length !== 4 ? 0.5 : 1 }]}
+                    style={[styles.modalConfirmBtn, (verifyingCode || passengerCode.length !== 4) && { opacity: 0.5 }]}
                     onPress={handleVerifyCode} disabled={verifyingCode || passengerCode.length !== 4}>
-                    <Text style={styles.modalConfirmText}>{verifyingCode ? 'Verifying...' : 'Verify'}</Text>
+                    <LinearGradient
+                      colors={MODAL_ORANGE_GRADIENT}
+                      start={{ x: 0.5, y: 0 }}
+                      end={{ x: 0.5, y: 1 }}
+                      style={styles.modalBtnGradient}
+                    >
+                      <Text style={styles.modalConfirmText}>{verifyingCode ? 'Verifying...' : 'Verify'}</Text>
+                    </LinearGradient>
                   </TouchableOpacity>
                 </View>
               </>
             )}
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={showEndTripConfirmModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowEndTripConfirmModal(false)}
+      >
+        <View style={styles.confirmOverlay}>
+          <View style={[styles.confirmCard, { backgroundColor: theme.colors.surface }]}>
+            <Text style={[styles.confirmTitle, { color: theme.colors.text }]}>End Trip</Text>
+            <Text style={[styles.confirmMessage, { color: theme.colors.textSecondary }]}>
+              Are you sure you want to end this trip? All remaining bookings will be marked as completed.
+            </Text>
+            <View style={styles.confirmButtons}>
+              <TouchableOpacity
+                style={styles.confirmBtn}
+                activeOpacity={0.85}
+                onPress={() => setShowEndTripConfirmModal(false)}
+              >
+                <LinearGradient
+                  colors={MODAL_BLUE_GRADIENT}
+                  start={{ x: 0.5, y: 0 }}
+                  end={{ x: 0.5, y: 1 }}
+                  style={styles.confirmBtnGradient}
+                >
+                  <Text style={styles.confirmBtnText}>Cancel</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.confirmBtn}
+                activeOpacity={0.85}
+                onPress={confirmEndTrip}
+              >
+                <LinearGradient
+                  colors={MODAL_ORANGE_GRADIENT}
+                  start={{ x: 0.5, y: 0 }}
+                  end={{ x: 0.5, y: 1 }}
+                  style={styles.confirmBtnGradient}
+                >
+                  <Text style={styles.confirmBtnText}>End Trip</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -1382,7 +1436,7 @@ const styles = StyleSheet.create({
 
   // Sheet
   sheet: { flex: 1, borderTopLeftRadius: normalize(20), borderTopRightRadius: normalize(20), backgroundColor: 'transparent' },
-  sheetContent: { paddingHorizontal: normalize(14), paddingBottom: normalize(20) },
+  sheetContent: { paddingHorizontal: normalize(14), paddingBottom: normalize(120) },
   sheetHandle: { width: normalize(36), height: normalize(4), borderRadius: normalize(2), backgroundColor: '#D1D5DB', alignSelf: 'center', marginTop: normalize(10), marginBottom: normalize(14) },
 
   // Metrics
@@ -1431,11 +1485,13 @@ const styles = StyleSheet.create({
   pStatusDot: { width: normalize(6), height: normalize(6), borderRadius: normalize(3) },
   pStatusLabel: { fontFamily: FONTS.medium, fontSize: normalize(10), fontWeight: '700' },
   pActions: { flexDirection: 'row', alignItems: 'center', gap: normalize(8), marginTop: normalize(10), paddingTop: normalize(10), borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(0,0,0,0.06)' },
-  pBtn: { flexDirection: 'row', alignItems: 'center', gap: normalize(6), paddingHorizontal: normalize(16), paddingVertical: normalize(9), borderRadius: normalize(10) },
+  pBtn: { borderRadius: normalize(10), overflow: 'hidden' },
+  pBtnGradient: { flexDirection: 'row', alignItems: 'center', gap: normalize(6), paddingHorizontal: normalize(16), paddingVertical: normalize(9) },
+  pBtnSolid: { flexDirection: 'row', alignItems: 'center', gap: normalize(6), paddingHorizontal: normalize(16), paddingVertical: normalize(9), borderRadius: normalize(10) },
   pBtnText: { fontFamily: FONTS.medium, fontSize: normalize(13), fontWeight: '600', color: '#FFF' },
   pIconBtn: { width: normalize(36), height: normalize(36), borderRadius: normalize(10), alignItems: 'center', justifyContent: 'center', marginLeft: 'auto' },
   pDoneBadge: { flexDirection: 'row', alignItems: 'center', gap: normalize(5), paddingHorizontal: normalize(12), paddingVertical: normalize(8), borderRadius: normalize(10) },
-  pDoneText: { fontFamily: FONTS.medium, fontSize: normalize(12), fontWeight: '600', color: '#4CAF50' },
+  pDoneText: { fontFamily: FONTS.medium, fontSize: normalize(12), fontWeight: '600', color: GREEN_LIGHT },
 
   // Stops
   stopRow: { flexDirection: 'row', marginBottom: normalize(2) },
@@ -1451,9 +1507,19 @@ const styles = StyleSheet.create({
 
   // Trip Actions
   tripActionWrap: { marginTop: normalize(4) },
-  startBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: normalize(10), paddingVertical: normalize(16), borderRadius: normalize(14), ...SHADOWS.md },
+  startBtn: { borderRadius: normalize(14), overflow: 'hidden', ...SHADOWS.md },
+  startBtnGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: normalize(10), paddingVertical: normalize(16) },
   startBtnText: { fontFamily: FONTS.medium, fontSize: normalize(16), fontWeight: '700', color: '#FFF' },
-  endBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: normalize(10), paddingVertical: normalize(16), borderRadius: normalize(14), backgroundColor: '#E53E3E' },
+  endBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: normalize(10),
+    height: normalize(54),
+    borderRadius: normalize(30),
+    backgroundColor: '#FF0000',
+    ...SHADOWS.md,
+  },
   endBtnText: { fontFamily: FONTS.medium, fontSize: normalize(16), fontWeight: '700', color: '#FFF' },
   stopIcon: { width: normalize(14), height: normalize(14), borderRadius: normalize(3), backgroundColor: '#FFF' },
 
@@ -1472,10 +1538,56 @@ const styles = StyleSheet.create({
   modalHint: { fontFamily: FONTS.regular, fontSize: normalize(11), textAlign: 'center' },
   codeInput: { width: '100%', borderWidth: 2, borderRadius: normalize(14), padding: SPACING.md, fontSize: normalize(28), fontWeight: '800', textAlign: 'center', letterSpacing: normalize(16), marginBottom: SPACING.lg },
   modalBtns: { flexDirection: 'row', gap: SPACING.md, width: '100%' },
-  modalCancelBtn: { flex: 1, paddingVertical: normalize(14), borderRadius: normalize(14), borderWidth: 1.5, alignItems: 'center' },
-  modalCancelText: { fontFamily: FONTS.medium, fontSize: normalize(15), fontWeight: '600' },
-  modalConfirmBtn: { flex: 1, paddingVertical: normalize(14), borderRadius: normalize(14), alignItems: 'center' },
+  modalCancelBtn: { flex: 1, borderRadius: normalize(14), overflow: 'hidden' },
+  modalConfirmBtn: { flex: 1, borderRadius: normalize(14), overflow: 'hidden' },
+  modalBtnGradient: { paddingVertical: normalize(14), alignItems: 'center', justifyContent: 'center' },
+  modalCancelText: { fontFamily: FONTS.medium, fontSize: normalize(15), fontWeight: '600', color: '#FFF' },
   modalConfirmText: { fontFamily: FONTS.medium, fontSize: normalize(15), fontWeight: '700', color: '#FFF' },
+  confirmOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: normalize(22),
+  },
+  confirmCard: {
+    width: '100%',
+    borderRadius: normalize(16),
+    padding: normalize(16),
+    ...SHADOWS.lg,
+  },
+  confirmTitle: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(20),
+    fontWeight: '700',
+    marginBottom: normalize(10),
+  },
+  confirmMessage: {
+    fontFamily: FONTS.regular,
+    fontSize: normalize(14),
+    lineHeight: normalize(21),
+    marginBottom: normalize(16),
+  },
+  confirmButtons: {
+    flexDirection: 'row',
+    gap: normalize(10),
+  },
+  confirmBtn: {
+    flex: 1,
+    borderRadius: normalize(12),
+    overflow: 'hidden',
+  },
+  confirmBtnGradient: {
+    paddingVertical: normalize(12),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmBtnText: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(14),
+    fontWeight: '700',
+    color: '#FFF',
+  },
 });
 
 export default DriverTripScreen;

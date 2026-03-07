@@ -504,14 +504,14 @@ const BookingDetailsScreen = () => {
           </View>
         )}
 
-        {/* ── Payment Card ── */}
+        {/* ── Fare Card ── */}
         <View style={[st.card, { backgroundColor: theme.colors.surface }]}>
           <Text style={[st.cardTitle, { color: theme.colors.text }]}>
-            {isPoolingDriver || isOwner ? 'Earnings' : 'Payment'}
+            {isPoolingDriver || isOwner ? 'Earnings' : 'Trip Summary'}
           </Text>
           <View style={st.payRow}>
             <Text style={[st.payLabel, { color: theme.colors.textSecondary }]}>
-              {isRental ? 'Rental Amount' : 'Ride Amount'}
+              {isRental ? 'Rental Fare' : 'Ride Fare'}
             </Text>
             <View style={st.payValueRow}>
               <IndianRupee size={16} color={theme.colors.text} />
@@ -541,7 +541,7 @@ const BookingDetailsScreen = () => {
           <View style={st.payMethodRow}>
             <CreditCard size={14} color={theme.colors.textSecondary} />
             <Text style={[st.payMethodText, { color: theme.colors.textSecondary }]}>
-              {booking.paymentMethod === 'offline_cash' ? 'Cash' : booking.paymentMethod === 'wallet' ? 'Wallet' : booking.paymentMethod || 'Pay at trip end'}
+              {booking.paymentMethod === 'offline_cash' ? 'Manual settlement' : booking.paymentMethod === 'wallet' ? 'Wallet' : booking.paymentMethod || 'Settle at trip end'}
             </Text>
             <View style={[st.payStatusDot, {
               backgroundColor: booking.paymentStatus === 'paid' ? '#4CAF50' : booking.paymentStatus === 'failed' ? '#E53E3E' : '#FF9800',
@@ -549,7 +549,7 @@ const BookingDetailsScreen = () => {
             <Text style={[st.payStatusText, {
               color: booking.paymentStatus === 'paid' ? '#4CAF50' : booking.paymentStatus === 'failed' ? '#E53E3E' : '#FF9800',
             }]}>
-              {booking.paymentStatus === 'paid' ? 'Paid' : booking.paymentStatus === 'failed' ? 'Failed' : 'Pending'}
+              {booking.paymentStatus === 'paid' ? 'Settled' : booking.paymentStatus === 'failed' ? 'Issue' : 'Pending'}
             </Text>
           </View>
         </View>

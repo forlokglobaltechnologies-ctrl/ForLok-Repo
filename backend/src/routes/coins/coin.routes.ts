@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { coinService } from '../../services/coin.service';
 import { authenticate } from '../../middleware/auth.middleware';
 import { validate } from '../../middleware/validation.middleware';
+import Booking from '../../models/Booking';
+import { ConflictError, NotFoundError } from '../../utils/errors';
 
 const redeemSchema = z.object({
   bookingId: z.string(),
@@ -124,23 +126,51 @@ export async function coinRoutes(fastify: FastifyInstance) {
         const userId = (request as any).user.userId;
         const { bookingId, coinsToUse } = request.body as { bookingId: string; coinsToUse: number };
 
+        const booking = await Booking.findOne({ bookingId, userId });
+        if (!booking) {
+          throw new NotFoundError('Booking not found');
+        }
+        if (booking.status === 'completed' || booking.status === 'cancelled') {
+          throw new ConflictError('Coins can only be applied before trip completion');
+        }
+        if ((booking.coinsUsed || 0) > 0) {
+          throw new ConflictError('Coins already applied for this booking');
+        }
+
+        const payableBase = booking.finalPayableAmount ?? booking.totalAmount;
+        const discountPreview = coinService.calculateCoinDiscount(
+          (await coinService.getBalance(userId)).balance,
+          payableBase
+        );
+        const coinsToRedeem = Math.min(coinsToUse, discountPreview.maxCoins);
+        if (coinsToRedeem <= 0) {
+          throw new ConflictError('No eligible coin discount available for this booking');
+        }
+
         const result = await coinService.redeemCoins(
           userId,
-          coinsToUse,
+          coinsToRedeem,
           'ride_discount',
-          `Redeemed ${coinsToUse} coins for ride discount on booking ${bookingId}`,
+          `Redeemed ${coinsToRedeem} coins for ride discount on booking ${bookingId}`,
           bookingId
         );
 
         const { PRICING_CONFIG } = await import('../../config/pricing.config');
-        const discountInr = Math.floor((coinsToUse / PRICING_CONFIG.COIN.CONVERSION_RATE) * 100) / 100;
+        const discountInr = Math.floor((coinsToRedeem / PRICING_CONFIG.COIN.CONVERSION_RATE) * 100) / 100;
+        const finalPayableAmount = Math.max(0, parseFloat((payableBase - discountInr).toFixed(2)));
+
+        booking.coinsUsed = coinsToRedeem;
+        booking.coinDiscountAmount = discountInr;
+        booking.finalPayableAmount = finalPayableAmount;
+        await booking.save();
 
         const response: ApiResponse = {
           success: true,
-          message: `Redeemed ${coinsToUse} coins (₹${discountInr} discount)`,
+          message: `Redeemed ${coinsToRedeem} coins (₹${discountInr} discount)`,
           data: {
-            coinsRedeemed: coinsToUse,
+            coinsRedeemed: coinsToRedeem,
             discountInr,
+            finalPayableAmount,
             newBalance: result.wallet.balance,
           },
         };

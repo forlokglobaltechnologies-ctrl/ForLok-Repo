@@ -59,6 +59,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { getUserErrorMessage } from '@utils/errorUtils';
 
 const AVATAR_SIZE = normalize(60);
+const PROFILE_ACCENT = '#F99E3C';
 
 const ProfileScreen = () => {
   const navigation = useNavigation();
@@ -279,7 +280,7 @@ const ProfileScreen = () => {
           style={styles.headerImage}
           resizeMode="cover"
         >
-          <View style={[styles.headerOverlay, { backgroundColor: theme.colors.primary }]} />
+          <View style={[styles.headerOverlay, { backgroundColor: PROFILE_ACCENT }]} />
           <BlurView intensity={40} style={styles.blurContainer}>
             <View style={styles.headerNav}>
               <TouchableOpacity onPress={() => navigation.goBack()} style={styles.navButton}>
@@ -291,7 +292,7 @@ const ProfileScreen = () => {
           </BlurView>
         </ImageBackground>
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <ActivityIndicator size="large" color={PROFILE_ACCENT} />
           <Text style={[styles.loadingLabel, { color: theme.colors.textSecondary }]}>Loading profile...</Text>
         </View>
       </SafeAreaView>
@@ -309,12 +310,12 @@ const ProfileScreen = () => {
   }
 
   const menuItems = [
-    { icon: Wallet, label: 'Wallet', screen: 'Wallet', color: theme.colors.primary },
+    { icon: Wallet, label: 'Wallet', screen: 'Wallet', color: PROFILE_ACCENT },
     { icon: Coins, label: 'Earn Coins', screen: 'EarnCoins', color: '#F5A623' },
-    { icon: MessageSquare, label: 'My Reviews', screen: 'Reviews', params: { userId: user?.userId, userName: user?.name }, color: theme.colors.primary },
-    { icon: Car, label: 'My Offers', screen: 'MyOffers', color: theme.colors.primary },
-    { icon: Shield, label: 'Help & Support', screen: 'HelpSupport', color: theme.colors.primary },
-    { icon: Info, label: 'About', screen: 'About', color: theme.colors.primary },
+    { icon: MessageSquare, label: 'My Reviews', screen: 'Reviews', params: { userId: user?.userId, userName: user?.name }, color: PROFILE_ACCENT },
+    { icon: Car, label: 'My Offers', screen: 'MyOffers', color: PROFILE_ACCENT },
+    { icon: Shield, label: 'Help & Support', screen: 'HelpSupport', color: PROFILE_ACCENT },
+    { icon: Info, label: 'About', screen: 'About', color: PROFILE_ACCENT },
   ];
 
   return (
@@ -326,7 +327,7 @@ const ProfileScreen = () => {
           style={styles.headerImage}
           resizeMode="cover"
         >
-          <View style={[styles.headerOverlay, { backgroundColor: theme.colors.primary }]} />
+          <View style={[styles.headerOverlay, { backgroundColor: PROFILE_ACCENT }]} />
           <BlurView intensity={40} style={styles.blurContainer}>
             <View style={styles.headerNav}>
               <TouchableOpacity onPress={() => navigation.goBack()} style={styles.navButton}>
@@ -360,12 +361,12 @@ const ProfileScreen = () => {
                   }}
                 />
               ) : (
-                <View style={[styles.avatar, styles.avatarPlaceholder, { borderColor: theme.colors.surface, backgroundColor: theme.colors.primary + '15' }]}>
-                  <User size={28} color={theme.colors.primary} />
+                <View style={[styles.avatar, styles.avatarPlaceholder, { borderColor: theme.colors.surface, backgroundColor: PROFILE_ACCENT + '15' }]}>
+                  <User size={28} color={PROFILE_ACCENT} />
                 </View>
               )}
               <TouchableOpacity
-                style={[styles.editAvatarBtn, { backgroundColor: theme.colors.primary, borderColor: theme.colors.surface }]}
+                style={[styles.editAvatarBtn, { backgroundColor: PROFILE_ACCENT, borderColor: theme.colors.surface }]}
                 onPress={handleChangePhoto}
                 disabled={uploadingPhoto}
               >
@@ -436,7 +437,7 @@ const ProfileScreen = () => {
         {/* ── Personal Information ── */}
         <View style={[styles.sectionCard, { backgroundColor: theme.colors.surface }]}>
           <View style={styles.sectionHeader}>
-            <User size={16} color={theme.colors.primary} />
+            <User size={16} color={PROFILE_ACCENT} />
             <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t('profile.personalInformation')}</Text>
           </View>
           {[
@@ -445,8 +446,8 @@ const ProfileScreen = () => {
             ...(user.gender ? [{ icon: User, label: t('common.gender'), value: user.gender }] : []),
           ].map((item, idx, arr) => (
             <View key={idx} style={[styles.infoRow, idx < arr.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.colors.border }]}>
-              <View style={[styles.infoIcon, { backgroundColor: theme.colors.primary + '0D' }]}>
-                <item.icon size={14} color={theme.colors.primary} />
+              <View style={[styles.infoIcon, { backgroundColor: PROFILE_ACCENT + '0D' }]}>
+                <item.icon size={14} color={PROFILE_ACCENT} />
               </View>
               <View style={styles.infoContent}>
                 <Text style={[styles.infoLabel, { color: theme.colors.textSecondary }]}>{item.label}</Text>
@@ -459,12 +460,12 @@ const ProfileScreen = () => {
         {/* ── Documents ── */}
         <View style={[styles.sectionCard, { backgroundColor: theme.colors.surface }]}>
           <View style={styles.sectionHeader}>
-            <FileText size={16} color={theme.colors.primary} />
+            <FileText size={16} color={PROFILE_ACCENT} />
             <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t('profile.documents')}</Text>
           </View>
           {documentsLoading ? (
             <View style={styles.miniLoadingWrap}>
-              <ActivityIndicator size="small" color={theme.colors.primary} />
+              <ActivityIndicator size="small" color={PROFILE_ACCENT} />
               <Text style={[styles.loadingLabel, { color: theme.colors.textSecondary, fontSize: normalize(12) }]}>Loading documents...</Text>
             </View>
           ) : documents.length > 0 ? (
@@ -514,13 +515,13 @@ const ProfileScreen = () => {
                               <Image source={{ uri: doc.url }} style={styles.docThumb} />
                             </View>
                           ) : (
-                            <View style={[styles.docIconWrap, { backgroundColor: theme.colors.primary + '10' }]}>
+                            <View style={[styles.docIconWrap, { backgroundColor: PROFILE_ACCENT + '10' }]}>
                               {doc.status === 'verified' ? (
                                 <CheckCircle size={18} color="#4CAF50" />
                               ) : doc.status === 'pending' ? (
                                 <ActivityIndicator size={16} color="#FF9800" />
                               ) : (
-                                <FileText size={18} color={theme.colors.primary} />
+                                <FileText size={18} color={PROFILE_ACCENT} />
                               )}
                             </View>
                           )}
@@ -558,13 +559,13 @@ const ProfileScreen = () => {
                       style={[styles.docItem, { borderBottomColor: theme.colors.border }]}
                       onPress={() => doc.url && Linking.openURL(doc.url).catch(() => showSnackbar({ message: 'Could not open document', type: 'error' }))}
                     >
-                      <View style={[styles.docIconWrap, { backgroundColor: theme.colors.primary + '10' }]}>
+                      <View style={[styles.docIconWrap, { backgroundColor: PROFILE_ACCENT + '10' }]}>
                         {doc.status === 'verified' ? (
                           <CheckCircle size={18} color="#4CAF50" />
                         ) : doc.status === 'pending' ? (
                           <ActivityIndicator size={16} color="#FF9800" />
                         ) : (
-                          <FileText size={18} color={isPDF ? theme.colors.primary : '#F44336'} />
+                          <FileText size={18} color={isPDF ? PROFILE_ACCENT : '#F44336'} />
                         )}
                       </View>
                       <View style={styles.docInfo}>
@@ -591,27 +592,27 @@ const ProfileScreen = () => {
         {/* ── Vehicles ── */}
         <View style={[styles.sectionCard, { backgroundColor: theme.colors.surface }]}>
           <View style={styles.sectionHeader}>
-            <Car size={16} color={theme.colors.primary} />
+            <Car size={16} color={PROFILE_ACCENT} />
             <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t('profile.myVehicles')}</Text>
             <TouchableOpacity
               onPress={() => navigation.navigate('AddVehicle' as never)}
-              style={[styles.addBtn, { backgroundColor: theme.colors.primary }]}
+              style={[styles.addBtn, { backgroundColor: PROFILE_ACCENT }]}
             >
               <Text style={styles.addBtnText}>+ Add</Text>
             </TouchableOpacity>
           </View>
           {loadingVehicles ? (
             <View style={styles.miniLoadingWrap}>
-              <ActivityIndicator size="small" color={theme.colors.primary} />
+              <ActivityIndicator size="small" color={PROFILE_ACCENT} />
             </View>
           ) : vehicles.length > 0 ? (
             vehicles.map((vehicle: any, index: number) => (
               <View key={vehicle.vehicleId || vehicle._id || index} style={[styles.vehicleItem, { backgroundColor: theme.colors.background }]}>
-                <View style={[styles.vehicleIconWrap, { backgroundColor: theme.colors.primary + '12' }]}>
+                <View style={[styles.vehicleIconWrap, { backgroundColor: PROFILE_ACCENT + '12' }]}>
                   {vehicle.type?.toLowerCase() === 'car' ? (
-                    <Car size={22} color={theme.colors.primary} />
+                    <Car size={22} color={PROFILE_ACCENT} />
                   ) : (
-                    <Bike size={22} color={theme.colors.primary} />
+                    <Bike size={22} color={PROFILE_ACCENT} />
                   )}
                 </View>
                 <View style={styles.vehicleInfo}>
@@ -628,15 +629,15 @@ const ProfileScreen = () => {
                 <View style={styles.vehicleActions}>
                   <TouchableOpacity
                     style={[styles.vehicleActionBtn, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}
-                    onPress={() => navigation.navigate('EditVehicle' as never, { vehicleId: vehicle.vehicleId } as never)}
+                    onPress={() => navigation.navigate('AddVehicle' as never, { vehicle } as never)}
                   >
-                    <Edit size={16} color={theme.colors.primary} />
+                    <Edit size={16} color={PROFILE_ACCENT} />
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.vehicleActionBtn, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}
                     onPress={() => navigation.navigate('VehicleDetails' as never, { vehicleId: vehicle.vehicleId } as never)}
                   >
-                    <Eye size={16} color={theme.colors.primary} />
+                    <Eye size={16} color={PROFILE_ACCENT} />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -646,7 +647,7 @@ const ProfileScreen = () => {
               <Car size={36} color={theme.colors.textSecondary} />
               <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>No vehicles added yet</Text>
               <TouchableOpacity
-                style={[styles.addVehicleBtn, { backgroundColor: theme.colors.primary }]}
+                style={[styles.addVehicleBtn, { backgroundColor: PROFILE_ACCENT }]}
                 onPress={() => navigation.navigate('AddVehicle' as never)}
               >
                 <Text style={styles.addVehicleBtnText}>+ Add Vehicle</Text>
@@ -681,8 +682,8 @@ const ProfileScreen = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Bottom spacing */}
-        <View style={{ height: SPACING.xl }} />
+        {/* Bottom spacing to clear floating tab bar */}
+        <View style={{ height: normalize(120) }} />
       </ScrollView>
       {/* ── Logout Modal ── */}
       <Modal
@@ -783,7 +784,7 @@ const styles = StyleSheet.create({
 
   // ── Scroll ──
   scrollContent: {
-    paddingBottom: SPACING.md,
+    paddingBottom: normalize(24),
   },
 
   // ── Profile Card ──

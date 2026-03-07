@@ -79,14 +79,14 @@ const HelpSupportScreen = () => {
       title: 'How to book a rental vehicle',
       color: '#9C27B0',
       category: 'Rental',
-      explanation: 'To book a rental vehicle on Forlok:\n\n1. Go to "Take Services" > "Search Rental"\n2. Select your preferred vehicle type (bike, car, SUV, etc.)\n3. Choose your rental dates and location\n4. Browse available vehicles with photos, ratings, and pricing\n5. Tap on a vehicle to see full details and owner info\n6. Select your rental duration and review the price summary\n7. Complete payment via UPI, card, or Forlok Wallet\n8. Pick up the vehicle at the agreed location with valid ID\n\nA security deposit may be required, which is refundable upon safe return of the vehicle.',
+      explanation: 'To book a rental vehicle on Forlok:\n\n1. Go to "Take Services" > "Search Rental"\n2. Select your preferred vehicle type (bike, car, SUV, etc.)\n3. Choose your rental dates and location\n4. Browse available vehicles with photos, ratings, and pricing\n5. Tap on a vehicle to see full details and owner info\n6. Select your rental duration and review the price summary\n7. Confirm your booking in-app\n8. Pick up the vehicle at the agreed location with valid ID\n\nA security deposit may be required, which is refundable upon safe return of the vehicle.',
     },
     {
       icon: CreditCard,
-      title: 'Payment issues & refunds',
+      title: 'Trip completion & refunds',
       color: '#2196F3',
-      category: 'Payments',
-      explanation: 'Common payment issues and how to resolve them:\n\nPayment Failed:\n\u2022 Check your internet connection and retry\n\u2022 Ensure sufficient balance in your account/wallet\n\u2022 Try a different payment method\n\u2022 If money was deducted but booking failed, it will auto-refund in 24-48 hours\n\nRefund Process:\n\u2022 Eligible cancellations are auto-refunded\n\u2022 Refunds to UPI/cards: 5-7 business days\n\u2022 Refunds to Forlok Wallet: Instant\n\u2022 Track refund status in Booking History > Payment Details\n\nFor unresolved payment issues, contact support@forlok.com with your booking ID and transaction details.',
+      category: 'Trips',
+      explanation: 'Common trip-completion and refund guidance:\n\nTrip Completion:\n\u2022 Driver marks passenger as dropped\n\u2022 Passenger settles manually with driver\n\u2022 Passenger shares 4-digit completion code\n\u2022 Driver verifies code to close the trip\n\nRefund / Cancellation:\n\u2022 Eligible cancellations are handled per policy\n\u2022 Cancellation impact appears in booking details\n\u2022 Check Booking History for trip and cancellation status\n\nFor unresolved issues, contact support@forlok.com with your booking ID.',
     },
     {
       icon: FileText,
@@ -114,7 +114,7 @@ const HelpSupportScreen = () => {
       title: 'Wallet & Forlok coins',
       color: '#00BCD4',
       category: 'Wallet',
-      explanation: 'Forlok Wallet & Coins system:\n\nForlok Wallet:\n\u2022 A digital wallet for quick payments\n\u2022 Add money via UPI, debit/credit card, or net banking\n\u2022 Use for pooling bookings and rental payments\n\u2022 Receive refunds instantly to wallet\n\u2022 Withdraw to bank account anytime (1-2 business days)\n\nForlok Coins:\n\u2022 Earn coins through various activities:\n  - Complete a ride: 10-50 coins\n  - Refer a friend: 100 coins\n  - Maintain 4.5+ rating: 25 coins/month\n  - First ride of the month: 20 coins\n\u2022 Redeem coins for:\n  - Ride discounts (100 coins = \u20B910)\n  - Wallet credits\n  - Exclusive promotions\n\nCheck the Earn Coins section in-app for current offers.',
+      explanation: 'Forlok Wallet & Coins system:\n\nForlok Wallet:\n\u2022 Available in-app for coin-related credits/adjustments\n\u2022 Used where applicable by platform rules\n\nForlok Coins:\n\u2022 Earn coins through activities like rides and referrals\n\u2022 Redeem coins for trip-fare discounts\n\u2022 Discount eligibility and limits are shown in-app during booking/trip summary\n\nCheck the Earn Coins section in-app for current offers.',
     },
     {
       icon: Car,

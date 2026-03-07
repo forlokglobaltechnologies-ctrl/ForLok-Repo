@@ -29,7 +29,15 @@ const createOfferSchema = z.object({
       lng: z.number(),
       city: z.string().optional(),
       order: z.number().int().min(0),
-    })).max(5).optional(),
+    })).max(120).optional(),
+    selectedRouteId: z.string().optional(),
+    selectedPolyline: z.array(
+      z.object({
+        lat: z.number(),
+        lng: z.number(),
+        index: z.number().int().min(0),
+      })
+    ).optional(),
     distance: z.number().optional(),
     duration: z.number().optional(),
   }),
@@ -63,7 +71,15 @@ const updateOfferSchema = z.object({
       lng: z.number(),
       city: z.string().optional(),
       order: z.number().int().min(0),
-    })).max(5).optional(),
+    })).max(120).optional(),
+    selectedRouteId: z.string().optional(),
+    selectedPolyline: z.array(
+      z.object({
+        lat: z.number(),
+        lng: z.number(),
+        index: z.number().int().min(0),
+      })
+    ).optional(),
     distance: z.number().optional(),
     duration: z.number().optional(),
   }).optional(),
@@ -75,7 +91,78 @@ const updateOfferSchema = z.object({
   status: z.enum(['active', 'pending', 'expired', 'completed', 'cancelled', 'suspended']).optional(),
 });
 
+const validateWaypointSchema = z.object({
+  fromLat: z.number(),
+  fromLng: z.number(),
+  toLat: z.number(),
+  toLng: z.number(),
+  waypointLat: z.number(),
+  waypointLng: z.number(),
+  existingWaypoints: z.array(z.object({
+    lat: z.number(),
+    lng: z.number(),
+  })).optional().default([]),
+});
+
+const suggestWaypointsFromPolylineSchema = z.object({
+  selectedPolyline: z.array(
+    z.object({
+      lat: z.number(),
+      lng: z.number(),
+      index: z.number().int().min(0),
+    })
+  ).min(2),
+  intervalKm: z.number().min(2).max(30).optional(),
+  maxPoints: z.number().int().min(3).max(120).optional(),
+});
+
 export async function poolingRoutes(fastify: FastifyInstance) {
+  /**
+   * GET /api/pooling/routes/alternatives
+   * Get alternative routes for from/to coordinates
+   */
+  fastify.get(
+    '/routes/alternatives',
+    {
+      preHandler: [authenticate],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { fromLat, fromLng, toLat, toLng, maxAlternatives } = request.query as {
+        fromLat: string;
+        fromLng: string;
+        toLat: string;
+        toLng: string;
+        maxAlternatives?: string;
+      };
+
+      const fLat = parseFloat(fromLat);
+      const fLng = parseFloat(fromLng);
+      const tLat = parseFloat(toLat);
+      const tLng = parseFloat(toLng);
+      const requestedAlternatives = Number.isFinite(Number(maxAlternatives))
+        ? Math.max(2, Math.min(parseInt(maxAlternatives as string, 10), 8))
+        : 5;
+
+      if ([fLat, fLng, tLat, tLng].some((v) => !Number.isFinite(v))) {
+        return reply.status(400).send({
+          success: false,
+          message: 'Invalid coordinates. Provide fromLat, fromLng, toLat, toLng as numbers.',
+        });
+      }
+
+      const { getRouteAlternatives } = await import('../../utils/maps');
+      const routes = await getRouteAlternatives(fLat, fLng, tLat, tLng, requestedAlternatives);
+
+      const resp: ApiResponse = {
+        success: true,
+        message: 'Route alternatives generated',
+        data: { routes },
+      };
+
+      return reply.status(200).send(resp);
+    }
+  );
+
   /**
    * POST /api/pooling/offers
    * Create pooling offer (authenticated)
@@ -474,6 +561,97 @@ export async function poolingRoutes(fastify: FastifyInstance) {
         data: {
           waypoints,
           routeDistanceKm: Math.round(routeDistKm),
+          minRequired,
+        },
+      };
+
+      return reply.status(200).send(resp);
+    }
+  );
+
+  /**
+   * POST /api/pooling/suggest-waypoints-from-polyline
+   * Returns suggested intermediate waypoints for a selected route polyline
+   */
+  fastify.post(
+    '/suggest-waypoints-from-polyline',
+    {
+      preHandler: [authenticate, validate(suggestWaypointsFromPolylineSchema)],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { selectedPolyline, intervalKm, maxPoints } = request.body as {
+        selectedPolyline: Array<{ lat: number; lng: number; index: number }>;
+        intervalKm?: number;
+        maxPoints?: number;
+      };
+
+      const { calculatePolylineDistanceKm, generateRoutePlaceSuggestions, getMinWaypointCount } = await import('../../utils/maps');
+      const routeDistKm = calculatePolylineDistanceKm(selectedPolyline);
+      const minRequired = getMinWaypointCount(routeDistKm);
+      const waypoints = await generateRoutePlaceSuggestions(
+        selectedPolyline,
+        intervalKm ?? 8,
+        maxPoints ?? 80
+      );
+
+      const resp: ApiResponse = {
+        success: true,
+        message: 'Suggested waypoints generated from selected route',
+        data: {
+          waypoints,
+          routeDistanceKm: Math.round(routeDistKm),
+          minRequired,
+        },
+      };
+
+      return reply.status(200).send(resp);
+    }
+  );
+
+  /**
+   * POST /api/pooling/validate-waypoint
+   * Chained validation:
+   * - waypoint1 validated on source -> destination leg
+   * - waypoint2 validated on waypoint1 -> destination leg
+   * - ...
+   */
+  fastify.post(
+    '/validate-waypoint',
+    {
+      preHandler: [authenticate, validate(validateWaypointSchema)],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { fromLat, fromLng, toLat, toLng, waypointLat, waypointLng, existingWaypoints = [] } = request.body as {
+        fromLat: number;
+        fromLng: number;
+        toLat: number;
+        toLng: number;
+        waypointLat: number;
+        waypointLng: number;
+        existingWaypoints?: Array<{ lat: number; lng: number }>;
+      };
+
+      const { getRoutePolyline, validateWaypointOnRoute, getMinWaypointCount } = await import('../../utils/maps');
+      const { calculateDistance } = await import('../../utils/helpers');
+
+      const routeDistKm = calculateDistance(fromLat, fromLng, toLat, toLng);
+      const minRequired = getMinWaypointCount(routeDistKm);
+      const legStart = existingWaypoints.length > 0
+        ? existingWaypoints[existingWaypoints.length - 1]
+        : { lat: fromLat, lng: fromLng };
+
+      const legPolyline = await getRoutePolyline(legStart.lat, legStart.lng, toLat, toLng);
+      const validation = validateWaypointOnRoute(waypointLat, waypointLng, legPolyline);
+
+      const resp: ApiResponse = {
+        success: true,
+        message: validation.valid ? 'Waypoint is valid on current leg' : 'Waypoint is invalid for current leg',
+        data: {
+          isValid: validation.valid,
+          reason: validation.reason || null,
+          nearestDistanceKm: Number.isFinite(validation.distanceKm) ? Number(validation.distanceKm.toFixed(2)) : null,
+          routeDistanceKm: Math.round(routeDistKm),
+          legFrom: { lat: legStart.lat, lng: legStart.lng },
           minRequired,
         },
       };

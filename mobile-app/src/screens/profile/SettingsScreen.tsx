@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -10,167 +10,271 @@ import {
   Modal,
   Alert,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
-import { ArrowLeft, ChevronRight, User, Lock, Bell, Globe, CreditCard, HelpCircle, FileText, Info, Check, Wallet, UserX, Shield } from 'lucide-react-native';
-import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '@constants/theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  ArrowLeft,
+  ChevronRight,
+  User,
+  Lock,
+  Bell,
+  Globe,
+  CreditCard,
+  HelpCircle,
+  FileText,
+  Info,
+  Check,
+  Wallet,
+  UserX,
+  Shield,
+  Palette,
+  LogOut,
+} from 'lucide-react-native';
+import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { normalize } from '@utils/responsive';
-import { Card } from '@components/common/Card';
-import { useLanguage } from '@context/LanguageContext';
+import { useLanguage, Language } from '@context/LanguageContext';
+import { useTheme } from '@context/ThemeContext';
+import { useAuth } from '@context/AuthContext';
+
+const BRAND_YELLOW = '#F4AB04';
+const BRAND_YELLOW_BG = '#FFF3CD';
+const BRAND_DARK = '#1B1B1B';
+
+const LANGUAGE_LABELS: Record<Language, string> = {
+  en: 'English',
+  te: 'తెలుగు',
+  hi: 'हिन्दी',
+};
+
+const NOTIFICATION_PREFS_KEY = '@forlok_notification_prefs';
+
+type NotificationPrefs = {
+  bookingUpdates: boolean;
+  messages: boolean;
+  promotions: boolean;
+};
+
+type SettingItem =
+  | {
+      id: string;
+      icon: any;
+      label: string;
+      type: 'link';
+      value?: string;
+      onPress: () => void;
+    }
+  | {
+      id: string;
+      icon: any;
+      label: string;
+      type: 'toggle';
+      value: boolean;
+      onToggle: (value: boolean) => void;
+    };
 
 const SettingsScreen = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
   const { language, changeLanguage, t } = useLanguage();
-  const [bookingUpdates, setBookingUpdates] = useState(true);
-  const [messages, setMessages] = useState(true);
-  const [promotions, setPromotions] = useState(false);
+  const { isPinkMode, setPinkMode } = useTheme();
+  const { logout, user } = useAuth();
   const [showLanguageModal, setShowLanguageModal] = useState(false);
+  const [prefs, setPrefs] = useState<NotificationPrefs>({
+    bookingUpdates: true,
+    messages: true,
+    promotions: false,
+  });
 
-  const handleLanguageChange = async (lang: 'en' | 'te' | 'hi') => {
+  const loadPrefs = useCallback(async () => {
+    try {
+      const raw = await AsyncStorage.getItem(NOTIFICATION_PREFS_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as NotificationPrefs;
+      setPrefs({
+        bookingUpdates: !!parsed.bookingUpdates,
+        messages: !!parsed.messages,
+        promotions: !!parsed.promotions,
+      });
+    } catch (error) {
+      console.error('Failed to load notification preferences', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadPrefs();
+  }, [loadPrefs]);
+
+  const isFemaleUser = String(user?.gender || '').toLowerCase() === 'female';
+
+  useEffect(() => {
+    if (!isFemaleUser && isPinkMode) {
+      void setPinkMode(false);
+    }
+  }, [isFemaleUser, isPinkMode, setPinkMode]);
+
+  const updatePrefs = async (next: NotificationPrefs) => {
+    setPrefs(next);
+    try {
+      await AsyncStorage.setItem(NOTIFICATION_PREFS_KEY, JSON.stringify(next));
+    } catch (error) {
+      console.error('Failed to save notification preferences', error);
+      Alert.alert('Error', 'Could not save notification preferences.');
+    }
+  };
+
+  const togglePref = (key: keyof NotificationPrefs, value: boolean) => {
+    void updatePrefs({ ...prefs, [key]: value });
+  };
+
+  const handleLanguageChange = async (lang: Language) => {
     await changeLanguage(lang);
     setShowLanguageModal(false);
     Alert.alert(t('language.languageChanged'), '', [{ text: t('common.close') }]);
   };
 
-  const settingsSections = [
-    {
-      title: t('settings.account'),
-      items: [
-        { icon: User, label: t('settings.editProfile'), onPress: () => navigation.navigate('Profile' as never) },
-        { icon: Lock, label: t('settings.changePassword'), onPress: () => {} },
-        { icon: UserX, label: 'Blocked Users', onPress: () => navigation.navigate('BlockedUsers' as never) },
-        { icon: Bell, label: t('settings.privacySettings'), onPress: () => {} },
-      ],
-    },
-    {
-      title: t('settings.notifications'),
-      items: [
-        {
-          icon: Bell,
-          label: t('settings.bookingUpdates'),
-          toggle: true,
-          value: bookingUpdates,
-          onToggle: setBookingUpdates,
+  const handleLogout = () => {
+    Alert.alert('Logout', 'Are you sure you want to logout?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Logout',
+        style: 'destructive',
+        onPress: async () => {
+          await logout();
         },
-        {
-          icon: Bell,
-          label: t('settings.messages'),
-          toggle: true,
-          value: messages,
-          onToggle: setMessages,
-        },
-        {
-          icon: Bell,
-          label: t('settings.promotions'),
-          toggle: true,
-          value: promotions,
-          onToggle: setPromotions,
-        },
-      ],
-    },
-    {
-      title: t('settings.appPreferences'),
-      items: [
-        {
-          icon: Globe,
-          label: t('settings.language'),
-          value: language === 'en' ? t('language.english') : language === 'te' ? t('language.telugu') : t('language.hindi'),
-          onPress: () => setShowLanguageModal(true),
-        },
-        { icon: Globe, label: t('settings.theme'), value: t('settings.light'), onPress: () => {} },
-      ],
-    },
-    {
-      title: t('settings.payment'),
-      items: [
-        { icon: Wallet, label: 'Wallet', onPress: () => navigation.navigate('Wallet' as never) },
-        { icon: CreditCard, label: t('settings.paymentMethods'), onPress: () => {} },
-        { icon: CreditCard, label: t('settings.transactionHistory'), onPress: () => {} },
-      ],
-    },
-    {
-      title: t('settings.support'),
-      items: [
-        { icon: HelpCircle, label: t('settings.helpCenter'), onPress: () => navigation.navigate('HelpSupport' as never) },
-        { icon: HelpCircle, label: t('settings.contactUs'), onPress: () => navigation.navigate('HelpSupport' as never) },
-        { icon: HelpCircle, label: t('settings.reportIssue'), onPress: () => navigation.navigate('ReportBug' as never) },
-      ],
-    },
-    {
-      title: t('settings.about'),
-      items: [
-        { icon: Info, label: 'About Us', onPress: () => navigation.navigate('About' as never) },
-        { icon: FileText, label: t('settings.termsConditions'), onPress: () => {} },
-        { icon: FileText, label: t('settings.privacyPolicy'), onPress: () => {} },
-        { icon: Shield, label: 'Patents & Copyrights', onPress: () => navigation.navigate('IntellectualProperty' as never) },
-        { icon: Info, label: t('settings.appVersion'), value: '1.0.0', onPress: () => {} },
-      ],
-    },
-  ];
+      },
+    ]);
+  };
+
+  const settingsSections = useMemo<{ title: string; items: SettingItem[] }[]>(
+    () => [
+      {
+        title: t('settings.account'),
+        items: [
+          { id: 'edit-profile', icon: User, label: t('settings.editProfile'), type: 'link', onPress: () => navigation.navigate('EditProfile') },
+          { id: 'change-password', icon: Lock, label: t('settings.changePassword'), type: 'link', onPress: () => navigation.navigate('ForgotPassword') },
+          { id: 'blocked-users', icon: UserX, label: 'Blocked Users', type: 'link', onPress: () => navigation.navigate('BlockedUsers') },
+          { id: 'privacy-settings', icon: Shield, label: t('settings.privacySettings'), type: 'link', onPress: () => navigation.navigate('PrivacyPolicy') },
+        ],
+      },
+      {
+        title: t('settings.notifications'),
+        items: [
+          { id: 'booking-updates', icon: Bell, label: t('settings.bookingUpdates'), type: 'toggle', value: prefs.bookingUpdates, onToggle: (v) => togglePref('bookingUpdates', v) },
+          { id: 'messages', icon: Bell, label: t('settings.messages'), type: 'toggle', value: prefs.messages, onToggle: (v) => togglePref('messages', v) },
+          { id: 'promotions', icon: Bell, label: t('settings.promotions'), type: 'toggle', value: prefs.promotions, onToggle: (v) => togglePref('promotions', v) },
+          { id: 'notification-center', icon: Bell, label: 'Notification Center', type: 'link', onPress: () => navigation.navigate('Notifications') },
+        ],
+      },
+      {
+        title: t('settings.appPreferences'),
+        items: [
+          { id: 'language', icon: Globe, label: t('settings.language'), type: 'link', value: LANGUAGE_LABELS[language], onPress: () => setShowLanguageModal(true) },
+          ...(isFemaleUser
+            ? [{ id: 'theme', icon: Palette, label: 'HerPooling Theme', type: 'toggle' as const, value: isPinkMode, onToggle: (v: boolean) => setPinkMode(v) }]
+            : []),
+        ],
+      },
+      {
+        title: 'Wallet & Coins',
+        items: [
+          { id: 'wallet', icon: Wallet, label: 'Wallet & Coins', type: 'link', onPress: () => navigation.navigate('Wallet') },
+          { id: 'transaction-history', icon: CreditCard, label: 'Trip History', type: 'link', onPress: () => navigation.navigate('History') },
+        ],
+      },
+      {
+        title: t('settings.support'),
+        items: [
+          { id: 'help-center', icon: HelpCircle, label: t('settings.helpCenter'), type: 'link', onPress: () => navigation.navigate('HelpSupport') },
+          { id: 'contact-us', icon: HelpCircle, label: t('settings.contactUs'), type: 'link', onPress: () => navigation.navigate('HelpSupport') },
+          { id: 'report-issue', icon: HelpCircle, label: t('settings.reportIssue'), type: 'link', onPress: () => navigation.navigate('ReportBug') },
+        ],
+      },
+      {
+        title: t('settings.about'),
+        items: [
+          { id: 'about-us', icon: Info, label: 'About Us', type: 'link', onPress: () => navigation.navigate('About') },
+          { id: 'terms', icon: FileText, label: t('settings.termsConditions'), type: 'link', onPress: () => navigation.navigate('TermsConditions') },
+          { id: 'privacy', icon: FileText, label: t('settings.privacyPolicy'), type: 'link', onPress: () => navigation.navigate('PrivacyPolicy') },
+          { id: 'ip', icon: Shield, label: 'Patents & Copyrights', type: 'link', onPress: () => navigation.navigate('IntellectualProperty') },
+          { id: 'app-version', icon: Info, label: t('settings.appVersion'), type: 'link', value: '1.0.0', onPress: () => Alert.alert('App Version', 'ForLok v1.0.0') },
+        ],
+      },
+    ],
+    [t, navigation, language, prefs, isPinkMode, isFemaleUser, setPinkMode]
+  );
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <ArrowLeft size={24} color={COLORS.white} />
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <ArrowLeft size={22} color={BRAND_DARK} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Settings</Text>
-        <View style={styles.placeholder} />
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>Settings</Text>
+          <Text style={styles.headerSubtitle}>Manage account and preferences</Text>
+        </View>
+        <View style={styles.headerRightPlaceholder} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {settingsSections.map((section, sectionIndex) => (
-          <View key={sectionIndex} style={styles.section}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(insets.bottom + normalize(96), SPACING.xl * 2) }]}
+        showsVerticalScrollIndicator={false}
+      >
+        {settingsSections.map((section) => (
+          <View key={section.title} style={styles.section}>
             <Text style={styles.sectionTitle}>{section.title}</Text>
-            <Card style={styles.sectionCard}>
+            <View style={styles.sectionCard}>
               {section.items.map((item, itemIndex) => {
                 const Icon = item.icon;
                 return (
                   <TouchableOpacity
-                    key={itemIndex}
+                    key={item.id}
                     style={[
                       styles.settingItem,
                       itemIndex < section.items.length - 1 && styles.settingItemBorder,
                     ]}
-                    onPress={item.onPress}
-                    disabled={item.toggle}
+                    onPress={item.type === 'link' ? item.onPress : undefined}
+                    activeOpacity={item.type === 'link' ? 0.7 : 1}
+                    disabled={item.type === 'toggle'}
                   >
                     <View style={styles.settingLeft}>
-                      <Icon size={20} color={COLORS.primary} />
+                      <View style={styles.iconCircle}>
+                        <Icon size={16} color={BRAND_DARK} />
+                      </View>
                       <Text style={styles.settingLabel}>{item.label}</Text>
                     </View>
                     <View style={styles.settingRight}>
-                      {item.toggle ? (
+                      {item.type === 'toggle' ? (
                         <Switch
                           value={item.value}
                           onValueChange={item.onToggle}
-                          trackColor={{ false: COLORS.lightGray, true: COLORS.primary + '80' }}
-                          thumbColor={item.value ? COLORS.primary : COLORS.white}
+                          trackColor={{ false: COLORS.lightGray, true: BRAND_YELLOW + '80' }}
+                          thumbColor={item.value ? BRAND_YELLOW : COLORS.white}
                         />
                       ) : (
                         <>
-                          {item.value && (
-                            <Text style={styles.settingValue}>{item.value}</Text>
-                          )}
-                          <ChevronRight size={20} color={COLORS.textSecondary} />
+                          {item.value ? <Text style={styles.settingValue}>{item.value}</Text> : null}
+                          <ChevronRight size={18} color={COLORS.textSecondary} />
                         </>
                       )}
                     </View>
                   </TouchableOpacity>
                 );
               })}
-            </Card>
+            </View>
           </View>
         ))}
 
-        <TouchableOpacity style={styles.logoutButton}>
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout} activeOpacity={0.85}>
+          <LogOut size={16} color={COLORS.white} />
           <Text style={styles.logoutText}>{t('profile.logout')}</Text>
         </TouchableOpacity>
       </ScrollView>
 
-      {/* Language Selection Modal */}
       <Modal
         visible={showLanguageModal}
-        transparent={true}
+        transparent
         animationType="slide"
         onRequestClose={() => setShowLanguageModal(false)}
       >
@@ -178,71 +282,33 @@ const SettingsScreen = () => {
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{t('language.selectLanguage')}</Text>
-              <TouchableOpacity
-                onPress={() => setShowLanguageModal(false)}
-                style={styles.modalCloseButton}
-              >
+              <TouchableOpacity onPress={() => setShowLanguageModal(false)} style={styles.modalCloseButton}>
                 <Text style={styles.modalCloseText}>✕</Text>
               </TouchableOpacity>
             </View>
 
             <View style={styles.languageList}>
-              <TouchableOpacity
-                style={[
-                  styles.languageItem,
-                  language === 'en' && styles.languageItemSelected,
-                ]}
-                onPress={() => handleLanguageChange('en')}
-                activeOpacity={0.7}
-              >
-                <Text
+              {(Object.keys(LANGUAGE_LABELS) as Language[]).map((lang) => (
+                <TouchableOpacity
+                  key={lang}
                   style={[
-                    styles.languageItemText,
-                    language === 'en' && styles.languageItemTextSelected,
+                    styles.languageItem,
+                    language === lang && styles.languageItemSelected,
                   ]}
+                  onPress={() => handleLanguageChange(lang)}
+                  activeOpacity={0.7}
                 >
-                  {t('language.english')}
-                </Text>
-                {language === 'en' && <Check size={20} color={COLORS.primary} />}
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.languageItem,
-                  language === 'te' && styles.languageItemSelected,
-                ]}
-                onPress={() => handleLanguageChange('te')}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.languageItemText,
-                    language === 'te' && styles.languageItemTextSelected,
-                  ]}
-                >
-                  {t('language.telugu')}
-                </Text>
-                {language === 'te' && <Check size={20} color={COLORS.primary} />}
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.languageItem,
-                  language === 'hi' && styles.languageItemSelected,
-                ]}
-                onPress={() => handleLanguageChange('hi')}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.languageItemText,
-                    language === 'hi' && styles.languageItemTextSelected,
-                  ]}
-                >
-                  {t('language.hindi')}
-                </Text>
-                {language === 'hi' && <Check size={20} color={COLORS.primary} />}
-              </TouchableOpacity>
+                  <Text
+                    style={[
+                      styles.languageItemText,
+                      language === lang && styles.languageItemTextSelected,
+                    ]}
+                  >
+                    {LANGUAGE_LABELS[lang]}
+                  </Text>
+                  {language === lang ? <Check size={20} color={BRAND_YELLOW} /> : null}
+                </TouchableOpacity>
+              ))}
             </View>
           </View>
         </View>
@@ -252,81 +318,114 @@ const SettingsScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+  container: { flex: 1, backgroundColor: '#FFF9EA' },
   header: {
-    backgroundColor: COLORS.primary,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.md,
     paddingTop: SPACING.xl,
+    paddingBottom: SPACING.md,
+    backgroundColor: COLORS.white,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#EFE5C7',
   },
+  backBtn: {
+    paddingVertical: normalize(6),
+    paddingRight: normalize(8),
+  },
+  headerCenter: { flex: 1, alignItems: 'center' },
   headerTitle: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xl,
-    color: COLORS.white,
-    fontWeight: 'bold',
+    fontSize: normalize(20),
+    fontWeight: '700',
+    color: BRAND_DARK,
   },
-  placeholder: { width: normalize(40) },
+  headerSubtitle: {
+    fontFamily: FONTS.regular,
+    fontSize: normalize(12),
+    color: '#7C6A2F',
+    marginTop: 2,
+  },
+  headerRightPlaceholder: { width: normalize(38) },
   scrollContent: { padding: SPACING.md },
-  section: { marginBottom: SPACING.lg },
+  section: { marginBottom: SPACING.md },
   sectionTitle: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
+    fontSize: normalize(12),
     color: COLORS.textSecondary,
-    marginBottom: SPACING.sm,
-    marginLeft: SPACING.xs,
+    marginBottom: normalize(8),
+    marginLeft: 2,
+    fontWeight: '600',
   },
-  sectionCard: { padding: 0 },
+  sectionCard: {
+    backgroundColor: COLORS.white,
+    borderRadius: BORDER_RADIUS.lg,
+    overflow: 'hidden',
+    ...SHADOWS.sm,
+    borderWidth: 1,
+    borderColor: '#F3DFA8',
+  },
   settingItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: SPACING.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: normalize(12),
   },
   settingItemBorder: {
-    borderBottomWidth: 1,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.border,
   },
   settingLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.md,
     flex: 1,
+    gap: normalize(10),
+  },
+  iconCircle: {
+    width: normalize(28),
+    height: normalize(28),
+    borderRadius: normalize(14),
+    backgroundColor: BRAND_YELLOW_BG,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   settingLabel: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
+    fontSize: normalize(14),
     color: COLORS.text,
+    fontWeight: '500',
   },
   settingRight: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.sm,
+    gap: normalize(8),
   },
   settingValue: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
+    fontSize: normalize(12),
     color: COLORS.textSecondary,
   },
   logoutButton: {
+    marginTop: SPACING.md,
+    marginBottom: SPACING.md,
     backgroundColor: COLORS.error,
-    padding: SPACING.md,
-    borderRadius: normalize(8),
+    borderRadius: BORDER_RADIUS.md,
     alignItems: 'center',
-    marginTop: SPACING.lg,
-    marginBottom: SPACING.xl,
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: normalize(8),
+    paddingVertical: normalize(13),
   },
   logoutText: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
+    fontSize: normalize(14),
     color: COLORS.white,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0,0,0,0.45)',
     justifyContent: 'flex-end',
   },
   modalContent: {
@@ -335,36 +434,33 @@ const styles = StyleSheet.create({
     borderTopRightRadius: BORDER_RADIUS.xl,
     padding: SPACING.lg,
     paddingBottom: SPACING.xl,
-    maxHeight: '50%',
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING.md,
   },
   modalTitle: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xl,
+    fontSize: normalize(18),
     color: COLORS.text,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   modalCloseButton: {
-    width: normalize(32),
-    height: normalize(32),
-    borderRadius: normalize(16),
+    width: normalize(30),
+    height: normalize(30),
+    borderRadius: normalize(15),
     backgroundColor: COLORS.lightGray,
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalCloseText: {
-    fontSize: normalize(18),
+    fontSize: normalize(16),
     color: COLORS.text,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
-  languageList: {
-    gap: SPACING.sm,
-  },
+  languageList: { gap: SPACING.sm },
   languageItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -372,21 +468,21 @@ const styles = StyleSheet.create({
     padding: SPACING.md,
     borderRadius: BORDER_RADIUS.md,
     backgroundColor: COLORS.lightGray,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: 'transparent',
   },
   languageItemSelected: {
-    backgroundColor: COLORS.primaryLight,
-    borderColor: COLORS.primary,
+    borderColor: BRAND_YELLOW,
+    backgroundColor: BRAND_YELLOW_BG,
   },
   languageItemText: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
+    fontSize: normalize(15),
     color: COLORS.text,
   },
   languageItemTextSelected: {
-    color: COLORS.primary,
-    fontWeight: '600',
+    color: BRAND_DARK,
+    fontWeight: '700',
   },
 });
 

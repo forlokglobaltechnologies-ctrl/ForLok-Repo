@@ -10,7 +10,7 @@ import { useLanguage } from '@context/LanguageContext';
 import { useTheme } from '@context/ThemeContext';
 
 const OfferServicesScreen = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const { t } = useLanguage();
   const { theme } = useTheme();
 
@@ -98,7 +98,6 @@ const OfferServicesScreen = () => {
           </ImageBackground>
         </TouchableOpacity>
 
-     
       </View>
     </View>
   );

@@ -259,16 +259,14 @@ const styles = StyleSheet.create({
   header: {
     paddingTop: hp(6),
     paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.sm,
+    backgroundColor: COLORS.white,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#E6ECF5',
   },
   backButton: {
-    width: normalize(40),
-    height: normalize(40),
-    borderRadius: normalize(20),
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.white,
-    borderWidth: 1,
-    borderColor: '#DDE6F5',
+    paddingVertical: normalize(6),
+    paddingRight: normalize(8),
   },
   scrollContent: {
     flexGrow: 1,

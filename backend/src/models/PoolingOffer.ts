@@ -93,6 +93,7 @@ const poolingOfferSchema = new Schema<IPoolingOffer>(
         city: String,
         order: Number,
       }],
+      selectedRouteId: String,
       distance: Number,
       duration: Number,
       polyline: [{

@@ -5,10 +5,10 @@
  * Backend target is currently forced to development URL.
  */
 
-const DEV_API_URL = 'http://10.72.83.16:3000';
+const DEV_API_URL = 'http://10.170.142.16:3000';
 const PROD_API_URL = 'https://forlok-repo-1.onrender.com';
 
-const API_BASE_URL = PROD_API_URL;
+const API_BASE_URL = DEV_API_URL;
 
 export const API_CONFIG = {
   BASE_URL: API_BASE_URL,
@@ -81,6 +81,9 @@ export const API_CONFIG = {
       DELETE: '/api/pooling/offers/:offerId',
       CALCULATE_PRICE: '/api/pooling/calculate-price',
       SUGGEST_WAYPOINTS: '/api/pooling/suggest-waypoints',
+      SUGGEST_WAYPOINTS_FROM_POLYLINE: '/api/pooling/suggest-waypoints-from-polyline',
+      VALIDATE_WAYPOINT: '/api/pooling/validate-waypoint',
+      ROUTE_ALTERNATIVES: '/api/pooling/routes/alternatives',
       CONNECTED_SEARCH: '/api/pooling/offers/connected-search',
     },
     // Rental Offers
@@ -118,17 +121,6 @@ export const API_CONFIG = {
       START_TRIP: '/api/bookings/start-trip',
       END_TRIP: '/api/bookings/end-trip',
       CHOOSE_PAYMENT: '/api/bookings/:bookingId/choose-payment',
-    },
-    // Payments
-    PAYMENT: {
-      CREATE: '/api/payments/create',
-      VERIFY: '/api/payments/verify',
-      GET: '/api/payments/:paymentId',
-      LIST: '/api/payments',
-      REFUND: '/api/payments/:paymentId/refund',
-      METHODS: '/api/payments/methods',
-      WEBHOOK: '/api/payments/webhook',
-      SIMULATE_TEST: '/api/payments/simulate-test',
     },
     // Food
     FOOD: {
@@ -227,17 +219,6 @@ export const API_CONFIG = {
       MARK_MESSAGE_READ: '/api/chat/messages/:messageId/read',
       MARK_MESSAGES_READ: '/api/chat/conversations/:conversationId/messages/read',
       DELETE_MESSAGE: '/api/chat/messages/:messageId',
-    },
-    // Withdrawals
-    WITHDRAWAL: {
-      CREATE: '/api/withdrawals/create',
-      MY_WITHDRAWALS: '/api/withdrawals/my-withdrawals',
-      GET: '/api/withdrawals/:withdrawalId',
-      ADMIN_PENDING: '/api/withdrawals/admin/pending',
-      ADMIN_APPROVED: '/api/withdrawals/admin/approved',
-      ADMIN_APPROVE: '/api/withdrawals/admin/:withdrawalId/approve',
-      ADMIN_COMPLETE: '/api/withdrawals/admin/:withdrawalId/complete',
-      ADMIN_REJECT: '/api/withdrawals/admin/:withdrawalId/reject',
     },
     // Wallet
     WALLET: {

@@ -27,7 +27,7 @@ const SearchRentalScreen = () => {
   if (RENTAL_COMING_SOON) {
     return (
       <View style={{ flex: 1, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' }}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ position: 'absolute', top: 50, left: 16, zIndex: 10, width: 40, height: 40, borderRadius: 20, backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' }}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ position: 'absolute', top: 50, left: 16, zIndex: 10, paddingVertical: 6, paddingRight: 8 }}>
           <ArrowLeft size={22} color="#1E293B" />
         </TouchableOpacity>
         <LottieView source={require('../../../assets/videos/Coming soon.json')} autoPlay loop style={{ width: 300, height: 300 }} />

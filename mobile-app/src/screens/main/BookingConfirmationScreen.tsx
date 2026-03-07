@@ -128,12 +128,11 @@ const BookingConfirmationScreen = () => {
 
   const getPaymentStatusDisplay = () => {
     if (booking?.paymentStatus === 'paid') {
-      return { text: t('bookingConfirmation.paymentSuccessful'), color: COLORS.success };
+      return { text: 'Trip settled', color: COLORS.success };
     } else if (booking?.paymentStatus === 'pending') {
-      return { text: 'Payment at trip end', color: COLORS.warning };
-      return { text: 'Payment Pending', color: COLORS.warning };
+      return { text: 'Settle at trip end', color: COLORS.warning };
     } else if (booking?.paymentStatus === 'failed') {
-      return { text: 'Payment Failed', color: COLORS.error };
+      return { text: 'Settlement pending', color: COLORS.error };
     }
     return { text: booking?.paymentStatus || 'N/A', color: COLORS.textSecondary };
   };
@@ -347,15 +346,15 @@ const BookingConfirmationScreen = () => {
           </View>
         )}
 
-        {/* Payment Summary Card */}
+        {/* Fare Summary Card */}
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeader}>
             <IndianRupee size={20} color={COLORS.primary} />
-            <Text style={styles.sectionTitle}>{t('bookingConfirmation.paymentSummary')}</Text>
+            <Text style={styles.sectionTitle}>Fare Summary</Text>
           </View>
           <View style={styles.divider} />
           <View style={styles.paymentRow}>
-            <Text style={styles.paymentLabel}>Rental Amount</Text>
+            <Text style={styles.paymentLabel}>{isRental ? 'Rental Fare' : 'Ride Fare'}</Text>
             <Text style={styles.paymentValue}>₹{booking.amount || 0}</Text>
           </View>
           {booking.platformFee > 0 && (
@@ -366,12 +365,12 @@ const BookingConfirmationScreen = () => {
           )}
           {booking.totalAmount && (
             <View style={styles.paymentRow}>
-              <Text style={styles.paymentLabel}>Total Amount</Text>
+              <Text style={styles.paymentLabel}>Final Fare</Text>
               <Text style={styles.paymentValue}>₹{booking.totalAmount || 0}</Text>
             </View>
           )}
           <View style={styles.paymentRow}>
-            <Text style={styles.paymentLabel}>{t('bookingConfirmation.paymentMethod')}</Text>
+            <Text style={styles.paymentLabel}>Settlement</Text>
             <View style={styles.paymentMethodContainer}>
               <CreditCard size={16} color={COLORS.primary} />
               <Text style={styles.paymentMethodText}>
@@ -383,7 +382,7 @@ const BookingConfirmationScreen = () => {
                   ? 'Cash'
                   : booking.paymentMethod === 'net_banking'
                   ? 'Net Banking'
-                  : 'Pay at trip end'}
+                  : 'Manual at trip end'}
               </Text>
             </View>
           </View>

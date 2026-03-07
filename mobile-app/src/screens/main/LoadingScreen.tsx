@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, Image, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, FONTS, SPACING } from '@constants/theme';
 import { normalize, wp, hp } from '@utils/responsive';
+import { AppLoader } from '@components/common/AppLoader';
 
 const LoadingScreen = () => {
   return (
@@ -20,7 +21,7 @@ const LoadingScreen = () => {
             />
           </View>
         </View>
-        <ActivityIndicator size="large" color={COLORS.white} style={styles.loader} />
+        <AppLoader size="large" color={COLORS.white} style={styles.loader} />
         <Text style={styles.loadingText}>Loading...</Text>
         <Text style={styles.pleaseWaitText}>Please wait</Text>
       </View>

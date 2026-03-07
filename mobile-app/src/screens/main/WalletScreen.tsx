@@ -10,7 +10,6 @@ import {
   Modal,
   TextInput,
   Alert,
-  ActivityIndicator,
   ImageBackground,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -42,6 +41,7 @@ import { Card } from '@components/common/Card';
 import { walletApi, coinApi } from '@utils/apiClient';
 import { useLanguage } from '@context/LanguageContext';
 import { useTheme } from '@context/ThemeContext';
+import { AppLoader } from '@components/common/AppLoader';
 
 interface Transaction {
   transactionId: string;
@@ -210,7 +210,7 @@ const WalletScreen = () => {
           </BlurView>
         </ImageBackground>
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <AppLoader size="large" color={theme.colors.primary} />
           <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading wallet...</Text>
         </View>
       </SafeAreaView>
@@ -313,7 +313,7 @@ const WalletScreen = () => {
             </View>
             {[
               'Book a ride from the Dashboard',
-              'Toggle "Apply Coins" ON at payment',
+              'Toggle "Apply Coins" ON in trip summary',
               'Up to 50% off your fare!',
             ].map((step, idx) => (
               <View key={idx} style={styles.howToStep}>
@@ -525,7 +525,7 @@ const WalletScreen = () => {
               activeOpacity={0.8}
             >
               {topUpLoading ? (
-                <ActivityIndicator color="#FFF" size="small" />
+                <AppLoader color="#FFF" size="small" />
               ) : (
                 <>
                   <Plus size={18} color="#FFF" />

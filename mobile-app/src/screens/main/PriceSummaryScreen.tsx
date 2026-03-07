@@ -7,7 +7,7 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme
 import { Button } from '@components/common/Button';
 import { Card } from '@components/common/Card';
 import { useLanguage } from '@context/LanguageContext';
-import { bookingApi, walletApi } from '@utils/apiClient';
+import { bookingApi } from '@utils/apiClient';
 
 interface RouteParams {
   offerId: string;
@@ -66,22 +66,6 @@ const PriceSummaryScreen = () => {
     try {
       setBookingLoading(true);
 
-      // Check wallet balance — passengers need ₹100 minimum
-      const walletCheck = await walletApi.canBookRide();
-      if (walletCheck.success && walletCheck.data && !walletCheck.data.canBook) {
-        const shortfall = walletCheck.data.shortfall || 0;
-        Alert.alert(
-          'Insufficient Wallet Balance',
-          `You need minimum ₹${walletCheck.data.requiredBalance || 100} to book a ride. Please recharge ₹${shortfall} to continue.`,
-          [
-            { text: 'Recharge Now', onPress: () => navigation.navigate('Wallet' as never) },
-            { text: 'Cancel', style: 'cancel' },
-          ]
-        );
-        setBookingLoading(false);
-        return;
-      }
-
       const response = await bookingApi.createPoolingBooking({
         poolingOfferId: params.offer?.offerId || params.offerId,
         seatsBooked,
@@ -98,7 +82,7 @@ const PriceSummaryScreen = () => {
         const bookingId = response.data.bookingId || response.data._id;
         Alert.alert(
           'Booking Confirmed!',
-          'Your ride has been booked. Payment will be collected at the end of the trip.',
+          'Your ride has been booked. Settle manually with the driver at trip end.',
           [
             {
               text: 'View Booking',
@@ -297,7 +281,7 @@ const PriceSummaryScreen = () => {
         <View style={styles.payInfoCard}>
           <Info size={18} color={COLORS.success} />
           <Text style={styles.payInfoText}>
-            No payment now. Total payable for {seatsBooked} seat(s) is ₹{totalAmount} at trip end.
+            No in-app payment. Total payable for {seatsBooked} seat(s) is ₹{totalAmount} at trip end.
           </Text>
         </View>
 

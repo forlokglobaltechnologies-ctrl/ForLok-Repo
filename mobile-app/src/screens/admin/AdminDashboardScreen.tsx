@@ -14,7 +14,6 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
-import LottieView from 'lottie-react-native';
 import {
   Bell,
   Settings,
@@ -29,7 +28,6 @@ import {
   ChevronRight,
   CheckCircle,
   Lightbulb,
-  Wallet,
   Coins,
   BarChart3,
   Shield,
@@ -41,6 +39,7 @@ import {
 } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { useLanguage } from '@context/LanguageContext';
+import { useAuth } from '@context/AuthContext';
 import { adminApi, analyticsApi, apiCall } from '@utils/apiClient';
 import { normalize, wp, hp, SCREEN_WIDTH } from '@utils/responsive';
 
@@ -64,13 +63,13 @@ const QUICK_ACTIONS = [
   { key: 'history', icon: Clock, label: 'History', color: '#F39C12', route: 'RidesHistory' },
   { key: 'feedback', icon: MessageSquare, label: 'Feedback', color: '#E74C3C', route: 'FeedbackManagement' },
   { key: 'analytics', icon: BarChart3, label: 'Analytics', color: '#0984E3', route: 'Analytics' },
-  { key: 'payments', icon: Wallet, label: 'Payments', color: '#6C5CE7', route: 'AdminPendingPayments' },
   { key: 'promos', icon: Lightbulb, label: 'Promos', color: '#F5A623', route: 'AdminPromoReview' },
 ];
 
 const AdminDashboardScreen = () => {
   const navigation = useNavigation();
   const { t } = useLanguage();
+  const { logout } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [animDone, setAnimDone] = useState(false);
@@ -160,13 +159,7 @@ const AdminDashboardScreen = () => {
     return (
       <View style={styles.loadingContainer}>
         <StatusBar barStyle="dark-content" translucent backgroundColor="transparent" />
-        <LottieView
-          source={require('../../../assets/videos/Ai loading model.json')}
-          autoPlay
-          loop={false}
-          speed={1}
-          style={styles.loadingAnimation}
-        />
+        <ActivityIndicator size="large" color="#4A90D9" />
         <Text style={styles.loadingText}>Loading Dashboard...</Text>
       </View>
     );
@@ -210,7 +203,7 @@ const AdminDashboardScreen = () => {
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.headerIconBtn}
-              onPress={() => navigation.navigate('SignIn' as never)}
+              onPress={logout}
             >
               <LogOut size={20} color="#FF6B6B" />
             </TouchableOpacity>

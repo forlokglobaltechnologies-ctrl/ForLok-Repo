@@ -14,11 +14,17 @@ import {
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { ArrowLeft, Plus, Car, AlertCircle, X, Clock, MessageCircle, MapPin, ArrowRight, Calendar, Users, Bike, ChevronRight, Play, Eye, Navigation } from 'lucide-react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { normalize, wp, hp } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, SHADOWS } from '@constants/theme';
 import { useLanguage } from '@context/LanguageContext';
 import { useTheme } from '@context/ThemeContext';
 import { poolingApi, rentalApi } from '@utils/apiClient';
+
+const OFFER_ACCENT = '#F99E3C';
+const OFFER_ACCENT_DARK = '#D47B1B';
+const MODAL_BLUE_GRADIENT: [string, string] = ['#51A7EA', '#0284C7'];
+const MODAL_ORANGE_GRADIENT: [string, string] = ['#F99E3C', '#E08E35'];
 
 const MyOffersScreen = () => {
   const navigation = useNavigation();
@@ -172,8 +178,8 @@ const MyOffersScreen = () => {
   const getStatusConfig = (status: string) => {
     switch (status) {
       case 'active': return { bg: '#E8F5E9', color: '#2E7D32', label: 'Active', dotColor: '#4CAF50' };
-      case 'in_progress': return { bg: '#E3F2FD', color: '#1565C0', label: 'In Trip', dotColor: '#2196F3' };
-      case 'booked': return { bg: '#E3F2FD', color: '#1565C0', label: 'Booked', dotColor: '#2196F3' };
+      case 'in_progress': return { bg: '#FFF3E0', color: OFFER_ACCENT_DARK, label: 'In Trip', dotColor: OFFER_ACCENT };
+      case 'booked': return { bg: '#FFF3E0', color: OFFER_ACCENT_DARK, label: 'Booked', dotColor: OFFER_ACCENT };
       case 'pending': return { bg: '#FFF3E0', color: '#E65100', label: 'Pending', dotColor: '#FF9800' };
       case 'expired': return { bg: '#F5F5F5', color: '#757575', label: 'Expired', dotColor: '#9E9E9E' };
       default: return { bg: '#F5F5F5', color: '#757575', label: status, dotColor: '#9E9E9E' };
@@ -182,9 +188,9 @@ const MyOffersScreen = () => {
 
   const getVehicleIcon = (offer: any) => {
     const vType = offer.vehicle?.type?.toLowerCase();
-    if (vType === 'bike') return <Bike size={18} color={theme.colors.primary} />;
-    if (vType === 'scooty') return <MaterialCommunityIcons name="moped" size={18} color={theme.colors.primary} />;
-    return <Car size={18} color={theme.colors.primary} />;
+    if (vType === 'bike') return <Bike size={18} color={OFFER_ACCENT} />;
+    if (vType === 'scooty') return <MaterialCommunityIcons name="moped" size={18} color={OFFER_ACCENT} />;
+    return <Car size={18} color={OFFER_ACCENT} />;
   };
 
   const parseOfferDateTime = (offer: any): Date | null => {
@@ -239,7 +245,7 @@ const MyOffersScreen = () => {
       >
         {/* Top row: type icon + type label + status */}
         <View style={styles.cardTop}>
-          <View style={[styles.typeIcon, { backgroundColor: theme.colors.primary + '10' }]}>
+          <View style={[styles.typeIcon, { backgroundColor: OFFER_ACCENT + '12' }]}>
             {getVehicleIcon(offer)}
           </View>
           <View style={styles.typeInfo}>
@@ -293,14 +299,14 @@ const MyOffersScreen = () => {
         {isPooling && (
           <View style={styles.infoRow}>
             <View style={[styles.infoPill, { backgroundColor: theme.colors.background }]}>
-              <Users size={12} color={theme.colors.primary} />
+              <Users size={12} color={OFFER_ACCENT} />
               <Text style={[styles.infoPillText, { color: theme.colors.text }]}>
                 {offer.seatsBooked}/{offer.totalSeats} seats
               </Text>
             </View>
             {offer.pricePerSeat && (
               <View style={[styles.infoPill, { backgroundColor: theme.colors.background }]}>
-                <Text style={[styles.infoPillText, { color: theme.colors.primary, fontWeight: '700' }]}>
+                <Text style={[styles.infoPillText, { color: OFFER_ACCENT, fontWeight: '700' }]}>
                   ₹{offer.pricePerSeat}/seat
                 </Text>
               </View>
@@ -310,9 +316,9 @@ const MyOffersScreen = () => {
 
         {!isPooling && offer.totalBookings > 0 && (
           <View style={styles.infoRow}>
-            <View style={[styles.infoPill, { backgroundColor: theme.colors.primary + '10' }]}>
-              <Users size={12} color={theme.colors.primary} />
-              <Text style={[styles.infoPillText, { color: theme.colors.primary, fontWeight: '600' }]}>
+            <View style={[styles.infoPill, { backgroundColor: OFFER_ACCENT + '12' }]}>
+              <Users size={12} color={OFFER_ACCENT} />
+              <Text style={[styles.infoPillText, { color: OFFER_ACCENT, fontWeight: '600' }]}>
                 {offer.totalBookings} booking{offer.totalBookings !== 1 ? 's' : ''}
               </Text>
             </View>
@@ -334,7 +340,7 @@ const MyOffersScreen = () => {
           {/* Pooling: Start Trip / View Trip */}
           {isPooling && isInProgress && (
             <TouchableOpacity
-              style={[styles.primaryBtn, { backgroundColor: '#1565C0' }]}
+              style={[styles.primaryBtn, styles.primaryBtnSolid, { backgroundColor: OFFER_ACCENT_DARK }]}
               onPress={() => navigation.navigate('DriverTrip' as never, { offerId: offer.offerId, offer } as never)}
               activeOpacity={0.8}
             >
@@ -347,15 +353,22 @@ const MyOffersScreen = () => {
             <>
               {canStartTrip(offer) ? (
                 <TouchableOpacity
-                  style={[styles.primaryBtn, { backgroundColor: theme.colors.primary }]}
+                  style={styles.primaryBtn}
                   onPress={() => {
                     setMyOffers(prev => prev.map(o => o.id === offer.id ? { ...o, status: 'in_progress' } : o));
                     navigation.navigate('DriverTrip' as never, { offerId: offer.offerId, offer: { ...offer, status: 'in_progress' } } as never);
                   }}
                   activeOpacity={0.8}
                 >
-                  <Play size={15} color="#FFF" />
-                  <Text style={styles.primaryBtnText}>Start Trip</Text>
+                  <LinearGradient
+                    colors={[OFFER_ACCENT, OFFER_ACCENT_DARK]}
+                    start={{ x: 0.5, y: 0 }}
+                    end={{ x: 0.5, y: 1 }}
+                    style={styles.primaryBtnGradient}
+                  >
+                    <Play size={15} color="#FFF" />
+                    <Text style={styles.primaryBtnText}>Start Trip</Text>
+                  </LinearGradient>
                 </TouchableOpacity>
               ) : (
                 <View style={[styles.waitBtn, { backgroundColor: theme.colors.background }]}>
@@ -371,7 +384,7 @@ const MyOffersScreen = () => {
           {/* Rental: Manage */}
           {!isPooling && offer.totalBookings > 0 && (
             <TouchableOpacity
-              style={[styles.primaryBtn, { backgroundColor: theme.colors.primary }]}
+              style={[styles.primaryBtn, styles.primaryBtnSolid, { backgroundColor: OFFER_ACCENT }]}
               onPress={() => handleView(offer)}
               activeOpacity={0.8}
             >
@@ -418,7 +431,7 @@ const MyOffersScreen = () => {
         <TouchableOpacity onPress={() => navigation.navigate('ChatList' as never)} style={[styles.headerIconBtn, { backgroundColor: theme.colors.background }]}>
           <MessageCircle size={18} color={theme.colors.text} />
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => navigation.navigate('OfferServices' as never)} style={[styles.headerIconBtn, { backgroundColor: theme.colors.primary }]}>
+        <TouchableOpacity onPress={() => navigation.navigate('OfferServices' as never)} style={[styles.headerIconBtn, { backgroundColor: OFFER_ACCENT }]}>
           <Plus size={18} color="#FFF" />
         </TouchableOpacity>
       </View>
@@ -438,12 +451,12 @@ const MyOffersScreen = () => {
 
           return (
             <TouchableOpacity key={tab} onPress={() => setActiveTab(tab)}
-              style={[styles.tab, isActive && [styles.tabActive, { borderBottomColor: theme.colors.primary }]]}>
-              <Text style={[styles.tabText, { color: theme.colors.textSecondary }, isActive && { color: theme.colors.primary, fontWeight: '700' }]}>
+              style={[styles.tab, isActive && [styles.tabActive, { borderBottomColor: OFFER_ACCENT }]]}>
+              <Text style={[styles.tabText, { color: theme.colors.textSecondary }, isActive && { color: OFFER_ACCENT, fontWeight: '700' }]}>
                 {tab}
               </Text>
               {count > 0 && (
-                <View style={[styles.tabBadge, { backgroundColor: isActive ? theme.colors.primary : theme.colors.border }]}>
+                <View style={[styles.tabBadge, { backgroundColor: isActive ? OFFER_ACCENT : theme.colors.border }]}>
                   <Text style={[styles.tabBadgeText, { color: isActive ? '#FFF' : theme.colors.textSecondary }]}>{count}</Text>
                 </View>
               )}
@@ -456,17 +469,17 @@ const MyOffersScreen = () => {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {loading ? (
           <View style={styles.centerWrap}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
+            <ActivityIndicator size="large" color={OFFER_ACCENT} />
             <Text style={[styles.centerText, { color: theme.colors.textSecondary }]}>Loading offers...</Text>
           </View>
         ) : filteredOffers.length === 0 ? (
           <View style={styles.centerWrap}>
-            <View style={[styles.emptyIcon, { backgroundColor: theme.colors.primary + '10' }]}>
-              <Car size={32} color={theme.colors.primary} />
+            <View style={[styles.emptyIcon, { backgroundColor: OFFER_ACCENT + '12' }]}>
+              <Car size={32} color={OFFER_ACCENT} />
             </View>
             <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>No offers yet</Text>
             <Text style={[styles.centerText, { color: theme.colors.textSecondary }]}>Create your first ride or rental offer</Text>
-            <TouchableOpacity style={[styles.createBtn, { backgroundColor: theme.colors.primary }]}
+            <TouchableOpacity style={[styles.createBtn, { backgroundColor: OFFER_ACCENT }]}
               onPress={() => navigation.navigate('OfferServices' as never)}>
               <Plus size={18} color="#FFF" />
               <Text style={styles.createBtnText}>Create Offer</Text>
@@ -492,11 +505,25 @@ const MyOffersScreen = () => {
               This will permanently remove your {selectedOffer?.type === 'pooling' ? 'pooling' : 'rental'} offer. If passengers have booked, you'll need to cancel their bookings first.
             </Text>
             <View style={styles.modalBtns}>
-              <TouchableOpacity style={[styles.modalCancelBtn, { borderColor: theme.colors.border }]} onPress={() => setCancelModalVisible(false)}>
-                <Text style={[styles.modalCancelText, { color: theme.colors.textSecondary }]}>Keep</Text>
+              <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setCancelModalVisible(false)}>
+                <LinearGradient
+                  colors={MODAL_BLUE_GRADIENT}
+                  start={{ x: 0.5, y: 0 }}
+                  end={{ x: 0.5, y: 1 }}
+                  style={styles.modalBtnGradient}
+                >
+                  <Text style={styles.modalCancelText}>Keep</Text>
+                </LinearGradient>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalConfirmBtn, { backgroundColor: '#E53E3E' }]} onPress={handleCancelConfirm}>
-                <Text style={styles.modalConfirmText}>Delete Offer</Text>
+              <TouchableOpacity style={styles.modalConfirmBtn} onPress={handleCancelConfirm}>
+                <LinearGradient
+                  colors={MODAL_ORANGE_GRADIENT}
+                  start={{ x: 0.5, y: 0 }}
+                  end={{ x: 0.5, y: 1 }}
+                  style={styles.modalBtnGradient}
+                >
+                  <Text style={styles.modalConfirmText}>Delete Offer</Text>
+                </LinearGradient>
               </TouchableOpacity>
             </View>
           </View>
@@ -511,7 +538,7 @@ const styles = StyleSheet.create({
 
   // Header
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: normalize(14), paddingTop: normalize(48), paddingBottom: normalize(14), gap: normalize(10), ...SHADOWS.sm },
-  backBtn: { width: normalize(38), height: normalize(38), borderRadius: normalize(12), alignItems: 'center', justifyContent: 'center' },
+  backBtn: { paddingVertical: normalize(4), paddingRight: normalize(8) },
   headerCenter: { flex: 1 },
   headerTitle: { fontFamily: FONTS.medium, fontSize: normalize(20), fontWeight: '700' },
   headerSub: { fontFamily: FONTS.regular, fontSize: normalize(12), marginTop: normalize(1) },
@@ -561,7 +588,9 @@ const styles = StyleSheet.create({
   // Actions
   actions: { flexDirection: 'row', alignItems: 'center', gap: normalize(8), paddingTop: normalize(10), borderTopWidth: StyleSheet.hairlineWidth },
   chatBtn: { width: normalize(36), height: normalize(36), borderRadius: normalize(10), borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  primaryBtn: { flexDirection: 'row', alignItems: 'center', gap: normalize(6), paddingHorizontal: normalize(16), paddingVertical: normalize(9), borderRadius: normalize(10), flex: 1, justifyContent: 'center' },
+  primaryBtn: { borderRadius: normalize(10), flex: 1, overflow: 'hidden' },
+  primaryBtnSolid: { flexDirection: 'row', alignItems: 'center', gap: normalize(6), paddingHorizontal: normalize(16), paddingVertical: normalize(9), justifyContent: 'center' },
+  primaryBtnGradient: { flexDirection: 'row', alignItems: 'center', gap: normalize(6), paddingHorizontal: normalize(16), paddingVertical: normalize(9), justifyContent: 'center' },
   primaryBtnText: { fontFamily: FONTS.medium, fontSize: normalize(13), fontWeight: '700', color: '#FFF' },
   waitBtn: { flexDirection: 'row', alignItems: 'center', gap: normalize(6), paddingHorizontal: normalize(14), paddingVertical: normalize(9), borderRadius: normalize(10), flex: 1, justifyContent: 'center' },
   waitBtnText: { fontFamily: FONTS.medium, fontSize: normalize(12), fontWeight: '600' },
@@ -584,9 +613,10 @@ const styles = StyleSheet.create({
   modalTitle: { fontFamily: FONTS.medium, fontSize: normalize(18), fontWeight: '700', marginBottom: normalize(6), textAlign: 'center' },
   modalMsg: { fontFamily: FONTS.regular, fontSize: normalize(13), textAlign: 'center', lineHeight: normalize(20), marginBottom: SPACING.lg },
   modalBtns: { flexDirection: 'row', gap: SPACING.md, width: '100%' },
-  modalCancelBtn: { flex: 1, paddingVertical: normalize(13), borderRadius: normalize(12), borderWidth: 1.5, alignItems: 'center' },
-  modalCancelText: { fontFamily: FONTS.medium, fontSize: normalize(14), fontWeight: '600' },
-  modalConfirmBtn: { flex: 1, paddingVertical: normalize(13), borderRadius: normalize(12), alignItems: 'center' },
+  modalCancelBtn: { flex: 1, borderRadius: normalize(12), overflow: 'hidden' },
+  modalConfirmBtn: { flex: 1, borderRadius: normalize(12), overflow: 'hidden' },
+  modalBtnGradient: { paddingVertical: normalize(13), alignItems: 'center', justifyContent: 'center' },
+  modalCancelText: { fontFamily: FONTS.medium, fontSize: normalize(14), fontWeight: '600', color: '#FFF' },
   modalConfirmText: { fontFamily: FONTS.medium, fontSize: normalize(14), fontWeight: '700', color: '#FFF' },
 });
 

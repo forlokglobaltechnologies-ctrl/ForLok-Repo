@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   SafeAreaView,
   Alert,
-  ActivityIndicator,
   Image,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -30,6 +29,7 @@ import { normalize, wp, hp } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { Card } from '@components/common/Card';
 import { Button } from '@components/common/Button';
+import { AppLoader } from '@components/common/AppLoader';
 import { useLanguage } from '@context/LanguageContext';
 import { bookingApi } from '@utils/apiClient';
 
@@ -273,7 +273,7 @@ const EndRentalScreen = () => {
                 <CreditCard size={20} color={COLORS.success} />
               )}
             </View>
-            <Text style={styles.cardTitle}>Payment Information</Text>
+            <Text style={styles.cardTitle}>Settlement Information</Text>
           </View>
           <View style={styles.divider} />
           
@@ -286,11 +286,11 @@ const EndRentalScreen = () => {
               )}
             </View>
             <Text style={styles.paymentMethodText}>
-              {isOfflineCash ? 'Cash Payment' : 'Online Payment'}
+              {isOfflineCash ? 'Manual Settlement' : 'In-App Settlement'}
             </Text>
             <View style={[styles.paymentStatusBadge, isOfflineCash ? styles.pendingBadge : styles.paidBadge]}>
               <Text style={[styles.paymentStatusText, isOfflineCash ? styles.pendingText : styles.paidText]}>
-                {isOfflineCash ? 'Pay at Return' : 'Paid'}
+                {isOfflineCash ? 'Settle at Return' : 'Settled'}
               </Text>
             </View>
           </View>
@@ -338,12 +338,12 @@ const EndRentalScreen = () => {
             </View>
           </View>
 
-          {/* Payment Method Specific Notes */}
+          {/* Settlement Method Specific Notes */}
           {isOfflineCash ? (
             <View style={styles.infoBox}>
               <View style={styles.infoBoxHeader}>
                 <AlertCircle size={18} color={COLORS.warning} />
-                <Text style={styles.infoBoxTitle}>Cash Payment Instructions</Text>
+                <Text style={styles.infoBoxTitle}>Manual Settlement Instructions</Text>
               </View>
               <View style={styles.infoBoxContent}>
                 <Text style={styles.infoBoxText}>
@@ -357,13 +357,13 @@ const EndRentalScreen = () => {
             <View style={[styles.infoBox, styles.successBox]}>
               <View style={styles.infoBoxHeader}>
                 <CheckCircle size={18} color={COLORS.success} />
-                <Text style={styles.infoBoxTitle}>Online Payment</Text>
+                <Text style={styles.infoBoxTitle}>In-App Settlement</Text>
               </View>
               <View style={styles.infoBoxContent}>
                 <Text style={styles.infoBoxText}>
-                  • Payment received online via Razorpay{'\n'}
+                  • Settlement completed in app{'\n'}
                   • Earnings (₹{ownerSettlement.toFixed(2)}) credited to your wallet{'\n'}
-                  • Request withdrawal from dashboard to receive payment
+                  • Track settlement in ride history
                 </Text>
               </View>
             </View>
@@ -378,7 +378,7 @@ const EndRentalScreen = () => {
           size="large"
           style={styles.completeButton}
           disabled={loading}
-          icon={loading ? <ActivityIndicator size="small" color={COLORS.white} /> : undefined}
+          icon={loading ? <AppLoader size="small" color={COLORS.white} /> : undefined}
         />
       </ScrollView>
     </SafeAreaView>

@@ -13,8 +13,10 @@ import { X } from 'lucide-react-native';
 import { FONTS, SPACING, BORDER_RADIUS } from '@constants/theme';
 import { useLanguage } from '@context/LanguageContext';
 import { normalize, wp, hp } from '@utils/responsive';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const ACCENT = '#F9A825';
+const ORANGE_GRADIENT = ['#F99E3C', '#D47B1B'] as const;
 
 const VerificationPendingScreen = () => {
   const navigation = useNavigation();
@@ -46,9 +48,16 @@ const VerificationPendingScreen = () => {
           onPress={() => navigation.navigate('MainDashboard' as never)}
           activeOpacity={0.85}
         >
-          <Text style={styles.dashboardBtnText}>
-            {t('verificationPending.goToDashboard')}
-          </Text>
+          <LinearGradient
+            colors={[ORANGE_GRADIENT[0], ORANGE_GRADIENT[1]]}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={styles.buttonGradient}
+          >
+            <Text style={styles.dashboardBtnText}>
+              {t('verificationPending.goToDashboard')}
+            </Text>
+          </LinearGradient>
         </TouchableOpacity>
       </View>
 
@@ -87,7 +96,14 @@ const VerificationPendingScreen = () => {
               onPress={() => setModalVisible(false)}
               activeOpacity={0.85}
             >
-              <Text style={styles.modalBtnText}>Got it</Text>
+              <LinearGradient
+                colors={[ORANGE_GRADIENT[0], ORANGE_GRADIENT[1]]}
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+                style={styles.buttonGradient}
+              >
+                <Text style={styles.modalBtnText}>Got it</Text>
+              </LinearGradient>
             </TouchableOpacity>
           </View>
         </View>
@@ -129,13 +145,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
   },
   dashboardBtn: {
-    backgroundColor: ACCENT,
     height: normalize(52),
     borderRadius: normalize(26),
-    justifyContent: 'center',
-    alignItems: 'center',
     paddingHorizontal: SPACING.xxl,
     minWidth: wp(70),
+    overflow: 'hidden',
   },
   dashboardBtnText: {
     fontFamily: FONTS.semiBold,
@@ -201,13 +215,17 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.lg,
   },
   modalBtn: {
-    backgroundColor: ACCENT,
     height: normalize(44),
     borderRadius: normalize(22),
-    justifyContent: 'center',
-    alignItems: 'center',
     paddingHorizontal: SPACING.xl,
     minWidth: normalize(140),
+    overflow: 'hidden',
+  },
+  buttonGradient: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
   },
   modalBtnText: {
     fontFamily: FONTS.semiBold,

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Image, ActivityIndicator, Alert, Linking } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { ArrowLeft, Settings, CheckCircle, Car, Bike, Edit, Mail, Phone, MapPin, Building, FileText, CreditCard, BarChart, DollarSign, LogOut, ChevronRight, Shield, Hash } from 'lucide-react-native';
+import { ArrowLeft, Settings, CheckCircle, Car, Bike, Edit, Mail, Phone, MapPin, Building, FileText, Wallet, BarChart, DollarSign, LogOut, ChevronRight, Shield, Hash } from 'lucide-react-native';
 import { normalize, wp, hp } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, SHADOWS, BORDER_RADIUS } from '@constants/theme';
 import { Card } from '@components/common/Card';
@@ -449,13 +449,13 @@ const CompanyProfileScreen = () => {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => navigation.navigate('Payment' as never)}
+            onPress={() => navigation.navigate('Wallet' as never)}
           >
             <View style={styles.menuItemLeft}>
               <View style={styles.menuIconContainer}>
-                <CreditCard size={20} color={COLORS.primary} />
+                <Wallet size={20} color={COLORS.primary} />
               </View>
-              <Text style={styles.menuText}>{t('profile.paymentMethods')}</Text>
+              <Text style={styles.menuText}>Wallet & Coins</Text>
             </View>
             <ChevronRight size={20} color={COLORS.textSecondary} />
           </TouchableOpacity>

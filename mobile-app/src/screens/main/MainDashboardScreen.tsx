@@ -8,6 +8,7 @@ import {
   TouchableWithoutFeedback,
   SafeAreaView,
   Image,
+  StatusBar,
   Platform,
   Modal,
   Dimensions,
@@ -18,7 +19,7 @@ import {
   Animated,
 } from 'react-native';
 import { normalize, wp, hp, SCREEN_WIDTH } from '@utils/responsive';
-import { useNavigation, useIsFocused } from '@react-navigation/native';
+import { useNavigation, useIsFocused, useNavigationState } from '@react-navigation/native';
 import {
   Bell, User, Clock, TrendingUp, IndianRupee, Heart, Plus, Coins, LogOut,
   Search, CarFront, CreditCard, PartyPopper, Wallet, X, MapPin, Home as HomeIcon,
@@ -34,6 +35,8 @@ import { useNotifications } from '@context/NotificationContext';
 import { useAuth } from '@context/AuthContext';
 import { useSOS } from '@context/SOSContext';
 import * as Location from 'expo-location';
+import { LinearGradient } from 'expo-linear-gradient';
+import { SvgUri } from 'react-native-svg';
 
 const SCREEN_W = Dimensions.get('window').width;
 const STEP_CARD_W = SCREEN_W;
@@ -104,15 +107,47 @@ const coinsCarouselData = [
 ];
 
 const quickActions = [
-  { id: 'pool', label: 'Pool Ride', icon: Search, screen: 'SearchPooling', color: '#4A90D9' },
-  { id: 'offer', label: 'Offer Pool', icon: Car, screen: 'CreatePoolingOffer', color: '#00B894' },
-  { id: 'coins', label: 'Coins', icon: Coins, screen: 'EarnCoins', color: '#F5A623' },
-  { id: 'myoffers', label: 'My Offers', icon: Award, screen: 'MyOffers', color: '#8B5CF6' },
+  { id: 'pool', label: 'Pool Ride', icon: Search, screen: 'SearchPooling', color: '#4A90D9', gradient: ['#38BDF8', '#2563EB'] as const },
+  { id: 'offer-ride', label: 'Offer Ride', icon: Car, screen: 'CreatePoolingOffer', color: '#00B894', gradient: ['#34D399', '#059669'] as const },
+  { id: 'my-rides', label: 'My Rides', icon: History, screen: 'History', color: '#0EA5E9', gradient: ['#22D3EE', '#0891B2'] as const },
+  { id: 'offers', label: 'My Offers', icon: Award, screen: 'MyOffers', color: '#8B5CF6', gradient: ['#A78BFA', '#7C3AED'] as const },
+  { id: 'messages', label: 'Messages', icon: MessageSquare, screen: 'ChatList', color: '#2563EB', gradient: ['#60A5FA', '#1D4ED8'] as const },
+  { id: 'notifications', label: 'Alerts', icon: Bell, screen: 'Notifications', color: '#F97316', gradient: ['#FB923C', '#EA580C'] as const },
+  { id: 'reviews', label: 'Reviews', icon: Star, screen: 'Reviews', color: '#D97706', gradient: ['#FBBF24', '#D97706'] as const },
+  { id: 'help', label: 'Help', icon: HelpCircle, screen: 'HelpSupport', color: '#059669', gradient: ['#10B981', '#047857'] as const },
+  { id: 'faq', label: 'FAQ', icon: Info, screen: 'FAQ', color: '#3B82F6', gradient: ['#93C5FD', '#3B82F6'] as const },
+  { id: 'feedback', label: 'Feedback', icon: FileText, screen: 'Feedback', color: '#7C3AED', gradient: ['#C4B5FD', '#7C3AED'] as const },
+  { id: 'report-bug', label: 'Report Bug', icon: Shield, screen: 'ReportBug', color: '#EF4444', gradient: ['#F87171', '#DC2626'] as const },
+  { id: 'settings', label: 'Settings', icon: Settings, screen: 'Settings', color: '#64748B', gradient: ['#94A3B8', '#475569'] as const },
+];
+
+const quickActionBubbleLayoutPresets = [
+  [
+    { top: 7, right: 8, size: 18 },
+    { top: 24, right: 27, size: 10 },
+    { bottom: 9, left: 9, size: 12 },
+  ],
+  [
+    { top: 8, left: 8, size: 16 },
+    { top: 25, left: 26, size: 9 },
+    { bottom: 8, right: 10, size: 13 },
+  ],
+  [
+    { top: 6, right: 18, size: 14 },
+    { top: 23, left: 12, size: 11 },
+    { bottom: 9, right: 8, size: 12 },
+  ],
+  [
+    { top: 10, left: 16, size: 15 },
+    { top: 28, right: 12, size: 10 },
+    { bottom: 8, left: 6, size: 12 },
+  ],
 ];
 
 const MainDashboardScreen = () => {
   const navigation = useNavigation();
   const isFocused = useIsFocused();
+  const currentRouteName = useNavigationState((state) => state.routes[state.index]?.name);
   const { t } = useLanguage();
   const { theme, isPinkMode, setPinkMode } = useTheme();
   const { user: authUser, logout } = useAuth();
@@ -127,6 +162,9 @@ const MainDashboardScreen = () => {
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
   const quickActionScaleMapRef = useRef<Record<string, Animated.Value>>({});
+  const quickActionBubbleMapRef = useRef<Record<string, Animated.Value>>({});
+  const quickActionBubbleLoopsRef = useRef<any[]>([]);
+  const nyumLogoUri = Image.resolveAssetSource(require('../../../assets/nyum-logo.svg'))?.uri;
 
   // Sidebar animation
   const sidebarAnim = useRef(new Animated.Value(-SCREEN_W * 0.78)).current;
@@ -171,10 +209,47 @@ const MainDashboardScreen = () => {
     }).start();
   }, [getQuickActionScale]);
 
+  const getQuickActionBubble = useCallback((id: string) => {
+    if (!quickActionBubbleMapRef.current[id]) {
+      quickActionBubbleMapRef.current[id] = new Animated.Value(0);
+    }
+    return quickActionBubbleMapRef.current[id];
+  }, []);
+
   useEffect(() => {
     if (authUser?.gender) setUserGender(authUser.gender);
     getUserLocation();
   }, [authUser]);
+
+  useEffect(() => {
+    quickActionBubbleLoopsRef.current.forEach((anim) => anim?.stop?.());
+    quickActionBubbleLoopsRef.current = quickActions.map((action, index) => {
+      const bubbleAnim = getQuickActionBubble(action.id);
+      bubbleAnim.setValue(0);
+      const loop = Animated.loop(
+        Animated.sequence([
+          Animated.delay(120 + (index % 6) * 140),
+          Animated.timing(bubbleAnim, {
+            toValue: 1,
+            duration: 1200,
+            useNativeDriver: true,
+          }),
+          Animated.timing(bubbleAnim, {
+            toValue: 0,
+            duration: 1200,
+            useNativeDriver: true,
+          }),
+        ]),
+      );
+      loop.start();
+      return loop;
+    });
+
+    return () => {
+      quickActionBubbleLoopsRef.current.forEach((anim) => anim?.stop?.());
+      quickActionBubbleLoopsRef.current = [];
+    };
+  }, [getQuickActionBubble]);
 
   useEffect(() => {
     loadHomeData();
@@ -262,6 +337,13 @@ const MainDashboardScreen = () => {
     } finally { setWhereToSearching(false); }
   };
 
+  const handleWhereToPress = () => {
+    setWhereToQuery('');
+    setWhereToResults([]);
+    Keyboard.dismiss();
+    navigation.navigate('SearchPooling' as never);
+  };
+
   const handleWhereToSelect = (location: { address: string; lat: number; lng: number; city?: string; state?: string }) => {
     setWhereToQuery('');
     setWhereToResults([]);
@@ -304,6 +386,28 @@ const MainDashboardScreen = () => {
         message: `Join ForLok and get free coins! Use my referral code: ${code}\nDownload now: https://forlok.com/download`,
       });
     } catch (_) {}
+  };
+
+  const handleCoinsCardAction = (cardId: string) => {
+    switch (cardId) {
+      case 'welcome':
+        navigation.navigate('EarnCoins' as never);
+        break;
+      case 'refer':
+        handleShareReferral();
+        break;
+      case 'social':
+        navigation.navigate('EarnCoins' as never);
+        break;
+      case 'pool':
+        navigation.navigate('SearchPooling' as never);
+        break;
+      case 'redeem':
+        (navigation.navigate as any)('Wallet', { tab: 'coins' });
+        break;
+      default:
+        navigation.navigate('EarnCoins' as never);
+    }
   };
 
   const getGreeting = () => {
@@ -372,6 +476,7 @@ const MainDashboardScreen = () => {
 
   return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <StatusBar hidden={showSidebar} />
         {/* ── Header ── */}
         <View style={[styles.header, { backgroundColor: theme.colors.background, borderBottomColor: theme.colors.border }]}>
           <TouchableOpacity style={styles.menuButton} onPress={openSidebar} activeOpacity={0.7}>
@@ -438,26 +543,23 @@ const MainDashboardScreen = () => {
           <View style={styles.whereToContainer}>
             <View style={[styles.whereToCard, { backgroundColor: theme.colors.surface }]}>
               <View style={styles.whereToRow}>
-                <View style={styles.whereToSearchDot} />
-                <TextInput
-                  style={[styles.whereToInput, { color: theme.colors.text }]}
-                  placeholder="Where to?"
-                  placeholderTextColor="#999"
-                  value={whereToQuery}
-                  onChangeText={setWhereToQuery}
-                  returnKeyType="search"
-                  onSubmitEditing={() => { if (whereToQuery.trim()) handleWhereToSelect({ address: whereToQuery.trim(), lat: 0, lng: 0 }); }}
-                />
-                {whereToQuery.length > 0 && (
-                  <TouchableOpacity onPress={() => { setWhereToQuery(''); setWhereToResults([]); }} style={styles.whereToClose}>
-                    <X size={16} color="#999" />
-                  </TouchableOpacity>
-                )}
-                <View style={[styles.whereToDivider, { backgroundColor: theme.colors.border }]} />
-                <TouchableOpacity style={styles.whereToNow} onPress={() => setShowScheduleModal(true)}>
-                  <Clock size={14} color={theme.colors.text} />
-                  <Text style={[styles.whereToNowText, { color: theme.colors.text }]}>Now</Text>
-                  <Text style={[styles.whereToChevron, { color: theme.colors.textSecondary }]}>▾</Text>
+                <TouchableOpacity
+                  style={styles.whereToSearchTap}
+                  onPress={handleWhereToPress}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.whereToSearchDot} />
+                  <Text style={[styles.whereToInputPlaceholder, { color: theme.colors.text }]}>Where to?</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.whereToQuickAction, { borderColor: theme.colors.border }]}
+                  onPress={handleWhereToPress}
+                  activeOpacity={0.8}
+                >
+                  <Search size={14} color={theme.colors.primary} />
+                  <Text style={[styles.whereToQuickActionText, { color: theme.colors.primary }]}>Take ride</Text>
+                  <ChevronRight size={14} color={theme.colors.primary} />
                 </TouchableOpacity>
               </View>
 
@@ -495,34 +597,6 @@ const MainDashboardScreen = () => {
               </ScrollView>
             </View>
 
-            {(whereToResults.length > 0 || whereToSearching) && (
-              <View style={[styles.whereToDropdown, { backgroundColor: theme.colors.surface }]}>
-                {whereToSearching && whereToResults.length === 0 && (
-                  <View style={styles.whereToDropdownLoading}>
-                    <ActivityIndicator size="small" color={theme.colors.primary} />
-                    <Text style={[styles.whereToDropdownLoadingText, { color: theme.colors.textSecondary }]}>Searching...</Text>
-                  </View>
-                )}
-                <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false} style={styles.whereToDropdownScroll}>
-                  {whereToResults.map((item, index) => (
-                    <TouchableOpacity
-                      key={`${item.lat}-${item.lng}-${index}`}
-                      style={[styles.whereToDropdownItem, index < whereToResults.length - 1 && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.colors.border }]}
-                      onPress={() => handleWhereToSelect(item)}
-                      activeOpacity={0.7}
-                    >
-                      <View style={[styles.whereToDropdownIcon, { backgroundColor: theme.colors.background }]}>
-                        <MapPin size={16} color={theme.colors.primary} />
-                      </View>
-                      <View style={styles.whereToDropdownText}>
-                        <Text style={[styles.whereToDropdownTitle, { color: theme.colors.text }]} numberOfLines={1}>{item.city || item.address.split(',')[0]}</Text>
-                        <Text style={[styles.whereToDropdownSubtitle, { color: theme.colors.textSecondary }]} numberOfLines={1}>{item.address}</Text>
-                      </View>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-            )}
           </View>
 
           {/* ── Coins Rewards Carousel ── */}
@@ -543,14 +617,23 @@ const MainDashboardScreen = () => {
               {coinsCarouselData.map((card) => {
                 const Icon = card.icon;
                 return (
-                  <View key={card.id} style={[styles.coinsCard, { backgroundColor: card.bg, width: SCREEN_W - SPACING.md * 2 }]}>
+                  <TouchableOpacity
+                    key={card.id}
+                    style={[styles.coinsCard, { backgroundColor: card.bg, width: SCREEN_W - SPACING.md * 2 }]}
+                    activeOpacity={0.9}
+                    onPress={() => handleCoinsCardAction(card.id)}
+                  >
                     <View style={styles.coinsCardContent}>
                       <View style={styles.coinsCardLeft}>
                         <View style={[styles.coinsTag, { backgroundColor: card.accent + '25' }]}>
                           <Text style={[styles.coinsTagText, { color: card.accent }]}>{card.tag}</Text>
                         </View>
                         <Text style={styles.coinsCardTitle}>{card.title}</Text>
-                        <TouchableOpacity style={[styles.coinsCta, { backgroundColor: card.accent }]} activeOpacity={0.8}>
+                        <TouchableOpacity
+                          style={[styles.coinsCta, { backgroundColor: card.accent }]}
+                          activeOpacity={0.8}
+                          onPress={() => handleCoinsCardAction(card.id)}
+                        >
                           <Text style={styles.coinsCtaText}>{card.cta}</Text>
                           <ChevronRight size={14} color="#FFF" />
                         </TouchableOpacity>
@@ -567,7 +650,7 @@ const MainDashboardScreen = () => {
                         <View style={[styles.coinsMiniFloat2, { backgroundColor: card.accent + '20' }]} />
                       </View>
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 );
               })}
             </ScrollView>
@@ -586,10 +669,154 @@ const MainDashboardScreen = () => {
             </View>
           </View>
 
+          {/* ── Quick Actions Grid ── */}
+          <View style={styles.quickActionsGrid}>
+            {quickActions.map((action, index) => {
+              const Icon = action.icon;
+              const scale = getQuickActionScale(action.id);
+              const bubbleAnim = getQuickActionBubble(action.id);
+              const bubbleLayout = quickActionBubbleLayoutPresets[index % quickActionBubbleLayoutPresets.length];
+              const motionDir = index % 2 === 0 ? 1 : -1;
+              const motionScale = 1 + (index % 3) * 0.18;
+              const bubbleColor1 = action.gradient[0] + '3D';
+              const bubbleColor2 = action.gradient[0] + '2B';
+              const bubbleColor3 = action.gradient[0] + '24';
+              return (
+                <Animated.View key={action.id} style={{ transform: [{ scale }] }}>
+                  <TouchableOpacity
+                    style={styles.quickActionItem}
+                    activeOpacity={0.85}
+                    onPressIn={() => animateQuickAction(action.id, 0.96)}
+                    onPressOut={() => animateQuickAction(action.id, 1)}
+                    onPress={() => navigation.navigate(action.screen as never)}
+                  >
+                    <Animated.View
+                      pointerEvents="none"
+                      style={[
+                        styles.quickActionBubbleBase,
+                        {
+                          width: normalize(bubbleLayout[0].size),
+                          height: normalize(bubbleLayout[0].size),
+                          borderRadius: normalize(bubbleLayout[0].size / 2),
+                          backgroundColor: bubbleColor1,
+                          top: bubbleLayout[0].top != null ? normalize(bubbleLayout[0].top) : undefined,
+                          right: bubbleLayout[0].right != null ? normalize(bubbleLayout[0].right) : undefined,
+                          bottom: bubbleLayout[0].bottom != null ? normalize(bubbleLayout[0].bottom) : undefined,
+                          left: bubbleLayout[0].left != null ? normalize(bubbleLayout[0].left) : undefined,
+                        },
+                        {
+                          opacity: bubbleAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [0.45, 0.9],
+                          }),
+                          transform: [
+                            {
+                              translateY: bubbleAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0, -6 * motionScale],
+                              }),
+                            },
+                            {
+                              translateX: bubbleAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0, 7 * motionDir * motionScale],
+                              }),
+                            },
+                          ],
+                        },
+                      ]}
+                    />
+                    <Animated.View
+                      pointerEvents="none"
+                      style={[
+                        styles.quickActionBubbleBase,
+                        {
+                          width: normalize(bubbleLayout[1].size),
+                          height: normalize(bubbleLayout[1].size),
+                          borderRadius: normalize(bubbleLayout[1].size / 2),
+                          backgroundColor: bubbleColor2,
+                          top: bubbleLayout[1].top != null ? normalize(bubbleLayout[1].top) : undefined,
+                          right: bubbleLayout[1].right != null ? normalize(bubbleLayout[1].right) : undefined,
+                          bottom: bubbleLayout[1].bottom != null ? normalize(bubbleLayout[1].bottom) : undefined,
+                          left: bubbleLayout[1].left != null ? normalize(bubbleLayout[1].left) : undefined,
+                        },
+                        {
+                          opacity: bubbleAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [0.35, 0.72],
+                          }),
+                          transform: [
+                            {
+                              translateY: bubbleAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0, 5 * motionScale],
+                              }),
+                            },
+                            {
+                              translateX: bubbleAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0, -6 * motionDir * motionScale],
+                              }),
+                            },
+                          ],
+                        },
+                      ]}
+                    />
+                    <Animated.View
+                      pointerEvents="none"
+                      style={[
+                        styles.quickActionBubbleBase,
+                        {
+                          width: normalize(bubbleLayout[2].size),
+                          height: normalize(bubbleLayout[2].size),
+                          borderRadius: normalize(bubbleLayout[2].size / 2),
+                          backgroundColor: bubbleColor3,
+                          top: bubbleLayout[2].top != null ? normalize(bubbleLayout[2].top) : undefined,
+                          right: bubbleLayout[2].right != null ? normalize(bubbleLayout[2].right) : undefined,
+                          bottom: bubbleLayout[2].bottom != null ? normalize(bubbleLayout[2].bottom) : undefined,
+                          left: bubbleLayout[2].left != null ? normalize(bubbleLayout[2].left) : undefined,
+                        },
+                        {
+                          opacity: bubbleAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [0.3, 0.66],
+                          }),
+                          transform: [
+                            {
+                              translateY: bubbleAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0, -4 * motionScale],
+                              }),
+                            },
+                            {
+                              translateX: bubbleAnim.interpolate({
+                                inputRange: [0, 1],
+                                outputRange: [0, 5 * motionDir * -1 * motionScale],
+                              }),
+                            },
+                          ],
+                        },
+                      ]}
+                    />
+                    <LinearGradient
+                      colors={action.gradient}
+                      start={{ x: 0.5, y: 0 }}
+                      end={{ x: 0.5, y: 1 }}
+                      style={styles.quickActionIcon}
+                    >
+                      <Icon size={22} color="#FFFFFF" />
+                    </LinearGradient>
+                    <Text style={styles.quickActionLabel}>{action.label}</Text>
+                  </TouchableOpacity>
+                </Animated.View>
+              );
+            })}
+          </View>
+
           {/* ── Active Ride Card ── */}
           {activeRide && (
             <TouchableOpacity
-              style={[styles.activeRideCard, { backgroundColor: activeRide.status === 'in_progress' ? '#2E7D32' : theme.colors.primary }]}
+              style={styles.activeRideCard}
               activeOpacity={0.85}
               onPress={() => {
                 if (activeRide.status === 'in_progress') {
@@ -603,46 +830,44 @@ const MainDashboardScreen = () => {
                 }
               }}
             >
-              <View style={styles.activeRideLeft}>
-                <View style={styles.activeRideBadge}>
-                  <Navigation size={14} color="#FFF" />
+              {activeRide.status === 'in_progress' ? (
+                <View style={[styles.activeRideFill, { backgroundColor: '#2E7D32' }]}>
+                  <View style={styles.activeRideLeft}>
+                    <View style={styles.activeRideBadge}>
+                      <Navigation size={14} color="#FFF" />
+                    </View>
+                    <View style={styles.activeRideInfo}>
+                      <Text style={styles.activeRideLabel}>LIVE TRIP</Text>
+                      <Text style={styles.activeRideDest} numberOfLines={1}>
+                        To {activeRide.route?.to?.city || activeRide.route?.to?.address?.split(',')[0] || 'Destination'}
+                      </Text>
+                    </View>
+                  </View>
+                  <ChevronRight size={20} color="#FFF" />
                 </View>
-                <View style={styles.activeRideInfo}>
-                  <Text style={styles.activeRideLabel}>
-                    {activeRide.status === 'in_progress' ? 'LIVE TRIP' : 'UPCOMING RIDE'}
-                  </Text>
-                  <Text style={styles.activeRideDest} numberOfLines={1}>
-                    To {activeRide.route?.to?.city || activeRide.route?.to?.address?.split(',')[0] || 'Destination'}
-                  </Text>
-                </View>
-              </View>
-              <ChevronRight size={20} color="#FFF" />
+              ) : (
+                <LinearGradient
+                  colors={['#F99E3C', '#D47B1B']}
+                  start={{ x: 0.5, y: 0 }}
+                  end={{ x: 0.5, y: 1 }}
+                  style={styles.activeRideFill}
+                >
+                  <View style={styles.activeRideLeft}>
+                    <View style={styles.activeRideBadge}>
+                      <Navigation size={14} color="#FFF" />
+                    </View>
+                    <View style={styles.activeRideInfo}>
+                      <Text style={styles.activeRideLabel}>UPCOMING RIDE</Text>
+                      <Text style={styles.activeRideDest} numberOfLines={1}>
+                        To {activeRide.route?.to?.city || activeRide.route?.to?.address?.split(',')[0] || 'Destination'}
+                      </Text>
+                    </View>
+                  </View>
+                  <ChevronRight size={20} color="#FFF" />
+                </LinearGradient>
+              )}
             </TouchableOpacity>
           )}
-
-          {/* ── Quick Actions Grid ── */}
-          <View style={styles.quickActionsGrid}>
-            {quickActions.map((action) => {
-              const Icon = action.icon;
-              const scale = getQuickActionScale(action.id);
-              return (
-                <Animated.View key={action.id} style={{ transform: [{ scale }] }}>
-                  <TouchableOpacity
-                    style={[styles.quickActionItem, { backgroundColor: theme.colors.surface }]}
-                    activeOpacity={0.85}
-                    onPressIn={() => animateQuickAction(action.id, 0.96)}
-                    onPressOut={() => animateQuickAction(action.id, 1)}
-                    onPress={() => navigation.navigate(action.screen as never)}
-                  >
-                    <View style={[styles.quickActionIcon, { backgroundColor: action.color + '18' }]}>
-                      <Icon size={22} color={action.color} />
-                    </View>
-                    <Text style={[styles.quickActionLabel, { color: theme.colors.text }]}>{action.label}</Text>
-                  </TouchableOpacity>
-                </Animated.View>
-              );
-            })}
-          </View>
 
           {/* ── HerPooling Banner ── */}
           {userGender === 'Female' && !isPinkMode && (
@@ -770,17 +995,24 @@ const MainDashboardScreen = () => {
 
           {/* ── Referral Banner ── */}
           {referral?.code && (
-            <TouchableOpacity style={[styles.referralCard, { backgroundColor: theme.colors.primary }]} activeOpacity={0.85} onPress={handleShareReferral}>
-              <View style={styles.referralLeft}>
-                <View style={styles.referralIconWrap}>
-                  <Gift size={22} color="#FFF" />
+            <TouchableOpacity style={styles.referralCard} activeOpacity={0.85} onPress={handleShareReferral}>
+              <LinearGradient
+                colors={['#51A7EA', '#3B8FD5']}
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+                style={styles.referralGradient}
+              >
+                <View style={styles.referralLeft}>
+                  <View style={styles.referralIconWrap}>
+                    <Gift size={22} color="#FFF" />
+                  </View>
+                  <View>
+                    <Text style={styles.referralTitle}>Invite Friends, Earn Coins</Text>
+                    <Text style={styles.referralCode}>Code: {referral.code}</Text>
+                  </View>
                 </View>
-                <View>
-                  <Text style={styles.referralTitle}>Invite Friends, Earn Coins</Text>
-                  <Text style={styles.referralCode}>Code: {referral.code}</Text>
-                </View>
-              </View>
-              <Share2 size={20} color="rgba(255,255,255,0.8)" />
+                <Share2 size={20} color="rgba(255,255,255,0.8)" />
+              </LinearGradient>
             </TouchableOpacity>
           )}
 
@@ -859,12 +1091,12 @@ const MainDashboardScreen = () => {
                     </View>
                   </View>
                   <View style={styles.walletModalButtons}>
-                    <TouchableOpacity style={[styles.walletModalBtn, { backgroundColor: theme.colors.success }]} onPress={() => { setShowWalletModal(false); (navigation.navigate as any)('Wallet', {}); }}>
+                    <TouchableOpacity style={[styles.walletModalBtn, { backgroundColor: theme.colors.success }]} onPress={() => { setShowWalletModal(false); (navigation.navigate as any)('Wallet', { tab: 'coins' }); }}>
                       <Plus size={18} color="#FFF" />
-                      <Text style={styles.walletModalBtnText}>Recharge</Text>
+                      <Text style={styles.walletModalBtnText}>Use Coins</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={[styles.walletModalBtn, { backgroundColor: theme.colors.primary }]} onPress={() => { setShowWalletModal(false); navigation.navigate('Withdrawal' as never); }}>
-                      <Text style={styles.walletModalBtnText}>Withdraw</Text>
+                    <TouchableOpacity style={[styles.walletModalBtn, { backgroundColor: theme.colors.primary }]} onPress={() => { setShowWalletModal(false); (navigation.navigate as any)('Wallet', {}); }}>
+                      <Text style={styles.walletModalBtnText}>Wallet</Text>
                     </TouchableOpacity>
                   </View>
                   <TouchableOpacity style={[styles.walletModalViewAll, { borderColor: theme.colors.border }]} onPress={() => { setShowWalletModal(false); (navigation.navigate as any)('Wallet', {}); }}>
@@ -909,20 +1141,22 @@ const MainDashboardScreen = () => {
             <TouchableWithoutFeedback onPress={closeSidebar}>
               <Animated.View style={[styles.sidebarOverlay, { opacity: overlayAnim }]} />
             </TouchableWithoutFeedback>
-            <Animated.View style={[styles.sidebarContainer, { backgroundColor: theme.colors.surface, transform: [{ translateX: sidebarAnim }] }]}>
-              <View style={[styles.sidebarHeader, { backgroundColor: '#F5F7FB', borderBottomColor: theme.colors.border }]}>
-                <Image
-                  source={require('../../../assets/signin_logo.png')}
-                  style={[styles.sidebarLogo, { borderColor: theme.colors.border }]}
-                  resizeMode="contain"
-                />
-                <View style={styles.sidebarUserInfo}>
-                  <Text style={[styles.sidebarUserName, { color: theme.colors.text }]}>{authUser?.name || 'User'}</Text>
-                  <Text style={[styles.sidebarUserPhone, { color: theme.colors.textSecondary }]}>{authUser?.phone || authUser?.email || ''}</Text>
-                </View>
-                <TouchableOpacity onPress={closeSidebar} style={styles.sidebarCloseBtn}>
-                  <X size={22} color={theme.colors.text} />
-                </TouchableOpacity>
+            <Animated.View style={[styles.sidebarContainer, { backgroundColor: theme.colors.background, transform: [{ translateX: sidebarAnim }] }]}>
+              <View style={styles.sidebarHeader}>
+                {nyumLogoUri ? (
+                  <SvgUri
+                    uri={nyumLogoUri}
+                    width={normalize(180)}
+                    height={normalize(64)}
+                    style={styles.sidebarLogoSvg}
+                  />
+                ) : (
+                  <Image
+                    source={require('../../../assets/signin_logo.png')}
+                    style={styles.sidebarLogo}
+                    resizeMode="contain"
+                  />
+                )}
               </View>
 
               <ScrollView
@@ -932,40 +1166,53 @@ const MainDashboardScreen = () => {
               >
                 {sidebarMenuItems.map((item, index) => {
                   const IconComp = item.icon;
-                  const isActive = index === 0;
+                  const isActive = item.screen === currentRouteName || (item.screen === 'MainDashboard' && !currentRouteName);
                   return (
                     <TouchableOpacity
                       key={index}
-                      style={[
-                        styles.sidebarMenuItem,
-                        {
-                          backgroundColor: isActive ? theme.colors.primary + '10' : 'transparent',
-                          borderColor: isActive ? theme.colors.primary + '20' : 'transparent',
-                        },
-                      ]}
+                      style={styles.sidebarMenuItemTouchable}
                       activeOpacity={0.78}
                       onPress={() => { closeSidebar(); if (item.screen !== 'MainDashboard') (navigation.navigate as any)(item.screen); }}
                     >
-                      <View style={[styles.sidebarMenuIconWrap, { backgroundColor: isActive ? theme.colors.primary + '1A' : theme.colors.background }]}>
-                        <IconComp size={18} color={isActive ? theme.colors.primary : theme.colors.textSecondary} />
-                      </View>
-                      <Text style={[styles.sidebarMenuText, { color: isActive ? theme.colors.primary : theme.colors.text }]}>{item.label}</Text>
-                      <ChevronRight size={16} color={theme.colors.textSecondary} />
+                      {isActive ? (
+                        <LinearGradient
+                          colors={['#F99E3C', '#E08E35']}
+                          start={{ x: 0.5, y: 0 }}
+                          end={{ x: 0.5, y: 1 }}
+                          style={[styles.sidebarMenuItem, styles.sidebarMenuItemActive]}
+                        >
+                          <View style={[styles.sidebarMenuIconWrap, styles.sidebarMenuIconWrapActive]}>
+                            <IconComp size={18} color="#FFFFFF" />
+                          </View>
+                          <Text style={[styles.sidebarMenuText, styles.sidebarMenuTextActive]}>{item.label}</Text>
+                          <ChevronRight size={16} color="rgba(255,255,255,0.9)" />
+                        </LinearGradient>
+                      ) : (
+                        <View style={styles.sidebarMenuItem}>
+                          <View style={styles.sidebarMenuIconWrap}>
+                            <IconComp size={18} color="#475569" />
+                          </View>
+                          <Text style={styles.sidebarMenuText}>{item.label}</Text>
+                          <ChevronRight size={16} color="#94A3B8" />
+                        </View>
+                      )}
                     </TouchableOpacity>
                   );
                 })}
 
-                <View style={[styles.sidebarDivider, { backgroundColor: theme.colors.border }]} />
+                <View style={styles.sidebarDivider} />
 
                 <TouchableOpacity
-                  style={[styles.sidebarMenuItem, { borderColor: 'transparent' }]}
+                  style={styles.sidebarMenuItemTouchable}
                   activeOpacity={0.78}
                   onPress={() => { closeSidebar(); logout(); }}
                 >
-                  <View style={[styles.sidebarMenuIconWrap, { backgroundColor: '#FDECEC' }]}>
-                    <LogOut size={18} color="#E53E3E" />
+                  <View style={styles.sidebarMenuItem}>
+                    <View style={[styles.sidebarMenuIconWrap, { backgroundColor: '#FEE2E2' }]}>
+                      <LogOut size={18} color="#FF6B6B" />
+                    </View>
+                    <Text style={[styles.sidebarMenuText, { color: '#FF7C7C' }]}>Logout</Text>
                   </View>
-                  <Text style={[styles.sidebarMenuText, { color: '#E53E3E' }]}>Logout</Text>
                 </TouchableOpacity>
                 <View style={{ height: normalize(28) }} />
               </ScrollView>
@@ -1024,10 +1271,35 @@ const styles = StyleSheet.create({
   whereToRow: {
     flexDirection: 'row', alignItems: 'center',
     paddingVertical: normalize(12), paddingHorizontal: SPACING.md,
+    gap: normalize(10),
+  },
+  whereToSearchTap: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   whereToSearchDot: {
     width: normalize(10), height: normalize(10), borderRadius: normalize(5),
-    backgroundColor: '#4CAF50', marginRight: normalize(12),
+    backgroundColor: '#4CAF50', marginRight: normalize(10),
+  },
+  whereToInputPlaceholder: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(16),
+    fontWeight: '600',
+  },
+  whereToQuickAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: normalize(4),
+    borderWidth: 1,
+    borderRadius: normalize(16),
+    paddingVertical: normalize(6),
+    paddingHorizontal: normalize(10),
+  },
+  whereToQuickActionText: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(12),
+    fontWeight: '600',
   },
   whereToInput: { flex: 1, fontFamily: FONTS.medium, fontSize: normalize(16), paddingVertical: 0, fontWeight: '600' },
   whereToClose: { padding: normalize(4), marginRight: normalize(8) },
@@ -1173,9 +1445,15 @@ const styles = StyleSheet.create({
 
   // ── Active Ride ──
   activeRideCard: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingVertical: normalize(14), paddingHorizontal: SPACING.md,
     borderRadius: normalize(16), marginBottom: SPACING.lg,
+    overflow: 'hidden',
+  },
+  activeRideFill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: normalize(14),
+    paddingHorizontal: SPACING.md,
   },
   activeRideLeft: { flexDirection: 'row', alignItems: 'center', gap: normalize(12), flex: 1 },
   activeRideBadge: {
@@ -1187,17 +1465,38 @@ const styles = StyleSheet.create({
   activeRideDest: { fontFamily: FONTS.medium, fontSize: normalize(16), color: '#FFF', fontWeight: '600' },
 
   // ── Quick Actions ──
-  quickActionsGrid: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: SPACING.lg },
+  quickActionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: normalize(10),
+    marginBottom: SPACING.lg,
+  },
   quickActionItem: {
-    width: (SCREEN_W - SPACING.md * 2 - SPACING.sm * 3) / 4,
+    width: (SCREEN_W - SPACING.md * 2 - normalize(10) * 3) / 4,
     alignItems: 'center', paddingVertical: normalize(14),
-    borderRadius: normalize(16), ...SHADOWS.sm,
+    borderRadius: normalize(16),
+    backgroundColor: '#0F172B',
+    borderWidth: 1,
+    borderColor: '#F99E3C',
+    overflow: 'hidden',
+    ...SHADOWS.sm,
+  },
+  quickActionBubbleBase: {
+    position: 'absolute',
   },
   quickActionIcon: {
     width: normalize(44), height: normalize(44), borderRadius: normalize(22),
     alignItems: 'center', justifyContent: 'center', marginBottom: normalize(8),
   },
-  quickActionLabel: { fontFamily: FONTS.medium, fontSize: normalize(11), fontWeight: '500', textAlign: 'center' },
+  quickActionLabel: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(10.5),
+    fontWeight: '500',
+    textAlign: 'center',
+    lineHeight: normalize(13),
+    minHeight: normalize(26),
+    color: '#FFFFFF',
+  },
 
   // ── HerPooling ──
   pinkPoolingCard: { marginBottom: SPACING.lg, backgroundColor: '#FFF5F8', borderWidth: 2, borderColor: '#FFDEE7', borderRadius: BORDER_RADIUS.lg },
@@ -1263,8 +1562,13 @@ const styles = StyleSheet.create({
 
   // ── Referral ──
   referralCard: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    borderRadius: normalize(18), padding: SPACING.md, marginBottom: SPACING.lg,
+    borderRadius: normalize(18), marginBottom: SPACING.lg, overflow: 'hidden',
+  },
+  referralGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: SPACING.md,
   },
   referralLeft: { flexDirection: 'row', alignItems: 'center', gap: normalize(12), flex: 1 },
   referralIconWrap: {
@@ -1340,62 +1644,69 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     width: SCREEN_W * 0.82,
+    backgroundColor: '#0F172B',
     ...SHADOWS.lg,
     elevation: 20,
     overflow: 'hidden',
   },
   sidebarHeader: {
-    paddingTop: normalize(44),
-    paddingBottom: normalize(18),
-    paddingHorizontal: SPACING.lg,
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingTop: normalize(8),
+    paddingBottom: normalize(8),
+    paddingHorizontal: 0,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(15,23,43,0.08)',
+  },
+  sidebarLogoSvg: {
+    marginLeft: normalize(-10),
   },
   sidebarLogo: {
-    width: normalize(48),
-    height: normalize(48),
-    borderRadius: normalize(24),
-    borderWidth: 2,
+    width: normalize(64),
+    height: normalize(64),
+    borderRadius: normalize(32),
+    marginLeft: normalize(-10),
   },
-  sidebarUserInfo: { flex: 1, marginLeft: normalize(14) },
-  sidebarUserName: {
-    fontFamily: FONTS.medium,
-    fontSize: normalize(17),
-    fontWeight: 'bold',
-  },
-  sidebarUserPhone: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(12),
-    marginTop: normalize(2),
-  },
-  sidebarCloseBtn: { padding: SPACING.xs },
   sidebarMenu: { flex: 1, paddingTop: SPACING.sm, paddingHorizontal: normalize(10) },
   sidebarMenuContent: { paddingBottom: normalize(96) },
+  sidebarMenuItemTouchable: {
+    marginBottom: normalize(4),
+  },
   sidebarMenuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: normalize(12),
     paddingVertical: normalize(10),
     paddingHorizontal: normalize(12),
-    borderWidth: 1,
     borderRadius: normalize(12),
-    marginBottom: normalize(4),
+    backgroundColor: 'transparent',
+  },
+  sidebarMenuItemActive: {
+    borderWidth: 0,
   },
   sidebarMenuIconWrap: {
     width: normalize(32),
     height: normalize(32),
     borderRadius: normalize(10),
+    backgroundColor: '#FFF4D8',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  sidebarMenuIconWrapActive: {
+    backgroundColor: 'rgba(255,255,255,0.22)',
   },
   sidebarMenuText: {
     fontFamily: FONTS.medium,
     fontSize: normalize(15),
     fontWeight: '500',
     flex: 1,
+    color: '#0F172B',
   },
-  sidebarDivider: { height: StyleSheet.hairlineWidth, marginVertical: SPACING.md, marginHorizontal: normalize(6) },
+  sidebarMenuTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  sidebarDivider: { height: 1, marginVertical: SPACING.md, marginHorizontal: normalize(6), backgroundColor: 'rgba(15,23,43,0.08)' },
 });
 
 export default MainDashboardScreen;

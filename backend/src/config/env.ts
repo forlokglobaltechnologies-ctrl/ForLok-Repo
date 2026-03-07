@@ -1,15 +1,16 @@
 import { z } from 'zod';
 import dotenv from 'dotenv';
+import path from 'path';
 
 // Load environment variables
-dotenv.config();
+dotenv.config({ path: path.join(process.cwd(), '.env'), override: true });
 
 const envSchema = z.object({
   // Server
   PORT: z.string().default('3000'),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  API_BASE_URL: z.string().url().optional().default('http://localhost:3000'),
-  FRONTEND_URL: z.string().url().optional().default('http://localhost:19006'),
+  API_BASE_URL: z.string().url().optional().default('http://10.170.142.16:3000'),
+  FRONTEND_URL: z.string().url().optional().default('http://10.170.142.16:19006'),
 
   // Database
   MONGODB_URI: z.string().url().optional(),

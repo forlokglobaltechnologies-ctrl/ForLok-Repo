@@ -18,6 +18,7 @@ import { ArrowLeft, Camera, CheckCircle } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 
 const ACCENT = '#F9A825';
+const ORANGE_GRADIENT = ['#F99E3C', '#D47B1B'] as const;
 import { Button } from '@components/common/Button';
 import { Input } from '@components/common/Input';
 import {
@@ -33,6 +34,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { normalize, wp, hp } from '@utils/responsive';
+import { LinearGradient } from 'expo-linear-gradient';
 
 interface RouteParams {
   serviceType: 'createPooling' | 'createRental' | 'takePooling' | 'takeRental';
@@ -1139,11 +1141,18 @@ const DocumentVerificationScreen = () => {
           activeOpacity={0.85}
           disabled={isSubmitting}
         >
-          {isSubmitting ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
-          ) : (
-            <Text style={styles.submitBtnText}>{t('documentVerification.submitContinue')}</Text>
-          )}
+          <LinearGradient
+            colors={[ORANGE_GRADIENT[0], ORANGE_GRADIENT[1]]}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={styles.submitBtnGradient}
+          >
+            {isSubmitting ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Text style={styles.submitBtnText}>{t('documentVerification.submitContinue')}</Text>
+            )}
+          </LinearGradient>
         </TouchableOpacity>
       </View>
       {/* State Picker Modal */}
@@ -1186,14 +1195,13 @@ const styles = StyleSheet.create({
     paddingTop: hp(6),
     paddingHorizontal: SPACING.lg,
     paddingBottom: SPACING.sm,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#E9E9E9',
   },
   backBtn: {
-    width: normalize(40),
-    height: normalize(40),
-    borderRadius: normalize(20),
-    backgroundColor: '#F5F5F5',
-    justifyContent: 'center',
-    alignItems: 'center',
+    paddingVertical: normalize(6),
+    paddingRight: normalize(8),
   },
   scrollView: {
     flex: 1,
@@ -1422,9 +1430,12 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   submitBtn: {
-    backgroundColor: ACCENT,
     height: normalize(52),
     borderRadius: normalize(26),
+    overflow: 'hidden',
+  },
+  submitBtnGradient: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },

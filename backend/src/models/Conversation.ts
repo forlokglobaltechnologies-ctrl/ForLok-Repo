@@ -5,7 +5,7 @@ export interface IParticipant {
   userId: string;
   name: string;
   photo?: string;
-  role: 'driver' | 'owner' | 'passenger' | 'renter';
+  role: 'driver' | 'owner' | 'passenger' | 'renter' | 'sender' | 'receiver' | 'delivery_partner';
   joinedAt: Date;
   leftAt?: Date;
 }
@@ -21,7 +21,7 @@ export interface ILastMessage {
 
 export interface IConversation extends Document {
   conversationId: string;
-  type: 'pooling' | 'rental';
+  type: 'pooling' | 'rental' | 'loads';
   bookingId?: string; // Reference to Booking (optional for group chats)
   offerId?: string; // Reference to PoolingOffer (for group chats)
   isGroup: boolean; // true for group chats, false for individual chats
@@ -50,7 +50,7 @@ const participantSchema = new Schema<IParticipant>(
     },
     role: {
       type: String,
-      enum: ['driver', 'owner', 'passenger', 'renter'],
+      enum: ['driver', 'owner', 'passenger', 'renter', 'sender', 'receiver', 'delivery_partner'],
       required: true,
     },
     joinedAt: {
@@ -105,7 +105,7 @@ const conversationSchema = new Schema<IConversation>(
     },
     type: {
       type: String,
-      enum: ['pooling', 'rental'],
+      enum: ['pooling', 'rental', 'loads'],
       required: true,
     },
     bookingId: {

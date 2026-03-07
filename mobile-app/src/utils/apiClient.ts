@@ -298,6 +298,14 @@ export const vehicleApi = {
       requiresAuth: true,
     }),
 
+  updateVehicle: (vehicleId: string, data: any) =>
+    apiCall(API_CONFIG.ENDPOINTS.VEHICLE.UPDATE, {
+      method: 'PUT',
+      params: { vehicleId },
+      body: data,
+      requiresAuth: true,
+    }),
+
   getVehicle: (vehicleId: string) =>
     apiCall(API_CONFIG.ENDPOINTS.VEHICLE.GET, {
       method: 'GET',
@@ -321,6 +329,8 @@ export const poolingApi = {
     route: {
       from: { address: string; lat: number; lng: number; city?: string; state?: string };
       to: { address: string; lat: number; lng: number; city?: string; state?: string };
+      selectedRouteId?: string;
+      selectedPolyline?: Array<{ lat: number; lng: number; index: number }>;
       distance?: number;
       duration?: number;
     };
@@ -434,6 +444,45 @@ export const poolingApi = {
     apiCall(API_CONFIG.ENDPOINTS.POOLING.SUGGEST_WAYPOINTS, {
       method: 'GET',
       query: params,
+      requiresAuth: true,
+    }),
+
+  suggestWaypointsFromPolyline: (data: {
+    selectedPolyline: Array<{ lat: number; lng: number; index: number }>;
+    intervalKm?: number;
+    maxPoints?: number;
+  }) =>
+    apiCall(API_CONFIG.ENDPOINTS.POOLING.SUGGEST_WAYPOINTS_FROM_POLYLINE, {
+      method: 'POST',
+      body: data,
+      requiresAuth: true,
+    }),
+
+  getRouteAlternatives: (params: {
+    fromLat: number;
+    fromLng: number;
+    toLat: number;
+    toLng: number;
+    maxAlternatives?: number;
+  }) =>
+    apiCall(API_CONFIG.ENDPOINTS.POOLING.ROUTE_ALTERNATIVES, {
+      method: 'GET',
+      query: params,
+      requiresAuth: true,
+    }),
+
+  validateWaypoint: (params: {
+    fromLat: number;
+    fromLng: number;
+    toLat: number;
+    toLng: number;
+    waypointLat: number;
+    waypointLng: number;
+    existingWaypoints?: Array<{ lat: number; lng: number }>;
+  }) =>
+    apiCall(API_CONFIG.ENDPOINTS.POOLING.VALIDATE_WAYPOINT, {
+      method: 'POST',
+      body: params,
       requiresAuth: true,
     }),
 
@@ -715,7 +764,7 @@ export const bookingApi = {
       requiresAuth: true,
     }),
 
-  choosePaymentMethod: (bookingId: string, paymentMethod: 'online' | 'offline_cash') =>
+  choosePaymentMethod: (bookingId: string, paymentMethod: 'offline_cash') =>
     apiCall(API_CONFIG.ENDPOINTS.BOOKING.CHOOSE_PAYMENT, {
       method: 'POST',
       params: { bookingId },
@@ -745,163 +794,11 @@ export const bookingApi = {
       requiresAuth: true,
     }),
 
-  requestWithdrawal: (bookingId: string) =>
-    apiCall('/api/bookings/:bookingId/withdraw', {
-      method: 'POST',
-      params: { bookingId },
-      requiresAuth: true,
-    }),
-
   getTripPassengers: (offerId: string, serviceType: 'pooling' | 'rental') =>
     apiCall('/api/bookings/trip/:offerId/passengers', {
       method: 'GET',
       params: { offerId },
       query: { serviceType },
-      requiresAuth: true,
-    }),
-};
-
-/**
- * Payment API calls
- */
-export const paymentApi = {
-  createPayment: (data: {
-    bookingId: string;
-    paymentMethod: 'upi' | 'card' | 'wallet' | 'net_banking';
-  }) =>
-    apiCall(API_CONFIG.ENDPOINTS.PAYMENT.CREATE, {
-      method: 'POST',
-      body: data,
-      requiresAuth: true,
-    }),
-
-  verifyPayment: (data: {
-    razorpayOrderId: string;
-    razorpayPaymentId: string;
-    razorpaySignature: string;
-  }) =>
-    apiCall(API_CONFIG.ENDPOINTS.PAYMENT.VERIFY, {
-      method: 'POST',
-      body: data,
-      requiresAuth: true,
-    }),
-
-  getPayment: (paymentId: string) =>
-    apiCall(API_CONFIG.ENDPOINTS.PAYMENT.GET, {
-      method: 'GET',
-      params: { paymentId },
-      requiresAuth: true,
-    }),
-
-  getPayments: (params?: {
-    status?: string;
-    page?: number;
-    limit?: number;
-  }) =>
-    apiCall(API_CONFIG.ENDPOINTS.PAYMENT.LIST, {
-      method: 'GET',
-      params,
-      requiresAuth: true,
-    }),
-
-  getPaymentMethods: () =>
-    apiCall(API_CONFIG.ENDPOINTS.PAYMENT.METHODS, {
-      method: 'GET',
-      requiresAuth: false,
-    }),
-
-  simulateTestPayment: (razorpayOrderId: string) =>
-    apiCall(API_CONFIG.ENDPOINTS.PAYMENT.SIMULATE_TEST, {
-      method: 'POST',
-      body: { razorpayOrderId },
-      requiresAuth: true,
-    }),
-};
-
-/**
- * Withdrawal API calls
- */
-export const withdrawalApi = {
-  createWithdrawal: (data: {
-    amount: number;
-    paymentMethod: 'bank' | 'upi';
-    bankAccount?: {
-      accountNumber: string;
-      ifscCode: string;
-      accountHolderName: string;
-      bankName: string;
-    };
-    upiId?: string;
-  }) =>
-    apiCall(API_CONFIG.ENDPOINTS.WITHDRAWAL.CREATE, {
-      method: 'POST',
-      body: data,
-      requiresAuth: true,
-    }),
-
-  getMyWithdrawals: (params?: {
-    status?: string;
-    page?: number;
-    limit?: number;
-  }) =>
-    apiCall(API_CONFIG.ENDPOINTS.WITHDRAWAL.MY_WITHDRAWALS, {
-      method: 'GET',
-      query: params,
-      requiresAuth: true,
-    }),
-
-  getWithdrawal: (withdrawalId: string) =>
-    apiCall(API_CONFIG.ENDPOINTS.WITHDRAWAL.GET, {
-      method: 'GET',
-      params: { withdrawalId },
-      requiresAuth: true,
-    }),
-
-  // Admin APIs
-  getPendingWithdrawals: (params?: {
-    page?: number;
-    limit?: number;
-  }) =>
-    apiCall(API_CONFIG.ENDPOINTS.WITHDRAWAL.ADMIN_PENDING, {
-      method: 'GET',
-      query: params,
-      requiresAuth: true,
-    }),
-
-  getApprovedWithdrawals: (params?: {
-    page?: number;
-    limit?: number;
-  }) =>
-    apiCall(API_CONFIG.ENDPOINTS.WITHDRAWAL.ADMIN_APPROVED, {
-      method: 'GET',
-      query: params,
-      requiresAuth: true,
-    }),
-
-  approveWithdrawal: (withdrawalId: string) =>
-    apiCall(API_CONFIG.ENDPOINTS.WITHDRAWAL.ADMIN_APPROVE, {
-      method: 'POST',
-      params: { withdrawalId },
-      body: {}, // Empty body required for POST requests
-      requiresAuth: true,
-    }),
-
-  completeWithdrawal: (withdrawalId: string, data: {
-    transactionId: string;
-    notes?: string;
-  }) =>
-    apiCall(API_CONFIG.ENDPOINTS.WITHDRAWAL.ADMIN_COMPLETE, {
-      method: 'POST',
-      params: { withdrawalId },
-      body: data,
-      requiresAuth: true,
-    }),
-
-  rejectWithdrawal: (withdrawalId: string, reason: string) =>
-    apiCall(API_CONFIG.ENDPOINTS.WITHDRAWAL.ADMIN_REJECT, {
-      method: 'POST',
-      params: { withdrawalId },
-      body: { reason },
       requiresAuth: true,
     }),
 };

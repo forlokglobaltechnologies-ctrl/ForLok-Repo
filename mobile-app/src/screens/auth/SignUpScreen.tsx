@@ -11,7 +11,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { ArrowLeft, User, Building2, Globe, ChevronDown, Check } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '@constants/theme';
-import { useLanguage } from '@context/LanguageContext';
+import { useLanguage, Language } from '@context/LanguageContext';
 import { normalize, wp, hp } from '@utils/responsive';
 
 const ACCENT = '#F9A825';
@@ -21,10 +21,10 @@ const SignUpScreen = () => {
   const { language, changeLanguage, t } = useLanguage();
   const [showLang, setShowLang] = useState(false);
 
-  const languages = [
-    { code: 'en', label: t('signUp.english') },
-    { code: 'te', label: t('signUp.telugu') },
-    { code: 'hi', label: t('signUp.hindi') },
+  const languages: Array<{ code: Language; label: string }> = [
+    { code: 'en', label: 'English' },
+    { code: 'te', label: 'తెలుగు' },
+    { code: 'hi', label: 'हिन्दी' },
   ];
 
   const currentLang = languages.find((l) => l.code === language);
@@ -68,7 +68,7 @@ const SignUpScreen = () => {
                 language === lang.code && styles.langOptionActive,
               ]}
               onPress={async () => {
-                await changeLanguage(lang.code as any);
+                await changeLanguage(lang.code);
                 setShowLang(false);
               }}
               activeOpacity={0.7}
@@ -169,14 +169,13 @@ const styles = StyleSheet.create({
     paddingTop: hp(6),
     paddingHorizontal: SPACING.lg,
     paddingBottom: SPACING.sm,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#E9E9E9',
   },
   backBtn: {
-    width: normalize(40),
-    height: normalize(40),
-    borderRadius: normalize(20),
-    backgroundColor: '#F5F5F5',
-    justifyContent: 'center',
-    alignItems: 'center',
+    paddingVertical: normalize(6),
+    paddingRight: normalize(8),
   },
   langPill: {
     flexDirection: 'row',

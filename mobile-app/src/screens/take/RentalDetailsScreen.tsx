@@ -399,7 +399,7 @@ const RentalDetailsScreen = () => {
                 const bookingId = response.data.bookingId || response.data._id;
                 Alert.alert(
                   t('rentalDetails.bookingSuccess'),
-                  'Your rental has been booked. Payment will be collected at the end of the trip.',
+                  'Your rental has been booked. Settle manually at trip end.',
                   [
                     {
                       text: 'View Booking',

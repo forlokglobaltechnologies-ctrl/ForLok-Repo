@@ -8,16 +8,21 @@ import {
   TouchableOpacity,
   StatusBar,
   Dimensions,
+  Animated,
+  PanResponder,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Lock } from 'lucide-react-native';
 import { FONTS, SPACING } from '@constants/theme';
 import { normalize, wp, hp } from '@utils/responsive';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const ONBOARDING_KEY = '@forlok_onboarding_seen';
 const DEBUG_ENDPOINT = 'http://127.0.0.1:7775/ingest/9bdd2fd3-ac77-45be-b342-a40ab02f34f7';
+const KNOB_SIZE = normalize(40);
+const KNOB_PADDING = normalize(6);
 
 const SLIDE_ACCENT: Record<number, string> = {
   0: '#F9A825',
@@ -25,10 +30,19 @@ const SLIDE_ACCENT: Record<number, string> = {
   2: '#2E7D32',
 };
 
+const SLIDE_BUTTON_GRADIENT: Record<number, readonly [string, string]> = {
+  0: ['#F99E3C', '#D47B1B'],
+  1: ['#51A7EA', '#3B8FD5'],
+  2: ['#04645E', '#013532'],
+};
+
 const OnboardingScreen = () => {
   const navigation = useNavigation();
   const scrollViewRef = useRef<ScrollView>(null);
   const [currentPage, setCurrentPage] = useState(0);
+  const [capsuleWidth, setCapsuleWidth] = useState(0);
+  const swipeX = useRef(new Animated.Value(0)).current;
+  const maxDragRef = useRef(0);
 
   React.useEffect(() => {
     // #region agent log
@@ -83,6 +97,51 @@ const OnboardingScreen = () => {
   };
 
   const accent = SLIDE_ACCENT[currentPage] ?? '#F9A825';
+  const buttonGradient = SLIDE_BUTTON_GRADIENT[currentPage] ?? ['#F99E3C', '#D47B1B'];
+  const maxDrag = Math.max(0, capsuleWidth - (KNOB_SIZE + KNOB_PADDING * 2));
+  maxDragRef.current = maxDrag;
+
+  React.useEffect(() => {
+    Animated.spring(swipeX, {
+      toValue: 0,
+      useNativeDriver: true,
+      friction: 8,
+      tension: 120,
+    }).start();
+  }, [currentPage, swipeX]);
+
+  const panResponder = React.useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: () => true,
+        onPanResponderMove: (_evt, gestureState) => {
+          const clamped = Math.max(0, Math.min(maxDragRef.current, gestureState.dx));
+          swipeX.setValue(clamped);
+        },
+        onPanResponderRelease: (_evt, gestureState) => {
+          const threshold = maxDragRef.current * 0.85;
+          if (gestureState.dx >= threshold && maxDragRef.current > 0) {
+            Animated.timing(swipeX, {
+              toValue: maxDragRef.current,
+              duration: 120,
+              useNativeDriver: true,
+            }).start(() => {
+              handleGetStarted();
+              swipeX.setValue(0);
+            });
+          } else {
+            Animated.spring(swipeX, {
+              toValue: 0,
+              useNativeDriver: true,
+              friction: 8,
+              tension: 120,
+            }).start();
+          }
+        },
+      }),
+    [handleGetStarted, swipeX]
+  );
 
   return (
     <View style={styles.container}>
@@ -125,24 +184,34 @@ const OnboardingScreen = () => {
 
       {/* Bottom: capsule button */}
       <View style={styles.bottomSection}>
-        <View style={[styles.capsuleBtn, { backgroundColor: accent }]}>
-          <View style={styles.lockCircle}>
+        <LinearGradient
+          colors={[buttonGradient[0], buttonGradient[1]]}
+          start={currentPage === 2 ? { x: 0.15, y: 0.12 } : { x: 0.5, y: 0 }}
+          end={currentPage === 2 ? { x: 0.9, y: 0.9 } : { x: 0.5, y: 1 }}
+          style={styles.capsuleBtn}
+          onLayout={(e) => setCapsuleWidth(e.nativeEvent.layout.width)}
+        >
+          <View style={styles.lockTarget}>
             <Lock size={normalize(16)} color={accent} strokeWidth={2.5} />
           </View>
 
-          <TouchableOpacity
-            onPress={handleGetStarted}
-            activeOpacity={0.85}
-            style={styles.capsuleCenter}
-          >
+          <View style={styles.capsuleCenter}>
             <Text style={styles.capsuleBtnText}>Get Started</Text>
             <Text style={styles.capsuleArrows}>  {'>>'}</Text>
-          </TouchableOpacity>
-
-          <View style={styles.lockCircle}>
-            <Lock size={normalize(16)} color={accent} strokeWidth={2.5} />
           </View>
-        </View>
+
+          <Animated.View
+            style={[
+              styles.lockKnob,
+              {
+                transform: [{ translateX: swipeX }],
+              },
+            ]}
+            {...panResponder.panHandlers}
+          >
+            <Lock size={normalize(16)} color={accent} strokeWidth={2.5} />
+          </Animated.View>
+        </LinearGradient>
       </View>
     </View>
   );
@@ -200,26 +269,43 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   capsuleBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    justifyContent: 'center',
     borderRadius: normalize(40),
     paddingVertical: normalize(10),
-    paddingHorizontal: normalize(6),
+    paddingHorizontal: KNOB_PADDING,
     width: '100%',
+    minHeight: normalize(52),
+    position: 'relative',
+    overflow: 'hidden',
   },
-  lockCircle: {
-    width: normalize(40),
-    height: normalize(40),
-    borderRadius: normalize(20),
+  lockTarget: {
+    width: KNOB_SIZE,
+    height: KNOB_SIZE,
+    borderRadius: KNOB_SIZE / 2,
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
+    position: 'absolute',
+    right: KNOB_PADDING,
+    top: KNOB_PADDING,
+    opacity: 0.9,
   },
   capsuleCenter: {
-    flex: 1,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    alignSelf: 'center',
+  },
+  lockKnob: {
+    width: KNOB_SIZE,
+    height: KNOB_SIZE,
+    borderRadius: KNOB_SIZE / 2,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'absolute',
+    left: KNOB_PADDING,
+    top: KNOB_PADDING,
   },
   capsuleBtnText: {
     fontFamily: FONTS.semiBold,

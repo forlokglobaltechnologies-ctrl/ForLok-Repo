@@ -137,7 +137,7 @@ const VehicleDetailsScreen = () => {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Vehicle Details</Text>
         <TouchableOpacity
-          onPress={() => navigation.navigate('EditVehicle' as never, { vehicleId: vehicle.vehicleId } as never)}
+          onPress={() => navigation.navigate('AddVehicle' as never, { vehicle } as never)}
         >
           <Edit size={24} color={COLORS.white} />
         </TouchableOpacity>

@@ -34,7 +34,6 @@ const HIDDEN_SCREENS = [
   'AdminDashboard',
   'AdminSettings',
   'AdminPromoReview',
-  'AdminPendingPayments',
   'PoolingManagement',
   'RentalManagement',
   'RidesHistory',

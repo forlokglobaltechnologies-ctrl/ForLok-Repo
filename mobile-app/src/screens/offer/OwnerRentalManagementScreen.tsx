@@ -371,7 +371,7 @@ const OwnerRentalManagementScreen = () => {
                 </View>
                 <View style={styles.detailRow}>
                   <Text style={[styles.detailText, { fontSize: FONTS.sizes.xs, color: COLORS.textSecondary }]}>
-                    Payment: {booking.paymentMethod === 'offline_cash' ? 'Cash' : booking.paymentMethod?.toUpperCase() || 'Pay at trip end'} | Status: {booking.paymentStatus || 'pending'}
+                    Completion Mode: {booking.paymentMethod === 'offline_cash' ? 'Manual settlement' : booking.paymentMethod?.toUpperCase() || 'Trip-end confirmation'} | Status: {booking.paymentStatus || 'pending'}
                   </Text>
                 </View>
               </View>

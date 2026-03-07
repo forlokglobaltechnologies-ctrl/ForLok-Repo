@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   TextInput,
   ScrollView,
-  ActivityIndicator,
   Alert,
 } from 'react-native';
 import {
@@ -19,6 +18,7 @@ import {
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '@constants/theme';
 import { normalize } from '@utils/responsive';
 import { ratingApi } from '@utils/apiClient';
+import { AppLoader } from '@components/common/AppLoader';
 
 interface RatingModalProps {
   visible: boolean;
@@ -294,7 +294,7 @@ const RatingModal: React.FC<RatingModalProps> = ({
               disabled={loading || overallRating === 0}
             >
               {loading ? (
-                <ActivityIndicator color={COLORS.white} />
+                <AppLoader color={COLORS.white} size="small" />
               ) : (
                 <Text style={styles.submitButtonText}>Submit Rating</Text>
               )}

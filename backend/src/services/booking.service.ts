@@ -1,6 +1,7 @@
 import Booking from '../models/Booking';
 import PoolingOffer from '../models/PoolingOffer';
 import RentalOffer from '../models/RentalOffer';
+import LoadOffer from '../models/LoadOffer';
 import User from '../models/User';
 import { NotFoundError, ConflictError } from '../utils/errors';
 import logger from '../utils/logger';
@@ -87,8 +88,8 @@ class BookingService {
       if (data.calculatedPrice) {
         // Use pre-calculated price
         amount = data.calculatedPrice.finalPrice;
-        platformFee = data.calculatedPrice.platformFee;
-        totalAmount = data.calculatedPrice.totalAmount;
+        platformFee = 0;
+        totalAmount = data.calculatedPrice.finalPrice;
       } else {
         // Calculate price dynamically
         const priceBreakdown = await priceCalculationService.calculatePrice({
@@ -132,6 +133,7 @@ class BookingService {
         amount: totalBaseAmount,
         platformFee: totalPlatformFee,
         totalAmount: totalBookingAmount,
+        finalPayableAmount: totalBookingAmount,
         paymentMethod: data.paymentMethod,
         paymentStatus: 'pending', // Payment happens at trip end for all bookings
         // Keep pooling aligned with the trip-end payment model:
@@ -349,6 +351,113 @@ class BookingService {
   }
 
   /**
+   * Create loads booking (supports instant + offer-based load offers)
+   */
+  async createLoadBooking(data: {
+    userId: string;
+    loadOfferId: string;
+    paymentMethod?: PaymentMethod;
+  }): Promise<any> {
+    try {
+      const offer = await LoadOffer.findOne({ loadOfferId: data.loadOfferId });
+      if (!offer) {
+        throw new NotFoundError('Load offer not found');
+      }
+
+      if (!['open', 'accepted'].includes(offer.status)) {
+        throw new ConflictError('Load offer is not available for booking');
+      }
+
+      // Prevent duplicate active booking by same sender for same load offer
+      const existingBooking = await Booking.findOne({
+        userId: data.userId,
+        loadOfferId: data.loadOfferId,
+        status: { $in: ['pending', 'confirmed', 'in_progress'] },
+      });
+      if (existingBooking) {
+        throw new ConflictError('You already have an active booking for this load');
+      }
+
+      const sender = await User.findOne({ userId: data.userId });
+      if (!sender) {
+        throw new NotFoundError('User not found');
+      }
+
+      // Wallet gate parity with pooling flow
+      try {
+        const { walletService } = await import('./wallet.service');
+        const wallet = await walletService.getOrCreateWallet(data.userId);
+        const { PRICING_CONFIG } = await import('../config/pricing.config');
+        if (wallet.balance < PRICING_CONFIG.WALLET.MINIMUM_TO_BOOK) {
+          throw new ConflictError(
+            `Minimum wallet balance of ₹${PRICING_CONFIG.WALLET.MINIMUM_TO_BOOK} required to book. Current: ₹${wallet.balance}`
+          );
+        }
+      } catch (walletError: any) {
+        if (walletError?.name === 'ConflictError') throw walletError;
+        logger.warn('Loads wallet check failed (non-blocking):', walletError);
+      }
+
+      const pickupOtp = this.generatePassengerCode();
+      const dropOtp = this.generatePassengerCode();
+
+      const booking = await Booking.create({
+        userId: data.userId,
+        serviceType: 'loads',
+        loadOfferId: data.loadOfferId,
+        route: {
+          from: offer.pickup,
+          to: offer.drop,
+        },
+        date: new Date(),
+        driver: offer.assignedDriverId
+          ? {
+              userId: offer.assignedDriverId,
+              name: offer.assignedDriverName || 'Delivery Partner',
+              phone: offer.assignedDriverPhone || '',
+            }
+          : undefined,
+        vehicle: {
+          type: 'bike',
+          brand: 'Delivery',
+          number: 'N/A',
+        },
+        amount: offer.fareEstimate.amount,
+        platformFee: offer.fareEstimate.platformFee,
+        totalAmount: offer.fareEstimate.totalAmount,
+        paymentMethod: data.paymentMethod,
+        paymentStatus: 'pending',
+        status: offer.assignedDriverId ? 'confirmed' : 'pending',
+        passengerStatus: 'waiting',
+        passengers: [
+          {
+            userId: data.userId,
+            name: sender.name,
+            status: 'confirmed',
+          },
+        ],
+        loadDetails: {
+          receiver: offer.receiver,
+          parcel: offer.parcel,
+          pickupOtp,
+          dropOtp,
+          pickupStatus: 'pending',
+          dropStatus: 'pending',
+        },
+      });
+
+      offer.status = offer.assignedDriverId ? 'accepted' : 'open';
+      await offer.save();
+
+      logger.info(`Loads booking created: ${booking.bookingId}`);
+      return booking.toJSON();
+    } catch (error) {
+      logger.error('Error creating loads booking:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Check if a time slot conflicts with existing bookings
    */
   async checkTimeSlotConflict(
@@ -509,9 +618,12 @@ class BookingService {
    */
   async getBookingByOfferId(offerId: string, serviceType: ServiceType, driverId: string): Promise<any> {
     try {
-      const query: any = serviceType === 'pooling' 
-        ? { poolingOfferId: offerId }
-        : { rentalOfferId: offerId };
+      const query: any =
+        serviceType === 'pooling'
+          ? { poolingOfferId: offerId }
+          : serviceType === 'rental'
+            ? { rentalOfferId: offerId }
+            : { loadOfferId: offerId };
 
       // First, try to find any booking with active statuses (pending, confirmed, in_progress)
       // This covers cases where payment is pending or confirmed
@@ -559,9 +671,12 @@ class BookingService {
    */
   async getBookingsByOfferId(offerId: string, serviceType: ServiceType, ownerId: string): Promise<any[]> {
     try {
-      const query: any = serviceType === 'pooling' 
-        ? { poolingOfferId: offerId }
-        : { rentalOfferId: offerId };
+      const query: any =
+        serviceType === 'pooling'
+          ? { poolingOfferId: offerId }
+          : serviceType === 'rental'
+            ? { rentalOfferId: offerId }
+            : { loadOfferId: offerId };
 
       // Verify owner matches FIRST (check if owner created the offer)
       if (serviceType === 'rental') {
@@ -574,7 +689,7 @@ class BookingService {
           logger.warn(`Owner ${ownerId} not authorized for offer ${offerId} (owner: ${offer.ownerId})`);
           throw new ConflictError('You are not authorized to access these bookings');
         }
-      } else {
+      } else if (serviceType === 'pooling') {
         const PoolingOffer = (await import('../models/PoolingOffer')).default;
         const offer = await PoolingOffer.findOne({ offerId });
         if (!offer) {
@@ -582,6 +697,15 @@ class BookingService {
         }
         if (offer.driverId !== ownerId) {
           logger.warn(`Driver ${ownerId} not authorized for offer ${offerId} (driver: ${offer.driverId})`);
+          throw new ConflictError('You are not authorized to access these bookings');
+        }
+      } else {
+        const loadOffer = await LoadOffer.findOne({ loadOfferId: offerId });
+        if (!loadOffer) {
+          throw new NotFoundError('Load offer not found');
+        }
+        if (loadOffer.assignedDriverId !== ownerId) {
+          logger.warn(`Driver ${ownerId} not authorized for loads offer ${offerId} (driver: ${loadOffer.assignedDriverId})`);
           throw new ConflictError('You are not authorized to access these bookings');
         }
       }
@@ -1083,9 +1207,12 @@ class BookingService {
    */
   async getTripPassengers(offerId: string, driverId: string, serviceType: ServiceType): Promise<any[]> {
     try {
-      const query: any = serviceType === 'pooling'
-        ? { poolingOfferId: offerId }
-        : { rentalOfferId: offerId };
+      const query: any =
+        serviceType === 'pooling'
+          ? { poolingOfferId: offerId }
+          : serviceType === 'rental'
+            ? { rentalOfferId: offerId }
+            : { loadOfferId: offerId };
 
       query.status = { $in: ['in_progress', 'confirmed'] };
 
@@ -1266,15 +1393,15 @@ class BookingService {
       booking.passengerStatus = 'got_out';
       await booking.save();
 
-      // Send notification to passenger to pay
+      // Send notification to passenger for manual payment and trip confirmation
       try {
         const { notificationService } = await import('./notification.service');
         await notificationService.createNotification({
           userId: booking.userId,
           type: 'payment_required',
-          title: 'Trip Ended — Please Pay',
-          message: `Your trip has ended. Amount: ₹${booking.totalAmount}. Please complete payment.`,
-          data: { bookingId, amount: booking.totalAmount },
+          title: 'Trip Ended — Confirm Completion',
+          message: `Your trip has ended. Please settle manually with driver and share your code to complete.`,
+          data: { bookingId, amount: booking.finalPayableAmount ?? booking.totalAmount },
           actionRequired: true,
         });
       } catch (notifError) {
@@ -1285,7 +1412,7 @@ class BookingService {
 
       return {
         booking: booking.toJSON(),
-        message: 'Passenger notified to complete payment.',
+        message: 'Passenger marked as got out. Waiting for passenger completion code.',
       };
     } catch (error) {
       logger.error('Error marking passenger got out:', error);
@@ -1294,11 +1421,65 @@ class BookingService {
   }
 
   /**
-   * Passenger chooses payment method (passenger action)
-   * - Online: Creates Razorpay order for passenger to pay
-   * - Cash: Generates 4-digit code for passenger to show driver
+   * Loads: mark pickup reached (driver action)
    */
-  async choosePaymentMethod(bookingId: string, passengerId: string, paymentMethod: 'online' | 'offline_cash'): Promise<any> {
+  async markLoadPickupReached(bookingId: string, driverId: string): Promise<any> {
+    const booking = await Booking.findOne({ bookingId, serviceType: 'loads' });
+    if (!booking) throw new NotFoundError('Loads booking not found');
+    if (booking.driver?.userId !== driverId) throw new ConflictError('You are not authorized for this booking');
+
+    const loadDetails = booking.loadDetails || ({} as any);
+    loadDetails.pickupStatus = 'reached';
+    booking.loadDetails = loadDetails;
+    await booking.save();
+
+    return booking.toJSON();
+  }
+
+  /**
+   * Loads: verify pickup OTP and move to in-progress
+   */
+  async verifyLoadPickupOtp(bookingId: string, driverId: string, otp: string): Promise<any> {
+    const booking = await Booking.findOne({ bookingId, serviceType: 'loads' });
+    if (!booking) throw new NotFoundError('Loads booking not found');
+    if (booking.driver?.userId !== driverId) throw new ConflictError('You are not authorized for this booking');
+
+    const expectedOtp = booking.loadDetails?.pickupOtp;
+    if (!expectedOtp || expectedOtp !== otp) {
+      throw new ConflictError('Invalid pickup OTP');
+    }
+
+    booking.loadDetails!.pickupStatus = 'verified';
+    booking.loadDetails!.pickupOtpVerifiedAt = new Date();
+    booking.status = 'in_progress';
+    booking.tripStartedAt = new Date();
+    await booking.save();
+
+    return booking.toJSON();
+  }
+
+  /**
+   * Loads: mark drop reached (driver action)
+   */
+  async markLoadDropReached(bookingId: string, driverId: string): Promise<any> {
+    const booking = await Booking.findOne({ bookingId, serviceType: 'loads' });
+    if (!booking) throw new NotFoundError('Loads booking not found');
+    if (booking.driver?.userId !== driverId) throw new ConflictError('You are not authorized for this booking');
+
+    const loadDetails = booking.loadDetails || ({} as any);
+    loadDetails.dropStatus = 'reached';
+    booking.loadDetails = loadDetails;
+    booking.passengerStatus = 'got_out';
+    await booking.save();
+
+    return booking.toJSON();
+  }
+
+  /**
+   * Passenger requests completion code after trip end.
+   * Manual payment is handled outside the app.
+   */
+  async choosePaymentMethod(bookingId: string, passengerId: string, paymentMethod: 'offline_cash'): Promise<any> {
     try {
       const booking = await Booking.findOne({ bookingId });
       if (!booking) {
@@ -1315,67 +1496,20 @@ class BookingService {
         throw new ConflictError('Trip must be ended by driver first');
       }
 
-      const driverId = booking.driver?.userId;
-      if (!driverId) {
-        throw new ConflictError('Driver not found for this booking');
-      }
-
-      // ========== OFFLINE CASH ==========
-      if (paymentMethod === 'offline_cash') {
-        // Generate 4-digit code for passenger to show driver
-        const passengerCode = this.generatePassengerCode();
-        booking.passengerCode = passengerCode;
-        booking.paymentMethod = 'offline_cash';
-        booking.codeGeneratedAt = new Date();
-        await booking.save();
-
-        console.log('\n🔐 ========================================');
-        console.log(`🔐 CASH PAYMENT — CODE GENERATED`);
-        console.log(`🔐 Booking ID: ${bookingId}`);
-        console.log(`🔐 CODE: ${passengerCode}`);
-        console.log(`🔐 ========================================\n`);
-
-        logger.info(`💵 Cash selected for booking ${bookingId}. Code: ${passengerCode}`);
-
-        return {
-          booking: booking.toJSON(),
-          paymentMethod: 'offline_cash',
-          passengerCode,
-          message: 'Tell this code to your driver to complete the trip.',
-        };
-      }
-
-      // ========== ONLINE PAYMENT (Razorpay) ==========
-      const { paymentService } = await import('./payment.service');
-      
-      booking.paymentMethod = 'upi'; // Default online method
+      // Generate 4-digit completion code for passenger to show driver
+      const passengerCode = this.generatePassengerCode();
+      booking.passengerCode = passengerCode;
+      booking.paymentMethod = 'offline_cash';
+      booking.codeGeneratedAt = new Date();
       await booking.save();
 
-      const paymentResult = await paymentService.createRidePaymentOrder({
-        bookingId,
-        userId: passengerId,
-        driverId,
-        amount: booking.amount,
-        platformFee: booking.platformFee || 0,
-        totalAmount: booking.totalAmount,
-      });
-
-      booking.paymentStatus = 'pending';
-      await booking.save();
-
-      logger.info(`💳 Online payment selected for booking ${bookingId}. Razorpay order: ${paymentResult.razorpayOrder.id}`);
+      logger.info(`🔐 Completion code generated for booking ${bookingId}. Code: ${passengerCode}`);
 
       return {
         booking: booking.toJSON(),
-        paymentMethod: 'online',
-        paymentOrder: {
-          razorpayOrderId: paymentResult.razorpayOrder.id,
-          amount: paymentResult.razorpayOrder.amount,
-          currency: paymentResult.razorpayOrder.currency,
-          key: paymentResult.razorpayOrder.key,
-          totalAmount: booking.totalAmount,
-        },
-        message: 'Complete payment to finish the trip.',
+        paymentMethod: 'offline_cash',
+        passengerCode,
+        message: 'Show this code to your driver to complete the trip.',
       };
     } catch (error) {
       logger.error('Error in choosePaymentMethod:', error);
@@ -1431,26 +1565,36 @@ class BookingService {
         throw new ConflictError('Passenger must be marked as "got out" first');
       }
 
-      // Cash payment flow — process offline payment
+      // Trip completion in manual-payment model
       const driverSettlementAmount = booking.amount;
       booking.driverSettlementAmount = driverSettlementAmount;
+      booking.status = 'completed';
+      booking.paymentMethod = 'offline_cash';
+      booking.paymentStatus = 'paid';
+      booking.tripCompletedAt = new Date();
+      booking.settlementStatus = 'settled';
 
-      const { paymentService } = await import('./payment.service');
+      const coinCompensation = booking.coinDiscountAmount || 0;
+      if (coinCompensation > 0 && !booking.coinCompensationCredited) {
+        const { walletService } = await import('./wallet.service');
+        await walletService.creditWallet(
+          driverId,
+          coinCompensation,
+          'ride_earning',
+          `Coin discount compensation for booking ${bookingId}`,
+          undefined,
+          bookingId
+        );
+        booking.coinCompensationCredited = true;
+        booking.coinCompensationCreditedAt = new Date();
+      }
+      await booking.save();
 
-      await paymentService.processOfflineCashPayment({
-        bookingId,
-        userId: booking.userId,
-        driverId,
-        amount: booking.amount,
-        platformFee: booking.platformFee || 0,
-        totalAmount: booking.totalAmount,
-      });
-
-      const updatedBooking = await Booking.findOne({ bookingId });
-
-      logger.info(`💵 Cash trip completed: Booking ${bookingId}`);
-      logger.info(`   Passenger paid ₹${booking.totalAmount} cash to driver`);
-      logger.info(`   Platform fee ₹${booking.platformFee || 0} deducted from driver wallet`);
+      logger.info(`💵 Manual-payment trip completed: Booking ${bookingId}`);
+      logger.info(`   Passenger paid driver directly: ₹${booking.finalPayableAmount ?? booking.totalAmount}`);
+      if (coinCompensation > 0) {
+        logger.info(`   Coin compensation credited to driver wallet: ₹${coinCompensation}`);
+      }
 
       await this.checkAndCompleteOffer(booking);
 
@@ -1461,7 +1605,7 @@ class BookingService {
           userId: booking.userId,
           type: 'payment_completed',
           title: 'Trip Completed',
-          message: `Your trip is completed. ₹${booking.totalAmount} paid in cash.`,
+          message: `Your trip is completed. Paid amount: ₹${booking.finalPayableAmount ?? booking.totalAmount}.`,
           data: { bookingId },
         });
       } catch (notifError) {
@@ -1530,10 +1674,10 @@ class BookingService {
       }
 
       return {
-        booking: updatedBooking ? updatedBooking.toJSON() : booking.toJSON(),
+        booking: booking.toJSON(),
         settlementAmount: driverSettlementAmount,
         paymentMethod: 'offline_cash',
-        message: 'Trip completed. Cash payment recorded.',
+        message: 'Trip completed successfully.',
       };
     } catch (error) {
       logger.error('Error verifying passenger code:', error);
@@ -1746,26 +1890,41 @@ class BookingService {
         const driverSettlementAmount = booking.amount;
         booking.driverSettlementAmount = driverSettlementAmount;
         
-        // NEW PAYMENT MODEL: Create Razorpay order for each booking at trip end
-        const { paymentService } = await import('./payment.service');
-        try {
-          await paymentService.createRidePaymentOrder({
-            bookingId: booking.bookingId,
-            userId: booking.userId,
-            driverId,
-            amount: booking.amount,
-            platformFee: booking.platformFee || 0,
-            totalAmount: booking.totalAmount,
-          });
-          booking.settlementStatus = 'pending';
-          booking.paymentStatus = 'pending';
-          
-          logger.info(`💰 Ride payment order created (endTrip): Booking ${booking.bookingId}`);
-          logger.info(`   Passenger: ${booking.userId}, Driver: ${driverId}`);
-          logger.info(`   Total: ₹${booking.totalAmount}`);
-        } catch (payError) {
-          logger.error(`Failed to create payment order for booking ${booking.bookingId}:`, payError);
-          // Continue processing other bookings
+        if (serviceType === 'pooling') {
+          booking.paymentMethod = 'offline_cash';
+          booking.paymentStatus = 'paid';
+          booking.settlementStatus = 'settled';
+          if ((booking.coinDiscountAmount || 0) > 0 && !booking.coinCompensationCredited) {
+            const { walletService } = await import('./wallet.service');
+            await walletService.creditWallet(
+              driverId,
+              booking.coinDiscountAmount || 0,
+              'ride_earning',
+              `Coin discount compensation for booking ${booking.bookingId}`,
+              undefined,
+              booking.bookingId
+            );
+            booking.coinCompensationCredited = true;
+            booking.coinCompensationCreditedAt = new Date();
+          }
+        } else {
+          // Keep rental flow unchanged.
+          const { paymentService } = await import('./payment.service');
+          try {
+            await paymentService.createRidePaymentOrder({
+              bookingId: booking.bookingId,
+              userId: booking.userId,
+              driverId,
+              amount: booking.amount,
+              platformFee: booking.platformFee || 0,
+              totalAmount: booking.totalAmount,
+            });
+            booking.settlementStatus = 'pending';
+            booking.paymentStatus = 'pending';
+          } catch (payError) {
+            logger.error(`Failed to create payment order for booking ${booking.bookingId}:`, payError);
+            // Continue processing other bookings
+          }
         }
         
         await booking.save();
@@ -1884,21 +2043,6 @@ class BookingService {
       }
       if (!['active', 'pending'].includes(offer2.status) || offer2.availableSeats <= 0) {
         throw new ConflictError('Leg 2 offer is not available for booking');
-      }
-
-      // Check wallet balance once (₹100 minimum)
-      try {
-        const { walletService } = await import('./wallet.service');
-        const wallet = await walletService.getOrCreateWallet(data.userId);
-        const { PRICING_CONFIG } = await import('../config/pricing.config');
-        if (wallet.balance < PRICING_CONFIG.WALLET.MINIMUM_TO_BOOK) {
-          throw new ConflictError(
-            `Minimum wallet balance of ₹${PRICING_CONFIG.WALLET.MINIMUM_TO_BOOK} required to book. Current: ₹${wallet.balance}`
-          );
-        }
-      } catch (err: any) {
-        if (err.name === 'ConflictError') throw err;
-        logger.warn('Wallet check failed (non-blocking):', err);
       }
 
       // Check user doesn't already have bookings for these offers

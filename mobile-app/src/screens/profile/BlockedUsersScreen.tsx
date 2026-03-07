@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   SafeAreaView,
   RefreshControl,
@@ -12,6 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
   ArrowLeft,
   User,
@@ -21,11 +21,10 @@ import {
   Clock,
   AlertTriangle,
 } from 'lucide-react-native';
-import { normalize, wp, hp } from '@utils/responsive';
-import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '@constants/theme';
+import { normalize } from '@utils/responsive';
+import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { Card } from '@components/common/Card';
 import { blockApi } from '@utils/apiClient';
-import { useLanguage } from '@context/LanguageContext';
 
 interface BlockedUser {
   blockId: string;
@@ -40,7 +39,6 @@ interface BlockedUser {
 
 const BlockedUsersScreen = () => {
   const navigation = useNavigation<any>();
-  const { t } = useLanguage();
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([]);
@@ -161,9 +159,12 @@ const BlockedUsersScreen = () => {
           disabled={unblocking === item.blockId}
         >
           {unblocking === item.blockId ? (
-            <ActivityIndicator size="small" color={COLORS.error} />
+            <ActivityIndicator size="small" color={COLORS.white} />
           ) : (
-            <Trash2 size={20} color={COLORS.error} />
+            <View style={styles.unblockContent}>
+              <Trash2 size={13} color={COLORS.white} />
+              <Text style={styles.unblockText}>Unblock</Text>
+            </View>
           )}
         </TouchableOpacity>
       </View>
@@ -188,11 +189,11 @@ const BlockedUsersScreen = () => {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <ArrowLeft size={24} color={COLORS.white} />
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <ArrowLeft size={22} color={COLORS.white} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Blocked Users</Text>
-          <View style={styles.placeholder} />
+          <View style={styles.headerSpacer} />
         </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
@@ -203,20 +204,29 @@ const BlockedUsersScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <ArrowLeft size={24} color={COLORS.white} />
+      <LinearGradient colors={['#1C65D8', '#2A7BEF']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <ArrowLeft size={22} color={COLORS.white} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Blocked Users</Text>
-        <View style={styles.placeholder} />
-      </View>
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>Blocked Users</Text>
+          <Text style={styles.headerSubtitle}>Manage your safety controls</Text>
+        </View>
+        <View style={styles.headerSpacer} />
+      </LinearGradient>
 
-      {/* Info Banner */}
       <View style={styles.infoBanner}>
-        <Shield size={20} color={COLORS.primary} />
-        <Text style={styles.infoBannerText}>
-          Blocked users cannot see your rides, message you, or book with you.
-        </Text>
+        <View style={styles.infoTopRow}>
+          <View style={styles.infoChip}>
+            <Text style={styles.infoChipText}>{blockedUsers.length} blocked</Text>
+          </View>
+        </View>
+        <View style={styles.infoBody}>
+          <Shield size={18} color={COLORS.primary} />
+          <Text style={styles.infoBannerText}>
+            Blocked users cannot see your rides, contact you, or book with you.
+          </Text>
+        </View>
       </View>
 
       <FlatList
@@ -244,50 +254,87 @@ const BlockedUsersScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+  container: { flex: 1, backgroundColor: '#F4F7FB' },
   header: {
-    backgroundColor: COLORS.primary,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.md,
     paddingTop: SPACING.xl,
+    paddingBottom: SPACING.md,
   },
+  backBtn: {
+    width: normalize(36),
+    height: normalize(36),
+    borderRadius: normalize(18),
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerCenter: { flex: 1, alignItems: 'center' },
   headerTitle: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xl,
+    fontSize: normalize(18),
     color: COLORS.white,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
-  placeholder: { width: normalize(24) },
+  headerSubtitle: {
+    fontFamily: FONTS.regular,
+    fontSize: normalize(11),
+    color: 'rgba(255,255,255,0.85)',
+    marginTop: 1,
+  },
+  headerSpacer: { width: normalize(36) },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
   infoBanner: {
+    backgroundColor: COLORS.white,
+    paddingVertical: normalize(10),
+    paddingHorizontal: SPACING.md,
+    margin: SPACING.md,
+    borderRadius: BORDER_RADIUS.lg,
+    ...SHADOWS.sm,
+  },
+  infoTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  infoChip: {
+    backgroundColor: COLORS.primary + '15',
+    borderRadius: BORDER_RADIUS.round,
+    paddingHorizontal: normalize(10),
+    paddingVertical: normalize(4),
+  },
+  infoChipText: {
+    fontFamily: FONTS.regular,
+    fontSize: normalize(11),
+    color: COLORS.primary,
+    fontWeight: '700',
+  },
+  infoBody: {
+    marginTop: normalize(8),
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.primary + '10',
-    padding: SPACING.md,
-    margin: SPACING.md,
-    borderRadius: BORDER_RADIUS.md,
     gap: SPACING.sm,
   },
   infoBannerText: {
     flex: 1,
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
+    fontSize: normalize(12),
     color: COLORS.text,
   },
   listContent: {
     padding: SPACING.md,
     paddingTop: 0,
+    paddingBottom: SPACING.xl,
   },
   userCard: {
     padding: SPACING.md,
     marginBottom: SPACING.sm,
+    borderRadius: BORDER_RADIUS.lg,
+    ...SHADOWS.sm,
   },
   userHeader: {
     flexDirection: 'row',
@@ -327,12 +374,25 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
   },
   unblockButton: {
-    width: normalize(40),
-    height: normalize(40),
-    borderRadius: normalize(20),
-    backgroundColor: COLORS.error + '15',
+    minWidth: normalize(72),
+    height: normalize(34),
+    borderRadius: normalize(17),
+    backgroundColor: COLORS.error,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: normalize(10),
+    ...SHADOWS.sm,
+  },
+  unblockContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: normalize(5),
+  },
+  unblockText: {
+    fontFamily: FONTS.regular,
+    fontSize: normalize(11),
+    color: COLORS.white,
+    fontWeight: '700',
   },
   reasonSection: {
     marginTop: SPACING.md,

@@ -14,7 +14,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ActivityIndicator,
   TextInput,
   FlatList,
   Keyboard,
@@ -29,8 +28,10 @@ import { ArrowLeft, MapPin, Search, X, Navigation, Check, Crosshair } from 'luci
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { normalize, wp, hp } from '@utils/responsive';
 import { LinearGradient } from 'expo-linear-gradient';
+import { AppLoader } from '@components/common/AppLoader';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const LOCATION_ACCENT = '#F99E3C';
 
 // ─── Public types (unchanged — consumed by 6+ files) ─────────
 export interface LocationData {
@@ -389,7 +390,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
       {/* ── Floating Search Card ── */}
       <View style={styles.searchCard}>
         <View style={[styles.searchBar, searchFocused && styles.searchBarFocused]}>
-          <Search size={18} color={searchFocused ? COLORS.primary : '#9CA3AF'} />
+          <Search size={18} color={searchFocused ? LOCATION_ACCENT : '#9CA3AF'} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search city, area, or landmark..."
@@ -402,7 +403,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
             onBlur={() => setSearchFocused(false)}
           />
           {searching && (
-            <ActivityIndicator size="small" color={COLORS.primary} style={{ marginRight: 4 }} />
+            <AppLoader size="small" color={LOCATION_ACCENT} style={{ marginRight: 4 }} />
           )}
           {searchQuery.length > 0 && !searching && (
             <TouchableOpacity
@@ -418,7 +419,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
         {currentLocation && !searchResults.length && (
           <TouchableOpacity style={styles.quickLocationRow} onPress={useMyLocation} activeOpacity={0.7}>
             <View style={styles.quickLocationIcon}>
-              <Crosshair size={16} color={COLORS.primary} />
+              <Crosshair size={16} color={LOCATION_ACCENT} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.quickLocationTitle}>Use current location</Text>
@@ -426,7 +427,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
                 {currentLocation.address}
               </Text>
             </View>
-            <Navigation size={16} color={COLORS.primary} />
+            <Navigation size={16} color={LOCATION_ACCENT} />
           </TouchableOpacity>
         )}
 
@@ -444,7 +445,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
                 activeOpacity={0.6}
               >
                 <View style={styles.resultPinWrapper}>
-                  <MapPin size={16} color={COLORS.primary} />
+                  <MapPin size={16} color={LOCATION_ACCENT} />
                 </View>
                 <View style={styles.resultText}>
                   <Text style={styles.resultAddress} numberOfLines={2}>
@@ -474,14 +475,14 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
           startInLoadingState
           renderLoading={() => (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={COLORS.primary} />
+              <AppLoader size="large" color={LOCATION_ACCENT} />
               <Text style={styles.loadingText}>Loading map...</Text>
             </View>
           )}
         />
       ) : (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
+          <AppLoader size="large" color={LOCATION_ACCENT} />
           <Text style={styles.loadingText}>Getting your location...</Text>
         </View>
       )}
@@ -489,7 +490,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
       {/* ── GPS re-center FAB ── */}
       {currentLocation && mapReady && (
         <TouchableOpacity style={styles.gpsFab} onPress={useMyLocation} activeOpacity={0.8}>
-          <Crosshair size={20} color={COLORS.primary} />
+          <Crosshair size={20} color={LOCATION_ACCENT} />
         </TouchableOpacity>
       )}
 
@@ -524,8 +525,15 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
             disabled={selectedLocation.address === 'Fetching address...'}
             activeOpacity={0.8}
           >
-            <Check size={20} color="#fff" />
-            <Text style={styles.confirmButtonText}>Confirm Location</Text>
+            <LinearGradient
+              colors={['#F99E3C', '#E08E35']}
+              start={{ x: 0.5, y: 0 }}
+              end={{ x: 0.5, y: 1 }}
+              style={styles.confirmButtonGradient}
+            >
+              <Check size={20} color="#fff" />
+              <Text style={styles.confirmButtonText}>Confirm Location</Text>
+            </LinearGradient>
           </TouchableOpacity>
         </View>
       )}
@@ -604,7 +612,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F3F4F6',
   },
   searchBarFocused: {
-    borderBottomColor: COLORS.primary,
+    borderBottomColor: LOCATION_ACCENT,
   },
   searchInput: {
     flex: 1,
@@ -633,7 +641,7 @@ const styles = StyleSheet.create({
     width: normalize(32),
     height: normalize(32),
     borderRadius: normalize(16),
-    backgroundColor: `${COLORS.primary}15`,
+    backgroundColor: `${LOCATION_ACCENT}15`,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: SPACING.sm,
@@ -641,7 +649,7 @@ const styles = StyleSheet.create({
   quickLocationTitle: {
     fontSize: normalize(13),
     fontFamily: FONTS.medium,
-    color: COLORS.primary,
+    color: LOCATION_ACCENT,
   },
   quickLocationAddr: {
     fontSize: normalize(11),
@@ -666,7 +674,7 @@ const styles = StyleSheet.create({
     width: normalize(28),
     height: normalize(28),
     borderRadius: normalize(14),
-    backgroundColor: `${COLORS.primary}12`,
+    backgroundColor: `${LOCATION_ACCENT}12`,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: SPACING.sm,
@@ -755,7 +763,7 @@ const styles = StyleSheet.create({
     width: normalize(36),
     height: normalize(36),
     borderRadius: normalize(10),
-    backgroundColor: COLORS.primary,
+    backgroundColor: LOCATION_ACCENT,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: SPACING.sm,
@@ -784,12 +792,14 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   confirmButton: {
+    borderRadius: BORDER_RADIUS.lg,
+    overflow: 'hidden',
+  },
+  confirmButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.primary,
     paddingVertical: normalize(14),
-    borderRadius: BORDER_RADIUS.lg,
     gap: 8,
   },
   confirmButtonDisabled: {

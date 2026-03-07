@@ -3,13 +3,13 @@ import {
   TouchableOpacity,
   Text,
   StyleSheet,
-  ActivityIndicator,
   ViewStyle,
   TextStyle,
   View,
 } from 'react-native';
 import { FONTS, BORDER_RADIUS } from '@constants/theme';
 import { useTheme } from '@context/ThemeContext';
+import { AppLoader } from '@components/common/AppLoader';
 
 interface ButtonProps {
   title: string;
@@ -125,7 +125,7 @@ export const Button: React.FC<ButtonProps> = ({
       activeOpacity={0.7}
     >
       {loading ? (
-        <ActivityIndicator
+        <AppLoader
           color={variant === 'primary' || variant === 'secondary' ? colors.white : colors.primary}
           size="small"
         />

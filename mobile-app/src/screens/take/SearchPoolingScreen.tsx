@@ -1,26 +1,32 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView,
-  ActivityIndicator, Alert, Platform, Modal, Animated, Dimensions, Image,
+  ActivityIndicator, Alert, Platform, Modal, Animated, Dimensions,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import {
-  ArrowLeft, Search, Filter, Car, Bike, Star, MapPin, Calendar, Clock,
-  ArrowRight, X, Navigation, Users, ChevronRight, Crosshair, Edit3,
+  ArrowLeft, Search, Car, Bike, Star, MapPin, Calendar, Clock,
+  Users, ChevronRight, Crosshair, Edit3, SlidersHorizontal,
   ArrowDownUp, Link2, Timer,
 } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
 import { COLORS, FONTS, SPACING, SHADOWS, BORDER_RADIUS } from '@constants/theme';
 import { Button as CustomButton } from '@components/common/Button';
 import { useLanguage } from '@context/LanguageContext';
 import { useTheme } from '@context/ThemeContext';
-import { poolingApi, bookingApi, walletApi } from '@utils/apiClient';
+import { poolingApi, bookingApi } from '@utils/apiClient';
 import { LocationData } from '@components/common/LocationPicker';
 import { normalize } from '@utils/responsive';
 
 const { width: SCREEN_W } = Dimensions.get('window');
+const MODAL_BLUE_GRADIENT: [string, string] = ['#51A7EA', '#0284C7'];
+const MODAL_ORANGE_GRADIENT: [string, string] = ['#F99E3C', '#E08E35'];
+const FILTER_ACCENT = '#F99E3C';
+const FILTER_ACCENT_DARK = '#D47B1B';
+const FILTER_ACCENT_BG = '#FFF4E6';
 
 interface RouteParams {
   from?: LocationData;
@@ -43,6 +49,7 @@ const SearchPoolingScreen = () => {
   const [fromLocation, setFromLocation] = useState<LocationData | null>(params.from || null);
   const [toLocation, setToLocation] = useState<LocationData | null>(params.to || null);
   const [showBookingModal, setShowBookingModal] = useState(false);
+  const [showFiltersModal, setShowFiltersModal] = useState(false);
   const [selectedConnectedRide, setSelectedConnectedRide] = useState<any>(null);
   const [bookingInProgress, setBookingInProgress] = useState(false);
   const [priceLoading, setPriceLoading] = useState(false);
@@ -69,8 +76,27 @@ const SearchPoolingScreen = () => {
   const [vehicleType, setVehicleType] = useState<'Car' | 'Bike' | 'Scooty' | null>(params.vehicleType || null);
   const [passengers, setPassengers] = useState<number>(params.passengers || 1);
   const [hasAutoSearched, setHasAutoSearched] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
-  const activeFilterCount = (anyDate ? 0 : 1) + (time ? 1 : 0) + (vehicleType ? 1 : 0) + (passengers > 1 ? 1 : 0);
+
+  const isSameRoutePoint = (a?: LocationData | null, b?: LocationData | null) => {
+    if (!a || !b) return false;
+    const latA = Number(a.lat);
+    const lngA = Number(a.lng);
+    const latB = Number(b.lat);
+    const lngB = Number(b.lng);
+    if (Number.isFinite(latA) && Number.isFinite(lngA) && Number.isFinite(latB) && Number.isFinite(lngB)) {
+      return Math.abs(latA - latB) < 0.0001 && Math.abs(lngA - lngB) < 0.0001;
+    }
+    return (a.address || '').trim().toLowerCase() === (b.address || '').trim().toLowerCase();
+  };
+
+  const rejectIfSameFromTo = (candidate: LocationData, asType: 'from' | 'to') => {
+    const compareTarget = asType === 'from' ? toLocation : fromLocation;
+    if (isSameRoutePoint(candidate, compareTarget)) {
+      Alert.alert('Invalid route', 'Pickup and destination cannot be the same. Please choose a different location.');
+      return true;
+    }
+    return false;
+  };
 
   // Show "from" popup if arriving with a "to" but no "from"
   useEffect(() => {
@@ -78,6 +104,12 @@ const SearchPoolingScreen = () => {
       setTimeout(() => openFromPopup(), 400);
     }
   }, []);
+
+  useEffect(() => {
+    if (vehicleType !== 'Car' && passengers !== 1) {
+      setPassengers(1);
+    }
+  }, [vehicleType, passengers]);
 
   const openFromPopup = () => {
     setShowFromPopup(true);
@@ -114,7 +146,9 @@ const SearchPoolingScreen = () => {
           state = p.state || '';
         }
       }
-      setFromLocation({ address, lat: latitude, lng: longitude, city, state });
+      const candidate = { address, lat: latitude, lng: longitude, city, state };
+      if (rejectIfSameFromTo(candidate, 'from')) return;
+      setFromLocation(candidate);
       closeFromPopup();
     } catch (err) {
       console.error('Error getting location:', err);
@@ -130,6 +164,7 @@ const SearchPoolingScreen = () => {
       (navigation.navigate as any)('LocationPicker', {
         title: 'Select Pickup Location',
         onLocationSelect: (location: LocationData) => {
+          if (rejectIfSameFromTo(location, 'from')) return;
           setFromLocation(location);
           setOffers([]);
         },
@@ -166,6 +201,10 @@ const SearchPoolingScreen = () => {
   const loadOffers = async () => {
     if (!fromLocation || !toLocation) {
       Alert.alert('Missing Information', 'Please select both From and To locations');
+      return;
+    }
+    if (isSameRoutePoint(fromLocation, toLocation)) {
+      Alert.alert('Invalid route', 'Pickup and destination cannot be the same. Please choose different locations.');
       return;
     }
     if (!fromLocation.lat || !fromLocation.lng || !toLocation.lat || !toLocation.lng) {
@@ -221,14 +260,22 @@ const SearchPoolingScreen = () => {
     (navigation.navigate as any)('LocationPicker', {
       title: 'Select Pickup Location',
       initialLocation: fromLocation || undefined,
-      onLocationSelect: (location: LocationData) => { setFromLocation(location); setOffers([]); },
+      onLocationSelect: (location: LocationData) => {
+        if (rejectIfSameFromTo(location, 'from')) return;
+        setFromLocation(location);
+        setOffers([]);
+      },
     });
   };
   const handleSelectToLocation = () => {
     (navigation.navigate as any)('LocationPicker', {
       title: 'Select Destination',
       initialLocation: toLocation || undefined,
-      onLocationSelect: (location: LocationData) => { setToLocation(location); setOffers([]); },
+      onLocationSelect: (location: LocationData) => {
+        if (rejectIfSameFromTo(location, 'to')) return;
+        setToLocation(location);
+        setOffers([]);
+      },
     });
   };
 
@@ -238,6 +285,7 @@ const SearchPoolingScreen = () => {
     setToLocation(temp);
     setOffers([]);
   };
+  const activeFilterCount = Number(!anyDate) + Number(!!time) + Number(!!vehicleType) + Number(passengers > 1);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: '#FFFFFF' }]}>
@@ -249,11 +297,11 @@ const SearchPoolingScreen = () => {
           </TouchableOpacity>
           <Text style={[styles.topTitle, { color: theme.colors.text }]}>Find a Ride</Text>
           <TouchableOpacity
-            onPress={() => setShowFilters((prev: boolean) => !prev)}
-            style={[styles.filterHeaderBtn, { borderColor: showFilters ? theme.colors.primary : theme.colors.border }]}
-            activeOpacity={0.8}
+            onPress={() => setShowFiltersModal(true)}
+            style={[styles.filterHeaderBtn, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}
+            activeOpacity={0.7}
           >
-            <Filter size={17} color={showFilters ? theme.colors.primary : theme.colors.textSecondary} />
+            <SlidersHorizontal size={18} color={theme.colors.text} />
             {activeFilterCount > 0 && (
               <View style={[styles.filterBadge, { backgroundColor: theme.colors.primary }]}>
                 <Text style={styles.filterBadgeText}>{activeFilterCount}</Text>
@@ -261,105 +309,6 @@ const SearchPoolingScreen = () => {
             )}
           </TouchableOpacity>
         </View>
-
-        {showFilters && (
-          <View style={[styles.filterDropdownCard, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}>
-            <Text style={[styles.filterDropdownTitle, { color: theme.colors.text }]}>Filters</Text>
-
-            <View style={styles.filterActionsRow}>
-              <TouchableOpacity
-                style={[
-                  styles.filterActionChip,
-                  !anyDate ? { backgroundColor: `${theme.colors.primary}15`, borderColor: theme.colors.primary } : { borderColor: theme.colors.border },
-                ]}
-                onPress={() => setShowDatePicker(true)}
-              >
-                <Calendar size={14} color={!anyDate ? theme.colors.primary : theme.colors.textSecondary} />
-                <Text style={[styles.filterActionText, { color: !anyDate ? theme.colors.primary : theme.colors.textSecondary }]}>
-                  {anyDate ? 'Any date' : formatDateDisplay(date)}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.filterActionChip,
-                  time ? { backgroundColor: `${theme.colors.primary}15`, borderColor: theme.colors.primary } : { borderColor: theme.colors.border },
-                ]}
-                onPress={() => setShowTimePicker(true)}
-              >
-                <Clock size={14} color={time ? theme.colors.primary : theme.colors.textSecondary} />
-                <Text style={[styles.filterActionText, { color: time ? theme.colors.primary : theme.colors.textSecondary }]}>
-                  {time ? formatTimeDisplay(time) : 'Any time'}
-                </Text>
-                {time && (
-                  <TouchableOpacity
-                    onPress={() => { setTime(null); setOffers([]); }}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  >
-                    <X size={12} color={theme.colors.textSecondary} />
-                  </TouchableOpacity>
-                )}
-              </TouchableOpacity>
-            </View>
-
-            <Text style={[styles.filterLabel, { color: theme.colors.text }]}>Vehicle</Text>
-            <View style={styles.filterRow}>
-              {([null, 'Car', 'Bike', 'Scooty'] as const).map((vt) => (
-                <TouchableOpacity
-                  key={vt || 'all'}
-                  style={[styles.filterPill, vehicleType === vt ? { backgroundColor: theme.colors.primary } : { backgroundColor: theme.colors.background, borderColor: theme.colors.border, borderWidth: 1 }]}
-                  onPress={() => { setVehicleType(vt as any); if (vt === 'Bike' || vt === 'Scooty') setPassengers(1); setOffers([]); }}
-                >
-                  {vt === 'Car' && <Car size={14} color={vehicleType === vt ? '#FFF' : theme.colors.textSecondary} />}
-                  {vt === 'Bike' && <Bike size={14} color={vehicleType === vt ? '#FFF' : theme.colors.textSecondary} />}
-                  {vt === 'Scooty' && <MaterialCommunityIcons name="moped" size={14} color={vehicleType === vt ? '#FFF' : theme.colors.textSecondary} />}
-                  <Text style={[styles.filterPillText, { color: vehicleType === vt ? '#FFF' : theme.colors.text }]}>{vt || 'All'}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <Text style={[styles.filterLabel, { color: theme.colors.text, marginTop: normalize(10) }]}>Seats</Text>
-            <View style={styles.filterRow}>
-              {[1, 2, 3, 4].map((n) => (
-                <TouchableOpacity
-                  key={n}
-                  style={[styles.filterPill, { minWidth: normalize(44) }, passengers === n ? { backgroundColor: theme.colors.primary } : { backgroundColor: theme.colors.background, borderColor: theme.colors.border, borderWidth: 1 }]}
-                  onPress={() => { if ((vehicleType !== 'Bike' && vehicleType !== 'Scooty') || n === 1) { setPassengers(n); setOffers([]); } }}
-                  disabled={(vehicleType === 'Bike' || vehicleType === 'Scooty') && n > 1}
-                >
-                  <Text style={[styles.filterPillText, { color: passengers === n ? '#FFF' : theme.colors.text }]}>{n}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <View style={styles.filterFooterRow}>
-              <TouchableOpacity
-                style={[styles.filterFooterBtn, { borderColor: theme.colors.border }]}
-                onPress={() => {
-                  setAnyDate(true);
-                  setTime(null);
-                  setVehicleType(null);
-                  setPassengers(1);
-                  setOffers([]);
-                }}
-              >
-                <Text style={[styles.filterFooterText, { color: theme.colors.textSecondary }]}>Clear</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.filterFooterBtn, { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary }]}
-                onPress={() => setShowFilters(false)}
-              >
-                <Text style={[styles.filterFooterText, { color: '#FFF' }]}>Done</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
-        <Image
-          source={require('../../../assets/forlok_find_a_ride_vector_white_bg_v2.png')}
-          style={styles.findRideHero}
-          resizeMode="contain"
-        />
 
         {/* Route inputs */}
         <View style={styles.routeCard}>
@@ -385,16 +334,22 @@ const SearchPoolingScreen = () => {
           </TouchableOpacity>
         </View>
 
-
         {/* Search button */}
         <TouchableOpacity
-          style={[styles.searchBtn, { backgroundColor: theme.colors.primary, opacity: (!fromLocation || !toLocation || loading) ? 0.5 : 1 }]}
+          style={[styles.searchBtn, styles.searchBtnAligned, { opacity: (!fromLocation || !toLocation || loading) ? 0.5 : 1 }]}
           onPress={loadOffers}
           disabled={!fromLocation || !toLocation || loading}
           activeOpacity={0.8}
         >
-          {loading ? <ActivityIndicator color="#FFF" size="small" /> : <Search size={18} color="#FFF" />}
-          <Text style={styles.searchBtnText}>{loading ? 'Searching...' : 'Search Rides'}</Text>
+          <LinearGradient
+            colors={['#51A7EA', '#0284C7']}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={styles.searchBtnGradient}
+          >
+            {loading ? <ActivityIndicator color="#FFF" size="small" /> : <Search size={18} color="#FFF" />}
+            <Text style={styles.searchBtnText}>{loading ? 'Searching...' : 'Search Rides'}</Text>
+          </LinearGradient>
         </TouchableOpacity>
       </View>
 
@@ -404,6 +359,129 @@ const SearchPoolingScreen = () => {
       {showTimePicker && (
         <DateTimePicker value={time || new Date()} mode="time" display={Platform.OS === 'ios' ? 'spinner' : 'default'} onChange={onTimeChange} />
       )}
+
+      <Modal visible={showFiltersModal} transparent animationType="slide" onRequestClose={() => setShowFiltersModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.filterModalCard, { backgroundColor: theme.colors.surface }]}>
+            <View style={styles.modalHandle} />
+            <Text style={[styles.modalTitle, { color: theme.colors.text }]}>Filters</Text>
+
+            <View style={styles.filterActionsRow}>
+              <TouchableOpacity
+                style={[
+                  styles.filterActionChip,
+                  !anyDate ? { backgroundColor: FILTER_ACCENT_BG, borderColor: FILTER_ACCENT } : { borderColor: theme.colors.border },
+                ]}
+                onPress={() => setShowDatePicker(true)}
+              >
+                <Calendar size={14} color={!anyDate ? FILTER_ACCENT_DARK : theme.colors.textSecondary} />
+                <Text style={[styles.filterActionText, { color: !anyDate ? FILTER_ACCENT_DARK : theme.colors.textSecondary }]}>
+                  {anyDate ? 'Any date' : formatDateDisplay(date)}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.filterActionChip,
+                  time ? { backgroundColor: FILTER_ACCENT_BG, borderColor: FILTER_ACCENT } : { borderColor: theme.colors.border },
+                ]}
+                onPress={() => setShowTimePicker(true)}
+              >
+                <Clock size={14} color={time ? FILTER_ACCENT_DARK : theme.colors.textSecondary} />
+                <Text style={[styles.filterActionText, { color: time ? FILTER_ACCENT_DARK : theme.colors.textSecondary }]}>
+                  {time ? formatTimeDisplay(time) : 'Any time'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={[styles.filterLabel, { color: theme.colors.text }]}>Vehicle</Text>
+            <View style={styles.vehicleMiniRow}>
+              {(['Car', 'Bike', 'Scooty'] as const).map((vt) => (
+                <TouchableOpacity
+                  key={vt}
+                  style={[
+                    styles.vehicleMiniPill,
+                    vehicleType === vt && styles.vehicleMiniPillSelected,
+                  ]}
+                  onPress={() => {
+                    const nextType = vehicleType === vt ? null : vt;
+                    setVehicleType(nextType as any);
+                    if (nextType === 'Bike' || nextType === 'Scooty') setPassengers(1);
+                    setOffers([]);
+                  }}
+                >
+                  {vt === 'Car' && <Car size={16} color={vehicleType === vt ? '#0F766E' : '#334155'} />}
+                  {vt === 'Bike' && <Bike size={16} color={vehicleType === vt ? '#0F766E' : '#334155'} />}
+                  {vt === 'Scooty' && <MaterialCommunityIcons name="moped" size={17} color={vehicleType === vt ? '#0F766E' : '#334155'} />}
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {vehicleType === 'Car' && (
+              <>
+                <Text style={[styles.filterLabel, { color: theme.colors.text, marginTop: normalize(10) }]}>Seats</Text>
+                <View style={styles.seatMiniRow}>
+                  {[1, 2, 3, 4].map((n) => {
+                    const seatSelected = passengers === n;
+                    return (
+                      <TouchableOpacity
+                        key={n}
+                        style={[
+                          styles.seatMiniPill,
+                          seatSelected
+                            ? { backgroundColor: FILTER_ACCENT, borderColor: FILTER_ACCENT }
+                            : { backgroundColor: '#FFFFFF', borderColor: '#E5E7EB' },
+                        ]}
+                        onPress={() => {
+                          setPassengers(n);
+                          setOffers([]);
+                        }}
+                      >
+                        <Text
+                          style={[
+                            styles.filterPillText,
+                            { color: seatSelected ? '#FFF' : theme.colors.text },
+                          ]}
+                        >
+                          {n}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </>
+            )}
+
+            <View style={styles.filterFooterRow}>
+              <TouchableOpacity
+                style={[styles.filterFooterBtn, { borderColor: theme.colors.border }]}
+                onPress={() => {
+                  setAnyDate(true);
+                  setTime(null);
+                  setVehicleType(null);
+                  setPassengers(1);
+                  setOffers([]);
+                }}
+              >
+                <Text style={[styles.filterFooterText, { color: theme.colors.textSecondary }]}>Clear</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.filterFooterBtn, { borderColor: FILTER_ACCENT }]}
+                onPress={() => setShowFiltersModal(false)}
+              >
+                <LinearGradient
+                  colors={[FILTER_ACCENT, FILTER_ACCENT_DARK]}
+                  start={{ x: 0.5, y: 0 }}
+                  end={{ x: 0.5, y: 1 }}
+                  style={styles.filterApplyGradient}
+                >
+                  <Text style={[styles.filterFooterText, { color: '#FFF' }]}>Apply</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* ── Results ── */}
       <ScrollView style={styles.results} contentContainerStyle={styles.resultsContent} showsVerticalScrollIndicator={false}>
@@ -785,7 +863,7 @@ const SearchPoolingScreen = () => {
                   <View>
                     <Text style={[styles.modalTotalLabel, { color: theme.colors.text }]}>Total</Text>
                     <Text style={[styles.modalBreakdownLabel, { color: theme.colors.textSecondary }]}>
-                      Incl. ₹{Math.round(leg1PriceBreakdown.platformFee + leg2PriceBreakdown.platformFee)} platform fee
+                      Final combined fare for both legs
                     </Text>
                   </View>
                   <Text style={[styles.modalTotalPrice, { color: theme.colors.primary }]}>
@@ -794,40 +872,32 @@ const SearchPoolingScreen = () => {
                 </View>
 
                 <Text style={[styles.modalNote, { color: theme.colors.textSecondary }]}>
-                  Payment is per-leg at trip end (cash or online). Wallet ₹100 minimum required.
+                  Payment is per-leg at trip end with manual settlement.
                 </Text>
 
                 <View style={styles.modalActions}>
                   <TouchableOpacity
-                    style={[styles.modalCancelBtn, { borderColor: theme.colors.border }]}
+                    style={styles.modalCancelBtn}
                     onPress={() => setShowBookingModal(false)}
                     activeOpacity={0.7}
                   >
-                    <Text style={[styles.modalCancelText, { color: theme.colors.text }]}>Cancel</Text>
+                    <LinearGradient
+                      colors={MODAL_BLUE_GRADIENT}
+                      start={{ x: 0.5, y: 0 }}
+                      end={{ x: 0.5, y: 1 }}
+                      style={styles.modalBtnGradient}
+                    >
+                      <Text style={styles.modalCancelText}>Cancel</Text>
+                    </LinearGradient>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.modalConfirmBtn, { backgroundColor: theme.colors.primary, opacity: bookingInProgress ? 0.6 : 1 }]}
+                    style={[styles.modalConfirmBtn, bookingInProgress && { opacity: 0.6 }]}
                     disabled={bookingInProgress}
                     activeOpacity={0.8}
                     onPress={async () => {
                       if (!selectedConnectedRide || !fromLocation || !toLocation || !leg1PriceBreakdown || !leg2PriceBreakdown) return;
                       try {
                         setBookingInProgress(true);
-
-                        const walletCheck = await walletApi.canBookRide();
-                        if (walletCheck.success && walletCheck.data && !walletCheck.data.canBook) {
-                          const shortfall = walletCheck.data.shortfall || 0;
-                          Alert.alert(
-                            'Insufficient Wallet Balance',
-                            `You need minimum ₹${walletCheck.data.requiredBalance || 100} to book. Please recharge ₹${shortfall} to continue.`,
-                            [
-                              { text: 'Recharge Now', onPress: () => { setShowBookingModal(false); navigation.navigate('Wallet' as never); } },
-                              { text: 'Cancel', style: 'cancel' },
-                            ]
-                          );
-                          setBookingInProgress(false);
-                          return;
-                        }
 
                         const leg1 = selectedConnectedRide.legs[0];
                         const leg2 = selectedConnectedRide.legs[1];
@@ -874,9 +944,16 @@ const SearchPoolingScreen = () => {
                       }
                     }}
                   >
-                    {bookingInProgress
-                      ? <ActivityIndicator size="small" color="#FFF" />
-                      : <Text style={styles.modalConfirmText}>Confirm Booking</Text>}
+                    <LinearGradient
+                      colors={MODAL_ORANGE_GRADIENT}
+                      start={{ x: 0.5, y: 0 }}
+                      end={{ x: 0.5, y: 1 }}
+                      style={styles.modalBtnGradient}
+                    >
+                      {bookingInProgress
+                        ? <ActivityIndicator size="small" color="#FFF" />
+                        : <Text style={styles.modalConfirmText}>Confirm Booking</Text>}
+                    </LinearGradient>
                   </TouchableOpacity>
                 </View>
               </>
@@ -886,42 +963,46 @@ const SearchPoolingScreen = () => {
       </Modal>
 
       {/* ── From Location Popup ── */}
-      {showFromPopup && (
-        <View style={StyleSheet.absoluteFill} pointerEvents="box-none">
-          <TouchableOpacity style={styles.popupOverlay} activeOpacity={1} onPress={closeFromPopup}>
-            <Animated.View style={[styles.popupCard, { backgroundColor: theme.colors.surface, opacity: popupAnim, transform: [{ translateY: popupAnim.interpolate({ inputRange: [0, 1], outputRange: [40, 0] }) }] }]}>
-              <TouchableOpacity activeOpacity={1}>
-                <Text style={[styles.popupTitle, { color: theme.colors.text }]}>Where are you starting from?</Text>
-                <Text style={[styles.popupSub, { color: theme.colors.textSecondary }]}>
-                  Going to {toLocation?.city || toLocation?.address?.split(',')[0] || 'destination'}
-                </Text>
+      <Modal
+        visible={showFromPopup}
+        transparent
+        animationType="none"
+        statusBarTranslucent
+        onRequestClose={closeFromPopup}
+      >
+        <TouchableOpacity style={styles.popupOverlay} activeOpacity={1} onPress={closeFromPopup}>
+          <Animated.View style={[styles.popupCard, { backgroundColor: theme.colors.surface, opacity: popupAnim, transform: [{ translateY: popupAnim.interpolate({ inputRange: [0, 1], outputRange: [40, 0] }) }] }]}>
+            <TouchableOpacity activeOpacity={1}>
+              <Text style={[styles.popupTitle, { color: theme.colors.text }]}>Where are you starting from?</Text>
+              <Text style={[styles.popupSub, { color: theme.colors.textSecondary }]}>
+                Going to {toLocation?.city || toLocation?.address?.split(',')[0] || 'destination'}
+              </Text>
 
-                <TouchableOpacity style={[styles.popupOption, { borderColor: theme.colors.border }]} onPress={handleUseCurrentLocation} activeOpacity={0.7}>
-                  <View style={[styles.popupOptionIcon, { backgroundColor: '#E8F5E9' }]}>
-                    {gettingCurrentLoc ? <ActivityIndicator size="small" color="#2E7D32" /> : <Crosshair size={20} color="#2E7D32" />}
-                  </View>
-                  <View style={styles.popupOptionInfo}>
-                    <Text style={[styles.popupOptionTitle, { color: theme.colors.text }]}>Use current location</Text>
-                    <Text style={[styles.popupOptionSub, { color: theme.colors.textSecondary }]}>Auto-detect via GPS</Text>
-                  </View>
-                  <ChevronRight size={18} color={theme.colors.textSecondary} />
-                </TouchableOpacity>
-
-                <TouchableOpacity style={[styles.popupOption, { borderColor: theme.colors.border }]} onPress={handleCustomFrom} activeOpacity={0.7}>
-                  <View style={[styles.popupOptionIcon, { backgroundColor: '#E3F2FD' }]}>
-                    <Edit3 size={20} color="#1565C0" />
-                  </View>
-                  <View style={styles.popupOptionInfo}>
-                    <Text style={[styles.popupOptionTitle, { color: theme.colors.text }]}>Choose on map</Text>
-                    <Text style={[styles.popupOptionSub, { color: theme.colors.textSecondary }]}>Search or pick a location</Text>
-                  </View>
-                  <ChevronRight size={18} color={theme.colors.textSecondary} />
-                </TouchableOpacity>
+              <TouchableOpacity style={[styles.popupOption, { borderColor: theme.colors.border }]} onPress={handleUseCurrentLocation} activeOpacity={0.7}>
+                <View style={[styles.popupOptionIcon, { backgroundColor: '#E8F5E9' }]}>
+                  {gettingCurrentLoc ? <ActivityIndicator size="small" color="#2E7D32" /> : <Crosshair size={20} color="#2E7D32" />}
+                </View>
+                <View style={styles.popupOptionInfo}>
+                  <Text style={[styles.popupOptionTitle, { color: theme.colors.text }]}>Use current location</Text>
+                  <Text style={[styles.popupOptionSub, { color: theme.colors.textSecondary }]}>Auto-detect via GPS</Text>
+                </View>
+                <ChevronRight size={18} color={theme.colors.textSecondary} />
               </TouchableOpacity>
-            </Animated.View>
-          </TouchableOpacity>
-        </View>
-      )}
+
+              <TouchableOpacity style={[styles.popupOption, { borderColor: theme.colors.border }]} onPress={handleCustomFrom} activeOpacity={0.7}>
+                <View style={[styles.popupOptionIcon, { backgroundColor: '#E3F2FD' }]}>
+                  <Edit3 size={20} color="#1565C0" />
+                </View>
+                <View style={styles.popupOptionInfo}>
+                  <Text style={[styles.popupOptionTitle, { color: theme.colors.text }]}>Choose on map</Text>
+                  <Text style={[styles.popupOptionSub, { color: theme.colors.textSecondary }]}>Search or pick a location</Text>
+                </View>
+                <ChevronRight size={18} color={theme.colors.textSecondary} />
+              </TouchableOpacity>
+            </TouchableOpacity>
+          </Animated.View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -969,26 +1050,26 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontWeight: '700',
   },
-  filterDropdownCard: {
-    borderWidth: 1,
-    borderRadius: normalize(14),
-    padding: SPACING.sm,
-    marginBottom: SPACING.sm,
+  filterModalCard: {
+    borderTopLeftRadius: normalize(24),
+    borderTopRightRadius: normalize(24),
+    paddingHorizontal: normalize(20),
+    paddingTop: normalize(12),
+    paddingBottom: normalize(22),
   },
-  filterDropdownTitle: { fontFamily: FONTS.medium, fontSize: normalize(14), fontWeight: '700', marginBottom: normalize(10) },
-  filterActionsRow: { flexDirection: 'row', gap: normalize(8), marginBottom: normalize(10) },
+  filterActionsRow: { flexDirection: 'row', gap: normalize(10), marginBottom: normalize(14) },
   filterActionChip: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     gap: normalize(5),
     borderWidth: 1,
-    borderRadius: normalize(20),
+    borderRadius: normalize(14),
     paddingHorizontal: normalize(10),
-    paddingVertical: normalize(7),
+    paddingVertical: normalize(10),
   },
-  filterActionText: { fontFamily: FONTS.medium, fontSize: normalize(11) },
+  filterActionText: { fontFamily: FONTS.medium, fontSize: normalize(12) },
   findRideHero: {
     width: '100%',
     height: normalize(174),
@@ -1016,30 +1097,94 @@ const styles = StyleSheet.create({
   },
 
   // ── Filter Dropdown ──
-  filterLabel: { fontFamily: FONTS.medium, fontSize: normalize(13), fontWeight: '600', marginBottom: normalize(6) },
+  filterLabel: { fontFamily: FONTS.medium, fontSize: normalize(13), fontWeight: '700', marginBottom: normalize(7) },
   filterRow: { flexDirection: 'row', gap: normalize(8), marginBottom: normalize(4) },
+  vehicleMiniRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: normalize(12),
+    marginBottom: normalize(8),
+  },
+  vehicleMiniPill: {
+    width: normalize(44),
+    height: normalize(30),
+    borderRadius: normalize(15),
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  vehicleMiniPillSelected: {
+    backgroundColor: '#BFF4F0',
+    borderColor: '#8BE7DF',
+  },
   filterPill: {
     flexDirection: 'row', alignItems: 'center', gap: normalize(5),
-    paddingVertical: normalize(7), paddingHorizontal: normalize(14),
+    paddingVertical: normalize(8), paddingHorizontal: normalize(14),
     borderRadius: normalize(20),
   },
   filterPillText: { fontFamily: FONTS.medium, fontSize: normalize(13) },
-  filterFooterRow: { flexDirection: 'row', gap: normalize(8), marginTop: normalize(10) },
+  seatMiniRow: {
+    flexDirection: 'row',
+    gap: normalize(10),
+    marginBottom: normalize(2),
+  },
+  seatMiniPill: {
+    width: normalize(44),
+    height: normalize(44),
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: normalize(22),
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+  },
+  seatMiniPillDisabled: {
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E5E7EB',
+    opacity: 1,
+  },
+  seatHintText: {
+    marginTop: normalize(6),
+    marginBottom: normalize(2),
+    fontFamily: FONTS.regular,
+    fontSize: normalize(12),
+    fontWeight: '500',
+  },
+  filterFooterRow: { flexDirection: 'row', gap: normalize(10), marginTop: normalize(14) },
   filterFooterBtn: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
     borderRadius: normalize(12),
-    paddingVertical: normalize(9),
+    minHeight: normalize(42),
+    overflow: 'hidden',
   },
   filterFooterText: { fontFamily: FONTS.medium, fontSize: normalize(13), fontWeight: '600' },
+  filterApplyGradient: {
+    width: '100%',
+    minHeight: normalize(42),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
   // ── Search Button ──
   searchBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: normalize(8), paddingVertical: normalize(13),
-    borderRadius: normalize(14), marginTop: normalize(4),
+    borderRadius: normalize(14), marginTop: normalize(4), overflow: 'hidden',
+  },
+  searchBtnGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: normalize(8),
+    paddingVertical: normalize(13),
+  },
+  searchBtnAligned: {
+    marginLeft: normalize(22),
+    marginRight: normalize(44),
   },
   searchBtnText: { fontFamily: FONTS.medium, fontSize: normalize(15), fontWeight: '600', color: '#FFF' },
 
@@ -1185,14 +1330,13 @@ const styles = StyleSheet.create({
   modalNote: { fontFamily: FONTS.regular, fontSize: normalize(11), marginTop: normalize(8), textAlign: 'center' },
   modalActions: { flexDirection: 'row', gap: normalize(12), marginTop: SPACING.lg },
   modalCancelBtn: {
-    flex: 1, paddingVertical: normalize(14), borderRadius: normalize(12),
-    borderWidth: 1, alignItems: 'center',
+    flex: 1, borderRadius: normalize(12), overflow: 'hidden',
   },
-  modalCancelText: { fontFamily: FONTS.medium, fontSize: normalize(14), fontWeight: '600' },
+  modalCancelText: { fontFamily: FONTS.medium, fontSize: normalize(14), fontWeight: '600', color: '#FFF' },
   modalConfirmBtn: {
-    flex: 2, paddingVertical: normalize(14), borderRadius: normalize(12),
-    alignItems: 'center', justifyContent: 'center',
+    flex: 1, borderRadius: normalize(12), overflow: 'hidden',
   },
+  modalBtnGradient: { paddingVertical: normalize(14), alignItems: 'center', justifyContent: 'center' },
   modalConfirmText: { fontFamily: FONTS.medium, fontSize: normalize(14), fontWeight: '600', color: '#FFF' },
 
   // ── From Popup ──

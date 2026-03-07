@@ -7,19 +7,19 @@ import {
   TouchableOpacity,
   SafeAreaView,
   Image,
-  ActivityIndicator,
   Alert,
   Modal,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { ArrowLeft, Phone, MessageCircle, Info, MapPin, Clock, Navigation, AlertCircle, CreditCard, Banknote, CheckCircle, Coins } from 'lucide-react-native';
+import { ArrowLeft, Phone, MessageCircle, Info, MapPin, Clock, Navigation, AlertCircle, Banknote, CheckCircle, Coins } from 'lucide-react-native';
 import { normalize, wp, hp } from '@utils/responsive';
 import { COLORS, FONTS, SPACING } from '@constants/theme';
 import { Card } from '@components/common/Card';
 import { Button } from '@components/common/Button';
+import { AppLoader } from '@components/common/AppLoader';
 import { useLanguage } from '@context/LanguageContext';
 import { useSOS } from '@context/SOSContext';
-import { trackingApi, bookingApi, paymentApi, coinApi } from '@utils/apiClient';
+import { trackingApi, bookingApi, coinApi } from '@utils/apiClient';
 import { WebView } from 'react-native-webview';
 import LottieView from 'lottie-react-native';
 
@@ -275,6 +275,9 @@ const TripTrackingScreen = () => {
   };
 
   const getDisplayAmount = () => {
+    if (booking?.finalPayableAmount != null) {
+      return booking.finalPayableAmount;
+    }
     if (useCoins && coinDiscount.maxDiscount > 0) {
       return coinDiscount.discountedAmount;
     }
@@ -284,51 +287,21 @@ const TripTrackingScreen = () => {
   const redeemCoinsBeforePayment = async () => {
     if (!useCoins || coinDiscount.maxCoins <= 0 || !bookingId) return;
     try {
-      await coinApi.redeemCoins(bookingId, coinDiscount.maxCoins);
+      const res = await coinApi.redeemCoins(bookingId, coinDiscount.maxCoins);
+      if (res?.success && res?.data?.finalPayableAmount != null) {
+        setBooking((prev: any) => ({
+          ...(prev || {}),
+          finalPayableAmount: res.data.finalPayableAmount,
+          coinDiscountAmount: res.data.discountInr ?? prev?.coinDiscountAmount ?? 0,
+          coinsUsed: res.data.coinsRedeemed ?? prev?.coinsUsed ?? 0,
+        }));
+      }
     } catch (err) {
       console.log('Coin redemption error:', err);
     }
   };
 
   // ========== PAYMENT FLOW ==========
-  const handleChooseOnline = async () => {
-    if (!bookingId || paymentProcessing) return;
-    setPaymentProcessing(true);
-
-    try {
-      // Redeem coins first if applied
-      await redeemCoinsBeforePayment();
-
-      const response = await bookingApi.choosePaymentMethod(bookingId, 'online');
-      if (response.success && response.data) {
-        const { paymentOrder } = response.data;
-        if (paymentOrder?.razorpayOrderId) {
-          // Simulate test payment success
-          try {
-            const simulateRes = await paymentApi.simulateTestPayment(paymentOrder.razorpayOrderId);
-            if (simulateRes.success) {
-              setShowPaymentChoice(false);
-              setTripCompleted(true);
-              // Show coin celebration
-              setCoinsEarnedText('Ride completed! You earned coins!');
-              setShowCoinCelebration(true);
-              setTimeout(() => setShowCoinCelebration(false), 4000);
-            } else {
-              Alert.alert('Payment Processing', 'Payment is being processed. Please wait.');
-            }
-          } catch (simErr) {
-            Alert.alert('Payment Error', 'Could not complete payment. Please try again.');
-          }
-        }
-      } else {
-        Alert.alert('Error', response.message || 'Could not initiate online payment.');
-      }
-    } catch (error: any) {
-      Alert.alert('Error', error.message || 'Payment failed. Please try again.');
-    } finally {
-      setPaymentProcessing(false);
-    }
-  };
 
   const handleChooseCash = async () => {
     if (!bookingId || paymentProcessing) return;
@@ -343,7 +316,7 @@ const TripTrackingScreen = () => {
         setPassengerCode(response.data.passengerCode);
         setShowPaymentChoice(false);
       } else {
-        Alert.alert('Error', response.message || 'Could not process cash payment.');
+        Alert.alert('Error', response.message || 'Could not generate completion code.');
       }
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed. Please try again.');
@@ -376,7 +349,7 @@ const TripTrackingScreen = () => {
 
       <View style={[styles.statusBar, tripCompleted && styles.statusBarCompleted, showPaymentChoice && styles.statusBarPayment]}>
         <Text style={styles.statusText}>
-          {tripCompleted ? '✅ Trip Completed' : showPaymentChoice ? '💳 Payment Required' : passengerCode ? '🔑 Show Code to Driver' : t('tripTracking.tripInProgress')}
+          {tripCompleted ? '✅ Trip Completed' : showPaymentChoice ? '💵 Settle & Confirm' : passengerCode ? '🔑 Show Code to Driver' : t('tripTracking.tripInProgress')}
         </Text>
         {!tripCompleted && !showPaymentChoice && !passengerCode && (
           <Text style={styles.etaText}>{t('tripTracking.eta')}: {eta} {t('common.minutes')}</Text>
@@ -386,7 +359,7 @@ const TripTrackingScreen = () => {
       <View style={styles.mapContainer}>
         {loading ? (
           <View style={styles.mapPlaceholder}>
-            <ActivityIndicator size="large" color={COLORS.primary} />
+            <AppLoader size="large" color={COLORS.primary} />
             <Text style={styles.mapHint}>Loading map...</Text>
           </View>
         ) : mapHTML ? (
@@ -470,9 +443,9 @@ const TripTrackingScreen = () => {
         {/* ========== PAYMENT CHOICE (shown when driver marks got_out) ========== */}
         {showPaymentChoice && (
           <Card style={styles.paymentCard}>
-            <Text style={styles.paymentTitle}>Trip Ended — Choose Payment</Text>
+            <Text style={styles.paymentTitle}>Trip Ended — Settle Manually</Text>
             <View style={styles.amountRow}>
-              <Text style={styles.amountLabel}>Total Amount</Text>
+              <Text style={styles.amountLabel}>Payable Amount</Text>
               <Text style={[styles.amountValue, useCoins && coinDiscount.maxDiscount > 0 && { textDecorationLine: 'line-through', color: COLORS.textSecondary, fontSize: 18 }]}>
                 ₹{booking?.totalAmount || 0}
               </Text>
@@ -514,24 +487,14 @@ const TripTrackingScreen = () => {
 
             <View style={styles.paymentButtons}>
               <TouchableOpacity
-                style={[styles.paymentOption, styles.paymentOnline]}
-                onPress={handleChooseOnline}
-                disabled={paymentProcessing}
-              >
-                <CreditCard size={28} color={COLORS.white} />
-                <Text style={styles.paymentOptionText}>Pay Online</Text>
-                <Text style={styles.paymentOptionSub}>UPI / Card / Net Banking</Text>
-                {paymentProcessing && <ActivityIndicator size="small" color={COLORS.white} style={{ marginTop: 8 }} />}
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.paymentOption, styles.paymentCash]}
+                style={[styles.paymentOption, styles.paymentCash, { width: '100%' }]}
                 onPress={handleChooseCash}
                 disabled={paymentProcessing}
               >
                 <Banknote size={28} color={COLORS.white} />
-                <Text style={styles.paymentOptionText}>Pay Cash</Text>
-                <Text style={styles.paymentOptionSub}>Pay driver directly</Text>
+                <Text style={styles.paymentOptionText}>I Paid Driver — Generate Code</Text>
+                <Text style={styles.paymentOptionSub}>Manual payment done outside app</Text>
+                {paymentProcessing && <AppLoader size="small" color={COLORS.white} style={{ marginTop: 8 }} />}
               </TouchableOpacity>
             </View>
           </Card>
@@ -547,7 +510,7 @@ const TripTrackingScreen = () => {
             </View>
             <Text style={styles.codeHint}>
               The driver will enter this code to complete the trip.{'\n'}
-              Amount: ₹{booking?.totalAmount || 0} (Cash)
+              Amount: ₹{booking?.finalPayableAmount ?? booking?.totalAmount ?? 0} (Manual Payment)
             </Text>
           </Card>
         )}

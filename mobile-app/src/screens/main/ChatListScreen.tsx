@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,11 +11,14 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { ArrowLeft, MessageCircle, Search } from 'lucide-react-native';
+import { ArrowLeft, MessageCircle, Search, ChevronRight } from 'lucide-react-native';
 import { normalize } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
-import { chatApi } from '@utils/apiClient';
+import { bookingApi, chatApi } from '@utils/apiClient';
 import { useLanguage } from '@context/LanguageContext';
+
+const ORANGE_LIGHT = '#F99E3C';
+const ORANGE_DARK = '#D47B1B';
 
 interface Conversation {
   conversationId: string;
@@ -53,7 +56,25 @@ const ChatListScreen = () => {
     try {
       const response = await chatApi.getConversations({ isActive: true });
       if (response.success && response.data) {
-        setConversations(response.data.conversations || []);
+        const incoming = response.data.conversations || [];
+        const filtered = await Promise.all(
+          incoming.map(async (conversation: Conversation) => {
+            if (!conversation.isActive) return null;
+            if (!conversation.bookingId) return conversation;
+
+            try {
+              const bookingRes = await bookingApi.getBooking(conversation.bookingId);
+              const bookingStatus = bookingRes?.data?.status as string | undefined;
+              if (bookingStatus && ['completed', 'cancelled', 'expired'].includes(bookingStatus)) {
+                return null;
+              }
+              return conversation;
+            } catch {
+              return conversation;
+            }
+          })
+        );
+        setConversations(filtered.filter(Boolean) as Conversation[]);
       }
     } catch (error: any) {
       console.error('Error loading conversations:', error);
@@ -182,6 +203,7 @@ const ChatListScreen = () => {
                 </Text>
               </View>
             )}
+            <ChevronRight size={16} color={COLORS.textSecondary} />
           </View>
         </View>
       </TouchableOpacity>
@@ -193,12 +215,13 @@ const ChatListScreen = () => {
       <SafeAreaView style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <ArrowLeft size={24} color={COLORS.white} />
+            <ArrowLeft size={22} color={COLORS.text} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Messages</Text>
+          <View style={styles.searchButton} />
         </View>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
+          <ActivityIndicator size="large" color={ORANGE_LIGHT} />
         </View>
       </SafeAreaView>
     );
@@ -209,11 +232,11 @@ const ChatListScreen = () => {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <ArrowLeft size={24} color={COLORS.white} />
+          <ArrowLeft size={22} color={COLORS.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Messages</Text>
         <TouchableOpacity style={styles.searchButton}>
-          <Search size={22} color={COLORS.white} />
+          <Search size={20} color={COLORS.textSecondary} />
         </TouchableOpacity>
       </View>
 
@@ -237,8 +260,8 @@ const ChatListScreen = () => {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              colors={[COLORS.primary]}
-              tintColor={COLORS.primary}
+              colors={[ORANGE_LIGHT]}
+              tintColor={ORANGE_LIGHT}
             />
           }
         />
@@ -250,36 +273,36 @@ const ChatListScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: '#F6F7F9',
   },
   header: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.white,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.xl,
-    paddingBottom: SPACING.md,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    paddingHorizontal: normalize(14),
+    paddingTop: normalize(46),
+    paddingBottom: normalize(12),
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border + '55',
   },
   backButton: {
-    padding: SPACING.xs,
+    padding: normalize(4),
   },
   headerTitle: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.xl,
-    color: COLORS.white,
-    fontWeight: 'bold',
+    fontSize: normalize(18),
+    color: COLORS.text,
+    fontWeight: '700',
     flex: 1,
     textAlign: 'center',
-    marginRight: normalize(40),
+    marginHorizontal: normalize(8),
   },
   searchButton: {
-    padding: SPACING.xs,
+    width: normalize(28),
+    height: normalize(28),
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   loadingContainer: {
     flex: 1,
@@ -287,16 +310,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   listContent: {
-    paddingVertical: SPACING.xs,
+    paddingVertical: normalize(10),
+    paddingHorizontal: normalize(12),
+    paddingBottom: normalize(110),
   },
   conversationItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.md,
+    paddingHorizontal: normalize(12),
+    paddingVertical: normalize(11),
     backgroundColor: COLORS.white,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border + '40',
+    borderRadius: normalize(14),
+    marginBottom: normalize(8),
+    ...SHADOWS.sm,
   },
   avatarContainer: {
     position: 'relative',
@@ -312,7 +338,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: normalize(-2),
     right: normalize(-2),
-    backgroundColor: COLORS.error,
+    backgroundColor: '#FF3B30',
     borderRadius: normalize(10),
     minWidth: normalize(20),
     height: normalize(20),
@@ -347,7 +373,7 @@ const styles = StyleSheet.create({
   conversationTime: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.xs,
-    color: COLORS.textSecondary,
+    color: '#8B8B8B',
     marginLeft: SPACING.sm,
   },
   conversationFooter: {
@@ -366,7 +392,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   groupBadge: {
-    backgroundColor: COLORS.primary + '20',
+    backgroundColor: ORANGE_LIGHT + '20',
     borderRadius: normalize(12),
     paddingHorizontal: normalize(8),
     paddingVertical: normalize(2),
@@ -375,7 +401,7 @@ const styles = StyleSheet.create({
   groupBadgeText: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.xs,
-    color: COLORS.primary,
+    color: ORANGE_DARK,
     fontWeight: '600',
   },
   emptyContainer: {

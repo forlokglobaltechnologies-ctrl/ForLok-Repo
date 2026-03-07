@@ -13,7 +13,6 @@ import {
   ActivityIndicator,
   Share,
   Clipboard,
-  ImageBackground,
 } from 'react-native';
 import { normalize, hp } from '@utils/responsive';
 import { useNavigation } from '@react-navigation/native';
@@ -36,9 +35,8 @@ import {
   TrendingUp,
   Zap,
 } from 'lucide-react-native';
-import { BlurView } from 'expo-blur';
-import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
-import { Card } from '@components/common/Card';
+import { LinearGradient } from 'expo-linear-gradient';
+import { FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { coinApi, referralApi, promoApi } from '@utils/apiClient';
 import { useTheme } from '@context/ThemeContext';
 
@@ -157,22 +155,13 @@ const EarnCoinsScreen = () => {
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <ImageBackground
-          source={require('../../../assets/coins.png')}
-          style={styles.headerImage}
-          resizeMode="cover"
-        >
-          <View style={styles.headerOverlay} />
-          <BlurView intensity={40} style={styles.blurContainer}>
-            <View style={styles.headerContent}>
-              <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                <ArrowLeft size={22} color="#FFF" />
-              </TouchableOpacity>
-              <Text style={styles.headerTitle}>Earn Coins</Text>
-              <View style={styles.headerPlaceholder} />
-            </View>
-          </BlurView>
-        </ImageBackground>
+        <View style={[styles.headerBar, { borderBottomColor: theme.colors.border, backgroundColor: theme.colors.background }]}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <ArrowLeft size={22} color={theme.colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.headerBarTitle, { color: theme.colors.text }]}>Earn Coins</Text>
+          <View style={styles.headerPlaceholder} />
+        </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COIN_COLOR} />
           <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading...</Text>
@@ -183,32 +172,50 @@ const EarnCoinsScreen = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      {/* ── Hero Header with Image ── */}
-      <ImageBackground
-        source={require('../../../assets/coins.png')}
-        style={styles.headerImage}
-        resizeMode="cover"
-      >
-        <View style={styles.headerOverlay} />
-        <BlurView intensity={40} style={styles.blurContainer}>
-          <View style={styles.headerContent}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-              <ArrowLeft size={22} color="#FFF" />
-            </TouchableOpacity>
-            <View style={styles.headerCenter}>
-              <Text style={styles.headerTitle}>Earn Coins</Text>
-              <Text style={styles.headerSubtitle}>Complete tasks & earn rewards</Text>
-            </View>
-            <View style={styles.headerPlaceholder} />
-          </View>
-        </BlurView>
-      </ImageBackground>
+      <View style={[styles.headerBar, { borderBottomColor: theme.colors.border, backgroundColor: theme.colors.background }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <ArrowLeft size={22} color={theme.colors.text} />
+        </TouchableOpacity>
+        <View style={styles.headerCenter}>
+          <Text style={[styles.headerBarTitle, { color: theme.colors.text }]}>Earn Coins</Text>
+          <Text style={[styles.headerBarSubtitle, { color: theme.colors.textSecondary }]}>Referrals, milestones, rewards</Text>
+        </View>
+        <View style={styles.headerPlaceholder} />
+      </View>
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COIN_COLOR]} />}
         showsVerticalScrollIndicator={false}
       >
+        <View style={styles.heroCard}>
+          <LinearGradient
+            colors={['#F99E3C', '#E08E35']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.heroGradient}
+          >
+            <View pointerEvents="none" style={styles.heroDecorLarge} />
+            <View pointerEvents="none" style={styles.heroDecorMid} />
+            <View pointerEvents="none" style={styles.heroDecorSmall} />
+
+            <View style={styles.heroContent}>
+              <View style={styles.heroTopRow}>
+                <View style={styles.heroCoinIconWrap}>
+                  <Coins size={20} color="#F99E3C" />
+                </View>
+                <View style={styles.heroBadge}>
+                  <Text style={styles.heroBadgeText}>Fast rewards</Text>
+                </View>
+              </View>
+              <Text style={styles.heroTitle}>Turn every ride into coins</Text>
+              <Text style={styles.heroSubtitle}>
+                Invite friends, complete rides, and submit promo proofs to earn up to 1000 coins.
+              </Text>
+            </View>
+          </LinearGradient>
+        </View>
+
         {/* ── Coin Balance Card ── */}
         <View style={[styles.balanceCard, { backgroundColor: theme.colors.surface }]}>
           <View style={styles.balanceIconWrap}>
@@ -561,50 +568,32 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  // ── Header with Image ──
-  headerImage: {
-    width: '100%',
-    height: hp(22),
-  },
-  headerOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: COIN_COLOR,
-    opacity: 0.65,
-  },
-  blurContainer: {
-    flex: 1,
-    overflow: 'hidden',
-  },
-  headerContent: {
-    flex: 1,
+  // ── Header ──
+  headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.lg,
+    paddingVertical: SPACING.sm,
+    paddingTop: SPACING.xl,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   backButton: {
-    width: normalize(40),
-    height: normalize(40),
-    borderRadius: normalize(20),
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    paddingVertical: normalize(6),
+    paddingRight: normalize(8),
   },
   headerCenter: {
     flex: 1,
     alignItems: 'center',
   },
-  headerTitle: {
+  headerBarTitle: {
     fontFamily: FONTS.regular,
-    fontSize: normalize(22),
+    fontSize: normalize(20),
     fontWeight: 'bold',
-    color: '#FFF',
   },
-  headerSubtitle: {
+  headerBarSubtitle: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.sm,
-    color: 'rgba(255,255,255,0.85)',
+    fontSize: FONTS.sizes.xs,
     marginTop: 2,
   },
   headerPlaceholder: {
@@ -627,6 +616,91 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: SPACING.md,
     paddingBottom: SPACING.xl * 2,
+  },
+  heroCard: {
+    borderRadius: BORDER_RADIUS.lg,
+    overflow: 'hidden',
+    marginBottom: SPACING.md,
+    ...SHADOWS.sm,
+  },
+  heroGradient: {
+    minHeight: hp(16),
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.md,
+    justifyContent: 'space-between',
+    position: 'relative',
+  },
+  heroContent: {
+    zIndex: 2,
+  },
+  heroDecorLarge: {
+    position: 'absolute',
+    width: normalize(280),
+    height: normalize(280),
+    borderRadius: normalize(140),
+    backgroundColor: 'rgba(255,255,255,0.20)',
+    top: normalize(-175),
+    right: normalize(-65),
+    zIndex: 1,
+  },
+  heroDecorMid: {
+    position: 'absolute',
+    width: normalize(200),
+    height: normalize(200),
+    borderRadius: normalize(100),
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    top: normalize(-115),
+    right: normalize(10),
+    zIndex: 1,
+  },
+  heroDecorSmall: {
+    position: 'absolute',
+    width: normalize(150),
+    height: normalize(150),
+    borderRadius: normalize(75),
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    bottom: normalize(-85),
+    right: normalize(-30),
+    zIndex: 1,
+  },
+  heroTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: normalize(8),
+  },
+  heroCoinIconWrap: {
+    width: normalize(38),
+    height: normalize(38),
+    borderRadius: normalize(19),
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroBadge: {
+    backgroundColor: 'rgba(15, 23, 43, 0.18)',
+    paddingHorizontal: normalize(10),
+    paddingVertical: normalize(5),
+    borderRadius: BORDER_RADIUS.round,
+  },
+  heroBadgeText: {
+    fontFamily: FONTS.regular,
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  heroTitle: {
+    fontFamily: FONTS.regular,
+    fontSize: normalize(24),
+    fontWeight: 'bold',
+    color: '#0F172B',
+  },
+  heroSubtitle: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.sm,
+    lineHeight: 20,
+    color: '#1F2937',
+    marginTop: normalize(6),
   },
 
   // ── Balance Card ──

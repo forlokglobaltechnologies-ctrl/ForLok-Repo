@@ -6,6 +6,9 @@ export type BookingStatus = 'pending' | 'confirmed' | 'in_progress' | 'completed
 export type OfferStatus = 'active' | 'pending' | 'expired' | 'completed' | 'cancelled' | 'suspended' | 'booked' | 'in_progress';
 export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'refunded';
 export type PaymentMethod = 'upi' | 'card' | 'wallet' | 'net_banking' | 'offline_cash';
+export type LoadOfferType = 'instant' | 'offer';
+export type LoadOfferStatus = 'open' | 'accepted' | 'cancelled' | 'completed' | 'expired';
+export type ParcelCategory = 'documents' | 'food' | 'fragile' | 'electronics' | 'other';
 export type DocumentType =
   | 'aadhar_front'
   | 'aadhar_back'
@@ -25,7 +28,7 @@ export type DocumentType =
   | 'business_license';
 export type DocumentStatus = 'pending' | 'verified' | 'rejected' | 'under_review';
 export type VehicleType = 'car' | 'bike' | 'scooty';
-export type ServiceType = 'pooling' | 'rental';
+export type ServiceType = 'pooling' | 'rental' | 'loads';
 export type OTPType = 'signup' | 'login' | 'reset_password' | 'verify_phone' | 'verify_email';
 export type NotificationType =
   | 'booking_request'
@@ -47,7 +50,13 @@ export type NotificationType =
   | 'feedback_acknowledged'
   | 'feedback_resolved'
   | 'feedback_response'
-  | 'feedback_archived';
+  | 'feedback_archived'
+  | 'load_requested'
+  | 'load_assigned'
+  | 'load_pickup_reached'
+  | 'load_picked_up'
+  | 'load_drop_reached'
+  | 'load_delivered';
 export type FeedbackType = 'issue' | 'suggestion' | 'complaint';
 export type FeedbackStatus = 'pending' | 'acknowledged' | 'resolved' | 'archived';
 export type FeedbackPriority = 'high' | 'medium' | 'low';
@@ -112,6 +121,8 @@ export interface Route {
   waypoints?: Waypoint[];
   distance?: number; // in km
   duration?: number; // in minutes
+  selectedRouteId?: string;
+  selectedPolyline?: Array<{ lat: number; lng: number; index: number }>;
   polyline?: Array<{ lat: number; lng: number; index: number }>;
   roadSegments?: RouteRoadSegment[];
 }

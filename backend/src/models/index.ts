@@ -4,6 +4,7 @@ export { default as Company, ICompany } from './Company';
 export { default as Vehicle, IVehicle } from './Vehicle';
 export { default as PoolingOffer, IPoolingOffer } from './PoolingOffer';
 export { default as RentalOffer, IRentalOffer } from './RentalOffer';
+export { default as LoadOffer, ILoadOffer } from './LoadOffer';
 export { default as Booking, IBooking } from './Booking';
 export { default as Payment, IPayment } from './Payment';
 export { default as Document, IDocument } from './Document';

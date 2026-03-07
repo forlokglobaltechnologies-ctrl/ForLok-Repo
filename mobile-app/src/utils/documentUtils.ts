@@ -12,6 +12,8 @@ export interface UserDocuments {
   insurance?: string | null;
 }
 
+let userDocumentsStorage: Partial<UserDocuments> = {};
+
 /**
  * Get user documents from backend API
  */

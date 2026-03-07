@@ -5,28 +5,140 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   KeyboardAvoidingView,
   Platform,
   Alert,
   StatusBar,
   ActivityIndicator,
-  Image,
   TextInput,
 } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { ArrowLeft, MapPin, Calendar, Clock, CheckCircle, IndianRupee, ChevronDown, ChevronRight, Car, Bike, Plus, X, GripVertical } from 'lucide-react-native';
+import { ArrowLeft, MapPin, Calendar, Clock, ChevronDown, ChevronRight, Car, Bike, ArrowUpDown } from 'lucide-react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { normalize, wp, hp } from '@utils/responsive';
+import { normalize } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
-import { Button } from '@components/common/Button';
-import { Input } from '@components/common/Input';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useLanguage } from '@context/LanguageContext';
 import { useSnackbar } from '@context/SnackbarContext';
 import { poolingApi, vehicleApi } from '@utils/apiClient';
-import LocationPicker, { LocationData } from '@components/common/LocationPicker';
+import { LocationData } from '@components/common/LocationPicker';
 import { getUserErrorMessage } from '@utils/errorUtils';
+import { WebView } from 'react-native-webview';
+
+interface RouteAlternative {
+  routeId: string;
+  distanceKm: number;
+  durationMin: number;
+  polyline: Array<{ lat: number; lng: number; index: number }>;
+}
+
+const buildRouteAlternativesMapHtml = (
+  routes: RouteAlternative[],
+  selectedRouteId: string | null,
+  fromLocation: LocationData | null,
+  toLocation: LocationData | null
+) => {
+  const safeRoutes = JSON.stringify(routes).replace(/</g, '\\u003c');
+  const safeSelectedRouteId = JSON.stringify(selectedRouteId);
+  const safeFrom = JSON.stringify(
+    fromLocation ? { lat: fromLocation.lat, lng: fromLocation.lng } : null
+  );
+  const safeTo = JSON.stringify(toLocation ? { lat: toLocation.lat, lng: toLocation.lng } : null);
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    html, body, #map {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: #f3f4f6;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script>
+    const routes = ${safeRoutes};
+    const selectedRouteId = ${safeSelectedRouteId};
+    const fromPoint = ${safeFrom};
+    const toPoint = ${safeTo};
+    const colors = ['#2563EB', '#0EA5E9', '#64748B'];
+
+    const firstPoint = routes?.[0]?.polyline?.[0];
+    const map = L.map('map', { zoomControl: false }).setView(
+      firstPoint ? [firstPoint.lat, firstPoint.lng] : [16.5, 80.6],
+      8
+    );
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
+      maxZoom: 19
+    }).addTo(map);
+
+    const boundsPoints = [];
+    routes.forEach((route, idx) => {
+      const latLngs = (route.polyline || []).map((p) => [p.lat, p.lng]);
+      if (latLngs.length === 0) return;
+
+      latLngs.forEach((pt) => boundsPoints.push(pt));
+      const isSelected = route.routeId === selectedRouteId;
+      const polyline = L.polyline(latLngs, {
+        color: isSelected ? '#1D4ED8' : (colors[idx % colors.length] || '#94A3B8'),
+        weight: isSelected ? 6 : 4,
+        opacity: isSelected ? 0.95 : 0.55
+      }).addTo(map);
+
+      polyline.on('click', () => {
+        if (window.ReactNativeWebView) {
+          window.ReactNativeWebView.postMessage(
+            JSON.stringify({ type: 'route_select', routeId: route.routeId })
+          );
+        }
+      });
+
+      if (isSelected) {
+        polyline.bringToFront();
+      }
+    });
+
+    if (fromPoint) {
+      const marker = L.circleMarker([fromPoint.lat, fromPoint.lng], {
+        radius: 7,
+        color: '#16A34A',
+        fillColor: '#22C55E',
+        fillOpacity: 0.95
+      }).addTo(map);
+      boundsPoints.push([fromPoint.lat, fromPoint.lng]);
+      marker.bindTooltip('From');
+    }
+
+    if (toPoint) {
+      const marker = L.circleMarker([toPoint.lat, toPoint.lng], {
+        radius: 7,
+        color: '#B91C1C',
+        fillColor: '#EF4444',
+        fillOpacity: 0.95
+      }).addTo(map);
+      boundsPoints.push([toPoint.lat, toPoint.lng]);
+      marker.bindTooltip('To');
+    }
+
+    if (boundsPoints.length > 0) {
+      map.fitBounds(boundsPoints, { padding: [24, 24] });
+    }
+  </script>
+</body>
+</html>
+`;
+};
 
 const CreatePoolingOfferScreen = () => {
   const navigation = useNavigation();
@@ -39,6 +151,7 @@ const CreatePoolingOfferScreen = () => {
   const [allVehicles, setAllVehicles] = useState<any[]>([]);
   const [loadingVehicles, setLoadingVehicles] = useState(false);
   const [lockedVehicleIds, setLockedVehicleIds] = useState<Set<string>>(new Set());
+  const [driverOffers, setDriverOffers] = useState<any[]>([]);
   const [fromLocation, setFromLocation] = useState<LocationData | null>(null);
   const [toLocation, setToLocation] = useState<LocationData | null>(null);
   const [date, setDate] = useState(new Date());
@@ -53,12 +166,14 @@ const CreatePoolingOfferScreen = () => {
   const [notes, setNotes] = useState('');
   const [creating, setCreating] = useState(false);
   const [waypoints, setWaypoints] = useState<LocationData[]>([]);
-  const [suggestedWaypoints, setSuggestedWaypoints] = useState<Array<{ address: string; lat: number; lng: number; city?: string; order: number }>>([]);
-  const [selectedSuggestions, setSelectedSuggestions] = useState<Set<number>>(new Set());
-  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [minRequired, setMinRequired] = useState(0);
   const [routeDistanceKm, setRouteDistanceKm] = useState(0);
-  const route = useRoute();
+  const [routeAlternatives, setRouteAlternatives] = useState<RouteAlternative[]>([]);
+  const [selectedRouteId, setSelectedRouteId] = useState<string | null>(null);
+  const [routeMapHtml, setRouteMapHtml] = useState('');
+  const [loadingRoutes, setLoadingRoutes] = useState(false);
+  const [routesError, setRoutesError] = useState<string | null>(null);
+  const [syncingAutoWaypoints, setSyncingAutoWaypoints] = useState(false);
 
   // ── Derived: filtered vehicles computed fresh every render ──
   const filteredVehicles = vehicleType
@@ -83,19 +198,11 @@ const CreatePoolingOfferScreen = () => {
     } finally {
       setLoadingVehicles(false);
     }
-    // Load locked vehicles in background (non-blocking)
+    // Load driver offers in background (non-blocking); lock calculation is time-window based.
     try {
       const offersRes = await poolingApi.getOffers();
       if (offersRes.success && offersRes.data) {
-        const activeStatuses = ['active', 'pending', 'in_progress', 'booked'];
-        const lockedNumbers = new Set<string>(
-          offersRes.data
-            .filter((o: any) => activeStatuses.includes(o.status))
-            .map((o: any) => o.vehicle?.number)
-            .filter(Boolean)
-        );
-        console.log('🔒 Locked vehicle numbers:', [...lockedNumbers]);
-        setLockedVehicleIds(lockedNumbers);
+        setDriverOffers(Array.isArray(offersRes.data) ? offersRes.data : []);
       }
     } catch (err) {
       console.warn('Could not check locked vehicles:', err);
@@ -150,50 +257,284 @@ const CreatePoolingOfferScreen = () => {
   }, []);
 
   useEffect(() => {
+    const activeStatuses = ['active', 'pending', 'in_progress', 'booked'];
+    const selectedRoute = routeAlternatives.find((route) => route.routeId === selectedRouteId);
+
+    const candidateStart = new Date(date);
+    candidateStart.setHours(time.getHours(), time.getMinutes(), 0, 0);
+    if (Number.isNaN(candidateStart.getTime())) {
+      setLockedVehicleIds(new Set());
+      return;
+    }
+
+    const candidateDurationMin = (() => {
+      if (selectedRoute?.durationMin && selectedRoute.durationMin > 0) {
+        return Math.ceil(selectedRoute.durationMin);
+      }
+      const distanceKm = selectedRoute?.distanceKm || routeDistanceKm || 0;
+      const speed = getVehicleAverageSpeedKmh(vehicleType || 'car');
+      return Math.max(10, Math.ceil((Math.max(1, distanceKm) / speed) * 60));
+    })();
+    const candidateEnd = new Date(candidateStart.getTime() + (candidateDurationMin + 10) * 60 * 1000);
+
+    const overlaps = (aStart: Date, aEnd: Date, bStart: Date, bEnd: Date) =>
+      aStart.getTime() < bEnd.getTime() && bStart.getTime() < aEnd.getTime();
+
+    const lockedNumbers = new Set<string>(
+      (driverOffers || [])
+        .filter((offer: any) => activeStatuses.includes(offer?.status))
+        .filter((offer: any) => {
+          const offerStart = buildOfferStartDateTime(offer);
+          if (!offerStart) return false;
+          const offerDuration = estimateOfferDurationMinutes(offer?.route, offer?.vehicle?.type);
+          const offerEnd = new Date(offerStart.getTime() + (offerDuration + 10) * 60 * 1000);
+          return overlaps(candidateStart, candidateEnd, offerStart, offerEnd);
+        })
+        .map((offer: any) => offer?.vehicle?.number)
+        .filter(Boolean)
+    );
+
+    setLockedVehicleIds(lockedNumbers);
+  }, [driverOffers, date, time, selectedRouteId, routeAlternatives, routeDistanceKm, vehicleType]);
+
+  const getMinWaypointCountByDistance = (distanceKm: number) => {
+    if (distanceKm < 20) return 1;
+    if (distanceKm < 80) return 2;
+    if (distanceKm < 200) return 3;
+    return 4;
+  };
+
+  const calculateDistanceKm = (lat1: number, lng1: number, lat2: number, lng2: number) => {
+    const toRad = (deg: number) => (deg * Math.PI) / 180;
+    const earthRadiusKm = 6371;
+    const dLat = toRad(lat2 - lat1);
+    const dLng = toRad(lng2 - lng1);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+      Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return earthRadiusKm * c;
+  };
+
+  const getVehicleAverageSpeedKmh = (type?: string | null) => {
+    const t = (type || '').toLowerCase();
+    if (t === 'bike') return 40;
+    if (t === 'scooty' || t === 'scooter') return 35;
+    return 45;
+  };
+
+  const parseTimeLabelToMinutes = (label?: string | null): number | null => {
+    if (!label) return null;
+    const cleaned = String(label).trim();
+    if (!cleaned) return null;
+
+    const match12 = cleaned.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+    if (match12) {
+      let hour = parseInt(match12[1], 10);
+      const minute = parseInt(match12[2], 10);
+      const ampm = match12[3].toUpperCase();
+      if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null;
+      if (hour < 1 || hour > 12 || minute < 0 || minute > 59) return null;
+      if (ampm === 'AM') hour = hour === 12 ? 0 : hour;
+      else hour = hour === 12 ? 12 : hour + 12;
+      return hour * 60 + minute;
+    }
+
+    const match24 = cleaned.match(/^(\d{1,2}):(\d{2})$/);
+    if (match24) {
+      const hour = parseInt(match24[1], 10);
+      const minute = parseInt(match24[2], 10);
+      if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null;
+      if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+      return hour * 60 + minute;
+    }
+
+    return null;
+  };
+
+  const estimateOfferDurationMinutes = (routeLike: any, vehicleTypeLike?: string | null) => {
+    const explicitDuration = Number(routeLike?.duration);
+    if (Number.isFinite(explicitDuration) && explicitDuration > 0) {
+      return Math.max(5, Math.ceil(explicitDuration));
+    }
+
+    let routeKm = Number(routeLike?.distance);
+    if (!Number.isFinite(routeKm) || routeKm <= 0) {
+      const from = routeLike?.from;
+      const to = routeLike?.to;
+      if (
+        from &&
+        to &&
+        Number.isFinite(from.lat) &&
+        Number.isFinite(from.lng) &&
+        Number.isFinite(to.lat) &&
+        Number.isFinite(to.lng)
+      ) {
+        routeKm = calculateDistanceKm(from.lat, from.lng, to.lat, to.lng);
+      }
+    }
+
+    if (!Number.isFinite(routeKm) || routeKm <= 0) routeKm = 5;
+    const speed = getVehicleAverageSpeedKmh(vehicleTypeLike);
+    return Math.max(10, Math.ceil((routeKm / speed) * 60));
+  };
+
+  const buildOfferStartDateTime = (offer: any): Date | null => {
+    if (!offer?.date) return null;
+    const dt = new Date(offer.date);
+    if (Number.isNaN(dt.getTime())) return null;
+    const minutes = parseTimeLabelToMinutes(offer?.time);
+    if (minutes !== null) {
+      dt.setHours(Math.floor(minutes / 60), minutes % 60, 0, 0);
+    }
+    return dt;
+  };
+
+  const fetchRouteAlternatives = async (from: LocationData, to: LocationData) => {
+    try {
+      setLoadingRoutes(true);
+      setRoutesError(null);
+      setRouteAlternatives([]);
+      setSelectedRouteId(null);
+
+      const response: any = await poolingApi.getRouteAlternatives({
+        fromLat: from.lat,
+        fromLng: from.lng,
+        toLat: to.lat,
+        toLng: to.lng,
+        maxAlternatives: 8,
+      });
+
+      const routes = response?.success ? response?.data?.routes : [];
+      const normalizedRoutes: RouteAlternative[] = Array.isArray(routes)
+        ? routes
+            .filter((route: any) => Array.isArray(route?.polyline) && route.polyline.length >= 2)
+            .map((route: any, idx: number) => ({
+              routeId: route.routeId || `r${idx}`,
+              distanceKm: Number(route.distanceKm || 0),
+              durationMin: Number(route.durationMin || 0),
+              polyline: route.polyline.map((point: any, pointIdx: number) => ({
+                lat: Number(point.lat),
+                lng: Number(point.lng),
+                index: Number.isFinite(point.index) ? Number(point.index) : pointIdx,
+              })),
+            }))
+        : [];
+
+      if (normalizedRoutes.length === 0) {
+        setRoutesError('No route alternatives available right now.');
+        return;
+      }
+
+      setRouteAlternatives(normalizedRoutes);
+      setSelectedRouteId(normalizedRoutes[0].routeId);
+    } catch (error: any) {
+      console.error('Failed to fetch route alternatives:', error);
+      setRoutesError(error?.message || 'Unable to fetch route alternatives.');
+    } finally {
+      setLoadingRoutes(false);
+    }
+  };
+
+  const syncAutoWaypointsForSelectedRoute = async () => {
+    const selectedRoute = routeAlternatives.find((route) => route.routeId === selectedRouteId);
+    if (!selectedRoute || !Array.isArray(selectedRoute.polyline) || selectedRoute.polyline.length < 2) {
+      return;
+    }
+
+    try {
+      setSyncingAutoWaypoints(true);
+      const response: any = await poolingApi.suggestWaypointsFromPolyline({
+        selectedPolyline: selectedRoute.polyline,
+        intervalKm: 4,
+        maxPoints: 120,
+      });
+
+      const list = response?.success ? response?.data?.waypoints : [];
+      const normalizedWaypoints: LocationData[] = Array.isArray(list)
+        ? list.map((wp: any, idx: number) => ({
+            address: wp.address,
+            lat: Number(wp.lat),
+            lng: Number(wp.lng),
+            city: wp.city,
+          }))
+        : [];
+
+      if (typeof response?.data?.routeDistanceKm === 'number') {
+        setRouteDistanceKm(response.data.routeDistanceKm);
+      }
+      if (typeof response?.data?.minRequired === 'number') {
+        setMinRequired(response.data.minRequired);
+      }
+
+      setWaypoints(normalizedWaypoints);
+    } catch (error: any) {
+      console.error('Auto waypoint sync failed:', error);
+      setWaypoints([]);
+    } finally {
+      setSyncingAutoWaypoints(false);
+    }
+  };
+
+  useEffect(() => {
     if (fromLocation && toLocation) {
-      fetchSuggestedWaypoints();
+      setWaypoints([]);
+      const dist = calculateDistanceKm(fromLocation.lat, fromLocation.lng, toLocation.lat, toLocation.lng);
+      const rounded = Math.round(dist);
+      setRouteDistanceKm(rounded);
+      setMinRequired(getMinWaypointCountByDistance(dist));
+      fetchRouteAlternatives(fromLocation, toLocation);
     } else {
-      setSuggestedWaypoints([]);
-      setSelectedSuggestions(new Set());
+      setRouteDistanceKm(0);
+      setMinRequired(0);
+      setWaypoints([]);
+      setRouteAlternatives([]);
+      setSelectedRouteId(null);
+      setRouteMapHtml('');
+      setRoutesError(null);
     }
   }, [fromLocation?.lat, fromLocation?.lng, toLocation?.lat, toLocation?.lng]);
 
-  const fetchSuggestedWaypoints = async () => {
-    if (!fromLocation || !toLocation) return;
-    try {
-      setLoadingSuggestions(true);
-      const res = await poolingApi.suggestWaypoints({
-        fromLat: fromLocation.lat,
-        fromLng: fromLocation.lng,
-        toLat: toLocation.lat,
-        toLng: toLocation.lng,
-      });
-      if (res.success && res.data) {
-        setSuggestedWaypoints(res.data.waypoints || []);
-        setMinRequired(res.data.minRequired || 0);
-        setRouteDistanceKm(res.data.routeDistanceKm || 0);
-        setSelectedSuggestions(new Set());
-      }
-    } catch (err) {
-      console.warn('Failed to fetch suggested waypoints:', err);
-    } finally {
-      setLoadingSuggestions(false);
+  useEffect(() => {
+    const selectedRoute = routeAlternatives.find((route) => route.routeId === selectedRouteId);
+    if (selectedRoute) {
+      const rounded = Math.round(selectedRoute.distanceKm);
+      setRouteDistanceKm(rounded);
+      setMinRequired(getMinWaypointCountByDistance(selectedRoute.distanceKm));
     }
-  };
+  }, [routeAlternatives, selectedRouteId]);
 
-  const toggleSuggestion = (idx: number) => {
-    const next = new Set(selectedSuggestions);
-    const sw = suggestedWaypoints[idx];
-    if (next.has(idx)) {
-      next.delete(idx);
-      setWaypoints((prev) => prev.filter((wp) => wp.lat !== sw.lat || wp.lng !== sw.lng));
-    } else {
-      if (waypoints.length >= 5) return;
-      next.add(idx);
-      setWaypoints((prev) => [...prev, { address: sw.address, lat: sw.lat, lng: sw.lng, city: sw.city } as LocationData]);
+  useEffect(() => {
+    if (!fromLocation || !toLocation || !selectedRouteId || routeAlternatives.length === 0) {
+      return;
     }
-    setSelectedSuggestions(next);
-  };
+    syncAutoWaypointsForSelectedRoute();
+  }, [selectedRouteId, routeAlternatives.length, fromLocation?.lat, fromLocation?.lng, toLocation?.lat, toLocation?.lng]);
+
+  useEffect(() => {
+    if (!fromLocation || !toLocation || routeAlternatives.length === 0) {
+      setRouteMapHtml('');
+      return;
+    }
+
+    setRouteMapHtml(
+      buildRouteAlternativesMapHtml(routeAlternatives, selectedRouteId, fromLocation, toLocation)
+    );
+  }, [
+    fromLocation?.lat,
+    fromLocation?.lng,
+    toLocation?.lat,
+    toLocation?.lng,
+    routeAlternatives,
+    selectedRouteId,
+  ]);
+
+  useEffect(() => {
+    if (vehicleType !== 'Car' && availableSeats !== 1) {
+      setAvailableSeats(1);
+    }
+  }, [vehicleType, availableSeats]);
 
   const formatDate = (date: Date) => {
     const day = date.getDate();
@@ -228,14 +569,18 @@ const CreatePoolingOfferScreen = () => {
     }
   };
 
-  const handleAddWaypoint = (location: LocationData) => {
-    if (waypoints.length < 5) {
-      setWaypoints([...waypoints, location]);
+  const handleRouteMapMessage = (event: any) => {
+    try {
+      const payload = JSON.parse(event?.nativeEvent?.data || '{}');
+      if (payload?.type === 'route_select' && typeof payload?.routeId === 'string') {
+        const exists = routeAlternatives.some((route) => route.routeId === payload.routeId);
+        if (exists) {
+          setSelectedRouteId(payload.routeId);
+        }
+      }
+    } catch (error) {
+      console.warn('Invalid route map message:', error);
     }
-  };
-
-  const handleRemoveWaypoint = (index: number) => {
-    setWaypoints(waypoints.filter((_, i) => i !== index));
   };
 
   const handleCreate = async () => {
@@ -257,6 +602,12 @@ const CreatePoolingOfferScreen = () => {
       return;
     }
 
+    const selectedRoute = routeAlternatives.find((route) => route.routeId === selectedRouteId);
+    if (!selectedRoute || !Array.isArray(selectedRoute.polyline) || selectedRoute.polyline.length < 2) {
+      Alert.alert('Route Selection Required', 'Please select one available route before creating offer.');
+      return;
+    }
+
     // Validate date+time is in the future
     const combinedDateTime = new Date(date);
     combinedDateTime.setHours(time.getHours(), time.getMinutes(), 0, 0);
@@ -265,25 +616,25 @@ const CreatePoolingOfferScreen = () => {
       return;
     }
 
-    // Soft validation: warn if fewer waypoints than recommended
+    // Hard validation: via points are mandatory based on route distance.
     if (minRequired > 0 && waypoints.length < minRequired) {
-      return new Promise<void>((resolve) => {
-        Alert.alert(
-          'Add More Stops?',
-          `For a ${routeDistanceKm} km route, we recommend at least ${minRequired} stop${minRequired > 1 ? 's' : ''} to help passengers find your ride. You've added ${waypoints.length}.\n\nContinue anyway?`,
-          [
-            { text: 'Add Stops', style: 'cancel', onPress: () => resolve() },
-            { text: 'Continue', onPress: () => { proceedCreate(); resolve(); } },
-          ]
-        );
-      });
+      Alert.alert(
+        'Via Points Required',
+        `For a ${routeDistanceKm} km route, at least ${minRequired} via point${minRequired > 1 ? 's are' : ' is'} required. You added ${waypoints.length}.`
+      );
+      return;
     }
     return proceedCreate();
+  };
+
+  const showCreateOfferErrorPopup = (message: string) => {
+    Alert.alert('Unable to Create Offer', message, [{ text: 'OK' }]);
   };
 
   const proceedCreate = async () => {
     try {
       setCreating(true);
+      const selectedRoute = routeAlternatives.find((route) => route.routeId === selectedRouteId);
 
       // Combine date and time
       const dateTime = new Date(date);
@@ -309,6 +660,10 @@ const CreatePoolingOfferScreen = () => {
             city: toLocation.city,
             state: toLocation.state,
           },
+          selectedRouteId: selectedRoute?.routeId,
+          selectedPolyline: selectedRoute?.polyline,
+          distance: selectedRoute?.distanceKm,
+          duration: selectedRoute?.durationMin,
         },
         date: dateTime.toISOString(),
         time: formatTime(time),
@@ -347,14 +702,16 @@ const CreatePoolingOfferScreen = () => {
           ]
         );
       } else {
-        showSnackbar({
-          message: getUserErrorMessage(response as any, 'Failed to create offer. Please try again.'),
-          type: 'error',
-        });
+        const message = getUserErrorMessage(response as any, 'Failed to create offer. Please try again.');
+        showCreateOfferErrorPopup(message);
       }
     } catch (error: any) {
       console.error('Error creating offer:', error);
-      showSnackbar({ message: error.message || 'Failed to create offer. Please try again.', type: 'error' });
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        'Failed to create offer. Please try again.';
+      showCreateOfferErrorPopup(message);
     } finally {
       setCreating(false);
     }
@@ -366,6 +723,13 @@ const CreatePoolingOfferScreen = () => {
 
   const handleToLocationSelect = (location: LocationData) => {
     setToLocation(location);
+  };
+
+  const handleSwapLocations = () => {
+    const from = fromLocation;
+    const to = toLocation;
+    setFromLocation(to);
+    setToLocation(from);
   };
 
   // Show loading while checking documents
@@ -390,6 +754,9 @@ const CreatePoolingOfferScreen = () => {
         <Text style={styles.heroTitle}>Give a Ride</Text>
         <View style={styles.heroRightSpacer} />
       </View>
+      <View style={styles.taglineBar}>
+        <Text style={styles.taglineText}>Start a Shared Trip</Text>
+      </View>
       <KeyboardAvoidingView
         style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -399,117 +766,175 @@ const CreatePoolingOfferScreen = () => {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Uber/Rapido style clean header */}
-          <View style={styles.heroSection}>
-            <Image
-              source={require('../../../assets/forlok_give_ride_vector_blue_bg_v2.png')}
-              style={styles.heroImage}
-              resizeMode="contain"
-            />
-          </View>
-
           {/* Form Fields */}
           <View style={styles.formContainer}>
-            <View style={styles.sectionCard}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Route Details</Text>
+            <View style={styles.routeSectionPlain}>
+              <View style={styles.googleLikeRouteWrap}>
+                <View style={styles.routeMarkersCol}>
+                  <View style={styles.blueDotOuter}>
+                    <View style={styles.blueDotInner} />
+                  </View>
+                  <View style={styles.routeDashedConnector} />
+                  <MapPin size={14} color="#E11D48" />
+                </View>
+
+                <View style={styles.googleInputsCol}>
+                  <TouchableOpacity
+                    style={styles.mapsInputRow}
+                    onPress={() =>
+                      navigation.navigate('LocationPicker' as never, {
+                        title: 'Select Pickup Location',
+                        onLocationSelect: handleFromLocationSelect,
+                        initialLocation: fromLocation || undefined,
+                      } as never)
+                    }
+                  >
+                    <Text
+                      style={[
+                        styles.mapsInputText,
+                        !fromLocation && styles.mapsInputPlaceholder,
+                        styles.inputTopBlueText,
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {fromLocation?.address || 'Your location'}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.mapsInputRow}
+                    onPress={() =>
+                      navigation.navigate('LocationPicker' as never, {
+                        title: 'Select Destination',
+                        onLocationSelect: handleToLocationSelect,
+                        initialLocation: toLocation || undefined,
+                      } as never)
+                    }
+                  >
+                    <Text style={[styles.mapsInputText, !toLocation && styles.mapsInputPlaceholder]} numberOfLines={1}>
+                      {toLocation?.address || 'Choose destination'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                <TouchableOpacity style={styles.swapRouteBtn} onPress={handleSwapLocations}>
+                  <ArrowUpDown size={16} color="#334155" />
+                </TouchableOpacity>
               </View>
 
-              <View style={styles.routeRowsWrap}>
+              <View style={styles.modeIconRow}>
                 <TouchableOpacity
-                  style={styles.routeRow}
-                  onPress={() =>
-                    navigation.navigate('LocationPicker' as never, {
-                      title: 'Select Pickup Location',
-                      onLocationSelect: handleFromLocationSelect,
-                      initialLocation: fromLocation || undefined,
-                    } as never)
-                  }
+                  style={[styles.modeIconBtn, vehicleType === 'Car' && styles.modeIconBtnSelected]}
+                  onPress={() => setVehicleType('Car')}
                 >
-                  <View style={styles.routeMarkerCol}>
-                    <View style={[styles.routeIconBadge, styles.routeIconBadgeFrom]}>
-                      <MapPin size={14} color="#16A34A" />
-                    </View>
-                  </View>
-                  <View style={styles.routeTextWrap}>
-                    <Text style={styles.routeRowLabel}>{cleanFieldLabel(t('createPoolingOffer.from'))}</Text>
-                    <Text style={[styles.routeRowValue, !fromLocation && styles.routeRowPlaceholder]} numberOfLines={1}>
-                      {fromLocation?.address || t('createPoolingOffer.selectPickup')}
-                    </Text>
-                  </View>
-                  <ChevronRight size={16} color={COLORS.textSecondary} />
+                  <Car size={16} color={vehicleType === 'Car' ? '#0F766E' : '#334155'} />
                 </TouchableOpacity>
-
                 <TouchableOpacity
-                  style={styles.routeRow}
-                  onPress={() =>
-                    navigation.navigate('LocationPicker' as never, {
-                      title: 'Select Destination',
-                      onLocationSelect: handleToLocationSelect,
-                      initialLocation: toLocation || undefined,
-                    } as never)
-                  }
+                  style={[styles.modeIconBtn, vehicleType === 'Bike' && styles.modeIconBtnSelected]}
+                  onPress={() => {
+                    setVehicleType('Bike');
+                    setAvailableSeats(1);
+                  }}
                 >
-                  <View style={styles.routeMarkerCol}>
-                    <View style={[styles.routeIconBadge, styles.routeIconBadgeTo]}>
-                      <MapPin size={14} color="#DC2626" />
-                    </View>
-                  </View>
-                  <View style={styles.routeTextWrap}>
-                    <Text style={styles.routeRowLabel}>{cleanFieldLabel(t('createPoolingOffer.to'))}</Text>
-                    <Text style={[styles.routeRowValue, !toLocation && styles.routeRowPlaceholder]} numberOfLines={1}>
-                      {toLocation?.address || t('createPoolingOffer.selectDestination')}
-                    </Text>
-                  </View>
-                  <ChevronRight size={16} color={COLORS.textSecondary} />
+                  <Bike size={16} color={vehicleType === 'Bike' ? '#0F766E' : '#334155'} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modeIconBtn, vehicleType === 'Scooty' && styles.modeIconBtnSelected]}
+                  onPress={() => {
+                    setVehicleType('Scooty');
+                    setAvailableSeats(1);
+                  }}
+                >
+                  <MaterialCommunityIcons name="moped" size={17} color={vehicleType === 'Scooty' ? '#0F766E' : '#334155'} />
                 </TouchableOpacity>
               </View>
+
+              <View style={styles.topSectionDivider} />
 
               <View style={styles.waypointsSection}>
-                {suggestedWaypoints.length > 0 && (
-                  <View style={styles.suggestedBlock}>
-                    <Text style={styles.label}>Suggested Stops ({routeDistanceKm} km route)</Text>
-                    {minRequired > 0 && (
-                      <Text style={styles.suggestedHint}>
-                        At least {minRequired} stop{minRequired > 1 ? 's' : ''} recommended for better matching
-                      </Text>
-                    )}
-                    {suggestedWaypoints.map((sw, idx) => {
-                      const isSelected = selectedSuggestions.has(idx);
-                      return (
-                        <TouchableOpacity
-                          key={idx}
-                          style={[styles.suggestedRow, isSelected && styles.suggestedRowSelected]}
-                          onPress={() => toggleSuggestion(idx)}
-                          activeOpacity={0.7}
-                        >
-                          <View style={[styles.suggestedCheck, isSelected && styles.suggestedCheckActive]}>
-                            {isSelected && <CheckCircle size={18} color="#fff" />}
-                          </View>
-                          <View style={{ flex: 1 }}>
-                            <Text style={styles.suggestedCity} numberOfLines={1}>
-                              {sw.city || sw.address.split(',')[0]}
-                            </Text>
-                            <Text style={styles.suggestedAddr} numberOfLines={1}>
-                              {sw.address}
-                            </Text>
-                          </View>
-                        </TouchableOpacity>
-                      );
-                    })}
+                {fromLocation && toLocation && (
+                  <View style={styles.requiredViaBanner}>
+                    <Text style={styles.requiredViaTitle}>
+                      Route: {routeDistanceKm} km
+                    </Text>
+                    <Text style={styles.requiredViaText}>
+                      Add at least {minRequired} via point{minRequired > 1 ? 's' : ''} for this route.
+                    </Text>
                   </View>
                 )}
 
-                {loadingSuggestions && (
-                  <View style={styles.suggestedLoading}>
-                    <ActivityIndicator size="small" color={COLORS.primary} />
-                    <Text style={styles.suggestedLoadingText}>Finding stops along your route...</Text>
+                {fromLocation && toLocation && (
+                  <View style={styles.routeSelectionSection}>
+                    <Text style={styles.label}>Choose Route</Text>
+                    {routeAlternatives.length > 0 ? (
+                      <Text style={styles.routeCountText}>
+                        {routeAlternatives.length} route option{routeAlternatives.length > 1 ? 's' : ''} found
+                      </Text>
+                    ) : null}
+                    {syncingAutoWaypoints ? (
+                      <Text style={styles.autoSyncText}>Auto-selecting via points from selected route...</Text>
+                    ) : null}
+
+                    {loadingRoutes ? (
+                      <View style={styles.routeLoadingBox}>
+                        <ActivityIndicator size="small" color={COLORS.primary} />
+                        <Text style={styles.routeLoadingText}>Loading route options...</Text>
+                      </View>
+                    ) : (
+                      <>
+                        {routeMapHtml ? (
+                          <View style={styles.routeMapCard}>
+                            <WebView
+                              originWhitelist={['*']}
+                              source={{ html: routeMapHtml }}
+                              style={styles.routeMap}
+                              javaScriptEnabled
+                              domStorageEnabled
+                              scrollEnabled={false}
+                              onMessage={handleRouteMapMessage}
+                            />
+                          </View>
+                        ) : null}
+
+                        {routeAlternatives.length > 0 ? (
+                          <ScrollView
+                            horizontal
+                            showsHorizontalScrollIndicator={false}
+                            contentContainerStyle={styles.routeCardsRow}
+                          >
+                            {routeAlternatives.map((routeOption, idx) => {
+                              const isSelected = selectedRouteId === routeOption.routeId;
+                              return (
+                                <TouchableOpacity
+                                  key={routeOption.routeId}
+                                  style={[
+                                    styles.routeCard,
+                                    isSelected && styles.routeCardSelected,
+                                  ]}
+                                  onPress={() => setSelectedRouteId(routeOption.routeId)}
+                                >
+                                  <Text style={styles.routeCardTitle}>
+                                    Route {idx + 1} {isSelected ? '(Selected)' : ''}
+                                  </Text>
+                                  <Text style={styles.routeCardSubtext}>
+                                    {Math.round(routeOption.distanceKm)} km • {Math.round(routeOption.durationMin)} min
+                                  </Text>
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </ScrollView>
+                        ) : null}
+                      </>
+                    )}
+
+                    {routesError ? <Text style={styles.routeErrorText}>{routesError}</Text> : null}
+
                   </View>
                 )}
 
                 {waypoints.length > 0 && (
-                  <Text style={[styles.label, { marginTop: suggestedWaypoints.length > 0 ? SPACING.md : 0 }]}>
-                    Selected Stops ({waypoints.length})
+                  <Text style={styles.label}>
+                    Auto-selected Stops ({waypoints.length})
                   </Text>
                 )}
 
@@ -519,37 +944,8 @@ const CreatePoolingOfferScreen = () => {
                       <View style={styles.waypointDotInner} />
                     </View>
                     <Text style={styles.waypointAddress} numberOfLines={1}>{wp.address}</Text>
-                    <TouchableOpacity
-                      onPress={() => {
-                        const removed = waypoints[idx];
-                        handleRemoveWaypoint(idx);
-                        const sugIdx = suggestedWaypoints.findIndex((s) => s.lat === removed.lat && s.lng === removed.lng);
-                        if (sugIdx >= 0) {
-                          setSelectedSuggestions((prev) => { const n = new Set(prev); n.delete(sugIdx); return n; });
-                        }
-                      }}
-                      style={styles.waypointRemove}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    >
-                      <X size={16} color={COLORS.error || '#E53935'} />
-                    </TouchableOpacity>
                   </View>
                 ))}
-
-                {waypoints.length < 5 && (
-                  <TouchableOpacity
-                    style={styles.addWaypointBtn}
-                    onPress={() =>
-                      navigation.navigate('LocationPicker' as never, {
-                        title: `Add Stop ${waypoints.length + 1}`,
-                        onLocationSelect: handleAddWaypoint,
-                      } as never)
-                    }
-                  >
-                    <Plus size={18} color={COLORS.primary} />
-                    <Text style={styles.addWaypointText}>Add a way-point along the way</Text>
-                  </TouchableOpacity>
-                )}
               </View>
             </View>
 
@@ -595,49 +991,8 @@ const CreatePoolingOfferScreen = () => {
               />
             )}
 
-            <View style={styles.sectionCard}>
-             
-
-              <View style={styles.vehicleTypeContainer}>
-                <Text style={styles.label}>{t('dashboard.selectYourVehicle')}</Text>
-                <View style={styles.vehicleTypeOptions}>
-                  {([
-                    { type: 'Car' as const, lucide: Car, color: '#1565C0', bg: '#E3F2FD', label: 'Car' },
-                    { type: 'Bike' as const, lucide: Bike, color: '#E65100', bg: '#FFF3E0', label: 'Bike' },
-                    { type: 'Scooty' as const, lucide: null, color: '#6A1B9A', bg: '#F3E5F5', label: 'Scooty' },
-                  ]).map((vt) => {
-                    const isSelected = vehicleType === vt.type;
-                    return (
-                      <TouchableOpacity
-                        key={vt.type}
-                        style={[
-                          styles.vehicleTypeButton,
-                          { backgroundColor: isSelected ? vt.bg : '#F7FAFF', borderColor: isSelected ? vt.color : '#DDE6F5' },
-                        ]}
-                        onPress={() => {
-                          setVehicleType(vt.type);
-                          setSelectedVehicle(null);
-                          setShowVehicleDropdown(false);
-                          setAvailableSeats(1);
-                        }}
-                        activeOpacity={0.7}
-                      >
-                        <View style={[styles.vehicleIconWrap, { backgroundColor: isSelected ? vt.color : vt.bg }]}>
-                          {vt.lucide ? (
-                            <vt.lucide size={22} color={isSelected ? '#FFF' : vt.color} />
-                          ) : (
-                            <MaterialCommunityIcons name="moped" size={22} color={isSelected ? '#FFF' : vt.color} />
-                          )}
-                        </View>
-                        <Text style={[styles.vehicleTypeLabel, { color: isSelected ? vt.color : COLORS.text }]}>{vt.label}</Text>
-                        {isSelected && <View style={[styles.vehicleCheckDot, { backgroundColor: vt.color }]} />}
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-
-              {vehicleType && (
+            {vehicleType && (
+              <View style={styles.sectionCard}>
                 <View style={styles.vehicleSelectContainer}>
                   <Text style={styles.label}>Select Vehicle</Text>
                   {loadingVehicles ? (
@@ -685,7 +1040,9 @@ const CreatePoolingOfferScreen = () => {
                             onPress={() => {
                               setSelectedVehicle(vehicle);
                               setShowVehicleDropdown(false);
-                              if (vehicle.seats && availableSeats > vehicle.seats) {
+                              if (vehicleType !== 'Car') {
+                                setAvailableSeats(1);
+                              } else if (vehicle.seats && availableSeats > vehicle.seats) {
                                 setAvailableSeats(vehicle.seats);
                               }
                             }}
@@ -706,44 +1063,47 @@ const CreatePoolingOfferScreen = () => {
                     </View>
                   )}
                 </View>
-              )}
+              </View>
+            )}
 
-              <View style={styles.seatsContainer}>
-                <Text style={styles.label}>{cleanFieldLabel(t('createPoolingOffer.availableSeats'))}</Text>
-                <View style={styles.seatsRangeContainer}>
-                  <View style={styles.seatsRangeRow}>
-                    {[1, 2, 3, 4, 5, 6].map((num) => (
-                      <TouchableOpacity
-                        key={num}
-                        style={[
-                          styles.seatRangeButton,
-                          availableSeats === num && styles.seatRangeSelected,
-                          (vehicleType === 'Bike' || vehicleType === 'Scooty') && num > 1 && styles.seatRangeDisabled,
-                        ]}
-                        onPress={() => {
-                          if ((vehicleType === 'Bike' || vehicleType === 'Scooty') && num > 1) return;
-                          setAvailableSeats(num);
-                        }}
-                        disabled={(vehicleType === 'Bike' || vehicleType === 'Scooty') && num > 1}
-                      >
-                        <Text
+            {vehicleType === 'Car' && (
+              <View style={styles.sectionCard}>
+                <View style={styles.seatsContainer}>
+                  <Text style={styles.label}>{cleanFieldLabel(t('createPoolingOffer.availableSeats'))}</Text>
+                  <View style={styles.seatsRangeContainer}>
+                    <View style={styles.seatsRangeRow}>
+                      {[1, 2, 3, 4, 5, 6].map((num) => (
+                        <TouchableOpacity
+                          key={num}
                           style={[
-                            styles.seatRangeText,
-                            availableSeats === num && styles.seatRangeTextSelected,
-                            (vehicleType === 'Bike' || vehicleType === 'Scooty') && num > 1 && styles.seatRangeTextDisabled,
+                            styles.seatRangeButton,
+                            availableSeats === num && styles.seatRangeSelected,
                           ]}
+                          onPress={() => {
+                            setAvailableSeats(num);
+                          }}
                         >
-                          {num}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
+                          {availableSeats === num ? (
+                            <LinearGradient
+                              colors={['#F99E3C', '#D47B1B']}
+                              start={{ x: 0.5, y: 0 }}
+                              end={{ x: 0.5, y: 1 }}
+                              style={styles.seatRangeGradient}
+                            >
+                              <Text style={[styles.seatRangeText, styles.seatRangeTextSelected]}>{num}</Text>
+                            </LinearGradient>
+                          ) : (
+                            <Text style={styles.seatRangeText}>
+                              {num}
+                            </Text>
+                          )}
+                        </TouchableOpacity>
+                      ))}
+                    </View>
                   </View>
-                  {(vehicleType === 'Bike' || vehicleType === 'Scooty') && (
-                    <Text style={styles.hint}>Only 1 seat available for {vehicleType}</Text>
-                  )}
                 </View>
               </View>
-            </View>
+            )}
 
             <View style={styles.sectionCard}>
               <View style={styles.sectionHeader}>
@@ -763,17 +1123,29 @@ const CreatePoolingOfferScreen = () => {
               </View>
             </View>
 
-            <Button
-              title={creating ? 'Creating...' : t('createPoolingOffer.createOffer')}
+            <TouchableOpacity
               onPress={handleCreate}
-              variant="primary"
-              size="large"
-              style={[styles.createButton, styles.createButtonModern]}
               disabled={creating}
-            />
+              activeOpacity={0.85}
+              style={[styles.createOfferBtn, creating && styles.createOfferBtnDisabled]}
+            >
+              <LinearGradient
+                colors={['#F99E3C', '#D47B1B']}
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+                style={styles.createOfferGradient}
+              >
+                {creating ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.createOfferText}>{t('createPoolingOffer.createOffer')}</Text>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
     </View>
   );
 };
@@ -784,14 +1156,30 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F7FB',
   },
   stickyHeader: {
-    backgroundColor: '#F5F7FB',
+    backgroundColor: '#FFFFFF',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: SPACING.md,
     paddingTop: normalize(24),
-    paddingBottom: normalize(2),
+    paddingBottom: normalize(10),
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5EBF5',
+    ...SHADOWS.sm,
     zIndex: 20,
+  },
+  taglineBar: {
+    backgroundColor: '#EEF4FF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#D6E4FF',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: normalize(6),
+  },
+  taglineText: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(11.5),
+    color: '#1E3A8A',
+    textAlign: 'center',
   },
   keyboardView: {
     flex: 1,
@@ -804,20 +1192,10 @@ const styles = StyleSheet.create({
     paddingBottom: normalize(120),
     backgroundColor: '#F5F7FB',
   },
-  heroSection: {
-    width: '100%',
-    backgroundColor: '#F5F7FB',
-    paddingHorizontal: 0,
-    paddingTop: 0,
-    paddingBottom: normalize(8),
-  },
   heroBackButton: {
-    width: normalize(36),
-    height: normalize(36),
-    borderRadius: normalize(18),
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    alignItems: 'center',
+    paddingVertical: normalize(6),
+    paddingRight: normalize(8),
+    alignItems: 'flex-start',
     justifyContent: 'center',
   },
   heroTitle: {
@@ -827,15 +1205,9 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
   heroRightSpacer: { width: normalize(36), height: normalize(36) },
-  heroImage: {
-    width: '100%',
-    height: normalize(138),
-    marginTop: 0,
-    marginBottom: 0,
-  },
   formContainer: {
     padding: SPACING.md,
-    paddingTop: normalize(14),
+    paddingTop: normalize(8),
     gap: normalize(12),
     backgroundColor: '#F5F7FB',
   },
@@ -846,6 +1218,9 @@ const styles = StyleSheet.create({
     borderColor: '#E5EBF5',
     padding: normalize(12),
     ...SHADOWS.sm,
+  },
+  routeSectionPlain: {
+    paddingTop: normalize(2),
   },
   sectionHeader: {
     marginBottom: normalize(6),
@@ -865,6 +1240,143 @@ const styles = StyleSheet.create({
   routeRowsWrap: {
     gap: normalize(8),
     marginBottom: normalize(8),
+  },
+  mapsInputsWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: normalize(8),
+    marginBottom: normalize(10),
+  },
+  googleLikeRouteWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: normalize(8),
+    marginBottom: normalize(10),
+  },
+  routeMarkersCol: {
+    width: normalize(18),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  blueDotOuter: {
+    width: normalize(11),
+    height: normalize(11),
+    borderRadius: normalize(6),
+    backgroundColor: '#DBEAFE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  blueDotInner: {
+    width: normalize(6),
+    height: normalize(6),
+    borderRadius: normalize(3),
+    backgroundColor: '#2563EB',
+  },
+  routeDashedConnector: {
+    height: normalize(18),
+    borderLeftWidth: 1,
+    borderStyle: 'dashed',
+    borderLeftColor: '#94A3B8',
+    marginVertical: normalize(3),
+  },
+  googleInputsCol: {
+    flex: 1,
+    gap: normalize(8),
+  },
+  mapsInputsLeft: {
+    flex: 1,
+    gap: normalize(8),
+  },
+  mapsInputRow: {
+    minHeight: normalize(44),
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: normalize(9),
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: normalize(10),
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: normalize(8),
+  },
+  mapsDot: {
+    width: normalize(8),
+    height: normalize(8),
+    borderRadius: normalize(4),
+  },
+  mapsDotFrom: {
+    backgroundColor: '#2563EB',
+  },
+  mapsInputText: {
+    flex: 1,
+    fontFamily: FONTS.medium,
+    fontSize: normalize(12.5),
+    color: COLORS.text,
+  },
+  inputTopBlueText: {
+    color: '#2563EB',
+  },
+  mapsInputPlaceholder: {
+    color: '#64748B',
+  },
+  swapRouteBtn: {
+    width: normalize(34),
+    height: normalize(34),
+    borderRadius: normalize(17),
+    borderWidth: 1,
+    borderColor: '#DDE6F5',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: normalize(22),
+  },
+  modeIconRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: normalize(12),
+    marginBottom: normalize(6),
+  },
+  modeIconBtn: {
+    width: normalize(44),
+    height: normalize(30),
+    borderRadius: normalize(15),
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modeIconBtnSelected: {
+    backgroundColor: '#BFF4F0',
+    borderColor: '#8BE7DF',
+  },
+  topSectionDivider: {
+    marginTop: normalize(6),
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  locationTag: {
+    borderRadius: normalize(8),
+    paddingHorizontal: normalize(6),
+    paddingVertical: normalize(2),
+    marginRight: normalize(2),
+  },
+  locationTagFrom: {
+    backgroundColor: '#DBEAFE',
+  },
+  locationTagTo: {
+    backgroundColor: '#FEE2E2',
+  },
+  locationTagText: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(9.5),
+    letterSpacing: 0.3,
+  },
+  locationTagTextFrom: {
+    color: '#1D4ED8',
+  },
+  locationTagTextTo: {
+    color: '#B91C1C',
   },
   routeRow: {
     flexDirection: 'row',
@@ -993,7 +1505,7 @@ const styles = StyleSheet.create({
     marginTop: normalize(6),
   },
   seatsContainer: {
-    marginBottom: SPACING.md,
+    marginBottom: 0,
   },
   seatsRangeContainer: {
     marginTop: SPACING.xs,
@@ -1012,10 +1524,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#F7FAFF',
+    overflow: 'hidden',
   },
   seatRangeSelected: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
+    borderColor: '#D47B1B',
+  },
+  seatRangeGradient: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: normalize(19),
   },
   seatRangeDisabled: {
     backgroundColor: COLORS.lightGray,
@@ -1059,13 +1578,27 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     backgroundColor: '#F8FAFF',
   },
-  createButton: {
+  createOfferBtn: {
     marginTop: normalize(4),
     marginBottom: SPACING.xl,
-  },
-  createButtonModern: {
     borderRadius: normalize(14),
+    overflow: 'hidden',
+  },
+  createOfferBtnDisabled: {
+    opacity: 0.65,
+  },
+  createOfferGradient: {
+    minHeight: normalize(52),
+    borderRadius: normalize(14),
+    alignItems: 'center',
+    justifyContent: 'center',
     ...SHADOWS.md,
+  },
+  createOfferText: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(15),
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   loadingContainer: {
     flex: 1,
@@ -1079,7 +1612,7 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
   },
   vehicleSelectContainer: {
-    marginBottom: SPACING.md,
+    marginBottom: 0,
   },
   vehicleDropdown: {
     flexDirection: 'row',
@@ -1204,67 +1737,243 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     marginLeft: normalize(8),
   },
-  suggestedBlock: {
-    marginBottom: SPACING.sm,
-  },
-  suggestedHint: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(12),
-    color: COLORS.primary,
-    marginBottom: normalize(8),
-    fontStyle: 'italic',
-  },
-  suggestedRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FAFAFA',
-    borderRadius: BORDER_RADIUS.md,
-    paddingVertical: normalize(10),
-    paddingHorizontal: SPACING.sm,
-    marginBottom: normalize(6),
+  requiredViaBanner: {
+    marginBottom: normalize(10),
+    paddingHorizontal: normalize(10),
+    paddingVertical: normalize(9),
+    borderRadius: normalize(10),
+    backgroundColor: '#EEF4FF',
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: '#D6E4FF',
   },
-  suggestedRowSelected: {
-    backgroundColor: '#E8F5E9',
-    borderColor: '#43A047',
+  requiredViaTitle: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(12),
+    color: '#1E3A8A',
+    marginBottom: normalize(2),
   },
-  suggestedCheck: {
-    width: normalize(26),
-    height: normalize(26),
-    borderRadius: normalize(13),
-    borderWidth: 2,
-    borderColor: COLORS.border,
+  requiredViaText: {
+    fontFamily: FONTS.regular,
+    fontSize: normalize(11.5),
+    color: '#334155',
+  },
+  routeSelectionSection: {
+    marginBottom: normalize(10),
+  },
+  routeLoadingBox: {
+    minHeight: normalize(64),
+    borderWidth: 1,
+    borderColor: '#DDE6F5',
+    borderRadius: normalize(10),
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: normalize(10),
-  },
-  suggestedCheckActive: {
-    backgroundColor: '#43A047',
-    borderColor: '#43A047',
-  },
-  suggestedCity: {
-    fontFamily: FONTS.medium,
-    fontSize: normalize(14),
-    color: COLORS.text,
-    fontWeight: '600',
-  },
-  suggestedAddr: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(11),
-    color: COLORS.textSecondary,
-    marginTop: normalize(2),
-  },
-  suggestedLoading: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: normalize(12),
+    gap: normalize(8),
+    backgroundColor: '#F8FAFF',
+  },
+  routeLoadingText: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(12),
+    color: COLORS.textSecondary,
+  },
+  routeMapCard: {
+    height: normalize(210),
+    borderWidth: 1,
+    borderColor: '#DDE6F5',
+    borderRadius: normalize(10),
+    overflow: 'hidden',
+    backgroundColor: '#F8FAFF',
+  },
+  routeMap: {
+    flex: 1,
+    backgroundColor: '#F8FAFF',
+  },
+  routeCardsRow: {
+    paddingTop: normalize(8),
+    paddingBottom: normalize(4),
+    paddingRight: normalize(4),
     gap: normalize(8),
   },
-  suggestedLoadingText: {
+  routeCard: {
+    minWidth: normalize(145),
+    borderRadius: normalize(10),
+    borderWidth: 1,
+    borderColor: '#DDE6F5',
+    backgroundColor: '#F8FAFF',
+    paddingVertical: normalize(9),
+    paddingHorizontal: normalize(10),
+  },
+  routeCardSelected: {
+    borderColor: '#1D4ED8',
+    backgroundColor: '#EEF4FF',
+  },
+  routeCardTitle: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(12),
+    color: COLORS.text,
+  },
+  routeCardSubtext: {
+    marginTop: normalize(2),
     fontFamily: FONTS.regular,
-    fontSize: normalize(13),
+    fontSize: normalize(11.5),
     color: COLORS.textSecondary,
+  },
+  routeErrorText: {
+    marginTop: normalize(6),
+    fontFamily: FONTS.medium,
+    fontSize: normalize(11.5),
+    color: COLORS.error || '#DC2626',
+  },
+  routeCountText: {
+    marginBottom: normalize(6),
+    fontFamily: FONTS.medium,
+    fontSize: normalize(11.5),
+    color: '#334155',
+  },
+  autoSyncText: {
+    marginBottom: normalize(6),
+    fontFamily: FONTS.regular,
+    fontSize: normalize(11.5),
+    color: COLORS.textSecondary,
+  },
+  autoSuggestBtn: {
+    marginTop: normalize(8),
+    borderWidth: 1,
+    borderColor: '#DDE6F5',
+    borderRadius: normalize(10),
+    paddingVertical: normalize(10),
+    paddingHorizontal: normalize(12),
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: normalize(6),
+    backgroundColor: '#F8FAFF',
+  },
+  autoSuggestBtnText: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(12),
+    color: COLORS.primary,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.4)',
+    justifyContent: 'center',
+    paddingHorizontal: normalize(16),
+  },
+  modalCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: normalize(14),
+    padding: normalize(14),
+    maxHeight: '75%',
+  },
+  modalTitle: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(16),
+    color: COLORS.text,
+    fontWeight: '700',
+  },
+  modalSubtitle: {
+    marginTop: normalize(4),
+    marginBottom: normalize(10),
+    fontFamily: FONTS.regular,
+    fontSize: normalize(12),
+    color: COLORS.textSecondary,
+  },
+  modalSearchInput: {
+    borderWidth: 1,
+    borderColor: '#DDE6F5',
+    borderRadius: normalize(10),
+    paddingHorizontal: normalize(10),
+    paddingVertical: normalize(8),
+    fontFamily: FONTS.regular,
+    fontSize: normalize(12.5),
+    color: COLORS.text,
+    backgroundColor: '#F8FAFF',
+    marginBottom: normalize(10),
+  },
+  modalList: {
+    maxHeight: normalize(320),
+  },
+  modalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: normalize(10),
+    paddingHorizontal: normalize(10),
+    paddingVertical: normalize(9),
+    marginBottom: normalize(8),
+    backgroundColor: '#F8FAFF',
+  },
+  modalRowContent: {
+    flex: 1,
+    marginRight: normalize(8),
+  },
+  modalRowTitle: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(12.5),
+    color: COLORS.text,
+  },
+  modalRowAddress: {
+    marginTop: normalize(2),
+    fontFamily: FONTS.regular,
+    fontSize: normalize(11.5),
+    color: COLORS.textSecondary,
+  },
+  modalRowDistance: {
+    marginTop: normalize(2),
+    fontFamily: FONTS.medium,
+    fontSize: normalize(11),
+    color: '#334155',
+  },
+  modalAddBtn: {
+    borderRadius: normalize(8),
+    borderWidth: 1,
+    borderColor: '#1D4ED8',
+    paddingVertical: normalize(6),
+    paddingHorizontal: normalize(10),
+    backgroundColor: '#EEF4FF',
+  },
+  modalAddBtnDisabled: {
+    borderColor: '#CBD5E1',
+    backgroundColor: '#F1F5F9',
+  },
+  modalAddBtnText: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(11.5),
+    color: '#1D4ED8',
+  },
+  modalAddBtnTextDisabled: {
+    color: '#64748B',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: normalize(10),
+    marginTop: normalize(10),
+  },
+  modalSecondaryBtn: {
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: normalize(8),
+    paddingVertical: normalize(8),
+    paddingHorizontal: normalize(12),
+  },
+  modalSecondaryText: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(12),
+    color: '#334155',
+  },
+  modalPrimaryBtn: {
+    borderRadius: normalize(8),
+    backgroundColor: '#1D4ED8',
+    paddingVertical: normalize(8),
+    paddingHorizontal: normalize(12),
+  },
+  modalPrimaryText: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(12),
+    color: '#FFFFFF',
   },
 });
 

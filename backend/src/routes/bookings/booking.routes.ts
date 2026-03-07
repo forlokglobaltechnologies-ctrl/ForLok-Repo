@@ -537,17 +537,15 @@ export async function bookingRoutes(fastify: FastifyInstance) {
 
   /**
    * POST /api/bookings/:bookingId/end-trip
-   * End trip for a specific passenger with code verification (authenticated - driver only)
-   * Body: { passengerCode: string, paymentMethod?: 'offline_cash' | 'upi' | 'card' | 'net_banking' }
-   * If paymentMethod is 'offline_cash', cash payment is recorded immediately.
-   * Otherwise, a Razorpay order is created for online payment.
+   * End trip for a specific passenger with completion code verification (authenticated - driver only)
+   * Body: { passengerCode: string, paymentMethod?: 'offline_cash' }
    */
   fastify.post(
     '/:bookingId/end-trip',
     {
       preHandler: [authenticate, validate(z.object({
         passengerCode: z.string().length(4),
-        paymentMethod: z.enum(['upi', 'card', 'wallet', 'net_banking', 'offline_cash']).optional(),
+        paymentMethod: z.enum(['offline_cash']).optional(),
       }))],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
@@ -672,22 +670,20 @@ export async function bookingRoutes(fastify: FastifyInstance) {
 
   /**
    * POST /api/bookings/:bookingId/choose-payment
-   * Passenger chooses payment method after trip ends (authenticated - passenger only)
-   * Body: { paymentMethod: 'online' | 'offline_cash' }
-   * Online → Razorpay order created, passenger pays
-   * Cash → 4-digit code generated, passenger shows to driver
+   * Passenger requests completion code after trip ends (authenticated - passenger only)
+   * Body: { paymentMethod: 'offline_cash' }
    */
   fastify.post(
     '/:bookingId/choose-payment',
     {
       preHandler: [authenticate, validate(z.object({
-        paymentMethod: z.enum(['online', 'offline_cash']),
+        paymentMethod: z.enum(['offline_cash']),
       }))],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const userId = (request as any).user.userId;
       const { bookingId } = request.params as { bookingId: string };
-      const { paymentMethod } = request.body as { paymentMethod: 'online' | 'offline_cash' };
+      const { paymentMethod } = request.body as { paymentMethod: 'offline_cash' };
 
       const result = await bookingService.choosePaymentMethod(bookingId, userId, paymentMethod);
 

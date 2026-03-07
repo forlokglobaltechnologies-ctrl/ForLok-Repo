@@ -124,11 +124,11 @@ class PriceCalculationService {
       const priceAfterTime = basePrice * timeMultiplier;
       const finalPrice = priceAfterTime * supplyMultiplier;
 
-      // 7. Calculate platform fee (10% of final price, minimum ₹5)
-      const platformFee = Math.max(finalPrice * 0.1, 5);
+      // 7. Service-mode pooling: no platform fee charged in-app.
+      const platformFee = 0;
 
-      // 8. Calculate total amount
-      const totalAmount = finalPrice + platformFee;
+      // 8. Total equals ride fare in manual-payment model.
+      const totalAmount = finalPrice;
 
       // Build breakdown
       const breakdown: PriceBreakdown = {

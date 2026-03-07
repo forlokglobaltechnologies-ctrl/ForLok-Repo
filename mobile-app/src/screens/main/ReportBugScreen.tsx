@@ -9,7 +9,6 @@ import {
   ImageBackground,
   TextInput,
   Alert,
-  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import {
@@ -32,6 +31,7 @@ import { normalize, wp, hp } from '@utils/responsive';
 import { useLanguage } from '@context/LanguageContext';
 import { useTheme } from '@context/ThemeContext';
 import { feedbackApi } from '@utils/apiClient';
+import { AppLoader } from '@components/common/AppLoader';
 
 const ReportBugScreen = () => {
   const navigation = useNavigation<any>();
@@ -49,7 +49,7 @@ const ReportBugScreen = () => {
   const bugCategories = [
     { id: 'app_crash', icon: Zap, label: 'App Crash', color: '#F44336' },
     { id: 'navigation', icon: MapPin, label: 'Navigation', color: '#2196F3' },
-    { id: 'payment', icon: CreditCard, label: 'Payment', color: '#FF9800' },
+    { id: 'wallet_coins', icon: CreditCard, label: 'Wallet & Coins', color: '#FF9800' },
     { id: 'account', icon: UserX, label: 'Account', color: '#9C27B0' },
     { id: 'ui_issue', icon: Smartphone, label: 'UI Issue', color: '#00BCD4' },
     { id: 'other', icon: Bug, label: 'Other', color: '#607D8B' },
@@ -259,7 +259,7 @@ const ReportBugScreen = () => {
           activeOpacity={0.8}
         >
           {submitting ? (
-            <ActivityIndicator size="small" color="#FFF" />
+            <AppLoader size="small" color="#FFF" />
           ) : (
             <>
               <Send size={18} color="#FFF" />

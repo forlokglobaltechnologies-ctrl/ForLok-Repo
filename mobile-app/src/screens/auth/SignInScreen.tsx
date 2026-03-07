@@ -8,11 +8,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
-  ActivityIndicator,
   StatusBar,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { ArrowLeft, Lock, Mail } from 'lucide-react-native';
+import { Lock, Mail } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '@constants/theme';
 import { Input } from '@components/common/Input';
 import { useLanguage } from '@context/LanguageContext';
@@ -21,8 +20,11 @@ import { normalize, wp, hp } from '@utils/responsive';
 import { useAuth } from '@context/AuthContext';
 import { useSnackbar } from '@context/SnackbarContext';
 import { getUserErrorMessage, mapFieldErrors } from '@utils/errorUtils';
+import { AppLoader } from '@components/common/AppLoader';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const ACCENT = '#F9A825';
+const ORANGE_GRADIENT = ['#F99E3C', '#D47B1B'] as const;
 const DEBUG_ENDPOINT = 'http://127.0.0.1:7775/ingest/9bdd2fd3-ac77-45be-b342-a40ab02f34f7';
 type SignInErrors = { username?: string; password?: string };
 
@@ -94,16 +96,7 @@ const SignInScreen = () => {
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => {
-            if (navigation.canGoBack()) navigation.goBack();
-            else navigation.navigate('Onboarding' as never);
-          }}
-          activeOpacity={0.7}
-        >
-          <ArrowLeft size={22} color="#1A1A1A" />
-        </TouchableOpacity>
+        <View style={styles.headerSpacer} />
 
         <TouchableOpacity
           style={styles.adminPill}
@@ -181,13 +174,20 @@ const SignInScreen = () => {
             activeOpacity={0.85}
             disabled={!canSubmit}
           >
-            {loading ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Text style={styles.signInBtnText}>
-                {t('signIn.signInButton')}
-              </Text>
-            )}
+            <LinearGradient
+              colors={[ORANGE_GRADIENT[0], ORANGE_GRADIENT[1]]}
+              start={{ x: 0.5, y: 0 }}
+              end={{ x: 0.5, y: 1 }}
+              style={styles.signInBtnGradient}
+            >
+              {loading ? (
+                <AppLoader size="small" color="#FFFFFF" />
+              ) : (
+                <Text style={styles.signInBtnText}>
+                  {t('signIn.signInButton')}
+                </Text>
+              )}
+            </LinearGradient>
           </TouchableOpacity>
 
           {/* Sign Up link */}
@@ -216,13 +216,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.lg,
     paddingBottom: SPACING.sm,
   },
-  backBtn: {
+  headerSpacer: {
     width: normalize(40),
     height: normalize(40),
-    borderRadius: normalize(20),
-    backgroundColor: '#F5F5F5',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   adminPill: {
     backgroundColor: '#F5F5F5',
@@ -277,12 +273,15 @@ const styles = StyleSheet.create({
     color: ACCENT,
   },
   signInBtn: {
-    backgroundColor: ACCENT,
     height: normalize(52),
     borderRadius: normalize(26),
+    marginBottom: SPACING.lg,
+    overflow: 'hidden',
+  },
+  signInBtnGradient: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: SPACING.lg,
   },
   signInBtnDisabled: {
     opacity: 0.5,

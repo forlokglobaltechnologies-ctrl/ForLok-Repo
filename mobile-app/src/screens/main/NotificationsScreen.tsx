@@ -142,8 +142,7 @@ const NotificationsScreen = () => {
     handleMarkRead(id);
 
     switch (action) {
-      case 'pay_online':
-      case 'pay_cash':
+      case 'open_trip':
         if (bookingId) navigation.navigate('TripTracking' as never, { bookingId } as never);
         break;
       case 'view_booking':
@@ -259,15 +258,9 @@ const NotificationsScreen = () => {
         <View style={styles.actionButtons}>
           <TouchableOpacity
             style={[styles.actionBtn, styles.actionBtnPrimary]}
-            onPress={() => handleAction(notification, 'pay_online')}
+            onPress={() => handleAction(notification, 'open_trip')}
           >
-            <Text style={styles.actionBtnPrimaryText}>Pay Online</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionBtn, styles.actionBtnOutline]}
-            onPress={() => handleAction(notification, 'pay_cash')}
-          >
-            <Text style={styles.actionBtnOutlineText}>Pay Cash</Text>
+            <Text style={styles.actionBtnPrimaryText}>Open Trip</Text>
           </TouchableOpacity>
         </View>
       );

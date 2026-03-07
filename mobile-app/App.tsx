@@ -44,13 +44,13 @@ import SearchPoolingScreen from './src/screens/take/SearchPoolingScreen';
 import SearchRentalScreen from './src/screens/take/SearchRentalScreen';
 import PoolingDetailsScreen from './src/screens/take/PoolingDetailsScreen';
 import RentalDetailsScreen from './src/screens/take/RentalDetailsScreen';
-import PaymentScreen from './src/screens/main/PaymentScreen';
 import PriceSummaryScreen from './src/screens/main/PriceSummaryScreen';
 import BookingConfirmationScreen from './src/screens/main/BookingConfirmationScreen';
 import HistoryScreen from './src/screens/history/HistoryScreen';
 import CompanyHistoryScreen from './src/screens/history/CompanyHistoryScreen';
 import BookingDetailsScreen from './src/screens/history/BookingDetailsScreen';
 import ProfileScreen from './src/screens/profile/ProfileScreen';
+import EditProfileScreen from './src/screens/profile/EditProfileScreen';
 import CompanyProfileScreen from './src/screens/profile/CompanyProfileScreen';
 import SettingsScreen from './src/screens/profile/SettingsScreen';
 import LocationPickerScreen from './src/screens/main/LocationPickerScreen';
@@ -83,7 +83,6 @@ import ReportBugScreen from './src/screens/main/ReportBugScreen';
 import LoadingScreen from './src/screens/main/LoadingScreen';
 import ErrorScreen from './src/screens/main/ErrorScreen';
 import PinkPoolingSplashScreen from './src/screens/main/PinkPoolingSplashScreen';
-import WithdrawalScreen from './src/screens/main/WithdrawalScreen';
 import WalletScreen from './src/screens/main/WalletScreen';
 import EarnCoinsScreen from './src/screens/main/EarnCoinsScreen';
 import ReviewsScreen from './src/screens/profile/ReviewsScreen';
@@ -105,8 +104,6 @@ import FeedbackManagementScreen from './src/screens/admin/FeedbackManagementScre
 import FeedbackDetailsScreen from './src/screens/admin/FeedbackDetailsScreen';
 import AnalyticsScreen from './src/screens/admin/AnalyticsScreen';
 import AdminSettingsScreen from './src/screens/admin/AdminSettingsScreen';
-import AdminPendingPaymentsScreen from './src/screens/admin/AdminPendingPaymentsScreen';
-import TransactionDetailsScreen from './src/screens/admin/TransactionDetailsScreen';
 import { LanguageProvider } from './src/context/LanguageContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { NotificationProvider } from './src/context/NotificationContext';
@@ -226,8 +223,7 @@ const AppNavigator = () => {
               <Stack.Screen name="PoolingDetails" component={PoolingDetailsScreen} />
               <Stack.Screen name="RentalDetails" component={RentalDetailsScreen} />
               
-              {/* Booking & Payment */}
-              <Stack.Screen name="Payment" component={PaymentScreen} />
+              {/* Booking Flow */}
               <Stack.Screen name="PriceSummary" component={PriceSummaryScreen} />
               <Stack.Screen name="BookingConfirmation" component={BookingConfirmationScreen} />
               <Stack.Screen name="TripTracking" component={TripTrackingScreen} />
@@ -242,6 +238,7 @@ const AppNavigator = () => {
               
               {/* Profile & Settings */}
               <Stack.Screen name="Profile" component={ProfileScreen} />
+              <Stack.Screen name="EditProfile" component={EditProfileScreen} />
               <Stack.Screen name="CompanyProfile" component={CompanyProfileScreen} />
               <Stack.Screen name="Settings" component={SettingsScreen} />
               
@@ -261,6 +258,8 @@ const AppNavigator = () => {
               <Stack.Screen name="IndividualRegistration" component={IndividualRegistrationScreen} />
               
               {/* Additional Screens */}
+              <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+              <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
               <Stack.Screen name="Filter" component={FilterScreen} />
               <Stack.Screen name="HelpSupport" component={HelpSupportScreen} />
               <Stack.Screen name="Feedback" component={FeedbackScreen} />
@@ -268,7 +267,6 @@ const AppNavigator = () => {
               <Stack.Screen name="ReportBug" component={ReportBugScreen} />
               <Stack.Screen name="Loading" component={LoadingScreen} />
               <Stack.Screen name="Error" component={ErrorScreen} />
-              <Stack.Screen name="Withdrawal" component={WithdrawalScreen} />
               <Stack.Screen name="Wallet" component={WalletScreen} />
               <Stack.Screen name="EarnCoins" component={EarnCoinsScreen} />
               <Stack.Screen name="Reviews" component={ReviewsScreen} />
@@ -279,7 +277,6 @@ const AppNavigator = () => {
               <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
               
               {/* Admin Screens */}
-              <Stack.Screen name="AdminLogin" component={AdminLoginScreen} />
               {user?.userType !== 'admin' && (
                 <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
               )}
@@ -292,8 +289,6 @@ const AppNavigator = () => {
               <Stack.Screen name="FeedbackDetails" component={FeedbackDetailsScreen} />
               <Stack.Screen name="Analytics" component={AnalyticsScreen} />
               <Stack.Screen name="AdminSettings" component={AdminSettingsScreen} />
-              <Stack.Screen name="AdminPendingPayments" component={AdminPendingPaymentsScreen} />
-              <Stack.Screen name="TransactionDetails" component={TransactionDetailsScreen} />
             </>
           )}
         </Stack.Navigator>

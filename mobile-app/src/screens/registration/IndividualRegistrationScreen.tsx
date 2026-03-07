@@ -25,8 +25,10 @@ import { authApi } from '@utils/apiClient';
 import LottieView from 'lottie-react-native';
 import { useSnackbar } from '@context/SnackbarContext';
 import { getUserErrorMessage, mapFieldErrors } from '@utils/errorUtils';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const ACCENT = '#F9A825';
+const ORANGE_GRADIENT = ['#F99E3C', '#D47B1B'] as const;
 
 const IndividualRegistrationScreen = () => {
   const navigation = useNavigation();
@@ -438,11 +440,18 @@ const IndividualRegistrationScreen = () => {
           activeOpacity={0.85}
           disabled={!canContinue || loading || verifying}
         >
-          {loading || verifying ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
-          ) : (
-            <Text style={styles.continueBtnText}>{buttonLabel}</Text>
-          )}
+          <LinearGradient
+            colors={[ORANGE_GRADIENT[0], ORANGE_GRADIENT[1]]}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={styles.continueBtnGradient}
+          >
+            {loading || verifying ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Text style={styles.continueBtnText}>{buttonLabel}</Text>
+            )}
+          </LinearGradient>
         </TouchableOpacity>
       </View>
 
@@ -492,14 +501,13 @@ const styles = StyleSheet.create({
     paddingTop: hp(6),
     paddingHorizontal: SPACING.lg,
     paddingBottom: SPACING.md,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#E9E9E9',
   },
   backBtn: {
-    width: normalize(40),
-    height: normalize(40),
-    borderRadius: normalize(20),
-    backgroundColor: '#F5F5F5',
-    justifyContent: 'center',
-    alignItems: 'center',
+    paddingVertical: normalize(6),
+    paddingRight: normalize(8),
   },
   progressRow: {
     flexDirection: 'row',
@@ -628,9 +636,12 @@ const styles = StyleSheet.create({
     borderTopColor: '#E0E0E0',
   },
   continueBtn: {
-    backgroundColor: ACCENT,
     height: normalize(52),
     borderRadius: normalize(26),
+    overflow: 'hidden',
+  },
+  continueBtnGradient: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },

@@ -10,7 +10,7 @@ import { useLanguage } from '@context/LanguageContext';
 import { useTheme } from '@context/ThemeContext';
 
 const TakeServicesScreen = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
   const { t } = useLanguage();
   const { theme } = useTheme();
 
@@ -156,6 +156,7 @@ const TakeServicesScreen = () => {
             </BlurView>
           </ImageBackground>
         </TouchableOpacity>
+
       </View>
     </View>
   );
