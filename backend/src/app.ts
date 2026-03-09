@@ -134,6 +134,7 @@ async function start() {
         admin.name = adminName;
         admin.isActive = true;
         admin.role = 'super_admin';
+        admin.permissions = ['*'];
         await admin.save();
         logger.info(`✅ Admin user updated: ${adminUsername}`);
       } else {
@@ -151,6 +152,53 @@ async function start() {
       }
     } catch (error) {
       logger.warn('Could not initialize admin user:', error);
+    }
+
+    // Initialize default admin roles
+    try {
+      const AdminRole = (await import('./models/AdminRole')).default;
+      const { ADMIN_PERMISSIONS } = await import('./constants/admin-permissions');
+      const baseRoles = [
+        {
+          roleKey: 'admin',
+          name: 'Admin',
+          description: 'General admin operations access',
+          permissions: [
+            ADMIN_PERMISSIONS.DASHBOARD_VIEW,
+            ADMIN_PERMISSIONS.USERS_VIEW,
+            ADMIN_PERMISSIONS.BOOKINGS_VIEW,
+            ADMIN_PERMISSIONS.OFFERS_VIEW,
+            ADMIN_PERMISSIONS.CONTENT_VIEW,
+            ADMIN_PERMISSIONS.CONTENT_MANAGE,
+          ],
+        },
+        {
+          roleKey: 'moderator',
+          name: 'Moderator',
+          description: 'Review and moderation focused access',
+          permissions: [
+            ADMIN_PERMISSIONS.DASHBOARD_VIEW,
+            ADMIN_PERMISSIONS.FEEDBACK_VIEW,
+            ADMIN_PERMISSIONS.FEEDBACK_MANAGE,
+            ADMIN_PERMISSIONS.PROMOS_REVIEW,
+          ],
+        },
+      ];
+
+      for (const role of baseRoles) {
+        await AdminRole.findOneAndUpdate(
+          { roleKey: role.roleKey },
+          {
+            ...role,
+            isSystem: true,
+            isActive: true,
+          },
+          { upsert: true, setDefaultsOnInsert: true }
+        );
+      }
+      logger.info('✅ Default admin roles initialized');
+    } catch (error) {
+      logger.warn('Could not initialize admin roles:', error);
     }
 
     // Initialize sample food data (development only)

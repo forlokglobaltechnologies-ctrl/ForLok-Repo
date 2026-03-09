@@ -16,6 +16,7 @@ import { normalize, hp } from '@utils/responsive';
 import { FONTS } from '@constants/theme';
 import { ratingApi } from '@utils/apiClient';
 import { useTheme } from '@context/ThemeContext';
+import useMasterData from '../../hooks/useMasterData';
 
 interface Rating {
   ratingId: string;
@@ -75,6 +76,10 @@ const ReviewsScreen = () => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [selectedFilter, setSelectedFilter] = useState<string>('all');
+  const { items: reviewTypeItems } = useMasterData('review_type', [
+    { type: 'review_type', key: 'passenger_to_driver', label: 'As Driver' },
+    { type: 'review_type', key: 'driver_to_passenger', label: 'As Rider' },
+  ]);
 
   const fetchData = useCallback(async (reset = false) => {
     try {
@@ -243,8 +248,10 @@ const ReviewsScreen = () => {
   /* ── Filter row ── */
   const filters = [
     { key: 'all', label: 'All' },
-    { key: 'passenger_to_driver', label: 'As Driver' },
-    { key: 'driver_to_passenger', label: 'As Rider' },
+    ...reviewTypeItems.map((item: any) => ({
+      key: String(item.value || item.key || '').toLowerCase(),
+      label: String(item.label || item.value || item.key || ''),
+    })).filter((item: any) => item.key),
   ];
 
   const FilterRow = () => (

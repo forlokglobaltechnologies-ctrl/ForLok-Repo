@@ -156,6 +156,8 @@ const ForgotPasswordScreen = () => {
           >
             <ArrowLeft size={22} color={COLORS.text} />
           </TouchableOpacity>
+          <Text style={styles.headerTitle}>Forgot Password</Text>
+          <View style={styles.headerSpacer} />
         </View>
 
         <View style={styles.progressRow}>
@@ -181,7 +183,6 @@ const ForgotPasswordScreen = () => {
               resizeMode="cover"
             />
           </View>
-          <Text style={styles.title}>Forgot Password</Text>
           <Text style={styles.subtitle}>
             {step === 'phone'
               ? 'Enter your phone number to receive OTP'
@@ -257,6 +258,9 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F5F7FB' },
   background: { flex: 1, backgroundColor: '#F5F7FB' },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingTop: hp(6),
     paddingHorizontal: SPACING.md,
     paddingBottom: SPACING.sm,
@@ -267,6 +271,15 @@ const styles = StyleSheet.create({
   backButton: {
     paddingVertical: normalize(6),
     paddingRight: normalize(8),
+  },
+  headerTitle: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(18),
+    color: COLORS.text,
+    fontWeight: '700',
+  },
+  headerSpacer: {
+    width: normalize(30),
   },
   scrollContent: {
     flexGrow: 1,
@@ -293,19 +306,13 @@ const styles = StyleSheet.create({
     borderRadius: normalize(18),
     overflow: 'hidden',
     marginBottom: SPACING.lg,
-    backgroundColor: '#EAF1FF',
+    backgroundColor: '#FFF4E6',
     borderWidth: 1,
-    borderColor: '#DDE6F5',
+    borderColor: '#F6D2A6',
   },
   heroImage: {
     width: '100%',
     height: normalize(170),
-  },
-  title: {
-    fontFamily: FONTS.medium,
-    fontSize: normalize(24),
-    color: COLORS.text,
-    marginBottom: normalize(6),
   },
   subtitle: {
     fontFamily: FONTS.regular,
@@ -318,7 +325,7 @@ const styles = StyleSheet.create({
     padding: SPACING.lg,
     borderRadius: normalize(16),
     borderWidth: 1,
-    borderColor: '#DDE6F5',
+    borderColor: '#F6D2A6',
   },
   input: { marginBottom: SPACING.md },
   button: {

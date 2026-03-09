@@ -70,7 +70,7 @@ const buildRouteAlternativesMapHtml = (
     const selectedRouteId = ${safeSelectedRouteId};
     const fromPoint = ${safeFrom};
     const toPoint = ${safeTo};
-    const colors = ['#2563EB', '#0EA5E9', '#64748B'];
+    const colors = ['#D47B1B', '#FFB55A', '#64748B'];
 
     const firstPoint = routes?.[0]?.polyline?.[0];
     const map = L.map('map', { zoomControl: false }).setView(
@@ -91,7 +91,7 @@ const buildRouteAlternativesMapHtml = (
       latLngs.forEach((pt) => boundsPoints.push(pt));
       const isSelected = route.routeId === selectedRouteId;
       const polyline = L.polyline(latLngs, {
-        color: isSelected ? '#1D4ED8' : (colors[idx % colors.length] || '#94A3B8'),
+        color: isSelected ? '#B85E00' : (colors[idx % colors.length] || '#94A3B8'),
         weight: isSelected ? 6 : 4,
         opacity: isSelected ? 0.95 : 0.55
       }).addTo(map);
@@ -1085,7 +1085,7 @@ const CreatePoolingOfferScreen = () => {
                         >
                           {availableSeats === num ? (
                             <LinearGradient
-                              colors={['#F99E3C', '#D47B1B']}
+                              colors={['#F99E3C', '#E08E35']}
                               start={{ x: 0.5, y: 0 }}
                               end={{ x: 0.5, y: 1 }}
                               style={styles.seatRangeGradient}
@@ -1130,7 +1130,7 @@ const CreatePoolingOfferScreen = () => {
               style={[styles.createOfferBtn, creating && styles.createOfferBtnDisabled]}
             >
               <LinearGradient
-                colors={['#F99E3C', '#D47B1B']}
+                colors={['#F99E3C', '#E08E35']}
                 start={{ x: 0.5, y: 0 }}
                 end={{ x: 0.5, y: 1 }}
                 style={styles.createOfferGradient}
@@ -1270,7 +1270,7 @@ const styles = StyleSheet.create({
     width: normalize(6),
     height: normalize(6),
     borderRadius: normalize(3),
-    backgroundColor: '#2563EB',
+    backgroundColor: '#D47B1B',
   },
   routeDashedConnector: {
     height: normalize(18),
@@ -1304,7 +1304,7 @@ const styles = StyleSheet.create({
     borderRadius: normalize(4),
   },
   mapsDotFrom: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#D47B1B',
   },
   mapsInputText: {
     flex: 1,
@@ -1313,7 +1313,7 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
   inputTopBlueText: {
-    color: '#2563EB',
+    color: '#D47B1B',
   },
   mapsInputPlaceholder: {
     color: '#64748B',
@@ -1373,7 +1373,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   locationTagTextFrom: {
-    color: '#1D4ED8',
+    color: '#B85E00',
   },
   locationTagTextTo: {
     color: '#B91C1C',
@@ -1804,7 +1804,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: normalize(10),
   },
   routeCardSelected: {
-    borderColor: '#1D4ED8',
+    borderColor: '#B85E00',
     backgroundColor: '#EEF4FF',
   },
   routeCardTitle: {
@@ -1929,7 +1929,7 @@ const styles = StyleSheet.create({
   modalAddBtn: {
     borderRadius: normalize(8),
     borderWidth: 1,
-    borderColor: '#1D4ED8',
+    borderColor: '#B85E00',
     paddingVertical: normalize(6),
     paddingHorizontal: normalize(10),
     backgroundColor: '#EEF4FF',
@@ -1941,7 +1941,7 @@ const styles = StyleSheet.create({
   modalAddBtnText: {
     fontFamily: FONTS.medium,
     fontSize: normalize(11.5),
-    color: '#1D4ED8',
+    color: '#B85E00',
   },
   modalAddBtnTextDisabled: {
     color: '#64748B',
@@ -1966,7 +1966,7 @@ const styles = StyleSheet.create({
   },
   modalPrimaryBtn: {
     borderRadius: normalize(8),
-    backgroundColor: '#1D4ED8',
+    backgroundColor: '#B85E00',
     paddingVertical: normalize(8),
     paddingHorizontal: normalize(12),
   },

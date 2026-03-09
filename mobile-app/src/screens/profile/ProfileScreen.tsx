@@ -278,6 +278,7 @@ const ProfileScreen = () => {
         <ImageBackground
           source={require('../../../assets/forlok_profile_banner_blue_bg_v1.png')}
           style={styles.headerImage}
+          imageStyle={{ tintColor: '#F99E3C' }}
           resizeMode="cover"
         >
           <View style={[styles.headerOverlay, { backgroundColor: PROFILE_ACCENT }]} />
@@ -325,6 +326,7 @@ const ProfileScreen = () => {
         <ImageBackground
           source={require('../../../assets/forlok_profile_banner_blue_bg_v1.png')}
           style={styles.headerImage}
+          imageStyle={{ tintColor: '#F99E3C' }}
           resizeMode="cover"
         >
           <View style={[styles.headerOverlay, { backgroundColor: PROFILE_ACCENT }]} />

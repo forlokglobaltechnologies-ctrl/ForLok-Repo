@@ -174,7 +174,7 @@ const AdminPromoReviewScreen = () => {
     if (p.includes('instagram')) {
       return { label: 'Instagram', icon: Instagram, color: '#E1306C' };
     }
-    return { label: platform.replace(/_/g, ' '), icon: Film, color: '#4A90D9' };
+    return { label: platform.replace(/_/g, ' '), icon: Film, color: '#F99E3C' };
   };
 
   const getTimeAgo = (dateStr: string) => {
@@ -205,7 +205,7 @@ const AdminPromoReviewScreen = () => {
     { key: 'pending' as const,  label: 'Pending',  icon: Clock,       color: '#F39C12' },
     { key: 'approved' as const, label: 'Approved', icon: CheckCircle, color: '#00B894' },
     { key: 'rejected' as const, label: 'Rejected', icon: XCircle,     color: '#E74C3C' },
-    { key: 'all' as const,      label: 'All',      icon: Eye,         color: '#4A90D9' },
+    { key: 'all' as const,      label: 'All',      icon: Eye,         color: '#F99E3C' },
   ];
 
   const pendingCount = filter === 'pending' ? submissions.length : 0;
@@ -269,7 +269,7 @@ const AdminPromoReviewScreen = () => {
       {/* ─── Content ──────────────────────────────────────────── */}
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#4A90D9" />
+          <ActivityIndicator size="large" color="#F99E3C" />
           <Text style={styles.loadingText}>Loading submissions...</Text>
         </View>
       ) : (
@@ -277,7 +277,7 @@ const AdminPromoReviewScreen = () => {
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#4A90D9" />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#F99E3C" />
           }
           showsVerticalScrollIndicator={false}
         >
@@ -326,12 +326,12 @@ const AdminPromoReviewScreen = () => {
                     onPress={() => openProofUrl(sub.proofUrl)}
                   >
                     <View style={styles.cardProofIcon}>
-                      <Link2 size={14} color="#4A90D9" />
+                      <Link2 size={14} color="#F99E3C" />
                     </View>
                     <Text style={styles.cardProofUrl} numberOfLines={1}>
                       {sub.proofUrl}
                     </Text>
-                    <ExternalLink size={14} color="#4A90D9" />
+                    <ExternalLink size={14} color="#F99E3C" />
                   </TouchableOpacity>
 
                   {/* Meta row */}
@@ -680,7 +680,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: normalize(8),
-    backgroundColor: '#4A90D9' + '08',
+    backgroundColor: '#F99E3C' + '08',
     paddingVertical: normalize(10),
     paddingHorizontal: normalize(12),
     borderRadius: normalize(10),
@@ -690,7 +690,7 @@ const styles = StyleSheet.create({
     width: normalize(28),
     height: normalize(28),
     borderRadius: normalize(8),
-    backgroundColor: '#4A90D9' + '15',
+    backgroundColor: '#F99E3C' + '15',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -698,7 +698,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: FONTS.regular,
     fontSize: normalize(12),
-    color: '#4A90D9',
+    color: '#F99E3C',
   },
 
   /* Meta row */

@@ -23,7 +23,7 @@ import { Input } from '@components/common/Input';
 
 import { useLanguage } from '@context/LanguageContext';
 import { useSnackbar } from '@context/SnackbarContext';
-import { vehicleApi, rentalApi, uploadFile, companyApi } from '@utils/apiClient';
+import { vehicleApi, rentalApi, uploadFile, companyApi, masterDataApi } from '@utils/apiClient';
 import { API_CONFIG } from '../../config/api';
 import { getUserErrorMessage } from '@utils/errorUtils';
 import * as ImagePicker from 'expo-image-picker';
@@ -61,6 +61,9 @@ const VEHICLE_BRAND_MODELS: Record<'car' | 'bike' | 'scooty', Record<string, str
     Ola: ['S1 Air', 'S1 X', 'S1 Pro'],
   },
 };
+
+const normalizeKey = (value: string) =>
+  value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
 
 const AddVehicleScreen = () => {
   const navigation = useNavigation();
@@ -113,10 +116,32 @@ const AddVehicleScreen = () => {
   const [suggestedPrice, setSuggestedPrice] = useState<number | null>(null);
   const [priceBreakdown, setPriceBreakdown] = useState<any>(null);
   const [calculatingPrice, setCalculatingPrice] = useState(false);
+  const [masterBrands, setMasterBrands] = useState<any[]>([]);
+  const [masterModels, setMasterModels] = useState<any[]>([]);
+  const [masterFuelTypes, setMasterFuelTypes] = useState<any[]>([]);
+  const [masterTransmissions, setMasterTransmissions] = useState<any[]>([]);
 
   useEffect(() => {
     loadUserType();
+    void loadMasterDropdowns();
   }, []);
+
+  const loadMasterDropdowns = async () => {
+    try {
+      const [brandsRes, modelsRes, fuelRes, transmissionRes] = await Promise.all([
+        masterDataApi.getByType('vehicle_brand'),
+        masterDataApi.getByType('vehicle_model'),
+        masterDataApi.getByType('fuel_type'),
+        masterDataApi.getByType('transmission_type'),
+      ]);
+      setMasterBrands((brandsRes.data as any)?.items || []);
+      setMasterModels((modelsRes.data as any)?.items || []);
+      setMasterFuelTypes((fuelRes.data as any)?.items || []);
+      setMasterTransmissions((transmissionRes.data as any)?.items || []);
+    } catch (error) {
+      console.error('Failed to load master dropdowns:', error);
+    }
+  };
 
   useEffect(() => {
     if (!editingVehicle) return;
@@ -703,12 +728,65 @@ const AddVehicleScreen = () => {
   // Generate year options (last 20 years)
   const currentYear = new Date().getFullYear();
   const yearOptions = Array.from({ length: 20 }, (_, i) => currentYear - i);
+  const fallbackBrands = vehicleType ? Object.keys(VEHICLE_BRAND_MODELS[vehicleType] || {}) : [];
+  const fallbackModels = vehicleType && brand && !isBrandOther
+    ? (VEHICLE_BRAND_MODELS[vehicleType]?.[brand] || [])
+    : [];
+  const masterBrandOptions = masterBrands
+    .filter((item: any) => {
+      const vt = String(item?.metadata?.vehicleType || '').toLowerCase();
+      return !!vehicleType && (!vt || vt === vehicleType);
+    })
+    .map((item: any) => item.label)
+    .filter(Boolean);
+  const selectedBrandKey = normalizeKey(brand);
+  const masterModelOptions = masterModels
+    .filter((item: any) => {
+      const vt = String(item?.metadata?.vehicleType || '').toLowerCase();
+      const brandKey = String(item?.metadata?.brandKey || '').toLowerCase();
+      const brandName = String(item?.metadata?.brand || '').toLowerCase();
+      const matchesVehicleType = !!vehicleType && (!vt || vt === vehicleType);
+      const matchesBrand =
+        !brand || !selectedBrandKey || !brandKey && !brandName
+          ? true
+          : brandKey === selectedBrandKey || brandName === brand.toLowerCase();
+      return matchesVehicleType && matchesBrand;
+    })
+    .map((item: any) => item.label)
+    .filter(Boolean);
   const brandOptions = vehicleType
-    ? [...Object.keys(VEHICLE_BRAND_MODELS[vehicleType] || {}), OTHER_OPTION]
+    ? [...Array.from(new Set([...masterBrandOptions, ...fallbackBrands])), OTHER_OPTION]
     : [OTHER_OPTION];
   const modelOptions = vehicleType && brand && !isBrandOther
-    ? [...(VEHICLE_BRAND_MODELS[vehicleType]?.[brand] || []), OTHER_OPTION]
+    ? [...Array.from(new Set([...masterModelOptions, ...fallbackModels])), OTHER_OPTION]
     : [OTHER_OPTION];
+  const fallbackFuelOptions = vehicleType === 'scooty' || vehicleType === 'bike'
+    ? ['Petrol', 'Electric']
+    : ['Petrol', 'Diesel', 'Electric', 'CNG'];
+  const fuelOptions = Array.from(
+    new Set([
+      ...masterFuelTypes
+        .filter((item: any) => {
+          const vt = String(item?.metadata?.vehicleType || '').toLowerCase();
+          return !vehicleType || !vt || vt === vehicleType;
+        })
+        .map((item: any) => item.label)
+        .filter(Boolean),
+      ...fallbackFuelOptions,
+    ])
+  );
+  const transmissionOptions = Array.from(
+    new Set([
+      ...masterTransmissions
+        .filter((item: any) => {
+          const vt = String(item?.metadata?.vehicleType || '').toLowerCase();
+          return !vehicleType || !vt || vt === vehicleType;
+        })
+        .map((item: any) => item.label)
+        .filter(Boolean),
+      ...['Manual', 'Automatic'],
+    ])
+  );
 
   const openSelectionModal = (type: 'brand' | 'model') => {
     setSelectionType(type);
@@ -948,10 +1026,7 @@ const AddVehicleScreen = () => {
                 <Text style={styles.label}>Fuel Type *</Text>
               </View>
               <View style={styles.optionsRow}>
-                {(vehicleType === 'scooty' || vehicleType === 'bike'
-                  ? ['Petrol', 'Electric']
-                  : ['Petrol', 'Diesel', 'Electric', 'CNG']
-                ).map((fuel) => (
+                {fuelOptions.map((fuel) => (
                   <TouchableOpacity
                     key={fuel}
                     style={[styles.optionButton, fuelType === fuel && styles.optionButtonSelected]}
@@ -979,7 +1054,7 @@ const AddVehicleScreen = () => {
                 </View>
               ) : vehicleType === 'bike' ? (
                 <View style={styles.optionsRow}>
-                  {['Manual', 'Automatic'].map((trans) => (
+                  {transmissionOptions.map((trans) => (
                     <TouchableOpacity
                       key={trans}
                       style={[styles.optionButton, transmission === trans && styles.optionButtonSelected]}
@@ -993,7 +1068,7 @@ const AddVehicleScreen = () => {
                 </View>
               ) : (
                 <View style={styles.optionsRow}>
-                  {['Manual', 'Automatic'].map((trans) => (
+                  {transmissionOptions.map((trans) => (
                     <TouchableOpacity
                       key={trans}
                       style={[styles.optionButton, transmission === trans && styles.optionButtonSelected]}

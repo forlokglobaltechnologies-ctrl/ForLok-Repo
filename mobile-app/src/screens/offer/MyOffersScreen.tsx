@@ -23,7 +23,7 @@ import { poolingApi, rentalApi } from '@utils/apiClient';
 
 const OFFER_ACCENT = '#F99E3C';
 const OFFER_ACCENT_DARK = '#D47B1B';
-const MODAL_BLUE_GRADIENT: [string, string] = ['#51A7EA', '#0284C7'];
+const MODAL_BLUE_GRADIENT: [string, string] = ['#F99E3C', '#E08E35'];
 const MODAL_ORANGE_GRADIENT: [string, string] = ['#F99E3C', '#E08E35'];
 
 const MyOffersScreen = () => {
@@ -361,7 +361,7 @@ const MyOffersScreen = () => {
                   activeOpacity={0.8}
                 >
                   <LinearGradient
-                    colors={[OFFER_ACCENT, OFFER_ACCENT_DARK]}
+                    colors={['#F99E3C', '#E08E35']}
                     start={{ x: 0.5, y: 0 }}
                     end={{ x: 0.5, y: 1 }}
                     style={styles.primaryBtnGradient}

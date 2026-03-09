@@ -7,25 +7,47 @@ import {
   Image,
   ScrollView,
   StatusBar,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { ArrowLeft, User, Building2, Globe, ChevronDown, Check } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '@constants/theme';
 import { useLanguage, Language } from '@context/LanguageContext';
 import { normalize, wp, hp } from '@utils/responsive';
+import { masterDataApi } from '@utils/apiClient';
 
 const ACCENT = '#F9A825';
+const SUPPORTED_LANGUAGES: Language[] = ['en', 'te', 'hi'];
 
 const SignUpScreen = () => {
   const navigation = useNavigation();
   const { language, changeLanguage, t } = useLanguage();
   const [showLang, setShowLang] = useState(false);
 
-  const languages: Array<{ code: Language; label: string }> = [
+  const [languages, setLanguages] = useState<Array<{ code: string; label: string }>>([
     { code: 'en', label: 'English' },
     { code: 'te', label: 'తెలుగు' },
     { code: 'hi', label: 'हिन्दी' },
-  ];
+  ]);
+
+  React.useEffect(() => {
+    const loadLanguageOptions = async () => {
+      const res = await masterDataApi.getByType('language');
+      if (res.success && (res.data as any)?.items?.length) {
+        const options = ((res.data as any).items as any[])
+          .filter((item) => item?.isActive !== false)
+          .map((item) => ({
+            code: String(item.value || item.key || '').trim().toLowerCase(),
+            label: String(item.label || item.value || item.key || '').trim(),
+          }))
+          .filter((item) => item.code && item.label);
+        if (options.length > 0) {
+          setLanguages(options);
+        }
+      }
+    };
+    void loadLanguageOptions();
+  }, []);
 
   const currentLang = languages.find((l) => l.code === language);
 
@@ -68,7 +90,14 @@ const SignUpScreen = () => {
                 language === lang.code && styles.langOptionActive,
               ]}
               onPress={async () => {
-                await changeLanguage(lang.code);
+                if (!SUPPORTED_LANGUAGES.includes(lang.code as Language)) {
+                  Alert.alert(
+                    'Language Not Configured',
+                    `${lang.label} is visible from master data, but translations are not configured yet.`
+                  );
+                  return;
+                }
+                await changeLanguage(lang.code as Language);
                 setShowLang(false);
               }}
               activeOpacity={0.7}
@@ -112,8 +141,8 @@ const SignUpScreen = () => {
           onPress={() => navigation.navigate('IndividualRegistration' as never)}
           activeOpacity={0.8}
         >
-          <View style={[styles.iconCircle, { backgroundColor: '#EBF5FF' }]}>
-            <User size={24} color="#1565C0" />
+          <View style={[styles.iconCircle, { backgroundColor: '#FFF4E6' }]}>
+            <User size={24} color="#B85E00" />
           </View>
           <View style={styles.optionContent}>
             <Text style={styles.optionTitle}>{t('signUp.individualTitle')}</Text>

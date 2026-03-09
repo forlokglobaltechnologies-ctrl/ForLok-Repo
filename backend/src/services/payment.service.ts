@@ -157,6 +157,7 @@ class PaymentService {
     razorpayOrderId: string;
     razorpayPaymentId: string;
     razorpaySignature: string;
+    userId?: string;
   }): Promise<any> {
     try {
       const crypto = require('crypto');
@@ -180,6 +181,10 @@ class PaymentService {
 
       if (!payment) {
         throw new NotFoundError('Payment not found');
+      }
+
+      if (data.userId && payment.userId !== data.userId) {
+        throw new ConflictError('Payment does not belong to current user');
       }
 
       if (payment.status === 'paid') {

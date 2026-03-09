@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Alert, ActivityIndicator, Image } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Alert, Image, Switch, TextInput } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { ArrowLeft, IndianRupee, CheckCircle, Info, MapPin, Circle } from 'lucide-react-native';
 import { normalize } from '@utils/responsive';
@@ -7,7 +7,7 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme
 import { Button } from '@components/common/Button';
 import { Card } from '@components/common/Card';
 import { useLanguage } from '@context/LanguageContext';
-import { bookingApi } from '@utils/apiClient';
+import { bookingApi, coinApi } from '@utils/apiClient';
 
 interface RouteParams {
   offerId: string;
@@ -54,14 +54,83 @@ const PriceSummaryScreen = () => {
   const { t } = useLanguage();
   const params = (route.params as RouteParams) || {};
   const [bookingLoading, setBookingLoading] = useState(false);
+  const [coinLoading, setCoinLoading] = useState(true);
+  const [coinBalance, setCoinBalance] = useState(0);
+  const [maxCoinsAllowed, setMaxCoinsAllowed] = useState(0);
+  const [maxDiscountAllowed, setMaxDiscountAllowed] = useState(0);
+  const [useCoins, setUseCoins] = useState(false);
+  const [coinsToUseInput, setCoinsToUseInput] = useState('');
   const seatsBooked = Math.max(
     1,
     params.seatsBooked || (Array.isArray(params.coPassengers) ? params.coPassengers.length + 1 : 1)
   );
   const coPassengers = params.coPassengers || [];
+  const { priceBreakdown } = params;
+  const perSeatTotal = Math.round(priceBreakdown?.breakdown?.total || 0);
+  const totalAmount = perSeatTotal * seatsBooked;
+  const fallbackMaxCoinsAllowed = Math.floor(totalAmount * 0.5 * 50);
+  const effectiveMaxCoinsAllowed = Math.max(maxCoinsAllowed, fallbackMaxCoinsAllowed);
+  const effectiveMaxDiscountAllowed = Math.floor(effectiveMaxCoinsAllowed / 50);
+
+  const coinsToUse = useMemo(() => {
+    const parsed = Number(coinsToUseInput || 0);
+    if (!Number.isFinite(parsed) || parsed <= 0) return 0;
+    return Math.floor(parsed);
+  }, [coinsToUseInput]);
+
+  const validationError = useMemo(() => {
+    if (!useCoins || coinsToUse <= 0) return '';
+    if (effectiveMaxCoinsAllowed <= 0) return 'Coin discount is not available for this ride.';
+    if (coinsToUse > coinBalance) return 'Insufficient coins in your wallet.';
+    if (coinsToUse > effectiveMaxCoinsAllowed) {
+      return `Maximum coins allowed for this ride is ${effectiveMaxCoinsAllowed}.`;
+    }
+    return '';
+  }, [coinBalance, coinsToUse, effectiveMaxCoinsAllowed, useCoins]);
+
+  const coinDiscount = useMemo(() => Math.floor(coinsToUse / 50), [coinsToUse]);
+  const payableAfterCoins = useMemo(() => {
+    if (!useCoins || !!validationError || coinsToUse <= 0) return totalAmount;
+    return Math.max(0, totalAmount - coinDiscount);
+  }, [coinDiscount, coinsToUse, totalAmount, useCoins, validationError]);
+
+  useEffect(() => {
+    const fetchCoinMeta = async () => {
+      try {
+        setCoinLoading(true);
+        const [balanceRes, previewRes] = await Promise.all([
+          coinApi.getBalance(),
+          coinApi.getDiscountPreview(totalAmount),
+        ]);
+        if (balanceRes.success && balanceRes.data) {
+          setCoinBalance(balanceRes.data.balance || 0);
+        }
+        if (previewRes.success && previewRes.data) {
+          setMaxCoinsAllowed(previewRes.data.maxCoins || 0);
+          setMaxDiscountAllowed(previewRes.data.maxDiscount || 0);
+        }
+      } catch (error) {
+        console.error('Error loading coin data:', error);
+      } finally {
+        setCoinLoading(false);
+      }
+    };
+
+    fetchCoinMeta();
+  }, [totalAmount]);
 
   const handleConfirmBooking = async () => {
     if (bookingLoading) return;
+    if (useCoins) {
+      if (coinsToUse <= 0) {
+        Alert.alert('Enter Coins', 'Please enter how many coins you want to use.');
+        return;
+      }
+      if (validationError) {
+        Alert.alert('Invalid Coins', validationError);
+        return;
+      }
+    }
 
     try {
       setBookingLoading(true);
@@ -80,6 +149,27 @@ const PriceSummaryScreen = () => {
 
       if (response.success && response.data) {
         const bookingId = response.data.bookingId || response.data._id;
+        let bookingData = response.data;
+
+        if (useCoins && coinsToUse > 0 && !validationError) {
+          try {
+            const redeemRes = await coinApi.redeemCoins(bookingId, coinsToUse);
+            if (redeemRes.success && redeemRes.data) {
+              bookingData = {
+                ...bookingData,
+                coinsUsed: redeemRes.data.coinsRedeemed,
+                coinDiscountAmount: redeemRes.data.discountInr,
+                finalPayableAmount: redeemRes.data.finalPayableAmount,
+              };
+            }
+          } catch (redeemError: any) {
+            Alert.alert(
+              'Booking Created',
+              redeemError?.message || 'Booking is confirmed, but coin deduction failed. You can continue without coin discount.'
+            );
+          }
+        }
+
         Alert.alert(
           'Booking Confirmed!',
           'Your ride has been booked. Settle manually with the driver at trip end.',
@@ -89,7 +179,7 @@ const PriceSummaryScreen = () => {
               onPress: () => {
                 navigation.navigate('BookingConfirmation' as never, {
                   bookingId,
-                  booking: response.data,
+                  booking: bookingData,
                 } as never);
               },
             },
@@ -105,10 +195,7 @@ const PriceSummaryScreen = () => {
       setBookingLoading(false);
     }
   };
-
-  const { priceBreakdown, passengerRoute } = params;
-  const perSeatTotal = Math.round(priceBreakdown?.breakdown?.total || 0);
-  const totalAmount = perSeatTotal * seatsBooked;
+  const { passengerRoute } = params;
 
   if (!priceBreakdown) {
     return (
@@ -257,6 +344,46 @@ const PriceSummaryScreen = () => {
               <Text style={styles.totalAmount}>{totalAmount}</Text>
             </View>
           </View>
+
+          {
+            <>
+              <View style={styles.divider} />
+              <View style={styles.coinToggleRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.coinTitle}>Apply Coins</Text>
+                  <Text style={styles.coinSubtitle}>
+                    {coinLoading
+                      ? 'Loading coin details...'
+                      : `Balance: ${coinBalance} | Max usable: ${effectiveMaxCoinsAllowed} (up to Rs ${Math.max(
+                          maxDiscountAllowed,
+                          effectiveMaxDiscountAllowed
+                        )})`}
+                  </Text>
+                </View>
+                <Switch value={useCoins} onValueChange={setUseCoins} />
+              </View>
+
+              {useCoins && (
+                <View style={styles.coinInputWrap}>
+                  <Text style={styles.coinInputLabel}>Enter coins to use</Text>
+                  <TextInput
+                    style={styles.coinInput}
+                    value={coinsToUseInput}
+                    onChangeText={setCoinsToUseInput}
+                    keyboardType="numeric"
+                    placeholder="Enter coin amount"
+                    placeholderTextColor={COLORS.textSecondary}
+                  />
+                  {!!validationError && <Text style={styles.coinWarning}>{validationError}</Text>}
+                  {!validationError && coinsToUse > 0 && (
+                    <Text style={styles.coinSuccess}>
+                      Discount: Rs {coinDiscount} | Final payable: Rs {payableAfterCoins}
+                    </Text>
+                  )}
+                </View>
+              )}
+            </>
+          }
         </Card>
 
         {coPassengers.length > 0 && (
@@ -281,7 +408,7 @@ const PriceSummaryScreen = () => {
         <View style={styles.payInfoCard}>
           <Info size={18} color={COLORS.success} />
           <Text style={styles.payInfoText}>
-            No in-app payment. Total payable for {seatsBooked} seat(s) is ₹{totalAmount} at trip end.
+            No in-app payment. Total payable for {seatsBooked} seat(s) is Rs {payableAfterCoins} at trip end.
           </Text>
         </View>
 
@@ -520,6 +647,56 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     flex: 1,
     fontWeight: '500',
+  },
+  coinToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  coinTitle: {
+    fontFamily: FONTS.medium,
+    fontSize: FONTS.sizes.md,
+    color: COLORS.text,
+    fontWeight: '600',
+  },
+  coinSubtitle: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.xs,
+    color: COLORS.textSecondary,
+    marginTop: 4,
+  },
+  coinInputWrap: {
+    marginTop: SPACING.sm,
+  },
+  coinInputLabel: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.sm,
+    color: COLORS.text,
+    marginBottom: 6,
+  },
+  coinInput: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: BORDER_RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.md,
+    color: COLORS.text,
+  },
+  coinWarning: {
+    marginTop: 6,
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.xs,
+    color: '#D32F2F',
+    fontWeight: '600',
+  },
+  coinSuccess: {
+    marginTop: 6,
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.xs,
+    color: COLORS.success,
+    fontWeight: '600',
   },
   proceedButton: {
     marginBottom: SPACING.xl,

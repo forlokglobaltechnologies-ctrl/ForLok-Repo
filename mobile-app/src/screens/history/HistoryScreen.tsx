@@ -144,7 +144,7 @@ const HistoryScreen = () => {
 
   const getStatusMeta = (status: string) => {
     switch (status) {
-      case 'confirmed': return { color: '#1976D2', label: 'Confirmed' };
+      case 'confirmed': return { color: '#D47B1B', label: 'Confirmed' };
       case 'pending': return { color: '#F57C00', label: 'Pending' };
       case 'in_progress': return { color: '#2E7D32', label: 'In Progress' };
       case 'completed': return { color: '#2E7D32', label: 'Completed' };

@@ -12,6 +12,15 @@ export interface IFeedback extends Document {
   adminResponse?: string;
   respondedBy?: string; // Admin userId
   respondedAt?: Date;
+  assignedTo?: string;
+  timeline: Array<{
+    action: string;
+    fromStatus?: FeedbackStatus;
+    toStatus?: FeedbackStatus;
+    message?: string;
+    actorId?: string;
+    createdAt: Date;
+  }>;
   metadata?: Record<string, any>;
   createdAt: Date;
   updatedAt: Date;
@@ -64,6 +73,29 @@ const feedbackSchema = new Schema<IFeedback>(
     },
     respondedAt: {
       type: Date,
+    },
+    assignedTo: {
+      type: String,
+      ref: 'Admin',
+    },
+    timeline: {
+      type: [
+        {
+          action: { type: String, required: true },
+          fromStatus: {
+            type: String,
+            enum: ['pending', 'acknowledged', 'resolved', 'archived'],
+          },
+          toStatus: {
+            type: String,
+            enum: ['pending', 'acknowledged', 'resolved', 'archived'],
+          },
+          message: { type: String },
+          actorId: { type: String },
+          createdAt: { type: Date, default: Date.now },
+        },
+      ],
+      default: [],
     },
     metadata: {
       type: Schema.Types.Mixed,

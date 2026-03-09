@@ -6,9 +6,10 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
-  ImageBackground,
   TextInput,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import {
@@ -19,15 +20,13 @@ import {
   CreditCard,
   UserX,
   Zap,
-  Camera,
   Send,
-  AlertTriangle,
   CheckCircle,
   Info,
 } from 'lucide-react-native';
-import { BlurView } from 'expo-blur';
-import { COLORS, FONTS, SPACING, SHADOWS } from '@constants/theme';
-import { normalize, wp, hp } from '@utils/responsive';
+import { LinearGradient } from 'expo-linear-gradient';
+import { FONTS, SPACING, SHADOWS } from '@constants/theme';
+import { normalize, wp } from '@utils/responsive';
 import { useLanguage } from '@context/LanguageContext';
 import { useTheme } from '@context/ThemeContext';
 import { feedbackApi } from '@utils/apiClient';
@@ -48,7 +47,7 @@ const ReportBugScreen = () => {
 
   const bugCategories = [
     { id: 'app_crash', icon: Zap, label: 'App Crash', color: '#F44336' },
-    { id: 'navigation', icon: MapPin, label: 'Navigation', color: '#2196F3' },
+    { id: 'navigation', icon: MapPin, label: 'Navigation', color: '#F99E3C' },
     { id: 'wallet_coins', icon: CreditCard, label: 'Wallet & Coins', color: '#FF9800' },
     { id: 'account', icon: UserX, label: 'Account', color: '#9C27B0' },
     { id: 'ui_issue', icon: Smartphone, label: 'UI Issue', color: '#00BCD4' },
@@ -103,326 +102,359 @@ const ReportBugScreen = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      {/* ── Hero Header ── */}
-      <ImageBackground
-        source={require('../../../assets/bug.png')}
-        style={styles.headerImage}
-        resizeMode="cover"
+      <KeyboardAvoidingView
+        style={styles.keyboardWrap}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <View style={[styles.headerOverlay, { backgroundColor: theme.colors.primary }]} />
-        <BlurView intensity={40} style={styles.blurContainer}>
-          <View style={styles.headerNav}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.navButton}>
-              <ArrowLeft size={22} color="#FFF" />
-            </TouchableOpacity>
-            <Text style={styles.navTitle}>{t('reportBug.title')}</Text>
-            <View style={{ width: normalize(38) }} />
-          </View>
-        </BlurView>
-      </ImageBackground>
-
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-
-        {/* ── Info Banner ── */}
-        <View style={[styles.infoBanner, { backgroundColor: '#E3F2FD', borderColor: '#90CAF9' }]}>
-          <Info size={18} color="#1565C0" />
-          <Text style={[styles.infoText, { color: '#1565C0' }]}>
-            {t('reportBug.helpText')}
-          </Text>
-        </View>
-
-        {/* ── Bug Category ── */}
-        <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-          <Text style={[styles.cardTitle, { color: theme.colors.text }]}>{t('reportBug.bugCategory')}</Text>
-          <View style={styles.categoryGrid}>
-            {bugCategories.map((cat) => {
-              const isSelected = bugCategory === cat.id;
-              const Icon = cat.icon;
-              return (
-                <TouchableOpacity
-                  key={cat.id}
-                  style={[
-                    styles.categoryChip,
-                    { borderColor: isSelected ? cat.color : theme.colors.border, backgroundColor: isSelected ? cat.color + '10' : theme.colors.background },
-                  ]}
-                  onPress={() => setBugCategory(cat.id)}
-                  activeOpacity={0.7}
-                >
-                  <Icon size={20} color={isSelected ? cat.color : theme.colors.textSecondary} />
-                  <Text style={[styles.categoryChipText, { color: isSelected ? cat.color : theme.colors.textSecondary }]}>
-                    {cat.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* ── Severity ── */}
-        <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-          <Text style={[styles.cardTitle, { color: theme.colors.text }]}>{t('reportBug.severity')}</Text>
-          <View style={styles.severityRow}>
-            {severities.map((sev) => {
-              const isSelected = severity === sev.id;
-              return (
-                <TouchableOpacity
-                  key={sev.id}
-                  style={[
-                    styles.severityChip,
-                    {
-                      borderColor: isSelected ? sev.color : theme.colors.border,
-                      backgroundColor: isSelected ? sev.color + '10' : theme.colors.background,
-                    },
-                  ]}
-                  onPress={() => setSeverity(sev.id as any)}
-                  activeOpacity={0.7}
-                >
-                  <View style={[styles.severityDot, { backgroundColor: sev.color }]} />
-                  <View>
-                    <Text style={[styles.severityLabel, { color: isSelected ? sev.color : theme.colors.text }]}>{sev.label}</Text>
-                    <Text style={[styles.severityDesc, { color: theme.colors.textSecondary }]}>{sev.desc}</Text>
-                  </View>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* ── Bug Title ── */}
-        <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-          <Text style={[styles.cardTitle, { color: theme.colors.text }]}>{t('reportBug.bugTitle')}</Text>
-          <TextInput
-            style={[styles.input, { color: theme.colors.text, borderColor: theme.colors.border, backgroundColor: theme.colors.background }]}
-            value={title}
-            onChangeText={setTitle}
-            placeholder={t('reportBug.bugTitlePlaceholder')}
-            placeholderTextColor={theme.colors.textSecondary}
-            maxLength={120}
-          />
-          <Text style={[styles.charCount, { color: theme.colors.textSecondary }]}>{title.length}/120</Text>
-        </View>
-
-        {/* ── Steps to Reproduce ── */}
-        <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-          <Text style={[styles.cardTitle, { color: theme.colors.text }]}>{t('reportBug.stepsToReproduce')}</Text>
-          <TextInput
-            style={[styles.textArea, { color: theme.colors.text, borderColor: theme.colors.border, backgroundColor: theme.colors.background }]}
-            value={steps}
-            onChangeText={setSteps}
-            placeholder={t('reportBug.stepsPlaceholder')}
-            placeholderTextColor={theme.colors.textSecondary}
-            multiline
-            numberOfLines={5}
-            textAlignVertical="top"
-            maxLength={500}
-          />
-          <Text style={[styles.charCount, { color: theme.colors.textSecondary }]}>{steps.length}/500</Text>
-        </View>
-
-        {/* ── Expected Behavior ── */}
-        <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-          <Text style={[styles.cardTitle, { color: theme.colors.text }]}>{t('reportBug.expectedBehavior')}</Text>
-          <TextInput
-            style={[styles.textArea, { color: theme.colors.text, borderColor: theme.colors.border, backgroundColor: theme.colors.background, minHeight: normalize(80) }]}
-            value={expected}
-            onChangeText={setExpected}
-            placeholder={t('reportBug.expectedPlaceholder')}
-            placeholderTextColor={theme.colors.textSecondary}
-            multiline
-            numberOfLines={3}
-            textAlignVertical="top"
-            maxLength={300}
-          />
-        </View>
-
-        {/* ── Actual Behavior ── */}
-        <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-          <Text style={[styles.cardTitle, { color: theme.colors.text }]}>{t('reportBug.actualBehavior')}</Text>
-          <TextInput
-            style={[styles.textArea, { color: theme.colors.text, borderColor: theme.colors.border, backgroundColor: theme.colors.background, minHeight: normalize(80) }]}
-            value={actual}
-            onChangeText={setActual}
-            placeholder={t('reportBug.actualPlaceholder')}
-            placeholderTextColor={theme.colors.textSecondary}
-            multiline
-            numberOfLines={3}
-            textAlignVertical="top"
-            maxLength={300}
-          />
-        </View>
-
-        {/* ── Submit Button ── */}
-        <TouchableOpacity
-          style={[styles.submitButton, { backgroundColor: theme.colors.primary, opacity: submitting ? 0.7 : 1 }]}
-          onPress={handleSubmit}
-          disabled={submitting}
-          activeOpacity={0.8}
+        <View
+          style={[
+            styles.headerNav,
+            {
+              backgroundColor: theme.colors.surface,
+              borderBottomColor: theme.colors.border,
+            },
+          ]}
         >
-          {submitting ? (
-            <AppLoader size="small" color="#FFF" />
-          ) : (
-            <>
-              <Send size={18} color="#FFF" />
-              <Text style={styles.submitText}>{t('reportBug.submitReport')}</Text>
-            </>
-          )}
-        </TouchableOpacity>
-
-        {/* ── Tips Card ── */}
-        <View style={[styles.tipsCard, { backgroundColor: '#FFF3E0', borderColor: '#FFE0B2' }]}>
-          <Text style={[styles.tipsTitle, { color: '#E65100' }]}>{t('reportBug.tipsTitle')}</Text>
-          <View style={styles.tipRow}>
-            <CheckCircle size={14} color="#4CAF50" />
-            <Text style={[styles.tipText, { color: '#5D4037' }]}>Be specific - include exact steps</Text>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.navButton}>
+            <ArrowLeft size={22} color={theme.colors.text} />
+          </TouchableOpacity>
+          <View style={styles.headerCenter}>
+            <Text style={[styles.navTitle, { color: theme.colors.text }]}>{t('reportBug.title')}</Text>
           </View>
-          <View style={styles.tipRow}>
-            <CheckCircle size={14} color="#4CAF50" />
-            <Text style={[styles.tipText, { color: '#5D4037' }]}>Mention your device model & OS version</Text>
-          </View>
-          <View style={styles.tipRow}>
-            <CheckCircle size={14} color="#4CAF50" />
-            <Text style={[styles.tipText, { color: '#5D4037' }]}>Describe what you expected vs what happened</Text>
-          </View>
-          <View style={styles.tipRow}>
-            <CheckCircle size={14} color="#4CAF50" />
-            <Text style={[styles.tipText, { color: '#5D4037' }]}>Note if the bug happens every time or randomly</Text>
-          </View>
+          <View style={styles.headerRightPlaceholder} />
         </View>
 
-      </ScrollView>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <LinearGradient
+            colors={['#FFD54A', '#F99E3C']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.heroCard}
+          >
+            <View style={styles.heroIconWrap}>
+              <Bug size={20} color="#111827" />
+            </View>
+            <View style={styles.heroTextWrap}>
+              <Text style={styles.heroTitle}>Report an issue quickly</Text>
+              <Text style={styles.heroSubtitle}>{t('reportBug.helpText')}</Text>
+            </View>
+          </LinearGradient>
+
+          <View style={[styles.infoBanner, { backgroundColor: '#FFF8E6', borderColor: '#FCD79C' }]}>
+            <Info size={16} color="#9A5B00" />
+            <Text style={[styles.infoText, { color: '#9A5B00' }]}>
+              Add clear steps so our team can reproduce and fix faster.
+            </Text>
+          </View>
+
+          <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+            <Text style={[styles.cardTitle, { color: theme.colors.text }]}>{t('reportBug.bugCategory')}</Text>
+            <View style={styles.categoryGrid}>
+              {bugCategories.map((cat) => {
+                const isSelected = bugCategory === cat.id;
+                const Icon = cat.icon;
+                return (
+                  <TouchableOpacity
+                    key={cat.id}
+                    style={[
+                      styles.categoryChip,
+                      {
+                        borderColor: isSelected ? '#F99E3C' : theme.colors.border,
+                        backgroundColor: isSelected ? '#FFF4E6' : theme.colors.background,
+                      },
+                    ]}
+                    onPress={() => setBugCategory(cat.id)}
+                    activeOpacity={0.8}
+                  >
+                    <Icon size={16} color={isSelected ? '#B85E00' : theme.colors.textSecondary} />
+                    <Text style={[styles.categoryChipText, { color: isSelected ? '#B85E00' : theme.colors.textSecondary }]}>
+                      {cat.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+          <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+            <Text style={[styles.cardTitle, { color: theme.colors.text }]}>{t('reportBug.severity')}</Text>
+            <View style={styles.severityRow}>
+              {severities.map((sev) => {
+                const isSelected = severity === sev.id;
+                return (
+                  <TouchableOpacity
+                    key={sev.id}
+                    style={[
+                      styles.severityChip,
+                      {
+                        borderColor: isSelected ? '#F99E3C' : theme.colors.border,
+                        backgroundColor: isSelected ? '#FFF4E6' : theme.colors.background,
+                      },
+                    ]}
+                    onPress={() => setSeverity(sev.id as any)}
+                    activeOpacity={0.8}
+                  >
+                    <View style={[styles.severityDot, { backgroundColor: sev.color }]} />
+                    <Text style={[styles.severityLabel, { color: isSelected ? '#B85E00' : theme.colors.text }]}>
+                      {sev.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+          <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+            <Text style={[styles.cardTitle, { color: theme.colors.text }]}>{t('reportBug.bugTitle')}</Text>
+            <TextInput
+              style={[styles.input, { color: theme.colors.text, borderColor: theme.colors.border, backgroundColor: theme.colors.background }]}
+              value={title}
+              onChangeText={setTitle}
+              placeholder={t('reportBug.bugTitlePlaceholder')}
+              placeholderTextColor={theme.colors.textSecondary}
+              maxLength={120}
+            />
+            <Text style={[styles.charCount, { color: theme.colors.textSecondary }]}>{title.length}/120</Text>
+          </View>
+
+          <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+            <Text style={[styles.cardTitle, { color: theme.colors.text }]}>{t('reportBug.stepsToReproduce')}</Text>
+            <TextInput
+              style={[styles.textArea, { color: theme.colors.text, borderColor: theme.colors.border, backgroundColor: theme.colors.background }]}
+              value={steps}
+              onChangeText={setSteps}
+              placeholder={t('reportBug.stepsPlaceholder')}
+              placeholderTextColor={theme.colors.textSecondary}
+              multiline
+              numberOfLines={5}
+              textAlignVertical="top"
+              maxLength={500}
+            />
+            <Text style={[styles.charCount, { color: theme.colors.textSecondary }]}>{steps.length}/500</Text>
+          </View>
+
+          <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+            <Text style={[styles.cardTitle, { color: theme.colors.text }]}>{t('reportBug.expectedBehavior')}</Text>
+            <TextInput
+              style={[styles.textArea, { color: theme.colors.text, borderColor: theme.colors.border, backgroundColor: theme.colors.background, minHeight: normalize(88) }]}
+              value={expected}
+              onChangeText={setExpected}
+              placeholder={t('reportBug.expectedPlaceholder')}
+              placeholderTextColor={theme.colors.textSecondary}
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+              maxLength={300}
+            />
+          </View>
+
+          <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+            <Text style={[styles.cardTitle, { color: theme.colors.text }]}>{t('reportBug.actualBehavior')}</Text>
+            <TextInput
+              style={[styles.textArea, { color: theme.colors.text, borderColor: theme.colors.border, backgroundColor: theme.colors.background, minHeight: normalize(88) }]}
+              value={actual}
+              onChangeText={setActual}
+              placeholder={t('reportBug.actualPlaceholder')}
+              placeholderTextColor={theme.colors.textSecondary}
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+              maxLength={300}
+            />
+          </View>
+
+          <View style={[styles.tipsCard, { backgroundColor: '#FFF9EE', borderColor: '#FDE4BD' }]}>
+            <Text style={[styles.tipsTitle, { color: '#8A4A00' }]}>{t('reportBug.tipsTitle')}</Text>
+            <View style={styles.tipRow}>
+              <CheckCircle size={14} color="#22C55E" />
+              <Text style={[styles.tipText, { color: '#5C3A00' }]}>Be specific - include exact steps</Text>
+            </View>
+            <View style={styles.tipRow}>
+              <CheckCircle size={14} color="#22C55E" />
+              <Text style={[styles.tipText, { color: '#5C3A00' }]}>Mention your device model & OS version</Text>
+            </View>
+            <View style={styles.tipRow}>
+              <CheckCircle size={14} color="#22C55E" />
+              <Text style={[styles.tipText, { color: '#5C3A00' }]}>Describe what you expected vs what happened</Text>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.submitButton, { opacity: submitting ? 0.75 : 1 }]}
+            onPress={handleSubmit}
+            disabled={submitting}
+            activeOpacity={0.85}
+          >
+            <LinearGradient
+              colors={['#F99E3C', '#E08E35']}
+              start={{ x: 0.5, y: 0 }}
+              end={{ x: 0.5, y: 1 }}
+              style={styles.submitGradient}
+            >
+              {submitting ? (
+                <AppLoader size="small" color="#FFF" />
+              ) : (
+                <>
+                  <Send size={18} color="#FFF" />
+                  <Text style={styles.submitText}>{t('reportBug.submitReport')}</Text>
+                </>
+              )}
+            </LinearGradient>
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-
-  /* ── Hero Header ── */
-  headerImage: { width: '100%', height: 160 },
-  headerOverlay: { ...StyleSheet.absoluteFillObject, opacity: 0.78 },
-  blurContainer: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: 'flex-end',
-    paddingBottom: SPACING.lg,
-    paddingHorizontal: SPACING.md,
-  },
-  headerNav: { flexDirection: 'row', alignItems: 'center' },
-  navButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  navTitle: {
-    flex: 1,
-    fontFamily: FONTS.regular,
-    fontSize: 22,
-    color: '#FFF',
-    fontWeight: '800',
-    textAlign: 'center',
-    letterSpacing: 0.4,
-  },
-
-  /* ── Scroll ── */
-  scrollContent: { padding: SPACING.md, paddingBottom: SPACING.xl * 2 },
-
-  /* ── Info Banner ── */
-  infoBanner: {
+  keyboardWrap: { flex: 1 },
+  headerNav: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    borderRadius: 12,
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.xl,
+    paddingBottom: SPACING.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  navButton: {
+    paddingVertical: normalize(6),
+    paddingRight: normalize(8),
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  navTitle: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(18),
+    fontWeight: '700',
+  },
+  headerRightPlaceholder: {
+    width: normalize(38),
+  },
+  scrollContent: {
+    paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.xl * 2,
+  },
+  heroCard: {
+    marginTop: normalize(8),
+    marginBottom: SPACING.md,
+    borderRadius: normalize(18),
     padding: SPACING.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    ...SHADOWS.md,
+  },
+  heroIconWrap: {
+    width: normalize(42),
+    height: normalize(42),
+    borderRadius: normalize(21),
+    backgroundColor: 'rgba(255,255,255,0.58)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: normalize(12),
+  },
+  heroTextWrap: { flex: 1 },
+  heroTitle: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(16),
+    fontWeight: '700',
+    color: '#1F2937',
+  },
+  heroSubtitle: {
+    marginTop: normalize(4),
+    fontFamily: FONTS.regular,
+    fontSize: normalize(12),
+    lineHeight: normalize(17),
+    color: 'rgba(17,24,39,0.78)',
+  },
+  infoBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: normalize(8),
+    borderRadius: normalize(12),
+    paddingVertical: normalize(10),
+    paddingHorizontal: normalize(12),
     borderWidth: 1,
     marginBottom: SPACING.md,
   },
   infoText: {
     flex: 1,
     fontFamily: FONTS.regular,
-    fontSize: normalize(13),
-    lineHeight: normalize(19),
+    fontSize: normalize(12),
+    lineHeight: normalize(17),
   },
-
-  /* ── Card ── */
   card: {
-    borderRadius: 16,
-    padding: SPACING.lg,
-    marginBottom: SPACING.md,
-    ...SHADOWS.md,
+    borderRadius: normalize(14),
+    padding: SPACING.md,
+    marginBottom: normalize(10),
+    ...SHADOWS.sm,
   },
   cardTitle: {
-    fontFamily: FONTS.regular,
+    fontFamily: FONTS.medium,
     fontSize: normalize(15),
     fontWeight: '700',
-    marginBottom: SPACING.md,
+    marginBottom: normalize(10),
   },
-
-  /* ── Category Grid ── */
   categoryGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: SPACING.sm,
+    justifyContent: 'space-between',
+    gap: normalize(8),
   },
   categoryChip: {
-    width: wp(30),
-    paddingVertical: normalize(14),
-    borderRadius: 12,
-    borderWidth: 1.5,
+    width: '48.5%',
+    paddingVertical: normalize(11),
+    borderRadius: normalize(11),
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: normalize(6),
+    gap: normalize(4),
   },
   categoryChipText: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(11),
+    fontFamily: FONTS.medium,
+    fontSize: normalize(10.5),
     fontWeight: '600',
+    textAlign: 'center',
   },
-
-  /* ── Severity ── */
   severityRow: {
     flexDirection: 'row',
-    gap: SPACING.sm,
+    gap: normalize(8),
   },
   severityChip: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: normalize(8),
-    paddingVertical: normalize(12),
-    paddingHorizontal: normalize(10),
-    borderRadius: 12,
-    borderWidth: 1.5,
+    justifyContent: 'center',
+    gap: normalize(6),
+    paddingVertical: normalize(11),
+    borderRadius: normalize(10),
+    borderWidth: 1,
   },
   severityDot: {
-    width: normalize(10),
-    height: normalize(10),
-    borderRadius: normalize(5),
+    width: normalize(9),
+    height: normalize(9),
+    borderRadius: normalize(4.5),
   },
   severityLabel: {
-    fontFamily: FONTS.regular,
+    fontFamily: FONTS.medium,
     fontSize: normalize(12),
-    fontWeight: '700',
+    fontWeight: '600',
   },
-  severityDesc: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(10),
-  },
-
-  /* ── Inputs ── */
   input: {
     fontFamily: FONTS.regular,
     fontSize: normalize(14),
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: normalize(12),
     padding: SPACING.md,
   },
   textArea: {
     fontFamily: FONTS.regular,
     fontSize: normalize(14),
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: normalize(12),
     padding: SPACING.md,
     minHeight: normalize(120),
   },
@@ -432,34 +464,35 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     marginTop: normalize(4),
   },
-
-  /* ── Submit ── */
   submitButton: {
+    borderRadius: normalize(14),
+    overflow: 'hidden',
+    marginTop: normalize(8),
+    marginBottom: SPACING.md,
+    ...SHADOWS.md,
+  },
+  submitGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: normalize(10),
-    paddingVertical: normalize(16),
-    borderRadius: normalize(14),
-    marginBottom: SPACING.lg,
+    gap: normalize(8),
+    paddingVertical: normalize(15),
   },
   submitText: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(16),
-    fontWeight: '700',
+    fontFamily: FONTS.medium,
+    fontSize: normalize(15),
+    fontWeight: '600',
     color: '#FFF',
   },
-
-  /* ── Tips ── */
   tipsCard: {
-    borderRadius: 16,
-    padding: SPACING.lg,
+    borderRadius: normalize(14),
+    padding: SPACING.md,
     borderWidth: 1,
-    marginBottom: SPACING.md,
+    marginBottom: normalize(2),
     gap: normalize(8),
   },
   tipsTitle: {
-    fontFamily: FONTS.regular,
+    fontFamily: FONTS.medium,
     fontSize: normalize(14),
     fontWeight: '700',
     marginBottom: normalize(4),

@@ -26,14 +26,14 @@ const KNOB_PADDING = normalize(6);
 
 const SLIDE_ACCENT: Record<number, string> = {
   0: '#F9A825',
-  1: '#1565C0',
+  1: '#B85E00',
   2: '#2E7D32',
 };
 
 const SLIDE_BUTTON_GRADIENT: Record<number, readonly [string, string]> = {
-  0: ['#F99E3C', '#D47B1B'],
-  1: ['#51A7EA', '#3B8FD5'],
-  2: ['#04645E', '#013532'],
+  0: ['#F99E3C', '#E08E35'],
+  1: ['#F99E3C', '#E08E35'],
+  2: ['#F99E3C', '#E08E35'],
 };
 
 const OnboardingScreen = () => {
@@ -97,7 +97,7 @@ const OnboardingScreen = () => {
   };
 
   const accent = SLIDE_ACCENT[currentPage] ?? '#F9A825';
-  const buttonGradient = SLIDE_BUTTON_GRADIENT[currentPage] ?? ['#F99E3C', '#D47B1B'];
+  const buttonGradient = SLIDE_BUTTON_GRADIENT[currentPage] ?? ['#F99E3C', '#E08E35'];
   const maxDrag = Math.max(0, capsuleWidth - (KNOB_SIZE + KNOB_PADDING * 2));
   maxDragRef.current = maxDrag;
 

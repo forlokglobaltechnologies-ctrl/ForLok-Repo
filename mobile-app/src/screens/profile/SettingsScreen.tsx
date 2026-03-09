@@ -10,7 +10,6 @@ import {
   Modal,
   Alert,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -36,6 +35,7 @@ import { normalize } from '@utils/responsive';
 import { useLanguage, Language } from '@context/LanguageContext';
 import { useTheme } from '@context/ThemeContext';
 import { useAuth } from '@context/AuthContext';
+import { masterDataApi, userApi } from '@utils/apiClient';
 
 const BRAND_YELLOW = '#F4AB04';
 const BRAND_YELLOW_BG = '#FFF3CD';
@@ -46,8 +46,7 @@ const LANGUAGE_LABELS: Record<Language, string> = {
   te: 'తెలుగు',
   hi: 'हिन्दी',
 };
-
-const NOTIFICATION_PREFS_KEY = '@forlok_notification_prefs';
+const SUPPORTED_LANGUAGES: Language[] = ['en', 'te', 'hi'];
 
 type NotificationPrefs = {
   bookingUpdates: boolean;
@@ -85,17 +84,23 @@ const SettingsScreen = () => {
     messages: true,
     promotions: false,
   });
+  const [languageOptions, setLanguageOptions] = useState<Array<{ code: string; label: string }>>([
+    { code: 'en', label: 'English' },
+    { code: 'te', label: 'తెలుగు' },
+    { code: 'hi', label: 'हिन्दी' },
+  ]);
 
   const loadPrefs = useCallback(async () => {
     try {
-      const raw = await AsyncStorage.getItem(NOTIFICATION_PREFS_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as NotificationPrefs;
-      setPrefs({
-        bookingUpdates: !!parsed.bookingUpdates,
-        messages: !!parsed.messages,
-        promotions: !!parsed.promotions,
-      });
+      const response = await userApi.getNotificationPreferences();
+      if (response.success && response.data) {
+        const parsed = response.data as NotificationPrefs;
+        setPrefs({
+          bookingUpdates: !!parsed.bookingUpdates,
+          messages: !!parsed.messages,
+          promotions: !!parsed.promotions,
+        });
+      }
     } catch (error) {
       console.error('Failed to load notification preferences', error);
     }
@@ -104,6 +109,25 @@ const SettingsScreen = () => {
   useEffect(() => {
     loadPrefs();
   }, [loadPrefs]);
+
+  useEffect(() => {
+    const loadLanguageOptions = async () => {
+      const res = await masterDataApi.getByType('language');
+      if (res.success && (res.data as any)?.items?.length) {
+        const options = ((res.data as any).items as any[])
+          .filter((item) => item?.isActive !== false)
+          .map((item) => ({
+            code: String(item.value || item.key || '').trim().toLowerCase(),
+            label: String(item.label || item.value || item.key || '').trim(),
+          }))
+          .filter((item) => item.code && item.label);
+        if (options.length > 0) {
+          setLanguageOptions(options);
+        }
+      }
+    };
+    void loadLanguageOptions();
+  }, []);
 
   const isFemaleUser = String(user?.gender || '').toLowerCase() === 'female';
 
@@ -116,10 +140,14 @@ const SettingsScreen = () => {
   const updatePrefs = async (next: NotificationPrefs) => {
     setPrefs(next);
     try {
-      await AsyncStorage.setItem(NOTIFICATION_PREFS_KEY, JSON.stringify(next));
+      const response = await userApi.updateNotificationPreferences(next);
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to save preferences');
+      }
     } catch (error) {
       console.error('Failed to save notification preferences', error);
       Alert.alert('Error', 'Could not save notification preferences.');
+      await loadPrefs();
     }
   };
 
@@ -127,7 +155,11 @@ const SettingsScreen = () => {
     void updatePrefs({ ...prefs, [key]: value });
   };
 
-  const handleLanguageChange = async (lang: Language) => {
+  const handleLanguageChange = async (lang: string) => {
+    if (!SUPPORTED_LANGUAGES.includes(lang as Language)) {
+      Alert.alert('Language Not Configured', `${lang} is added in master data but app translations are not configured yet.`);
+      return;
+    }
     await changeLanguage(lang);
     setShowLanguageModal(false);
     Alert.alert(t('language.languageChanged'), '', [{ text: t('common.close') }]);
@@ -152,7 +184,7 @@ const SettingsScreen = () => {
         title: t('settings.account'),
         items: [
           { id: 'edit-profile', icon: User, label: t('settings.editProfile'), type: 'link', onPress: () => navigation.navigate('EditProfile') },
-          { id: 'change-password', icon: Lock, label: t('settings.changePassword'), type: 'link', onPress: () => navigation.navigate('ForgotPassword') },
+          { id: 'change-password', icon: Lock, label: t('settings.changePassword'), type: 'link', onPress: () => navigation.navigate('ChangePassword') },
           { id: 'blocked-users', icon: UserX, label: 'Blocked Users', type: 'link', onPress: () => navigation.navigate('BlockedUsers') },
           { id: 'privacy-settings', icon: Shield, label: t('settings.privacySettings'), type: 'link', onPress: () => navigation.navigate('PrivacyPolicy') },
         ],
@@ -169,7 +201,14 @@ const SettingsScreen = () => {
       {
         title: t('settings.appPreferences'),
         items: [
-          { id: 'language', icon: Globe, label: t('settings.language'), type: 'link', value: LANGUAGE_LABELS[language], onPress: () => setShowLanguageModal(true) },
+          {
+            id: 'language',
+            icon: Globe,
+            label: t('settings.language'),
+            type: 'link',
+            value: languageOptions.find((item) => item.code === language)?.label || LANGUAGE_LABELS[language],
+            onPress: () => setShowLanguageModal(true),
+          },
           ...(isFemaleUser
             ? [{ id: 'theme', icon: Palette, label: 'HerPooling Theme', type: 'toggle' as const, value: isPinkMode, onToggle: (v: boolean) => setPinkMode(v) }]
             : []),
@@ -188,6 +227,7 @@ const SettingsScreen = () => {
           { id: 'help-center', icon: HelpCircle, label: t('settings.helpCenter'), type: 'link', onPress: () => navigation.navigate('HelpSupport') },
           { id: 'contact-us', icon: HelpCircle, label: t('settings.contactUs'), type: 'link', onPress: () => navigation.navigate('HelpSupport') },
           { id: 'report-issue', icon: HelpCircle, label: t('settings.reportIssue'), type: 'link', onPress: () => navigation.navigate('ReportBug') },
+          { id: 'my-reports', icon: HelpCircle, label: 'My Reports', type: 'link', onPress: () => navigation.navigate('MyReports') },
         ],
       },
       {
@@ -288,25 +328,25 @@ const SettingsScreen = () => {
             </View>
 
             <View style={styles.languageList}>
-              {(Object.keys(LANGUAGE_LABELS) as Language[]).map((lang) => (
+              {languageOptions.map((langItem) => (
                 <TouchableOpacity
-                  key={lang}
+                  key={langItem.code}
                   style={[
                     styles.languageItem,
-                    language === lang && styles.languageItemSelected,
+                    language === langItem.code && styles.languageItemSelected,
                   ]}
-                  onPress={() => handleLanguageChange(lang)}
+                  onPress={() => handleLanguageChange(langItem.code)}
                   activeOpacity={0.7}
                 >
                   <Text
                     style={[
                       styles.languageItemText,
-                      language === lang && styles.languageItemTextSelected,
+                      language === langItem.code && styles.languageItemTextSelected,
                     ]}
                   >
-                    {LANGUAGE_LABELS[lang]}
+                    {langItem.label}
                   </Text>
-                  {language === lang ? <Check size={20} color={BRAND_YELLOW} /> : null}
+                  {language === langItem.code ? <Check size={20} color={BRAND_YELLOW} /> : null}
                 </TouchableOpacity>
               ))}
             </View>

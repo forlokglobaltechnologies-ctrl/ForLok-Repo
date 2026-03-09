@@ -12,6 +12,11 @@ export interface IUser extends Document {
   isVerified: boolean;
   isActive: boolean;
   language: 'en' | 'te' | 'hi';
+  notificationPreferences: {
+    bookingUpdates: boolean;
+    messages: boolean;
+    promotions: boolean;
+  };
   profilePhoto?: string;
   dateOfBirth?: Date;
   gender?: 'Male' | 'Female' | 'Other';
@@ -80,6 +85,11 @@ const userSchema = new Schema<IUser>(
       type: String,
       enum: ['en', 'te', 'hi'],
       default: 'en',
+    },
+    notificationPreferences: {
+      bookingUpdates: { type: Boolean, default: true },
+      messages: { type: Boolean, default: true },
+      promotions: { type: Boolean, default: false },
     },
     profilePhoto: {
       type: String,

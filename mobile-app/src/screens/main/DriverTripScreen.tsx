@@ -23,13 +23,13 @@ import * as Location from 'expo-location';
 import { WebView } from 'react-native-webview';
 import { LinearGradient } from 'expo-linear-gradient';
 
-const BLUE_ACCENT = '#0284C7';
-const BLUE_LIGHT = '#51A7EA';
+const BLUE_ACCENT = '#D47B1B';
+const BLUE_LIGHT = '#FFB55A';
 const BLUE_GRADIENT: [string, string] = [BLUE_LIGHT, BLUE_ACCENT];
 const GREEN_LIGHT = '#04645E';
 const GREEN_DARK = '#013532';
 const GREEN_GRADIENT: [string, string] = [GREEN_LIGHT, GREEN_DARK];
-const MODAL_BLUE_GRADIENT: [string, string] = ['#51A7EA', '#0284C7'];
+const MODAL_BLUE_GRADIENT: [string, string] = ['#F99E3C', '#E08E35'];
 const MODAL_ORANGE_GRADIENT: [string, string] = ['#F99E3C', '#E08E35'];
 
 interface RouteParams {
@@ -1173,7 +1173,7 @@ const DriverTripScreen = () => {
                         activeOpacity={0.8}
                       >
                         <LinearGradient
-                          colors={GREEN_GRADIENT}
+                          colors={['#F99E3C', '#E08E35']}
                           start={{ x: 0, y: 0 }}
                           end={{ x: 1, y: 1 }}
                           style={styles.pBtnGradient}
@@ -1279,7 +1279,7 @@ const DriverTripScreen = () => {
           {!isTracking ? (
             <TouchableOpacity style={styles.startBtn} onPress={startTrip} activeOpacity={0.85}>
               <LinearGradient
-                colors={BLUE_GRADIENT}
+                colors={['#F99E3C', '#E08E35']}
                 start={{ x: 0.5, y: 0 }}
                 end={{ x: 0.5, y: 1 }}
                 style={styles.startBtnGradient}

@@ -29,6 +29,12 @@ const updateLanguageSchema = z.object({
   language: z.enum(['en', 'te', 'hi']),
 });
 
+const notificationPreferencesSchema = z.object({
+  bookingUpdates: z.boolean(),
+  messages: z.boolean(),
+  promotions: z.boolean(),
+});
+
 export async function userRoutes(fastify: FastifyInstance) {
   // Register multipart plugin for file uploads
   await fastify.register(multipart);
@@ -80,6 +86,57 @@ export async function userRoutes(fastify: FastifyInstance) {
         success: true,
         message: 'Profile updated successfully',
         data: profile,
+      };
+
+      return reply.status(200).send(response);
+    }
+  );
+
+  /**
+   * GET /api/users/preferences/notifications
+   * Get notification preferences (authenticated)
+   */
+  fastify.get(
+    '/preferences/notifications',
+    {
+      preHandler: [authenticate],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const userId = (request as any).user.userId;
+      const preferences = await userService.getNotificationPreferences(userId);
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'Notification preferences retrieved successfully',
+        data: preferences,
+      };
+
+      return reply.status(200).send(response);
+    }
+  );
+
+  /**
+   * PUT /api/users/preferences/notifications
+   * Update notification preferences (authenticated)
+   */
+  fastify.put(
+    '/preferences/notifications',
+    {
+      preHandler: [authenticate, validate(notificationPreferencesSchema)],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const userId = (request as any).user.userId;
+      const body = request.body as {
+        bookingUpdates: boolean;
+        messages: boolean;
+        promotions: boolean;
+      };
+
+      const preferences = await userService.updateNotificationPreferences(userId, body);
+      const response: ApiResponse = {
+        success: true,
+        message: 'Notification preferences updated successfully',
+        data: preferences,
       };
 
       return reply.status(200).send(response);

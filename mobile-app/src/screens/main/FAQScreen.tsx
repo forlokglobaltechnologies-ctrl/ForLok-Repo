@@ -34,6 +34,9 @@ import { COLORS, FONTS, SPACING, SHADOWS } from '@constants/theme';
 import { normalize, wp, hp } from '@utils/responsive';
 import { useLanguage } from '@context/LanguageContext';
 import { useTheme } from '@context/ThemeContext';
+import { useContentPage } from '../../hooks/useContentPage';
+import { resolveContentIcon } from '@utils/contentIcons';
+import { CONTENT_DEFAULTS } from '@constants/contentDefaults';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -58,8 +61,9 @@ const FAQScreen = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedCategory, setExpandedCategory] = useState<number | null>(null);
   const [expandedQuestion, setExpandedQuestion] = useState<string | null>(null);
+  const { data: contentData } = useContentPage<any>('faq', CONTENT_DEFAULTS.faq as any);
 
-  const categories: FAQCategory[] = [
+  const defaultCategories: FAQCategory[] = [
     {
       icon: UserCheck,
       title: 'Account & Registration',
@@ -90,7 +94,7 @@ const FAQScreen = () => {
     {
       icon: Car,
       title: 'Pooling Services',
-      color: '#2196F3',
+      color: '#F99E3C',
       items: [
         {
           question: 'What is Forlok Pooling?',
@@ -226,6 +230,7 @@ const FAQScreen = () => {
       ],
     },
   ];
+  void defaultCategories;
 
   const toggleCategory = (index: number) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -239,6 +244,11 @@ const FAQScreen = () => {
   };
 
   // Filter categories and questions based on search
+  const categories = (contentData.categories as FAQCategory[]).map((cat: any) => ({
+    ...cat,
+    icon: typeof cat.icon === 'string' ? resolveContentIcon(cat.icon, HelpCircle) : cat.icon,
+  }));
+
   const filteredCategories = searchQuery.trim()
     ? categories
         .map(cat => ({
@@ -303,7 +313,7 @@ const FAQScreen = () => {
         {/* ── FAQ Categories ── */}
         {filteredCategories.map((category, catIndex) => {
           const isExpanded = expandedCategory === catIndex || searchQuery.trim().length > 0;
-          const Icon = category.icon;
+          const Icon = resolveContentIcon((category as any).icon, HelpCircle);
           return (
             <View key={catIndex} style={[styles.categoryCard, { backgroundColor: theme.colors.surface }]}>
               {/* Category Header */}

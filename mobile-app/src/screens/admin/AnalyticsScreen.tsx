@@ -193,7 +193,7 @@ const AnalyticsScreen = () => {
 
   // Pie chart data for service distribution
   const pieData = [
-    { label: 'Car Pooling', value: carPoolPct || 0, color: '#3B82F6' },
+    { label: 'Car Pooling', value: carPoolPct || 0, color: '#F99E3C' },
     { label: 'Bike Pooling', value: bikePoolPct || 0, color: '#10B981' },
     { label: 'Car Rentals', value: safeNum(poolingStats?.carRentals), color: '#F59E0B' },
     { label: 'Bike Rentals', value: safeNum(poolingStats?.bikeRentals), color: '#EF4444' },
@@ -481,7 +481,7 @@ const AnalyticsScreen = () => {
         {/* ── Floating Stats Strip ─────────────────────── */}
         <View style={styles.statsStrip}>
           {[
-            { labelKey: 'admin.analytics.newUsers', value: formatNumber(newUsers), icon: Users, color: '#4A90D9' },
+            { labelKey: 'admin.analytics.newUsers', value: formatNumber(newUsers), icon: Users, color: '#F99E3C' },
             { labelKey: 'admin.analytics.revenue', value: formatCurrency(todayRevenue), icon: DollarSign, color: '#00B894' },
             { labelKey: 'admin.analytics.bookings', value: formatNumber(totalBookings), icon: Car, color: '#F39C12' },
             { labelKey: 'admin.analytics.netProfit', value: formatCurrency(netProfit), icon: TrendingUp, color: '#7B61FF' },
@@ -525,7 +525,7 @@ const AnalyticsScreen = () => {
             <View style={styles.card}>
               <View style={styles.cardHeader}>
                 <View style={styles.cardTitleRow}>
-                  <Activity size={18} color="#4A90D9" />
+                  <Activity size={18} color="#F99E3C" />
                   <Text style={styles.cardTitle}>{t('admin.analytics.realtimeActivity')}</Text>
                 </View>
                 <View style={styles.liveIndicator}>
@@ -535,7 +535,7 @@ const AnalyticsScreen = () => {
               </View>
               <View style={styles.realtimeGrid}>
                 {[
-                  { labelKey: 'admin.analytics.activeTrips', value: activeTrips, icon: Car, color: '#3B82F6' },
+                  { labelKey: 'admin.analytics.activeTrips', value: activeTrips, icon: Car, color: '#F99E3C' },
                   { labelKey: 'admin.analytics.onlineDrivers', value: onlineDrivers, icon: Users, color: '#10B981' },
                   { labelKey: 'admin.analytics.pendingBookings', value: pendingBookings, icon: Clock, color: '#F59E0B' },
                   { labelKey: 'admin.analytics.todayBookings', value: totalBookings, icon: Target, color: '#8B5CF6' },
@@ -575,7 +575,7 @@ const AnalyticsScreen = () => {
                 {[
                   { labelKey: 'admin.analytics.totalRevenue', value: formatCurrency(totalRevenue), color: '#10B981', icon: TrendingUp },
                   { labelKey: 'admin.analytics.totalExpenses', value: formatCurrency(totalExpense), color: '#EF4444', icon: TrendingDown },
-                  { labelKey: 'admin.analytics.netProfit', value: formatCurrency(netProfit), color: '#3B82F6', icon: DollarSign },
+                  { labelKey: 'admin.analytics.netProfit', value: formatCurrency(netProfit), color: '#F99E3C', icon: DollarSign },
                   { labelKey: 'admin.analytics.commission', value: formatCurrency(commissionEarned), color: '#8B5CF6', icon: Award },
                 ].map((f, i) => (
                   <View key={i} style={styles.financeItem}>
@@ -624,7 +624,7 @@ const AnalyticsScreen = () => {
             <View style={styles.card}>
               <View style={styles.cardHeader}>
                 <View style={styles.cardTitleRow}>
-                  <DollarSign size={18} color="#3B82F6" />
+                  <DollarSign size={18} color="#F99E3C" />
                   <Text style={styles.cardTitle}>{t('admin.analytics.revenueBreakdown')}</Text>
                 </View>
               </View>
@@ -633,7 +633,7 @@ const AnalyticsScreen = () => {
                   { labelKey: 'admin.analytics.totalRevenue', value: formatCurrency(totalRevenue), color: '#10B981' },
                   { labelKey: 'admin.analytics.expenses', value: formatCurrency(totalExpense), color: '#EF4444' },
                   { labelKey: 'admin.analytics.commissionEarned', value: formatCurrency(commissionEarned), color: '#8B5CF6' },
-                  { labelKey: 'admin.analytics.netProfit', value: formatCurrency(netProfit), color: '#3B82F6' },
+                  { labelKey: 'admin.analytics.netProfit', value: formatCurrency(netProfit), color: '#F99E3C' },
                 ].map((item, i) => (
                   <View key={i} style={styles.breakdownRow}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -655,11 +655,11 @@ const AnalyticsScreen = () => {
             <View style={styles.card}>
               <View style={styles.cardHeader}>
                 <View style={styles.cardTitleRow}>
-                  <Users size={18} color="#3B82F6" />
+                  <Users size={18} color="#F99E3C" />
                   <Text style={styles.cardTitle}>{t('admin.analytics.userGrowth')}</Text>
                 </View>
               </View>
-              {renderLineChart(growthPoints, '#3B82F6', 'usr', selectedUserPoint, setSelectedUserPoint, '')}
+              {renderLineChart(growthPoints, '#F99E3C', 'usr', selectedUserPoint, setSelectedUserPoint, '')}
             </View>
 
             {/* User Stats */}
@@ -672,7 +672,7 @@ const AnalyticsScreen = () => {
               </View>
               <View style={styles.userMetricsRow}>
                 {[
-                  { labelKey: 'admin.analytics.newUsers', value: newUsers, color: '#3B82F6' },
+                  { labelKey: 'admin.analytics.newUsers', value: newUsers, color: '#F99E3C' },
                   { labelKey: 'admin.analytics.activeNow', value: onlineDrivers, color: '#10B981' },
                   { labelKey: 'admin.analytics.bookings', value: totalBookings, color: '#F59E0B' },
                 ].map((m, i) => (
@@ -694,7 +694,7 @@ const AnalyticsScreen = () => {
               </View>
               <View style={styles.poolingBreakdownList}>
                 {[
-                  { labelKey: 'admin.analytics.carPooling', pct: carPoolPct, icon: Car, color: '#3B82F6' },
+                  { labelKey: 'admin.analytics.carPooling', pct: carPoolPct, icon: Car, color: '#F99E3C' },
                   { labelKey: 'admin.analytics.bikePooling', pct: bikePoolPct, icon: Bike, color: '#10B981' },
                 ].map((p, i) => (
                   <View key={i} style={styles.poolingRow}>
@@ -735,7 +735,7 @@ const AnalyticsScreen = () => {
                     <View style={[styles.rankBadge, i < 3 && { backgroundColor: ['#FFD700', '#C0C0C0', '#CD7F32'][i] + '20' }]}>
                       <Text style={[styles.rankText, i < 3 && { color: ['#B8860B', '#808080', '#8B4513'][i] }]}>{i + 1}</Text>
                     </View>
-                    <View style={[styles.leaderAvatar, { backgroundColor: '#3B82F6' + '20' }]}>
+                    <View style={[styles.leaderAvatar, { backgroundColor: '#F99E3C' + '20' }]}>
                       <Text style={styles.leaderAvatarText}>{u.avatar}</Text>
                     </View>
                     <View style={{ flex: 1 }}>
@@ -752,7 +752,7 @@ const AnalyticsScreen = () => {
             <View style={styles.card}>
               <View style={styles.cardHeader}>
                 <View style={styles.cardTitleRow}>
-                  <Activity size={18} color="#3B82F6" />
+                  <Activity size={18} color="#F99E3C" />
                   <Text style={styles.cardTitle}>{t('admin.analytics.mostActiveUsers')}</Text>
                 </View>
                 <Text style={styles.cardBadge}>{mostActive.length} {t('admin.analytics.usersCount')}</Text>
@@ -816,13 +816,13 @@ const AnalyticsScreen = () => {
         {/* ── Action Buttons ───────────────────────────── */}
         <View style={styles.actionsRow}>
           <TouchableOpacity style={styles.actionBtn} activeOpacity={0.7}>
-            <LinearGradient colors={['#3B82F6', '#2563EB']} style={styles.actionGradient}>
+            <LinearGradient colors={['#F99E3C', '#E08E35']} style={styles.actionGradient}>
               <Download size={16} color="#fff" />
               <Text style={styles.actionBtnText}>{t('admin.analytics.exportReport')}</Text>
             </LinearGradient>
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionBtn} activeOpacity={0.7}>
-            <LinearGradient colors={['#8B5CF6', '#7C3AED']} style={styles.actionGradient}>
+            <LinearGradient colors={['#F99E3C', '#E08E35']} style={styles.actionGradient}>
               <BarChart3 size={16} color="#fff" />
               <Text style={styles.actionBtnText}>{t('admin.analytics.customReport')}</Text>
             </LinearGradient>
@@ -1361,7 +1361,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.regular,
     fontSize: normalize(15),
     fontWeight: '700',
-    color: '#3B82F6',
+    color: '#F99E3C',
   },
   leaderName: {
     fontFamily: FONTS.regular,

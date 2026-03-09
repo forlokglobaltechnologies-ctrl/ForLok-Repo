@@ -14,7 +14,7 @@ import { ArrowLeft } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING } from '@constants/theme';
 import { Input } from '@components/common/Input';
 import { Button } from '@components/common/Button';
-import { authApi } from '@utils/apiClient';
+import { authApi, userApi } from '@utils/apiClient';
 import { normalize, hp } from '@utils/responsive';
 import { useSnackbar } from '@context/SnackbarContext';
 import { getUserErrorMessage, mapFieldErrors } from '@utils/errorUtils';
@@ -28,16 +28,17 @@ const ChangePasswordScreen = () => {
   const route = useRoute();
   const { showSnackbar } = useSnackbar();
   const phone = ((route.params as ChangePasswordRouteParams) || {}).phone || '';
+  const isAuthenticatedChange = !phone;
 
+  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleUpdatePassword = async () => {
-    if (!phone) {
-      showSnackbar({ message: 'Phone number missing. Please restart forgot password flow.', type: 'error' });
-      navigation.navigate('ForgotPassword' as never);
+    if (isAuthenticatedChange && !currentPassword) {
+      setErrors((prev) => ({ ...prev, currentPassword: 'Current password is required' }));
       return;
     }
 
@@ -54,13 +55,21 @@ const ChangePasswordScreen = () => {
     setErrors({});
     setLoading(true);
     try {
-      const response = await authApi.resetPassword(phone, newPassword);
+      const response = isAuthenticatedChange
+        ? await userApi.changePassword(currentPassword, newPassword)
+        : await authApi.resetPassword(phone, newPassword);
       if (response.success) {
         showSnackbar({
-          message: 'Password updated successfully. Please sign in with your new password.',
+          message: isAuthenticatedChange
+            ? 'Password changed successfully.'
+            : 'Password updated successfully. Please sign in with your new password.',
           type: 'success',
         });
-        navigation.navigate('SignIn' as never);
+        if (isAuthenticatedChange) {
+          navigation.goBack();
+        } else {
+          navigation.navigate('SignIn' as never);
+        }
         return;
       }
 
@@ -105,9 +114,28 @@ const ChangePasswordScreen = () => {
           </View>
 
           <Text style={styles.title}>Change Password</Text>
-          <Text style={styles.subtitle}>Create a new secure password for {phone}</Text>
+          <Text style={styles.subtitle}>
+            {isAuthenticatedChange
+              ? 'Set a new secure password for your account'
+              : `Create a new secure password for ${phone}`}
+          </Text>
 
           <View style={styles.formCard}>
+            {isAuthenticatedChange ? (
+              <Input
+                label="Current Password"
+                value={currentPassword}
+                onChangeText={(text) => {
+                  setCurrentPassword(text);
+                  if (errors.currentPassword) setErrors((prev) => ({ ...prev, currentPassword: '' }));
+                }}
+                placeholder="Enter current password"
+                secureTextEntry
+                showPasswordToggle
+                error={errors.currentPassword}
+                containerStyle={styles.input}
+              />
+            ) : null}
             <Input
               label="New Password"
               value={newPassword}
@@ -174,13 +202,14 @@ const styles = StyleSheet.create({
     borderRadius: normalize(18),
     overflow: 'hidden',
     marginBottom: SPACING.lg,
-    backgroundColor: '#EAF1FF',
+    backgroundColor: '#FFF4E6',
     borderWidth: 1,
-    borderColor: '#DDE6F5',
+    borderColor: '#F6D2A6',
   },
   heroImage: {
     width: '100%',
     height: normalize(170),
+    tintColor: '#F99E3C',
   },
   title: {
     fontFamily: FONTS.medium,
@@ -199,7 +228,7 @@ const styles = StyleSheet.create({
     padding: SPACING.lg,
     borderRadius: normalize(16),
     borderWidth: 1,
-    borderColor: '#DDE6F5',
+    borderColor: '#F6D2A6',
   },
   input: { marginBottom: SPACING.md },
   button: { marginTop: normalize(4) },

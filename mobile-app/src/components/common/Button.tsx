@@ -7,6 +7,7 @@ import {
   TextStyle,
   View,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { FONTS, BORDER_RADIUS } from '@constants/theme';
 import { useTheme } from '@context/ThemeContext';
 import { AppLoader } from '@components/common/AppLoader';
@@ -124,17 +125,27 @@ export const Button: React.FC<ButtonProps> = ({
       disabled={disabled || loading}
       activeOpacity={0.7}
     >
-      {loading ? (
-        <AppLoader
-          color={variant === 'primary' || variant === 'secondary' ? colors.white : colors.primary}
-          size="small"
+      {variant === 'primary' ? (
+        <LinearGradient
+          colors={['#F99E3C', '#E08E35']}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={[StyleSheet.absoluteFillObject, { borderRadius: BORDER_RADIUS.md }]}
         />
-      ) : (
-        <>
-          {icon && <View style={{ marginRight: title ? 8 : 0 }}>{icon}</View>}
-          {title && <Text style={[getTextStyle(), textStyle]}>{title}</Text>}
-        </>
-      )}
+      ) : null}
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+        {loading ? (
+          <AppLoader
+            color={variant === 'primary' || variant === 'secondary' ? colors.white : colors.primary}
+            size="small"
+          />
+        ) : (
+          <>
+            {icon && <View style={{ marginRight: title ? 8 : 0 }}>{icon}</View>}
+            {title && <Text style={[getTextStyle(), textStyle]}>{title}</Text>}
+          </>
+        )}
+      </View>
     </TouchableOpacity>
   );
 };

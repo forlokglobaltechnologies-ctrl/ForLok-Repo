@@ -21,7 +21,7 @@ import {
 import { normalize, wp, hp, SCREEN_WIDTH } from '@utils/responsive';
 import { useNavigation, useIsFocused, useNavigationState } from '@react-navigation/native';
 import {
-  Bell, User, Clock, TrendingUp, IndianRupee, Heart, Plus, Coins, LogOut,
+  Bell, User, Clock, TrendingUp, IndianRupee, Heart, Coins, LogOut,
   Search, CarFront, CreditCard, PartyPopper, Wallet, X, MapPin, Home as HomeIcon,
   Briefcase, Leaf, Star, ChevronRight, Users, Gift, Car, UtensilsCrossed,
   Navigation, Share2, Shield, Menu, History, HelpCircle, MessageSquare, FileText,
@@ -40,6 +40,7 @@ import { SvgUri } from 'react-native-svg';
 
 const SCREEN_W = Dimensions.get('window').width;
 const STEP_CARD_W = SCREEN_W;
+const QUICK_ACTION_ACCENT = '#8D1F1F';
 
 const bookingSteps = [
   { id: '1', step: 'Step 1', title: 'Search your\nroute', cta: 'Get started →', icon: Search },
@@ -88,9 +89,9 @@ const coinsCarouselData = [
     title: 'Complete pools to\nearn bonus coins',
     cta: 'Start Pooling',
     bg: '#002B36',
-    accent: '#4A90D9',
+    accent: '#F99E3C',
     icon: Car,
-    deco1: '#4A90D9',
+    deco1: '#F99E3C',
     deco2: '#63B3ED',
   },
   {
@@ -107,41 +108,18 @@ const coinsCarouselData = [
 ];
 
 const quickActions = [
-  { id: 'pool', label: 'Pool Ride', icon: Search, screen: 'SearchPooling', color: '#4A90D9', gradient: ['#38BDF8', '#2563EB'] as const },
-  { id: 'offer-ride', label: 'Offer Ride', icon: Car, screen: 'CreatePoolingOffer', color: '#00B894', gradient: ['#34D399', '#059669'] as const },
-  { id: 'my-rides', label: 'My Rides', icon: History, screen: 'History', color: '#0EA5E9', gradient: ['#22D3EE', '#0891B2'] as const },
-  { id: 'offers', label: 'My Offers', icon: Award, screen: 'MyOffers', color: '#8B5CF6', gradient: ['#A78BFA', '#7C3AED'] as const },
-  { id: 'messages', label: 'Messages', icon: MessageSquare, screen: 'ChatList', color: '#2563EB', gradient: ['#60A5FA', '#1D4ED8'] as const },
-  { id: 'notifications', label: 'Alerts', icon: Bell, screen: 'Notifications', color: '#F97316', gradient: ['#FB923C', '#EA580C'] as const },
-  { id: 'reviews', label: 'Reviews', icon: Star, screen: 'Reviews', color: '#D97706', gradient: ['#FBBF24', '#D97706'] as const },
-  { id: 'help', label: 'Help', icon: HelpCircle, screen: 'HelpSupport', color: '#059669', gradient: ['#10B981', '#047857'] as const },
-  { id: 'faq', label: 'FAQ', icon: Info, screen: 'FAQ', color: '#3B82F6', gradient: ['#93C5FD', '#3B82F6'] as const },
-  { id: 'feedback', label: 'Feedback', icon: FileText, screen: 'Feedback', color: '#7C3AED', gradient: ['#C4B5FD', '#7C3AED'] as const },
-  { id: 'report-bug', label: 'Report Bug', icon: Shield, screen: 'ReportBug', color: '#EF4444', gradient: ['#F87171', '#DC2626'] as const },
-  { id: 'settings', label: 'Settings', icon: Settings, screen: 'Settings', color: '#64748B', gradient: ['#94A3B8', '#475569'] as const },
-];
-
-const quickActionBubbleLayoutPresets = [
-  [
-    { top: 7, right: 8, size: 18 },
-    { top: 24, right: 27, size: 10 },
-    { bottom: 9, left: 9, size: 12 },
-  ],
-  [
-    { top: 8, left: 8, size: 16 },
-    { top: 25, left: 26, size: 9 },
-    { bottom: 8, right: 10, size: 13 },
-  ],
-  [
-    { top: 6, right: 18, size: 14 },
-    { top: 23, left: 12, size: 11 },
-    { bottom: 9, right: 8, size: 12 },
-  ],
-  [
-    { top: 10, left: 16, size: 15 },
-    { top: 28, right: 12, size: 10 },
-    { bottom: 8, left: 6, size: 12 },
-  ],
+  { id: 'pool', label: 'Pool Ride', icon: Search, screen: 'SearchPooling' },
+  { id: 'offer-ride', label: 'Offer Ride', icon: Car, screen: 'CreatePoolingOffer' },
+  { id: 'my-rides', label: 'My Rides', icon: History, screen: 'History' },
+  { id: 'offers', label: 'My Offers', icon: Award, screen: 'MyOffers' },
+  { id: 'messages', label: 'Messages', icon: MessageSquare, screen: 'ChatList' },
+  { id: 'history', label: 'History', icon: History, screen: 'History' },
+  { id: 'reviews', label: 'Reviews', icon: Star, screen: 'Reviews' },
+  { id: 'help', label: 'Help', icon: HelpCircle, screen: 'HelpSupport' },
+  { id: 'faq', label: 'FAQ', icon: Info, screen: 'FAQ' },
+  { id: 'feedback', label: 'Feedback', icon: FileText, screen: 'Feedback' },
+  { id: 'report-bug', label: 'Report Bug', icon: Shield, screen: 'ReportBug' },
+  { id: 'settings', label: 'Settings', icon: Settings, screen: 'Settings' },
 ];
 
 const MainDashboardScreen = () => {
@@ -162,8 +140,6 @@ const MainDashboardScreen = () => {
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
   const quickActionScaleMapRef = useRef<Record<string, Animated.Value>>({});
-  const quickActionBubbleMapRef = useRef<Record<string, Animated.Value>>({});
-  const quickActionBubbleLoopsRef = useRef<any[]>([]);
   const nyumLogoUri = Image.resolveAssetSource(require('../../../assets/nyum-logo.svg'))?.uri;
 
   // Sidebar animation
@@ -209,47 +185,10 @@ const MainDashboardScreen = () => {
     }).start();
   }, [getQuickActionScale]);
 
-  const getQuickActionBubble = useCallback((id: string) => {
-    if (!quickActionBubbleMapRef.current[id]) {
-      quickActionBubbleMapRef.current[id] = new Animated.Value(0);
-    }
-    return quickActionBubbleMapRef.current[id];
-  }, []);
-
   useEffect(() => {
     if (authUser?.gender) setUserGender(authUser.gender);
     getUserLocation();
   }, [authUser]);
-
-  useEffect(() => {
-    quickActionBubbleLoopsRef.current.forEach((anim) => anim?.stop?.());
-    quickActionBubbleLoopsRef.current = quickActions.map((action, index) => {
-      const bubbleAnim = getQuickActionBubble(action.id);
-      bubbleAnim.setValue(0);
-      const loop = Animated.loop(
-        Animated.sequence([
-          Animated.delay(120 + (index % 6) * 140),
-          Animated.timing(bubbleAnim, {
-            toValue: 1,
-            duration: 1200,
-            useNativeDriver: true,
-          }),
-          Animated.timing(bubbleAnim, {
-            toValue: 0,
-            duration: 1200,
-            useNativeDriver: true,
-          }),
-        ]),
-      );
-      loop.start();
-      return loop;
-    });
-
-    return () => {
-      quickActionBubbleLoopsRef.current.forEach((anim) => anim?.stop?.());
-      quickActionBubbleLoopsRef.current = [];
-    };
-  }, [getQuickActionBubble]);
 
   useEffect(() => {
     loadHomeData();
@@ -581,8 +520,8 @@ const MainDashboardScreen = () => {
                   onPress={() => { if (workSaved) handleWhereToSelect(workSaved); else handleSavePlace('work'); }}
                   activeOpacity={0.7}
                 >
-                  <View style={[styles.savedChipIcon, { backgroundColor: workSaved ? '#E3F2FD' : theme.colors.background }]}>
-                    <Briefcase size={14} color={workSaved ? '#1565C0' : theme.colors.textSecondary} />
+                  <View style={[styles.savedChipIcon, { backgroundColor: workSaved ? '#FFF4E6' : theme.colors.background }]}>
+                    <Briefcase size={14} color={workSaved ? '#B85E00' : theme.colors.textSecondary} />
                   </View>
                   <Text style={[styles.savedChipText, { color: theme.colors.text }]} numberOfLines={1}>{workSaved ? 'Work' : 'Set Work'}</Text>
                 </TouchableOpacity>
@@ -670,147 +609,33 @@ const MainDashboardScreen = () => {
           </View>
 
           {/* ── Quick Actions Grid ── */}
-          <View style={styles.quickActionsGrid}>
-            {quickActions.map((action, index) => {
-              const Icon = action.icon;
-              const scale = getQuickActionScale(action.id);
-              const bubbleAnim = getQuickActionBubble(action.id);
-              const bubbleLayout = quickActionBubbleLayoutPresets[index % quickActionBubbleLayoutPresets.length];
-              const motionDir = index % 2 === 0 ? 1 : -1;
-              const motionScale = 1 + (index % 3) * 0.18;
-              const bubbleColor1 = action.gradient[0] + '3D';
-              const bubbleColor2 = action.gradient[0] + '2B';
-              const bubbleColor3 = action.gradient[0] + '24';
-              return (
-                <Animated.View key={action.id} style={{ transform: [{ scale }] }}>
-                  <TouchableOpacity
-                    style={styles.quickActionItem}
-                    activeOpacity={0.85}
-                    onPressIn={() => animateQuickAction(action.id, 0.96)}
-                    onPressOut={() => animateQuickAction(action.id, 1)}
-                    onPress={() => navigation.navigate(action.screen as never)}
-                  >
-                    <Animated.View
-                      pointerEvents="none"
+          <View style={styles.quickActionsSection}>
+            <Text style={styles.quickActionsHeading}>Quick actions</Text>
+            <View style={styles.quickActionsGrid}>
+              {quickActions.map((action) => {
+                const Icon = action.icon;
+                const scale = getQuickActionScale(action.id);
+                return (
+                  <Animated.View key={action.id} style={{ transform: [{ scale }] }}>
+                    <TouchableOpacity
                       style={[
-                        styles.quickActionBubbleBase,
-                        {
-                          width: normalize(bubbleLayout[0].size),
-                          height: normalize(bubbleLayout[0].size),
-                          borderRadius: normalize(bubbleLayout[0].size / 2),
-                          backgroundColor: bubbleColor1,
-                          top: bubbleLayout[0].top != null ? normalize(bubbleLayout[0].top) : undefined,
-                          right: bubbleLayout[0].right != null ? normalize(bubbleLayout[0].right) : undefined,
-                          bottom: bubbleLayout[0].bottom != null ? normalize(bubbleLayout[0].bottom) : undefined,
-                          left: bubbleLayout[0].left != null ? normalize(bubbleLayout[0].left) : undefined,
-                        },
-                        {
-                          opacity: bubbleAnim.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [0.45, 0.9],
-                          }),
-                          transform: [
-                            {
-                              translateY: bubbleAnim.interpolate({
-                                inputRange: [0, 1],
-                                outputRange: [0, -6 * motionScale],
-                              }),
-                            },
-                            {
-                              translateX: bubbleAnim.interpolate({
-                                inputRange: [0, 1],
-                                outputRange: [0, 7 * motionDir * motionScale],
-                              }),
-                            },
-                          ],
-                        },
+                        styles.quickActionItem,
+                        styles.quickActionItemPlain,
                       ]}
-                    />
-                    <Animated.View
-                      pointerEvents="none"
-                      style={[
-                        styles.quickActionBubbleBase,
-                        {
-                          width: normalize(bubbleLayout[1].size),
-                          height: normalize(bubbleLayout[1].size),
-                          borderRadius: normalize(bubbleLayout[1].size / 2),
-                          backgroundColor: bubbleColor2,
-                          top: bubbleLayout[1].top != null ? normalize(bubbleLayout[1].top) : undefined,
-                          right: bubbleLayout[1].right != null ? normalize(bubbleLayout[1].right) : undefined,
-                          bottom: bubbleLayout[1].bottom != null ? normalize(bubbleLayout[1].bottom) : undefined,
-                          left: bubbleLayout[1].left != null ? normalize(bubbleLayout[1].left) : undefined,
-                        },
-                        {
-                          opacity: bubbleAnim.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [0.35, 0.72],
-                          }),
-                          transform: [
-                            {
-                              translateY: bubbleAnim.interpolate({
-                                inputRange: [0, 1],
-                                outputRange: [0, 5 * motionScale],
-                              }),
-                            },
-                            {
-                              translateX: bubbleAnim.interpolate({
-                                inputRange: [0, 1],
-                                outputRange: [0, -6 * motionDir * motionScale],
-                              }),
-                            },
-                          ],
-                        },
-                      ]}
-                    />
-                    <Animated.View
-                      pointerEvents="none"
-                      style={[
-                        styles.quickActionBubbleBase,
-                        {
-                          width: normalize(bubbleLayout[2].size),
-                          height: normalize(bubbleLayout[2].size),
-                          borderRadius: normalize(bubbleLayout[2].size / 2),
-                          backgroundColor: bubbleColor3,
-                          top: bubbleLayout[2].top != null ? normalize(bubbleLayout[2].top) : undefined,
-                          right: bubbleLayout[2].right != null ? normalize(bubbleLayout[2].right) : undefined,
-                          bottom: bubbleLayout[2].bottom != null ? normalize(bubbleLayout[2].bottom) : undefined,
-                          left: bubbleLayout[2].left != null ? normalize(bubbleLayout[2].left) : undefined,
-                        },
-                        {
-                          opacity: bubbleAnim.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [0.3, 0.66],
-                          }),
-                          transform: [
-                            {
-                              translateY: bubbleAnim.interpolate({
-                                inputRange: [0, 1],
-                                outputRange: [0, -4 * motionScale],
-                              }),
-                            },
-                            {
-                              translateX: bubbleAnim.interpolate({
-                                inputRange: [0, 1],
-                                outputRange: [0, 5 * motionDir * -1 * motionScale],
-                              }),
-                            },
-                          ],
-                        },
-                      ]}
-                    />
-                    <LinearGradient
-                      colors={action.gradient}
-                      start={{ x: 0.5, y: 0 }}
-                      end={{ x: 0.5, y: 1 }}
-                      style={styles.quickActionIcon}
+                      activeOpacity={0.85}
+                      onPressIn={() => animateQuickAction(action.id, 0.96)}
+                      onPressOut={() => animateQuickAction(action.id, 1)}
+                      onPress={() => navigation.navigate(action.screen as never)}
                     >
-                      <Icon size={22} color="#FFFFFF" />
-                    </LinearGradient>
-                    <Text style={styles.quickActionLabel}>{action.label}</Text>
-                  </TouchableOpacity>
-                </Animated.View>
-              );
-            })}
+                      <View style={styles.quickActionIcon}>
+                        <Icon size={19} color={QUICK_ACTION_ACCENT} />
+                      </View>
+                      <Text style={styles.quickActionLabel} numberOfLines={2}>{action.label}</Text>
+                    </TouchableOpacity>
+                  </Animated.View>
+                );
+              })}
+            </View>
           </View>
 
           {/* ── Active Ride Card ── */}
@@ -847,7 +672,7 @@ const MainDashboardScreen = () => {
                 </View>
               ) : (
                 <LinearGradient
-                  colors={['#F99E3C', '#D47B1B']}
+                  colors={['#F99E3C', '#E08E35']}
                   start={{ x: 0.5, y: 0 }}
                   end={{ x: 0.5, y: 1 }}
                   style={styles.activeRideFill}
@@ -997,21 +822,24 @@ const MainDashboardScreen = () => {
           {referral?.code && (
             <TouchableOpacity style={styles.referralCard} activeOpacity={0.85} onPress={handleShareReferral}>
               <LinearGradient
-                colors={['#51A7EA', '#3B8FD5']}
+                colors={['#0F172B', '#0F172B']}
                 start={{ x: 0.5, y: 0 }}
                 end={{ x: 0.5, y: 1 }}
                 style={styles.referralGradient}
               >
                 <View style={styles.referralLeft}>
                   <View style={styles.referralIconWrap}>
-                    <Gift size={22} color="#FFF" />
+                    <Gift size={22} color="#FFFFFF" />
                   </View>
                   <View>
                     <Text style={styles.referralTitle}>Invite Friends, Earn Coins</Text>
-                    <Text style={styles.referralCode}>Code: {referral.code}</Text>
+                    <Text style={styles.referralCode}>
+                      <Text style={styles.referralCodeLabel}>Code: </Text>
+                      <Text style={styles.referralCodeValue}>{referral.code}</Text>
+                    </Text>
                   </View>
                 </View>
-                <Share2 size={20} color="rgba(255,255,255,0.8)" />
+                <Share2 size={20} color="#51A7EA" />
               </LinearGradient>
             </TouchableOpacity>
           )}
@@ -1091,16 +919,28 @@ const MainDashboardScreen = () => {
                     </View>
                   </View>
                   <View style={styles.walletModalButtons}>
-                    <TouchableOpacity style={[styles.walletModalBtn, { backgroundColor: theme.colors.success }]} onPress={() => { setShowWalletModal(false); (navigation.navigate as any)('Wallet', { tab: 'coins' }); }}>
-                      <Plus size={18} color="#FFF" />
-                      <Text style={styles.walletModalBtnText}>Use Coins</Text>
+                    <TouchableOpacity
+                      style={styles.walletModalBtn}
+                      onPress={() => {
+                        setShowWalletModal(false);
+                        (navigation.navigate as any)('Wallet', { openWithdrawal: true });
+                      }}
+                    >
+                      <LinearGradient
+                        colors={['#51A7EA', '#0284C7']}
+                        start={{ x: 0.5, y: 0 }}
+                        end={{ x: 0.5, y: 1 }}
+                        style={styles.walletModalBtnGradient}
+                      >
+                        <Text style={styles.walletModalBtnText}>Withdrawal</Text>
+                      </LinearGradient>
                     </TouchableOpacity>
-                    <TouchableOpacity style={[styles.walletModalBtn, { backgroundColor: theme.colors.primary }]} onPress={() => { setShowWalletModal(false); (navigation.navigate as any)('Wallet', {}); }}>
+                    <TouchableOpacity style={[styles.walletModalBtn, { backgroundColor: '#0369A1' }]} onPress={() => { setShowWalletModal(false); (navigation.navigate as any)('Wallet', {}); }}>
                       <Text style={styles.walletModalBtnText}>Wallet</Text>
                     </TouchableOpacity>
                   </View>
                   <TouchableOpacity style={[styles.walletModalViewAll, { borderColor: theme.colors.border }]} onPress={() => { setShowWalletModal(false); (navigation.navigate as any)('Wallet', {}); }}>
-                    <Text style={[styles.walletModalViewAllText, { color: theme.colors.primary }]}>View wallet details →</Text>
+                    <Text style={[styles.walletModalViewAllText, { color: '#0284C7' }]}>View wallet details →</Text>
                   </TouchableOpacity>
                 </View>
               </TouchableWithoutFeedback>
@@ -1465,37 +1305,54 @@ const styles = StyleSheet.create({
   activeRideDest: { fontFamily: FONTS.medium, fontSize: normalize(16), color: '#FFF', fontWeight: '600' },
 
   // ── Quick Actions ──
+  quickActionsSection: {
+    marginBottom: SPACING.lg,
+  },
+  quickActionsHeading: {
+    fontFamily: FONTS.regular,
+    fontSize: normalize(18),
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: normalize(10),
+  },
   quickActionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: normalize(10),
-    marginBottom: SPACING.lg,
+    gap: normalize(8),
   },
   quickActionItem: {
-    width: (SCREEN_W - SPACING.md * 2 - normalize(10) * 3) / 4,
-    alignItems: 'center', paddingVertical: normalize(14),
-    borderRadius: normalize(16),
-    backgroundColor: '#0F172B',
+    width: (SCREEN_W - SPACING.md * 2 - normalize(8) * 3) / 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: normalize(9),
+    paddingHorizontal: normalize(6),
+    borderRadius: normalize(14),
     borderWidth: 1,
-    borderColor: '#F99E3C',
-    overflow: 'hidden',
-    ...SHADOWS.sm,
+    minHeight: normalize(86),
   },
-  quickActionBubbleBase: {
-    position: 'absolute',
+  quickActionItemPlain: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#EEF0F4',
   },
   quickActionIcon: {
-    width: normalize(44), height: normalize(44), borderRadius: normalize(22),
-    alignItems: 'center', justifyContent: 'center', marginBottom: normalize(8),
+    width: normalize(34),
+    height: normalize(34),
+    borderRadius: normalize(17),
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: normalize(7),
+    backgroundColor: '#FAF2F2',
+    borderWidth: 1.3,
+    borderColor: '#C88A8A',
   },
   quickActionLabel: {
     fontFamily: FONTS.medium,
     fontSize: normalize(10.5),
-    fontWeight: '500',
+    fontWeight: '600',
     textAlign: 'center',
     lineHeight: normalize(13),
-    minHeight: normalize(26),
-    color: '#FFFFFF',
+    minHeight: normalize(24),
+    color: '#1F2937',
   },
 
   // ── HerPooling ──
@@ -1573,10 +1430,12 @@ const styles = StyleSheet.create({
   referralLeft: { flexDirection: 'row', alignItems: 'center', gap: normalize(12), flex: 1 },
   referralIconWrap: {
     width: normalize(42), height: normalize(42), borderRadius: normalize(21),
-    backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.16)', alignItems: 'center', justifyContent: 'center',
   },
-  referralTitle: { fontFamily: FONTS.medium, fontSize: normalize(15), fontWeight: 'bold', color: '#FFF' },
-  referralCode: { fontFamily: FONTS.regular, fontSize: normalize(12), color: 'rgba(255,255,255,0.75)', marginTop: normalize(2) },
+  referralTitle: { fontFamily: FONTS.medium, fontSize: normalize(15), fontWeight: 'bold', color: '#FFFFFF' },
+  referralCode: { fontFamily: FONTS.regular, fontSize: normalize(12), marginTop: normalize(2) },
+  referralCodeLabel: { color: 'rgba(255,255,255,0.84)' },
+  referralCodeValue: { color: '#51A7EA' },
 
   // ── Steps Carousel ──
   stepsCarousel: { marginBottom: SPACING.lg, marginHorizontal: -SPACING.md },
@@ -1610,7 +1469,8 @@ const styles = StyleSheet.create({
   walletModalAmountRow: { flexDirection: 'row', alignItems: 'center' },
   walletModalAmount: { fontFamily: FONTS.medium, fontSize: normalize(24), fontWeight: 'bold' },
   walletModalButtons: { flexDirection: 'row', gap: SPACING.md, marginBottom: SPACING.md },
-  walletModalBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: normalize(6), paddingVertical: normalize(14), borderRadius: normalize(14) },
+  walletModalBtn: { flex: 1, borderRadius: normalize(14), overflow: 'hidden' },
+  walletModalBtnGradient: { alignItems: 'center', justifyContent: 'center', paddingVertical: normalize(14) },
   walletModalBtnText: { fontFamily: FONTS.medium, fontSize: normalize(15), fontWeight: '600', color: '#FFFFFF' },
   walletModalViewAll: { borderTopWidth: 1, paddingTop: SPACING.md, alignItems: 'center' },
   walletModalViewAllText: { fontFamily: FONTS.medium, fontSize: normalize(14), fontWeight: '600' },
@@ -1628,7 +1488,7 @@ const styles = StyleSheet.create({
   scheduleOptionSub: { fontFamily: FONTS.regular, fontSize: normalize(12), marginTop: normalize(2) },
 
   // ── Greeting cursor ──
-  greetingCursor: { fontFamily: FONTS.regular, fontSize: normalize(22), color: '#4A90D9' },
+  greetingCursor: { fontFamily: FONTS.regular, fontSize: normalize(22), color: '#F99E3C' },
 
   // ── Sidebar ──
   sidebarModalRoot: {

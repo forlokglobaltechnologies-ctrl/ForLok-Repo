@@ -217,21 +217,21 @@ const EarnCoinsScreen = () => {
         </View>
 
         {/* ── Coin Balance Card ── */}
-        <View style={[styles.balanceCard, { backgroundColor: theme.colors.surface }]}>
+        <View style={styles.balanceCard}>
           <View style={styles.balanceIconWrap}>
-            <Coins size={32} color={COIN_COLOR} />
+            <Coins size={32} color="#51A7EA" />
           </View>
           <View style={styles.balanceInfo}>
-            <Text style={[styles.balanceLabel, { color: theme.colors.textSecondary }]}>Your Balance</Text>
+            <Text style={styles.balanceLabel}>Your Balance</Text>
             <View style={styles.balanceRow}>
-              <Text style={[styles.balanceAmount, { color: theme.colors.text }]}>
+              <Text style={styles.balanceAmount}>
                 {coinBalance?.balance || 0}
               </Text>
-              <Text style={[styles.balanceCoinLabel, { color: COIN_COLOR }]}>coins</Text>
+              <Text style={styles.balanceCoinLabel}>coins</Text>
             </View>
           </View>
-          <View style={[styles.worthBadge, { backgroundColor: COIN_BG }]}>
-            <Text style={[styles.worthText, { color: COIN_DARK }]}>
+          <View style={styles.worthBadge}>
+            <Text style={styles.worthText}>
               ₹{coinBalance?.worthInRupees || 0}
             </Text>
           </View>
@@ -240,8 +240,8 @@ const EarnCoinsScreen = () => {
         {/* ── 1. Invite Friends (Referral) ── */}
         <View style={[styles.earnCard, { backgroundColor: theme.colors.surface }]}>
           <View style={styles.earnCardHeader}>
-            <View style={[styles.earnIconWrap, { backgroundColor: '#4A90D9' + '15' }]}>
-              <Users size={22} color="#4A90D9" />
+            <View style={[styles.earnIconWrap, { backgroundColor: '#F99E3C' + '15' }]}>
+              <Users size={22} color="#F99E3C" />
             </View>
             <View style={styles.earnCardTitleWrap}>
               <Text style={[styles.earnCardTitle, { color: theme.colors.text }]}>Invite Friends</Text>
@@ -256,8 +256,8 @@ const EarnCoinsScreen = () => {
             <Text style={[styles.referralCodeLabel, { color: theme.colors.textSecondary }]}>Your Referral Code</Text>
             <View style={styles.referralCodeRow}>
               <Text style={styles.referralCodeText}>{referralCode || '---'}</Text>
-              <TouchableOpacity onPress={handleCopyCode} style={[styles.copyBtn, { backgroundColor: '#4A90D9' + '15' }]}>
-                <Copy size={16} color="#4A90D9" />
+              <TouchableOpacity onPress={handleCopyCode} style={[styles.copyBtn, { backgroundColor: '#F99E3C' + '15' }]}>
+                <Copy size={16} color="#F99E3C" />
               </TouchableOpacity>
             </View>
           </View>
@@ -710,13 +710,16 @@ const styles = StyleSheet.create({
     padding: SPACING.md,
     borderRadius: BORDER_RADIUS.lg,
     marginBottom: SPACING.md,
+    backgroundColor: '#0F172B',
+    borderWidth: 1,
+    borderColor: '#1D4E89',
     ...SHADOWS.md,
   },
   balanceIconWrap: {
     width: normalize(52),
     height: normalize(52),
     borderRadius: normalize(26),
-    backgroundColor: COIN_BG,
+    backgroundColor: 'rgba(81,167,234,0.16)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: SPACING.md,
@@ -727,6 +730,7 @@ const styles = StyleSheet.create({
   balanceLabel: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.xs,
+    color: '#8FC8F3',
     marginBottom: 2,
   },
   balanceRow: {
@@ -738,22 +742,26 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.regular,
     fontSize: normalize(28),
     fontWeight: 'bold',
+    color: '#F5D067',
     lineHeight: normalize(32),
   },
   balanceCoinLabel: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.md,
     fontWeight: '600',
+    color: '#8FC8F3',
   },
   worthBadge: {
     paddingHorizontal: SPACING.sm,
     paddingVertical: 6,
     borderRadius: BORDER_RADIUS.round,
+    backgroundColor: 'rgba(245, 208, 103, 0.16)',
   },
   worthText: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.sm,
     fontWeight: 'bold',
+    color: '#F5D067',
   },
 
   // ── Earn Card (shared) ──
@@ -881,7 +889,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.regular,
     fontSize: normalize(22),
     fontWeight: 'bold',
-    color: '#4A90D9',
+    color: '#F99E3C',
     letterSpacing: normalize(3),
   },
   copyBtn: {
@@ -916,7 +924,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#4A90D9',
+    backgroundColor: '#F99E3C',
     paddingVertical: 10,
     borderRadius: BORDER_RADIUS.md,
     gap: SPACING.sm,

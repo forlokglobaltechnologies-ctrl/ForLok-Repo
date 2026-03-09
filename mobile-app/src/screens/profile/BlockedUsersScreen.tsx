@@ -204,7 +204,7 @@ const BlockedUsersScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient colors={['#1C65D8', '#2A7BEF']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.header}>
+      <LinearGradient colors={['#D47B1B', '#B85E00']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <ArrowLeft size={22} color={COLORS.white} />
         </TouchableOpacity>

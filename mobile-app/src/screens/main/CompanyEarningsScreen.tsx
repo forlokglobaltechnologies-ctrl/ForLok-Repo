@@ -14,12 +14,26 @@ import { normalize } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { Card } from '@components/common/Card';
 import { companyApi } from '@utils/apiClient';
+import useMasterData from '../../hooks/useMasterData';
 
 const CompanyEarningsScreen = () => {
   const navigation = useNavigation();
   const [earnings, setEarnings] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'pending' | 'settled'>('all');
+  const [filter, setFilter] = useState<string>('all');
+  const { items: settlementStatusItems } = useMasterData('settlement_status', [
+    { type: 'settlement_status', key: 'pending', label: 'Pending' },
+    { type: 'settlement_status', key: 'settled', label: 'Settled' },
+  ]);
+  const filterOptions = [
+    { key: 'all', label: 'All' },
+    ...settlementStatusItems
+      .map((item: any) => ({
+        key: String(item.value || item.key || '').toLowerCase(),
+        label: String(item.label || item.value || item.key || ''),
+      }))
+      .filter((item: any) => item.key),
+  ];
 
   useEffect(() => {
     loadEarnings();
@@ -107,14 +121,14 @@ const CompanyEarningsScreen = () => {
 
       {/* Filters */}
       <View style={styles.filters}>
-        {['all', 'pending', 'settled'].map((f) => (
+        {filterOptions.map((f) => (
           <TouchableOpacity
-            key={f}
-            style={[styles.filterButton, filter === f && styles.activeFilter]}
-            onPress={() => setFilter(f as any)}
+            key={f.key}
+            style={[styles.filterButton, filter === f.key && styles.activeFilter]}
+            onPress={() => setFilter(f.key)}
           >
-            <Text style={[styles.filterText, filter === f && styles.activeFilterText]}>
-              {f.charAt(0).toUpperCase() + f.slice(1)}
+            <Text style={[styles.filterText, filter === f.key && styles.activeFilterText]}>
+              {f.label}
             </Text>
           </TouchableOpacity>
         ))}

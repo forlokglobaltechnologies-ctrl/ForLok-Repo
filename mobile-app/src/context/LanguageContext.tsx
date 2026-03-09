@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import i18n from '../utils/i18n';
+import { userApi } from '../utils/apiClient';
 
 export type Language = 'en' | 'te' | 'hi';
 
@@ -48,9 +49,10 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
       setLanguage(lang);
       await i18n.changeLanguage(lang);
       await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, lang);
-      
-      // TODO: Sync with backend when user is logged in
-      // await updateUserLanguagePreference(lang);
+      const res = await userApi.updateLanguage(lang);
+      if (!res.success) {
+        console.warn('Language updated locally but backend sync failed:', res.error);
+      }
     } catch (error) {
       console.error('Error changing language:', error);
     }

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -7,12 +7,14 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { ArrowLeft } from 'lucide-react-native';
+import { ArrowLeft, ChevronDown, ChevronUp, Shield } from 'lucide-react-native';
 import { normalize, wp } from '@utils/responsive';
 import { FONTS } from '@constants/theme';
 import { useTheme } from '@context/ThemeContext';
+import { useContentPage } from '../../hooks/useContentPage';
+import { CONTENT_DEFAULTS } from '@constants/contentDefaults';
 
-const sections = [
+export const PRIVACY_DEFAULT_SECTIONS = [
   {
     title: 'Information We Collect',
     content: `We collect the following categories of information to provide and improve our services:\n\nPersonal Information:\n\u2022 Full name, email address, phone number\n\u2022 Profile photo and date of birth\n\u2022 Government-issued ID (Aadhaar, PAN, Driving License) for verification\n\u2022 Bank account or UPI details for payment processing\n\nVehicle Information (Drivers):\n\u2022 Driving license details and expiry\n\u2022 Vehicle registration number, make, model, and year\n\u2022 Vehicle insurance and fitness certificate details\n\nUsage Information:\n\u2022 Ride history, booking details, and transaction records\n\u2022 In-app communications and support tickets\n\u2022 App usage patterns and feature interactions`,
@@ -55,7 +57,7 @@ const sections = [
   },
 ];
 
-const rights = [
+export const PRIVACY_DEFAULT_RIGHTS = [
   { title: 'Right to Access', desc: 'Request a copy of your personal data' },
   { title: 'Right to Rectify', desc: 'Correct inaccurate or incomplete data' },
   { title: 'Right to Delete', desc: 'Request deletion of your personal data' },
@@ -67,6 +69,14 @@ const rights = [
 const PrivacyPolicyScreen = () => {
   const navigation = useNavigation<any>();
   const { theme } = useTheme();
+  const [expandedSection, setExpandedSection] = useState<number | null>(0);
+  const { data: contentData } = useContentPage<any>('privacy_policy', {
+    ...CONTENT_DEFAULTS.privacy_policy,
+    sections: PRIVACY_DEFAULT_SECTIONS,
+    rights: PRIVACY_DEFAULT_RIGHTS,
+  } as any);
+  const dynamicSections = contentData.sections;
+  const dynamicRights = contentData.rights;
 
   return (
     <View style={[s.container, { backgroundColor: theme.colors.background }]}>
@@ -79,39 +89,53 @@ const PrivacyPolicyScreen = () => {
       </View>
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-        <View style={[s.introCard, { backgroundColor: theme.colors.primary + '0A' }]}>
-          <Text style={[s.introTitle, { color: theme.colors.text }]}>Privacy Policy</Text>
+        <View style={[s.heroCard, { backgroundColor: theme.colors.primary + '12' }]}>
+          <View style={[s.heroIconWrap, { backgroundColor: theme.colors.primary + '26' }]}>
+            <Shield size={18} color={theme.colors.primary} />
+          </View>
+          <Text style={[s.introTitle, { color: theme.colors.text }]}>{contentData.introTitle}</Text>
           <Text style={[s.introSub, { color: theme.colors.textSecondary }]}>
-            Your privacy matters to us. Learn how we collect, use, and protect your data.
+            {contentData.introSub}
           </Text>
           <View style={[s.datePill, { backgroundColor: theme.colors.primary + '14' }]}>
-            <Text style={[s.dateText, { color: theme.colors.primary }]}>Last Updated: January 2024</Text>
+            <Text style={[s.dateText, { color: theme.colors.primary }]}>
+              {contentData.lastUpdatedText}
+            </Text>
           </View>
         </View>
 
-        <View style={[s.card, { backgroundColor: theme.colors.primary + '08', borderColor: theme.colors.primary + '20' }]}>
+        <View style={[s.summaryCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
           <Text style={[s.bodyText, { color: theme.colors.text }]}>
-            Forlok Technologies Pvt. Ltd. ("Forlok", "we", "us") respects your privacy and is committed
-            to protecting the personal information you share with us. This Privacy Policy explains what
-            data we collect, how we use it, and the choices you have regarding your information. This policy
-            applies to all users of the Forlok mobile application and related services, and complies with
-            the Information Technology Act, 2000 and the Digital Personal Data Protection Act, 2023 of India.
+            {contentData.introBody}
           </Text>
         </View>
 
-        {sections.map((section, i) => (
-          <View key={i} style={[s.card, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}>
-            <View style={s.sectionHead}>
-              <View style={[s.badge, { backgroundColor: theme.colors.primary + '14' }]}>
-                <Text style={[s.badgeText, { color: theme.colors.primary }]}>{i + 1}</Text>
-              </View>
-              <Text style={[s.sectionTitle, { color: theme.colors.text }]}>{section.title}</Text>
+        <Text style={[s.sectionLabel, { color: theme.colors.textSecondary }]}>Privacy topics</Text>
+        {dynamicSections.map((section: any, i: number) => {
+          const expanded = expandedSection === i;
+          return (
+            <View key={i} style={[s.sectionCard, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}>
+              <TouchableOpacity
+                style={s.sectionHead}
+                activeOpacity={0.75}
+                onPress={() => setExpandedSection(expanded ? null : i)}
+              >
+                <View style={[s.badge, { backgroundColor: theme.colors.primary + '14' }]}>
+                  <Text style={[s.badgeText, { color: theme.colors.primary }]}>{i + 1}</Text>
+                </View>
+                <Text style={[s.sectionTitle, { color: theme.colors.text }]}>{section.title}</Text>
+                {expanded ? (
+                  <ChevronUp size={16} color={theme.colors.textSecondary} />
+                ) : (
+                  <ChevronDown size={16} color={theme.colors.textSecondary} />
+                )}
+              </TouchableOpacity>
+              {expanded && <Text style={[s.bodyText, { color: theme.colors.textSecondary }]}>{section.content}</Text>}
             </View>
-            <Text style={[s.bodyText, { color: theme.colors.textSecondary }]}>{section.content}</Text>
-          </View>
-        ))}
+          );
+        })}
 
-        <View style={[s.card, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}>
+        <View style={[s.rightsCard, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}>
           <View style={s.sectionHead}>
             <View style={[s.badge, { backgroundColor: theme.colors.primary + '14' }]}>
               <Text style={[s.badgeText, { color: theme.colors.primary }]}>{'\u2713'}</Text>
@@ -122,7 +146,7 @@ const PrivacyPolicyScreen = () => {
             Under applicable Indian data protection laws, you have the following rights:
           </Text>
           <View style={s.rightsGrid}>
-            {rights.map((r, i) => (
+            {dynamicRights.map((r: any, i: number) => (
               <View key={i} style={[s.rightChip, { backgroundColor: theme.colors.background, borderColor: theme.colors.border }]}>
                 <Text style={[s.rightTitle, { color: theme.colors.text }]}>{r.title}</Text>
                 <Text style={[s.rightDesc, { color: theme.colors.textSecondary }]}>{r.desc}</Text>
@@ -131,19 +155,22 @@ const PrivacyPolicyScreen = () => {
           </View>
         </View>
 
-        <View style={[s.card, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface, alignItems: 'center' }]}>
+        <View style={[s.footerCard, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface, alignItems: 'center' }]}>
           <Text style={[s.footerTitle, { color: theme.colors.text }]}>Data Protection Officer</Text>
           <Text style={[s.footerSub, { color: theme.colors.textSecondary }]}>
             For privacy-related inquiries, data requests, or complaints, contact our DPO:
           </Text>
           <View style={[s.emailPill, { backgroundColor: theme.colors.primary + '10' }]}>
-            <Text style={[s.emailText, { color: theme.colors.primary }]}>privacy@forlok.com</Text>
+            <Text style={[s.emailText, { color: theme.colors.primary }]}>
+              {contentData.dpoEmail}
+            </Text>
           </View>
         </View>
 
         <Text style={[s.copyright, { color: theme.colors.textSecondary }]}>
-          {'\u00A9'} 2024 Forlok Technologies Pvt. Ltd. All rights reserved.
-          {'\n'}This policy is governed by the laws of India.
+          {contentData.footerLine1}
+          {'\n'}
+          {contentData.footerLine2}
         </Text>
       </ScrollView>
     </View>
@@ -156,8 +183,8 @@ const s = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: normalize(48),
-    paddingBottom: normalize(14),
+    paddingTop: normalize(44),
+    paddingBottom: normalize(12),
     paddingHorizontal: normalize(16),
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
@@ -171,26 +198,34 @@ const s = StyleSheet.create({
 
   scroll: {
     padding: normalize(16),
-    paddingBottom: normalize(40),
+    paddingBottom: normalize(56),
   },
 
-  introCard: {
-    borderRadius: normalize(12),
-    padding: normalize(20),
+  heroCard: {
+    borderRadius: normalize(16),
+    padding: normalize(16),
     alignItems: 'center',
     marginBottom: normalize(12),
   },
+  heroIconWrap: {
+    width: normalize(38),
+    height: normalize(38),
+    borderRadius: normalize(10),
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: normalize(8),
+  },
   introTitle: {
     fontFamily: FONTS.bold,
-    fontSize: normalize(20),
+    fontSize: normalize(19),
     fontWeight: '700',
     marginBottom: normalize(4),
   },
   introSub: {
     fontFamily: FONTS.regular,
-    fontSize: normalize(13),
+    fontSize: normalize(12),
     textAlign: 'center',
-    lineHeight: normalize(19),
+    lineHeight: normalize(18),
     marginBottom: normalize(10),
   },
   datePill: {
@@ -204,17 +239,28 @@ const s = StyleSheet.create({
     fontWeight: '600',
   },
 
-  card: {
-    borderRadius: normalize(12),
-    borderWidth: StyleSheet.hairlineWidth,
-    padding: normalize(16),
+  summaryCard: {
+    borderRadius: normalize(14),
+    borderWidth: 1,
+    padding: normalize(14),
     marginBottom: normalize(12),
+  },
+  sectionLabel: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(12),
+    marginBottom: normalize(8),
+  },
+  sectionCard: {
+    borderRadius: normalize(14),
+    borderWidth: 1,
+    padding: normalize(14),
+    marginBottom: normalize(10),
   },
 
   sectionHead: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: normalize(10),
+    marginBottom: normalize(2),
     gap: normalize(10),
   },
   badge: {
@@ -232,14 +278,21 @@ const s = StyleSheet.create({
   sectionTitle: {
     flex: 1,
     fontFamily: FONTS.semiBold,
-    fontSize: normalize(15),
+    fontSize: normalize(14),
     fontWeight: '600',
   },
 
   bodyText: {
     fontFamily: FONTS.regular,
-    fontSize: normalize(13),
-    lineHeight: normalize(21),
+    fontSize: normalize(12.5),
+    lineHeight: normalize(20),
+    marginTop: normalize(8),
+  },
+  rightsCard: {
+    borderRadius: normalize(14),
+    borderWidth: 1,
+    padding: normalize(14),
+    marginBottom: normalize(12),
   },
 
   rightsGrid: {
@@ -265,6 +318,12 @@ const s = StyleSheet.create({
     lineHeight: normalize(15),
   },
 
+  footerCard: {
+    borderRadius: normalize(14),
+    borderWidth: 1,
+    padding: normalize(16),
+    marginBottom: normalize(12),
+  },
   footerTitle: {
     fontFamily: FONTS.bold,
     fontSize: normalize(16),

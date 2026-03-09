@@ -78,7 +78,12 @@ export async function adminAuthRoutes(fastify: FastifyInstance) {
         success: true,
         message: 'Admin login successful',
         data: {
-          admin: admin.toJSON(),
+          admin: {
+            ...admin.toJSON(),
+            role: admin.role,
+            permissions: admin.permissions || [],
+            isActive: admin.isActive,
+          },
           tokens: {
             accessToken,
             refreshToken,

@@ -15,13 +15,66 @@ import { normalize, wp, hp } from '@utils/responsive';
 import { Button } from '@components/common/Button';
 import { Card } from '@components/common/Card';
 import { useLanguage } from '@context/LanguageContext';
+import useMasterData from '../../hooks/useMasterData';
 
 const FilterScreen = () => {
   const navigation = useNavigation();
   const { t } = useLanguage();
+  const { items: vehicleTypeMasterItems } = useMasterData('vehicle_type', [
+    { type: 'vehicle_type', key: 'car', label: 'Car' },
+    { type: 'vehicle_type', key: 'bike', label: 'Bike' },
+  ]);
+  const vehicleTypeOptions = vehicleTypeMasterItems
+    .map((item: any) => ({ code: String(item.value || item.key || '').toLowerCase(), label: String(item.label || item.value || item.key || '') }))
+    .filter((item: any) => item.code && item.label);
+  const { items: ratingBucketItems } = useMasterData('rating_bucket', [
+    { type: 'rating_bucket', key: '4_5', label: '4.5+' },
+    { type: 'rating_bucket', key: '4_0', label: '4.0+' },
+    { type: 'rating_bucket', key: '3_5', label: '3.5+' },
+  ]);
+  const { items: timeSlotItems } = useMasterData('time_slot', [
+    { type: 'time_slot', key: 'morning', label: t('filter.morning') },
+    { type: 'time_slot', key: 'afternoon', label: t('filter.afternoon') },
+    { type: 'time_slot', key: 'evening', label: t('filter.evening') },
+  ]);
+  const { items: rideFeatureItems } = useMasterData('ride_feature', [
+    { type: 'ride_feature', key: 'ac', label: t('filter.acAvailable') },
+    { type: 'ride_feature', key: 'music', label: t('filter.musicSystem') },
+    { type: 'ride_feature', key: 'luggage', label: t('filter.luggageSpace') },
+  ]);
+  const { items: sortOptionItems } = useMasterData('sort_option', [
+    { type: 'sort_option', key: 'priceLow', label: t('filter.priceLowToHigh') },
+    { type: 'sort_option', key: 'priceHigh', label: t('filter.priceHighToLow') },
+    { type: 'sort_option', key: 'rating', label: t('filter.rating') },
+    { type: 'sort_option', key: 'distance', label: t('filter.distance') },
+  ]);
+  const ratingOptions = ratingBucketItems
+    .map((item: any) => ({
+      key: String(item.value || item.key || '').replace('_', '.'),
+      label: String(item.label || item.value || item.key || ''),
+    }))
+    .filter((item: any) => item.key && item.label);
+  const departureOptions = timeSlotItems
+    .map((item: any) => ({ key: String(item.value || item.key || ''), label: String(item.label || item.value || item.key || '') }))
+    .filter((item: any) => item.key && item.label);
+  const featureOptions = rideFeatureItems
+    .map((item: any) => ({ key: String(item.value || item.key || ''), label: String(item.label || item.value || item.key || '') }))
+    .filter((item: any) => item.key && item.label);
+  const sortOptions = sortOptionItems
+    .map((item: any) => ({ key: String(item.value || item.key || ''), label: String(item.label || item.value || item.key || '') }))
+    .filter((item: any) => item.key && item.label);
+
+  const makeVehicleTypeState = (defaultCode = 'car') => {
+    const state: Record<string, boolean> = {};
+    vehicleTypeOptions.forEach((opt: any) => {
+      state[opt.code] = opt.code === defaultCode;
+    });
+    return state;
+  };
+
   const [minPrice, setMinPrice] = useState(500);
   const [maxPrice, setMaxPrice] = useState(2000);
-  const [vehicleType, setVehicleType] = useState({ car: true, bike: false });
+  const [vehicleType, setVehicleType] = useState<Record<string, boolean>>({});
   const [rating, setRating] = useState({ '4.5': true, '4.0': false, '3.5': false });
   const [departureTime, setDepartureTime] = useState({
     morning: false,
@@ -35,10 +88,16 @@ const FilterScreen = () => {
   });
   const [sortBy, setSortBy] = useState('priceHigh');
 
+  React.useEffect(() => {
+    if (Object.keys(vehicleType).length === 0 && vehicleTypeOptions.length > 0) {
+      setVehicleType(makeVehicleTypeState(vehicleTypeOptions[0].code));
+    }
+  }, [vehicleTypeOptions.length]);
+
   const handleReset = () => {
     setMinPrice(500);
     setMaxPrice(2000);
-    setVehicleType({ car: true, bike: false });
+    setVehicleType(makeVehicleTypeState(vehicleTypeOptions[0]?.code || 'car'));
     setRating({ '4.5': true, '4.0': false, '3.5': false });
     setDepartureTime({ morning: false, afternoon: true, evening: false });
     setFeatures({ ac: true, music: false, luggage: true });
@@ -95,46 +154,38 @@ const FilterScreen = () => {
         <Card style={styles.filterCard}>
           <Text style={styles.filterTitle}>{t('filter.vehicleType')}:</Text>
           <View style={styles.checkboxRow}>
-            <TouchableOpacity
-              style={styles.checkbox}
-              onPress={() => setVehicleType({ ...vehicleType, car: !vehicleType.car })}
-            >
-              {vehicleType.car ? (
-                <Check size={20} color={COLORS.primary} />
-              ) : (
-                <View style={styles.checkboxEmpty} />
-              )}
-              <Text style={styles.checkboxLabel}>{t('filter.car')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.checkbox}
-              onPress={() => setVehicleType({ ...vehicleType, bike: !vehicleType.bike })}
-            >
-              {vehicleType.bike ? (
-                <Check size={20} color={COLORS.primary} />
-              ) : (
-                <View style={styles.checkboxEmpty} />
-              )}
-              <Text style={styles.checkboxLabel}>{t('filter.bike')}</Text>
-            </TouchableOpacity>
+            {vehicleTypeOptions.map((opt: any) => (
+              <TouchableOpacity
+                key={opt.code}
+                style={styles.checkbox}
+                onPress={() => setVehicleType({ ...vehicleType, [opt.code]: !vehicleType[opt.code] })}
+              >
+                {vehicleType[opt.code] ? (
+                  <Check size={20} color={COLORS.primary} />
+                ) : (
+                  <View style={styles.checkboxEmpty} />
+                )}
+                <Text style={styles.checkboxLabel}>{opt.label}</Text>
+              </TouchableOpacity>
+            ))}
           </View>
         </Card>
 
         <Card style={styles.filterCard}>
           <Text style={styles.filterTitle}>{t('filter.rating')}:</Text>
           <View style={styles.ratingRow}>
-            {['4.5', '4.0', '3.5'].map((rate) => (
+            {ratingOptions.map((rate) => (
               <TouchableOpacity
-                key={rate}
+                key={rate.key}
                 style={styles.ratingOption}
-                onPress={() => setRating({ ...rating, [rate]: !rating[rate as keyof typeof rating] })}
+                onPress={() => setRating({ ...rating, [rate.key]: !rating[rate.key as keyof typeof rating] })}
               >
-                {rating[rate as keyof typeof rating] ? (
+                {rating[rate.key as keyof typeof rating] ? (
                   <Check size={20} color={COLORS.primary} />
                 ) : (
                   <View style={styles.checkboxEmpty} />
                 )}
-                <Text style={styles.ratingLabel}>{rate}+</Text>
+                <Text style={styles.ratingLabel}>{rate.label}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -142,11 +193,7 @@ const FilterScreen = () => {
 
         <Card style={styles.filterCard}>
           <Text style={styles.filterTitle}>{t('filter.departureTime')}:</Text>
-          {[
-            { key: 'morning', label: t('filter.morning') },
-            { key: 'afternoon', label: t('filter.afternoon') },
-            { key: 'evening', label: t('filter.evening') },
-          ].map((time) => (
+          {departureOptions.map((time) => (
             <TouchableOpacity
               key={time.key}
               style={styles.timeOption}
@@ -169,11 +216,7 @@ const FilterScreen = () => {
 
         <Card style={styles.filterCard}>
           <Text style={styles.filterTitle}>{t('filter.features')}:</Text>
-          {[
-            { key: 'ac', label: t('filter.acAvailable') },
-            { key: 'music', label: t('filter.musicSystem') },
-            { key: 'luggage', label: t('filter.luggageSpace') },
-          ].map((feature) => (
+          {featureOptions.map((feature) => (
             <TouchableOpacity
               key={feature.key}
               style={styles.featureOption}
@@ -196,12 +239,7 @@ const FilterScreen = () => {
 
         <Card style={styles.filterCard}>
           <Text style={styles.filterTitle}>{t('filter.sortBy')}:</Text>
-          {[
-            { key: 'priceLow', label: t('filter.priceLowToHigh') },
-            { key: 'priceHigh', label: t('filter.priceHighToLow') },
-            { key: 'rating', label: t('filter.rating') },
-            { key: 'distance', label: t('filter.distance') },
-          ].map((sort) => (
+          {sortOptions.map((sort) => (
             <TouchableOpacity
               key={sort.key}
               style={styles.sortOption}

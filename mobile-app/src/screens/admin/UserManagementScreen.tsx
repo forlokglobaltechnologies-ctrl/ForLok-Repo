@@ -39,7 +39,7 @@ const formatNumber = (num: number): string => {
 };
 
 const TAB_COLORS: Record<string, string> = {
-  total: '#4A90D9',
+  total: '#F99E3C',
   individual: '#7B61FF',
   company: '#F39C12',
   verified: '#00B894',
@@ -387,7 +387,7 @@ const styles = StyleSheet.create({
   actionBtnText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, fontWeight: '600', color: COLORS.primary },
   verifyBtn: { backgroundColor: '#00B894' },
   verifyBtnText: { color: '#fff' },
-  activateBtn: { backgroundColor: '#4A90D9' },
+  activateBtn: { backgroundColor: '#F99E3C' },
   activateBtnText: { color: '#fff' },
   suspendBtn: { backgroundColor: COLORS.error + '15' },
   suspendBtnText: { color: COLORS.error },

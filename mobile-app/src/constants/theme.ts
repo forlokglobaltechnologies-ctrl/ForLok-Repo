@@ -12,10 +12,10 @@ const normalize = (size: number): number => {
 /* ───────────────────────────────────────────────────────────── */
 
 export const COLORS = {
-  primary: '#071952',
-  primaryDark: '#050E3A',
-  primaryLight: '#0A2A6B',
-  secondary: '#1E88E5',
+  primary: '#F99E3C',
+  primaryDark: '#E08E35',
+  primaryLight: '#FFB55A',
+  secondary: '#F99E3C',
   accent: '#FF6B35',
   success: '#4CAF50',
   warning: '#FF9800',

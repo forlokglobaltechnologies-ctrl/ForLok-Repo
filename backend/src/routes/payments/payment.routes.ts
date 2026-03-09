@@ -8,6 +8,7 @@ import { ApiResponse } from '../../types';
 import Payment from '../../models/Payment';
 import logger from '../../utils/logger';
 import { walletService } from '../../services/wallet.service';
+import { config } from '../../config/env';
 
 // Request schemas
 const walletTopUpSchema = z.object({
@@ -59,13 +60,14 @@ export async function paymentRoutes(fastify: FastifyInstance) {
       preHandler: [authenticate, validate(verifyPaymentSchema)],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
+      const userId = (request as any).user.userId;
       const data = request.body as {
         razorpayOrderId: string;
         razorpayPaymentId: string;
         razorpaySignature: string;
       };
 
-      const payment = await paymentService.verifyPayment(data);
+      const payment = await paymentService.verifyPayment({ ...data, userId });
 
       const response: ApiResponse = {
         success: true,
@@ -90,6 +92,12 @@ export async function paymentRoutes(fastify: FastifyInstance) {
       }))],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
+      if (config.server.nodeEnv === 'production') {
+        return reply.status(403).send({
+          success: false,
+          message: 'Test payment simulation is disabled in production',
+        });
+      }
       const { razorpayOrderId } = request.body as { razorpayOrderId: string };
 
       const result = await paymentService.simulateTestPayment(razorpayOrderId);

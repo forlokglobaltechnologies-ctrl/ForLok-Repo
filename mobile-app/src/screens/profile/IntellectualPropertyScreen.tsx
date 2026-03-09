@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -7,12 +7,14 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { ArrowLeft, AlertTriangle } from 'lucide-react-native';
+import { ArrowLeft, AlertTriangle, ChevronDown, ChevronUp, Shield } from 'lucide-react-native';
 import { normalize } from '@utils/responsive';
 import { FONTS } from '@constants/theme';
 import { useTheme } from '@context/ThemeContext';
+import { useContentPage } from '../../hooks/useContentPage';
+import { CONTENT_DEFAULTS } from '@constants/contentDefaults';
 
-const sections = [
+export const IP_DEFAULT_SECTIONS = [
   {
     title: 'Trademarks',
     content: `The following are registered trademarks of Forlok Technologies Pvt. Ltd.:\n\n\u2022 Forlok\u2122 \u2014 Word Mark\n\u2022 Forlok Logo\u2122 \u2014 Design Mark\n\u2022 "Your Journey, Our Commitment"\u2122 \u2014 Tagline\n\nThese trademarks are protected under the Trade Marks Act, 1999 of India and international trademark laws. Any unauthorized use, imitation, or reproduction of these marks without prior written consent is strictly prohibited and will be subject to legal action.`,
@@ -42,6 +44,12 @@ const sections = [
 const IntellectualPropertyScreen = () => {
   const navigation = useNavigation<any>();
   const { theme } = useTheme();
+  const [expandedSection, setExpandedSection] = useState<number | null>(0);
+  const { data: contentData } = useContentPage<any>('intellectual_property', {
+    ...CONTENT_DEFAULTS.intellectual_property,
+    sections: IP_DEFAULT_SECTIONS,
+  } as any);
+  const dynamicSections = contentData.sections;
 
   return (
     <View style={[s.container, { backgroundColor: theme.colors.background }]}>
@@ -54,68 +62,91 @@ const IntellectualPropertyScreen = () => {
       </View>
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-        <View style={[s.introCard, { backgroundColor: theme.colors.primary + '0A' }]}>
-          <Text style={[s.introTitle, { color: theme.colors.text }]}>Intellectual Property</Text>
+        <View style={[s.heroCard, { backgroundColor: theme.colors.primary + '12' }]}>
+          <View style={[s.heroIconWrap, { backgroundColor: theme.colors.primary + '26' }]}>
+            <Shield size={18} color={theme.colors.primary} />
+          </View>
+          <Text style={[s.introTitle, { color: theme.colors.text }]}>
+            {contentData.introTitle}
+          </Text>
           <Text style={[s.introSub, { color: theme.colors.textSecondary }]}>
-            Protecting our innovation and your trust
+            {contentData.introSub}
           </Text>
           <View style={[s.datePill, { backgroundColor: theme.colors.primary + '14' }]}>
-            <Text style={[s.dateText, { color: theme.colors.primary }]}>Last Updated: January 2024</Text>
+            <Text style={[s.dateText, { color: theme.colors.primary }]}>
+              {contentData.lastUpdatedText}
+            </Text>
           </View>
         </View>
 
-        <View style={[s.card, { backgroundColor: theme.colors.primary + '08', borderColor: theme.colors.primary + '20' }]}>
+        <View style={[s.summaryCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
           <Text style={[s.bodyText, { color: theme.colors.text }]}>
-            Forlok Technologies Pvt. Ltd. is committed to protecting its intellectual property rights
-            and respecting the intellectual property rights of others. This page outlines our IP assets,
-            protections, and policies. Our innovations drive the Forlok platform and we take every measure
-            to safeguard them under applicable Indian and international laws.
+            {contentData.introBody}
           </Text>
         </View>
 
-        {sections.map((section, i) => (
-          <View key={i} style={[s.card, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}>
-            <View style={s.sectionHead}>
-              <View style={[s.badge, { backgroundColor: theme.colors.primary + '14' }]}>
-                <Text style={[s.badgeText, { color: theme.colors.primary }]}>{i + 1}</Text>
-              </View>
-              <Text style={[s.sectionTitle, { color: theme.colors.text }]}>{section.title}</Text>
+        <Text style={[s.sectionLabel, { color: theme.colors.textSecondary }]}>IP topics</Text>
+        {dynamicSections.map((section: any, i: number) => {
+          const expanded = expandedSection === i;
+          return (
+            <View key={i} style={[s.sectionCard, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}>
+              <TouchableOpacity
+                style={s.sectionHead}
+                activeOpacity={0.75}
+                onPress={() => setExpandedSection(expanded ? null : i)}
+              >
+                <View style={[s.badge, { backgroundColor: theme.colors.primary + '14' }]}>
+                  <Text style={[s.badgeText, { color: theme.colors.primary }]}>{i + 1}</Text>
+                </View>
+                <Text style={[s.sectionTitle, { color: theme.colors.text }]}>{section.title}</Text>
+                {expanded ? (
+                  <ChevronUp size={16} color={theme.colors.textSecondary} />
+                ) : (
+                  <ChevronDown size={16} color={theme.colors.textSecondary} />
+                )}
+              </TouchableOpacity>
+              {expanded && <Text style={[s.bodyText, { color: theme.colors.textSecondary }]}>{section.content}</Text>}
             </View>
-            <Text style={[s.bodyText, { color: theme.colors.textSecondary }]}>{section.content}</Text>
-          </View>
-        ))}
+          );
+        })}
 
         <View style={[s.warningCard, { borderColor: '#FFB74D' }]}>
           <View style={s.warningHead}>
             <AlertTriangle size={normalize(18)} color="#F57C00" />
-            <Text style={[s.warningTitle, { color: '#E65100' }]}>Important Notice</Text>
+            <Text style={[s.warningTitle, { color: '#E65100' }]}>
+              {contentData.warningTitle}
+            </Text>
           </View>
           <Text style={[s.bodyText, { color: '#5D4037' }]}>
-            Any unauthorized use, reproduction, or distribution of Forlok's intellectual property may
-            result in severe civil and criminal penalties under Indian law. If you believe that your
-            intellectual property rights have been infringed upon by Forlok, or if you discover
-            unauthorized use of our IP, please contact our legal team immediately.
+            {contentData.warningText}
           </Text>
         </View>
 
-        <View style={[s.card, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface, alignItems: 'center' }]}>
-          <Text style={[s.footerTitle, { color: theme.colors.text }]}>Licensing & Partnerships</Text>
+        <View style={[s.footerCard, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface, alignItems: 'center' }]}>
+          <Text style={[s.footerTitle, { color: theme.colors.text }]}>
+            {contentData.licensingTitle}
+          </Text>
           <Text style={[s.footerSub, { color: theme.colors.textSecondary }]}>
-            For licensing opportunities, IP inquiries, or partnership proposals:
+            {contentData.licensingSub}
           </Text>
           <View style={s.emailRow}>
             <View style={[s.emailPill, { backgroundColor: theme.colors.primary + '10' }]}>
-              <Text style={[s.emailText, { color: theme.colors.primary }]}>legal@forlok.com</Text>
+              <Text style={[s.emailText, { color: theme.colors.primary }]}>
+                {contentData.contactEmail1}
+              </Text>
             </View>
             <View style={[s.emailPill, { backgroundColor: '#4CAF5018' }]}>
-              <Text style={[s.emailText, { color: '#4CAF50' }]}>partnerships@forlok.com</Text>
+              <Text style={[s.emailText, { color: '#4CAF50' }]}>
+                {contentData.contactEmail2}
+              </Text>
             </View>
           </View>
         </View>
 
         <Text style={[s.copyright, { color: theme.colors.textSecondary }]}>
-          {'\u00A9'} 2024 Forlok Technologies Pvt. Ltd. All rights reserved.
-          {'\n'}This information is provided for general informational purposes and does not constitute legal advice.
+          {contentData.footerLine1}
+          {'\n'}
+          {contentData.footerLine2}
         </Text>
       </ScrollView>
     </View>
@@ -128,8 +159,8 @@ const s = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: normalize(48),
-    paddingBottom: normalize(14),
+    paddingTop: normalize(44),
+    paddingBottom: normalize(12),
     paddingHorizontal: normalize(16),
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
@@ -143,24 +174,32 @@ const s = StyleSheet.create({
 
   scroll: {
     padding: normalize(16),
-    paddingBottom: normalize(40),
+    paddingBottom: normalize(56),
   },
 
-  introCard: {
-    borderRadius: normalize(12),
-    padding: normalize(20),
+  heroCard: {
+    borderRadius: normalize(16),
+    padding: normalize(16),
     alignItems: 'center',
     marginBottom: normalize(12),
   },
+  heroIconWrap: {
+    width: normalize(38),
+    height: normalize(38),
+    borderRadius: normalize(10),
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: normalize(8),
+  },
   introTitle: {
     fontFamily: FONTS.bold,
-    fontSize: normalize(20),
+    fontSize: normalize(19),
     fontWeight: '700',
     marginBottom: normalize(4),
   },
   introSub: {
     fontFamily: FONTS.regular,
-    fontSize: normalize(13),
+    fontSize: normalize(12),
     textAlign: 'center',
     marginBottom: normalize(10),
   },
@@ -175,17 +214,28 @@ const s = StyleSheet.create({
     fontWeight: '600',
   },
 
-  card: {
-    borderRadius: normalize(12),
-    borderWidth: StyleSheet.hairlineWidth,
-    padding: normalize(16),
+  summaryCard: {
+    borderRadius: normalize(14),
+    borderWidth: 1,
+    padding: normalize(14),
     marginBottom: normalize(12),
+  },
+  sectionLabel: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(12),
+    marginBottom: normalize(8),
+  },
+  sectionCard: {
+    borderRadius: normalize(14),
+    borderWidth: 1,
+    padding: normalize(14),
+    marginBottom: normalize(10),
   },
 
   sectionHead: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: normalize(10),
+    marginBottom: normalize(2),
     gap: normalize(10),
   },
   badge: {
@@ -203,14 +253,15 @@ const s = StyleSheet.create({
   sectionTitle: {
     flex: 1,
     fontFamily: FONTS.semiBold,
-    fontSize: normalize(15),
+    fontSize: normalize(14),
     fontWeight: '600',
   },
 
   bodyText: {
     fontFamily: FONTS.regular,
-    fontSize: normalize(13),
-    lineHeight: normalize(21),
+    fontSize: normalize(12.5),
+    lineHeight: normalize(20),
+    marginTop: normalize(8),
   },
 
   warningCard: {
@@ -232,6 +283,12 @@ const s = StyleSheet.create({
     fontWeight: '600',
   },
 
+  footerCard: {
+    borderRadius: normalize(14),
+    borderWidth: 1,
+    padding: normalize(16),
+    marginBottom: normalize(12),
+  },
   footerTitle: {
     fontFamily: FONTS.bold,
     fontSize: normalize(16),

@@ -34,6 +34,7 @@ import {
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { useLanguage } from '@context/LanguageContext';
 import { adminFeedbackApi } from '@utils/apiClient';
+import useMasterData from '../../hooks/useMasterData';
 
 const FeedbackManagementScreen = () => {
   const navigation = useNavigation();
@@ -45,13 +46,31 @@ const FeedbackManagementScreen = () => {
   const [stats, setStats] = useState<any>(null);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const { items: feedbackStatusItems } = useMasterData('feedback_status', [
+    { type: 'feedback_status', key: 'pending', label: 'Pending' },
+    { type: 'feedback_status', key: 'acknowledged', label: 'In Review' },
+    { type: 'feedback_status', key: 'resolved', label: 'Resolved' },
+    { type: 'feedback_status', key: 'archived', label: 'Archived' },
+  ]);
+
+  const getTabMeta = (key: string) => {
+    const map: Record<string, { icon: any; color: string }> = {
+      all: { icon: MessageSquare, color: '#F99E3C' },
+      pending: { icon: Clock, color: '#F39C12' },
+      acknowledged: { icon: Eye, color: '#7B61FF' },
+      resolved: { icon: CheckCircle, color: '#00B894' },
+      archived: { icon: Inbox, color: '#94A3B8' },
+    };
+    return map[key] || { icon: MessageSquare, color: '#94A3B8' };
+  };
 
   const tabs = [
-    { key: 'all', label: 'All', icon: MessageSquare, color: '#4A90D9' },
-    { key: 'pending', label: 'Pending', icon: Clock, color: '#F39C12' },
-    { key: 'acknowledged', label: 'In Review', icon: Eye, color: '#7B61FF' },
-    { key: 'resolved', label: 'Resolved', icon: CheckCircle, color: '#00B894' },
-    { key: 'archived', label: 'Archived', icon: Inbox, color: '#94A3B8' },
+    { key: 'all', label: 'All', ...getTabMeta('all') },
+    ...feedbackStatusItems.map((item: any) => {
+      const key = String(item.value || item.key || '').toLowerCase();
+      const label = String(item.label || item.value || item.key || key);
+      return { key, label, ...getTabMeta(key) };
+    }).filter((item: any) => item.key),
   ];
 
   const fetchData = useCallback(async (reset = false) => {
@@ -105,7 +124,7 @@ const FeedbackManagementScreen = () => {
     const map: Record<string, { icon: any; color: string; bg: string; label: string }> = {
       bug:        { icon: Bug,           color: '#E74C3C', bg: '#FFEBEE', label: 'Bug Report' },
       issue:      { icon: AlertTriangle, color: '#F39C12', bg: '#FFF8E1', label: 'Issue' },
-      suggestion: { icon: Lightbulb,     color: '#4A90D9', bg: '#EBF5FF', label: 'Suggestion' },
+      suggestion: { icon: Lightbulb,     color: '#F99E3C', bg: '#FFF4E6', label: 'Suggestion' },
       complaint:  { icon: XCircle,       color: '#E74C3C', bg: '#FFEBEE', label: 'Complaint' },
       feedback:   { icon: MessageSquare, color: '#7B61FF', bg: '#F0EBFF', label: 'Feedback' },
       general:    { icon: MessageSquare, color: '#7B61FF', bg: '#F0EBFF', label: 'General' },
@@ -155,7 +174,7 @@ const FeedbackManagementScreen = () => {
   // ── Stats summary row ───────────────────────────────────────
   const statItems = stats
     ? [
-        { label: 'Total', value: stats.total || 0, color: '#4A90D9', icon: MessageSquare },
+        { label: 'Total', value: stats.total || 0, color: '#F99E3C', icon: MessageSquare },
         { label: 'Pending', value: stats.pending || 0, color: '#F39C12', icon: Clock },
         { label: 'Reviewed', value: stats.acknowledged || 0, color: '#7B61FF', icon: Eye },
         { label: 'Resolved', value: stats.resolved || 0, color: '#00B894', icon: CheckCircle },
@@ -245,7 +264,7 @@ const FeedbackManagementScreen = () => {
       {/* ─── Content ──────────────────────────────────────────── */}
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#4A90D9" />
+          <ActivityIndicator size="large" color="#F99E3C" />
           <Text style={styles.loadingText}>Loading feedback...</Text>
         </View>
       ) : (
@@ -253,7 +272,7 @@ const FeedbackManagementScreen = () => {
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#4A90D9" />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#F99E3C" />
           }
           showsVerticalScrollIndicator={false}
         >
@@ -395,7 +414,7 @@ const FeedbackManagementScreen = () => {
                   onPress={() => fetchData(false)}
                 >
                   <Text style={styles.loadMoreText}>Load More</Text>
-                  <ChevronRight size={14} color="#4A90D9" />
+                  <ChevronRight size={14} color="#F99E3C" />
                 </TouchableOpacity>
               )}
             </>
@@ -738,14 +757,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: normalize(4),
     paddingVertical: normalize(12),
-    backgroundColor: '#4A90D9' + '10',
+    backgroundColor: '#F99E3C' + '10',
     borderRadius: normalize(12),
     marginTop: SPACING.xs,
   },
   loadMoreText: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.sm,
-    color: '#4A90D9',
+    color: '#F99E3C',
     fontWeight: '600',
   },
 });

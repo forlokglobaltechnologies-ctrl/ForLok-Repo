@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Linking,
+  Image,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import {
@@ -28,50 +29,14 @@ import {
 import { normalize } from '@utils/responsive';
 import { FONTS } from '@constants/theme';
 import { useTheme } from '@context/ThemeContext';
+import { useContentPage } from '../../hooks/useContentPage';
+import { resolveContentIcon } from '@utils/contentIcons';
+import { CONTENT_DEFAULTS } from '@constants/contentDefaults';
 
 const AboutScreen = () => {
   const navigation = useNavigation<any>();
   const { theme } = useTheme();
-
-  const features = [
-    {
-      icon: Users,
-      title: 'Ride Pooling',
-      description: 'Share rides with verified commuters heading your way.',
-      color: '#4CAF50',
-    },
-    {
-      icon: Shield,
-      title: 'Verified & Safe',
-      description: 'Every rider and driver is identity-verified for safety.',
-      color: '#2196F3',
-    },
-    {
-      icon: Leaf,
-      title: 'Eco Friendly',
-      description: 'Reduce carbon footprint by sharing rides together.',
-      color: '#66BB6A',
-    },
-    {
-      icon: Car,
-      title: 'Vehicle Rental',
-      description: 'Rent vehicles from trusted owners near you.',
-      color: '#FF9800',
-    },
-  ];
-
-  const stats = [
-    { value: '50K+', label: 'Users', icon: Users },
-    { value: '120K+', label: 'Rides', icon: Car },
-    { value: '4.8', label: 'Rating', icon: Sparkles },
-  ];
-
-  const contactItems = [
-    { icon: Mail, label: 'Email', value: 'support@forlok.com', action: 'mailto:support@forlok.com' },
-    { icon: Phone, label: 'Phone', value: '+91 98765 43210', action: 'tel:+919876543210' },
-    { icon: Globe, label: 'Website', value: 'www.forlok.com', action: 'https://forlok.com' },
-    { icon: MapPin, label: 'Address', value: 'Hyderabad, Telangana, India', action: null },
-  ];
+  const { data: contentData } = useContentPage<any>('about', CONTENT_DEFAULTS.about as any);
 
   const legalItems = [
     { label: 'Terms of Service', route: 'TermsConditions' },
@@ -82,6 +47,21 @@ const AboutScreen = () => {
   const handleOpenLink = (url: string) => {
     Linking.openURL(url).catch(err => console.error('Error opening link:', err));
   };
+
+  const features = contentData.features.map((item: any) => ({
+    ...item,
+    icon: typeof item.icon === 'string' ? resolveContentIcon(item.icon, Car) : item.icon,
+  }));
+  const stats = contentData.stats.map((item: any) => ({
+    ...item,
+    icon: typeof item.icon === 'string' ? resolveContentIcon(item.icon, Users) : item.icon,
+  }));
+  const contactItems = contentData.contactItems.map(
+    (item: any) => ({
+      ...item,
+      icon: typeof item.icon === 'string' ? resolveContentIcon(item.icon, Mail) : item.icon,
+    })
+  );
 
   return (
     <View style={[s.container, { backgroundColor: theme.colors.background }]}>
@@ -97,21 +77,35 @@ const AboutScreen = () => {
       <ScrollView contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Brand Card */}
         <View style={[s.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, alignItems: 'center' }]}>
-          <View style={[s.logoCircle, { backgroundColor: theme.colors.primary }]}>
-            <Text style={s.logoLetter}>F</Text>
-          </View>
-          <Text style={[s.brandName, { color: theme.colors.text }]}>Forlok</Text>
+          {contentData.logoUrl ? (
+            <Image
+              source={{ uri: contentData.logoUrl }}
+              style={s.logoImage}
+              resizeMode="contain"
+            />
+          ) : (
+            <View style={[s.logoCircle, { backgroundColor: theme.colors.primary }]}>
+              <Text style={s.logoLetter}>
+                {String(contentData.brandName || 'F').trim().charAt(0).toUpperCase() || 'F'}
+              </Text>
+            </View>
+          )}
+          <Text style={[s.brandName, { color: theme.colors.text }]}>
+            {contentData.brandName}
+          </Text>
           <Text style={[s.tagline, { color: theme.colors.textSecondary }]}>
-            Your everyday ride companion
+            {contentData.tagline}
           </Text>
           <View style={[s.versionPill, { backgroundColor: theme.colors.primary + '14' }]}>
-            <Text style={[s.versionText, { color: theme.colors.primary }]}>v1.0.0</Text>
+            <Text style={[s.versionText, { color: theme.colors.primary }]}>
+              {contentData.version}
+            </Text>
           </View>
         </View>
 
         {/* Stats Row */}
         <View style={s.statsRow}>
-          {stats.map((stat, index) => (
+          {stats.map((stat: any, index: number) => (
             <View key={index} style={[s.statCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
               <stat.icon size={normalize(16)} color={theme.colors.primary} />
               <Text style={[s.statValue, { color: theme.colors.text }]}>{stat.value}</Text>
@@ -129,7 +123,7 @@ const AboutScreen = () => {
             <Text style={[s.cardTitle, { color: theme.colors.text }]}>Who We Are</Text>
           </View>
           <Text style={[s.bodyText, { color: theme.colors.textSecondary }]}>
-            Forlok is a community-driven mobility platform connecting riders and drivers for affordable, safe, and sustainable commutes across India.
+            {contentData.whoWeAre}
           </Text>
         </View>
 
@@ -139,7 +133,7 @@ const AboutScreen = () => {
           <Text style={[s.sectionTitle, { color: theme.colors.text }]}>Why Choose Forlok</Text>
         </View>
         <View style={[s.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, padding: 0 }]}>
-          {features.map((feature, index) => {
+          {features.map((feature: any, index: number) => {
             const Icon = feature.icon;
             return (
               <React.Fragment key={index}>
@@ -164,7 +158,7 @@ const AboutScreen = () => {
           <Text style={[s.sectionTitle, { color: theme.colors.text }]}>Contact Us</Text>
         </View>
         <View style={[s.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, padding: 0 }]}>
-          {contactItems.map((item, index) => (
+          {contactItems.map((item: any, index: number) => (
             <React.Fragment key={index}>
               {index > 0 && <View style={[s.divider, { backgroundColor: theme.colors.border }]} />}
               <TouchableOpacity
@@ -259,6 +253,12 @@ const s = StyleSheet.create({
     borderRadius: normalize(30),
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: normalize(10),
+  },
+  logoImage: {
+    width: normalize(70),
+    height: normalize(70),
+    borderRadius: normalize(14),
     marginBottom: normalize(10),
   },
   logoLetter: {
