@@ -115,7 +115,7 @@ const SignInScreen = () => {
         {/* Logo */}
         <View style={styles.logoWrap}>
           <Image
-            source={require('../../../assets/signin_forlok_logo.png')}
+            source={require('../../../assets/signin_ez_logo.png')}
             style={styles.logo}
             resizeMode="contain"
           />
@@ -250,12 +250,14 @@ const styles = StyleSheet.create({
     fontSize: normalize(26),
     color: '#1A1A1A',
     marginBottom: SPACING.xs,
+    textAlign: 'center',
   },
   subtitle: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.sm,
     color: '#888888',
     marginBottom: SPACING.xl,
+    textAlign: 'center',
   },
   form: {
     flex: 1,

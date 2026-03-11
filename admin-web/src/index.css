@@ -175,6 +175,13 @@ h6 {
   font-weight: 700;
 }
 
+.admin-app .sidebar .sidebar-brand-logo {
+  display: block;
+  width: 100%;
+  max-width: 170px;
+  height: auto;
+}
+
 .admin-app .sidebar .nav-link {
   color: #c8d5ea;
   border-left: 3px solid transparent;

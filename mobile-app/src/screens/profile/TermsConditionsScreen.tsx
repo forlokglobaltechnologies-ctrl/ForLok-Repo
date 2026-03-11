@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -7,42 +7,18 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { ArrowLeft, ChevronDown, ChevronUp, FileText } from 'lucide-react-native';
+import { ArrowLeft, FileText } from 'lucide-react-native';
 import { normalize } from '@utils/responsive';
 import { FONTS } from '@constants/theme';
 import { useTheme } from '@context/ThemeContext';
 import { useContentPage } from '../../hooks/useContentPage';
 import { CONTENT_DEFAULTS } from '@constants/contentDefaults';
 
-export const TERMS_DEFAULT_SECTIONS = [
-  {
-    title: 'Acceptance of Terms',
-    content: `By downloading, installing, or using the Forlok mobile application ("App"), you agree to be bound by these Terms and Conditions ("Terms"). If you do not agree to these Terms, please do not use the App.\n\nThese Terms constitute a legally binding agreement between you ("User") and Forlok Technologies Pvt. Ltd. ("Company", "we", "us", or "our"), a company registered under the laws of India with its registered office in Hyderabad, Telangana.`,
-  },
-  {
-    title: 'User Eligibility & Registration',
-    content: `To use Forlok, you must:\n\n• Be at least 18 years of age\n• Possess a valid government-issued ID (Aadhaar, PAN, Driving License, etc.)\n• Provide accurate and complete registration information\n• Maintain the security of your account credentials\n\nDrivers must additionally hold a valid Indian driving license appropriate for the vehicle type and have valid vehicle registration and insurance documents. All driver documents are subject to verification before service activation.`,
-  },
-  { title: 'Pooling Services', content: `Forlok's pooling service connects drivers with passengers traveling in similar directions.` },
-  { title: 'Rental Services', content: `Forlok's rental service allows users to rent vehicles for personal or commercial use.` },
-  { title: 'Pricing, Wallet & Coins', content: `Forlok provides transparent fare and trip-cost visibility.` },
-  { title: 'Safety & Conduct', content: `All users must adhere to safety standards and respectful conduct.` },
-  { title: 'Prohibited Activities', content: `The following activities are strictly prohibited on the Forlok platform.` },
-  { title: 'Cancellation & Refund Policy', content: `Cancellation terms for Forlok services are defined in app policy.` },
-  { title: 'Limitation of Liability', content: `To the maximum extent permitted by applicable Indian law.` },
-  { title: 'Governing Law & Disputes', content: `These Terms are governed by the laws of India.` },
-  { title: 'Modifications to Terms', content: `Forlok reserves the right to modify these Terms at any time.` },
-];
-
 const TermsConditionsScreen = () => {
   const navigation = useNavigation<any>();
   const { theme } = useTheme();
-  const [expandedSection, setExpandedSection] = useState<number | null>(0);
-  const { data: contentData } = useContentPage<any>('terms_conditions', {
-    ...CONTENT_DEFAULTS.terms_conditions,
-    sections: TERMS_DEFAULT_SECTIONS,
-  } as any);
-  const dynamicSections = contentData.sections;
+  const { data: contentData } = useContentPage<any>('terms_conditions', CONTENT_DEFAULTS.terms_conditions as any);
+  const dynamicSections = Array.isArray(contentData?.sections) ? contentData.sections : [];
 
   return (
     <View style={[s.container, { backgroundColor: theme.colors.background }]}>
@@ -71,29 +47,17 @@ const TermsConditionsScreen = () => {
         </View>
 
         <Text style={[s.sectionLabel, { color: theme.colors.textSecondary }]}>All policy sections</Text>
-        {dynamicSections.map((section: any, i: number) => {
-          const expanded = expandedSection === i;
-          return (
-            <View key={i} style={[s.sectionCard, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}>
-              <TouchableOpacity
-                style={s.sectionHead}
-                activeOpacity={0.75}
-                onPress={() => setExpandedSection(expanded ? null : i)}
-              >
-                <View style={[s.badge, { backgroundColor: theme.colors.primary + '14' }]}>
-                  <Text style={[s.badgeText, { color: theme.colors.primary }]}>{i + 1}</Text>
-                </View>
-                <Text style={[s.sectionTitle, { color: theme.colors.text }]}>{section.title}</Text>
-                {expanded ? (
-                  <ChevronUp size={16} color={theme.colors.textSecondary} />
-                ) : (
-                  <ChevronDown size={16} color={theme.colors.textSecondary} />
-                )}
-              </TouchableOpacity>
-              {expanded && <Text style={[s.bodyText, { color: theme.colors.textSecondary }]}>{section.content}</Text>}
+        {dynamicSections.map((section: any, i: number) => (
+          <View key={i} style={[s.sectionCard, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}>
+            <View style={s.sectionHead}>
+              <View style={[s.badge, { backgroundColor: theme.colors.primary + '14' }]}>
+                <Text style={[s.badgeText, { color: theme.colors.primary }]}>{i + 1}</Text>
+              </View>
+              <Text style={[s.sectionTitle, { color: theme.colors.text }]}>{section.title}</Text>
             </View>
-          );
-        })}
+            <Text style={[s.bodyText, { color: theme.colors.textSecondary }]}>{section.content}</Text>
+          </View>
+        ))}
 
         <View style={[s.footerCard, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface, alignItems: 'center' }]}>
           <Text style={[s.footerTitle, { color: theme.colors.text }]}>Questions?</Text>

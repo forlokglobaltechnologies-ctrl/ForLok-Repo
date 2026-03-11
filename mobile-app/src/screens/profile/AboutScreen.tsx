@@ -32,11 +32,13 @@ import { useTheme } from '@context/ThemeContext';
 import { useContentPage } from '../../hooks/useContentPage';
 import { resolveContentIcon } from '@utils/contentIcons';
 import { CONTENT_DEFAULTS } from '@constants/contentDefaults';
+import { dashboardApi } from '@utils/apiClient';
 
 const AboutScreen = () => {
   const navigation = useNavigation<any>();
   const { theme } = useTheme();
   const { data: contentData } = useContentPage<any>('about', CONTENT_DEFAULTS.about as any);
+  const [liveStats, setLiveStats] = React.useState<{ totalUsers: number; totalRides: number; averageRating: number } | null>(null);
 
   const legalItems = [
     { label: 'Terms of Service', route: 'TermsConditions' },
@@ -48,6 +50,37 @@ const AboutScreen = () => {
     Linking.openURL(url).catch(err => console.error('Error opening link:', err));
   };
 
+  React.useEffect(() => {
+    let mounted = true;
+
+    const loadAboutStats = async () => {
+      try {
+        const res = await dashboardApi.getAboutStats();
+        if (!mounted || !res.success || !res.data) return;
+        setLiveStats({
+          totalUsers: Number((res.data as any).totalUsers || 0),
+          totalRides: Number((res.data as any).totalRides || 0),
+          averageRating: Number((res.data as any).averageRating || 0),
+        });
+      } catch (error) {
+        console.warn('Failed to load about stats:', error);
+      }
+    };
+
+    void loadAboutStats();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const formatCompactNumber = (value: number) => {
+    if (!Number.isFinite(value)) return '0';
+    if (value >= 1000000) return `${(value / 1000000).toFixed(value >= 10000000 ? 0 : 1)}M+`;
+    if (value >= 1000) return `${(value / 1000).toFixed(value >= 10000 ? 0 : 1)}K+`;
+    return `${Math.round(value)}`;
+  };
+
   const features = contentData.features.map((item: any) => ({
     ...item,
     icon: typeof item.icon === 'string' ? resolveContentIcon(item.icon, Car) : item.icon,
@@ -55,6 +88,14 @@ const AboutScreen = () => {
   const stats = contentData.stats.map((item: any) => ({
     ...item,
     icon: typeof item.icon === 'string' ? resolveContentIcon(item.icon, Users) : item.icon,
+    value:
+      item.label === 'Users' && liveStats
+        ? formatCompactNumber(liveStats.totalUsers)
+        : item.label === 'Rides' && liveStats
+          ? formatCompactNumber(liveStats.totalRides)
+          : item.label === 'Rating' && liveStats
+            ? liveStats.averageRating.toFixed(1)
+            : item.value,
   }));
   const contactItems = contentData.contactItems.map(
     (item: any) => ({
@@ -203,9 +244,16 @@ const AboutScreen = () => {
             <Heart size={normalize(13)} color="#E53935" fill="#E53935" />
             <Text style={[s.footerText, { color: theme.colors.textSecondary }]}> in India</Text>
           </View>
-          <Text style={[s.copyright, { color: theme.colors.textSecondary }]}>
-            © 2025 Forlok. All rights reserved.
-          </Text>
+          {contentData.footerLine1 ? (
+            <Text style={[s.copyright, { color: theme.colors.textSecondary }]}>
+              {contentData.footerLine1}
+            </Text>
+          ) : null}
+          {contentData.footerLine2 ? (
+            <Text style={[s.copyright, { color: theme.colors.textSecondary }]}>
+              {contentData.footerLine2}
+            </Text>
+          ) : null}
         </View>
       </ScrollView>
     </View>
@@ -256,10 +304,9 @@ const s = StyleSheet.create({
     marginBottom: normalize(10),
   },
   logoImage: {
-    width: normalize(70),
-    height: normalize(70),
-    borderRadius: normalize(14),
-    marginBottom: normalize(10),
+    width: normalize(180),
+    height: normalize(88),
+    marginBottom: normalize(14),
   },
   logoLetter: {
     fontFamily: FONTS.regular,

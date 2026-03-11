@@ -143,6 +143,34 @@ class DashboardService {
       throw error;
     }
   }
+
+  async getAboutStats(): Promise<any> {
+    try {
+      const [totalUsers, totalRides, ratingStats] = await Promise.all([
+        User.countDocuments({}),
+        Booking.countDocuments({ status: 'completed' }),
+        User.aggregate([
+          { $match: { rating: { $gt: 0 } } },
+          {
+            $group: {
+              _id: null,
+              averageRating: { $avg: '$rating' },
+            },
+          },
+        ]),
+      ]);
+
+      return {
+        totalUsers,
+        totalRides,
+        averageRating: ratingStats.length > 0 ? parseFloat((ratingStats[0].averageRating || 0).toFixed(1)) : 0,
+      };
+    } catch (error) {
+      logger.error('Error getting about stats:', error);
+      throw error;
+    }
+  }
+
   /**
    * Get all data needed for the home screen in a single call
    */

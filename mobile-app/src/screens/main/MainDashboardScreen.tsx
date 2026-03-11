@@ -36,7 +36,6 @@ import { useAuth } from '@context/AuthContext';
 import { useSOS } from '@context/SOSContext';
 import * as Location from 'expo-location';
 import { LinearGradient } from 'expo-linear-gradient';
-import { SvgUri } from 'react-native-svg';
 
 const SCREEN_W = Dimensions.get('window').width;
 const STEP_CARD_W = SCREEN_W;
@@ -140,7 +139,6 @@ const MainDashboardScreen = () => {
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
   const quickActionScaleMapRef = useRef<Record<string, Animated.Value>>({});
-  const nyumLogoUri = Image.resolveAssetSource(require('../../../assets/nyum-logo.svg'))?.uri;
 
   // Sidebar animation
   const sidebarAnim = useRef(new Animated.Value(-SCREEN_W * 0.78)).current;
@@ -981,22 +979,13 @@ const MainDashboardScreen = () => {
             <TouchableWithoutFeedback onPress={closeSidebar}>
               <Animated.View style={[styles.sidebarOverlay, { opacity: overlayAnim }]} />
             </TouchableWithoutFeedback>
-            <Animated.View style={[styles.sidebarContainer, { backgroundColor: theme.colors.background, transform: [{ translateX: sidebarAnim }] }]}>
+            <Animated.View style={[styles.sidebarContainer, { transform: [{ translateX: sidebarAnim }] }]}>
               <View style={styles.sidebarHeader}>
-                {nyumLogoUri ? (
-                  <SvgUri
-                    uri={nyumLogoUri}
-                    width={normalize(180)}
-                    height={normalize(64)}
-                    style={styles.sidebarLogoSvg}
-                  />
-                ) : (
-                  <Image
-                    source={require('../../../assets/signin_logo.png')}
-                    style={styles.sidebarLogo}
-                    resizeMode="contain"
-                  />
-                )}
+                <Image
+                  source={require('../../../assets/sidebar_ezway_logo_transparent.png')}
+                  style={styles.sidebarLogo}
+                  resizeMode="contain"
+                />
               </View>
 
               <ScrollView
@@ -1504,28 +1493,23 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     width: SCREEN_W * 0.82,
-    backgroundColor: '#0F172B',
+    backgroundColor: '#F3F3F3',
     ...SHADOWS.lg,
     elevation: 20,
     overflow: 'hidden',
   },
   sidebarHeader: {
-    paddingTop: normalize(8),
-    paddingBottom: normalize(8),
+    paddingTop: normalize(10),
+    paddingBottom: normalize(10),
     paddingHorizontal: 0,
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(15,23,43,0.08)',
-  },
-  sidebarLogoSvg: {
-    marginLeft: normalize(-10),
+    borderBottomColor: 'rgba(0,0,0,0.06)',
   },
   sidebarLogo: {
-    width: normalize(64),
-    height: normalize(64),
-    borderRadius: normalize(32),
-    marginLeft: normalize(-10),
+    width: normalize(170),
+    height: normalize(60),
   },
   sidebarMenu: { flex: 1, paddingTop: SPACING.sm, paddingHorizontal: normalize(10) },
   sidebarMenuContent: { paddingBottom: normalize(96) },

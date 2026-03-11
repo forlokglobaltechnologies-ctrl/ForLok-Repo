@@ -4,6 +4,8 @@ export const CONTENT_DEFAULTS = {
     brandName: 'Forlok',
     tagline: 'Your everyday ride companion',
     version: 'v1.0.0',
+    footerLine1: '© 2026 Forlok Technologies Pvt. Ltd. All rights reserved.',
+    footerLine2: 'Registered in Hyderabad, Telangana, India.',
     whoWeAre:
       'Forlok is a community-driven mobility platform connecting riders and drivers for affordable, safe, and sustainable commutes across India.',
     features: [
@@ -46,186 +48,219 @@ export const CONTENT_DEFAULTS = {
   },
   terms_conditions: {
     introTitle: 'Terms of Service',
-    introSub: 'Please read these terms carefully before using Forlok',
-    effectiveText: 'Effective: January 2024',
+    introSub: 'Please read these terms carefully before using eZway.',
+    effectiveText: 'Effective Date: January 2024',
     introBody:
-      'Welcome to Forlok. These Terms and Conditions govern your use of the Forlok mobile application and all related services offered by Forlok Technologies Pvt. Ltd. By accessing or using our platform, you acknowledge that you have read, understood, and agree to be bound by these Terms.',
+      'Welcome to eZway, a mobility platform operated by Forlok Technologies Pvt. Ltd., a company registered in Hyderabad, Telangana, India. These Terms of Service govern your access to and use of the eZway mobile application, website, and related services. By downloading, installing, or using the Platform, you confirm that you have read, understood, and agreed to these Terms. If you do not agree, you must not use the Platform.',
     contactEmail: 'legal@forlok.com',
-    footerLine1: '© 2024 Forlok Technologies Pvt. Ltd. All rights reserved.',
+    footerLine1: '© 2026 Forlok Technologies Pvt. Ltd. All rights reserved.',
     footerLine2: 'Registered in Hyderabad, Telangana, India.',
     sections: [
       {
-        title: 'Acceptance of Terms',
+        title: '1. Introduction',
         content:
-          'By downloading, installing, or using the Forlok mobile application ("App"), you agree to be bound by these Terms and Conditions ("Terms"). If you do not agree to these Terms, please do not use the App.\n\nThese Terms constitute a legally binding agreement between you ("User") and Forlok Technologies Pvt. Ltd. ("Company", "we", "us", or "our"), a company registered under the laws of India with its registered office in Hyderabad, Telangana.',
+          'Welcome to eZway, a mobility platform operated by Forlok Technologies Pvt. Ltd. These Terms of Service govern your access to and use of the eZway mobile application, website, and related services. By downloading, installing, or using the Platform, you confirm that you have read, understood, and agreed to these Terms. If you do not agree to these Terms, you must not use the Platform.',
       },
       {
-        title: 'User Eligibility & Registration',
+        title: '2. Nature of the Platform',
         content:
-          'To use Forlok, you must:\n\n• Be at least 18 years of age\n• Possess a valid government-issued ID (Aadhaar, PAN, Driving License, etc.)\n• Provide accurate and complete registration information\n• Maintain the security of your account credentials\n\nDrivers must additionally hold a valid Indian driving license appropriate for the vehicle type and have valid vehicle registration and insurance documents. All driver documents are subject to verification before service activation.',
+          'eZway is a technology platform that connects drivers and passengers who wish to share rides through car pooling or bike pooling along similar routes. The Company does not own, operate, or control the vehicles used for rides on the Platform. Drivers and passengers interact directly through the Platform to arrange shared rides. Drivers using the Platform act as independent individuals and not as employees, partners, or agents of Forlok Technologies Pvt. Ltd.',
       },
       {
-        title: 'Pooling Services',
+        title: '3. Eligibility',
         content:
-          "Forlok's pooling service connects drivers with passengers traveling in similar directions. By using pooling services:\n\n• Drivers agree to offer available seats on their pre-planned routes\n• Passengers agree to share the ride with other verified users\n• The fare is calculated based on distance, route, and number of seats\n• Drivers must adhere to the declared route and pickup/drop-off points\n• Cancellation policies apply as defined in the App for each booking\n• Forlok acts as an intermediary platform and is not a transportation provider",
+          'To use the Platform, you must:\n\n- Be at least 18 years of age\n- Possess a valid government-issued identification document\n- Provide accurate and complete registration information\n- Maintain the confidentiality of your account credentials\n\nThe Company reserves the right to verify identity and account information at any time.',
       },
       {
-        title: 'Rental Services',
+        title: '4. Driver Requirements',
         content:
-          "Forlok's rental service allows users to rent vehicles for personal or commercial use. By using rental services:\n\n• The renter must provide a valid driving license and identity proof\n• Vehicles must be returned in the same condition as received\n• Fuel charges, toll fees, and any fines incurred are the renter's responsibility\n• Insurance coverage is provided as per the vehicle's existing policy\n• The security deposit is refundable upon satisfactory vehicle return\n• Any damage beyond normal wear and tear will be charged to the renter",
+          'Users who wish to offer rides as drivers must additionally:\n\n- Possess a valid Indian driving license\n- Own or have authorization to operate the vehicle used for pooling\n- Provide valid vehicle registration documents\n- Provide valid vehicle insurance documents\n- Ensure that the vehicle is in safe and roadworthy condition\n\nDriver accounts may require verification before activation.',
       },
       {
-        title: 'Pricing, Wallet & Coins',
+        title: '5. Pooling Services',
         content:
-          'Forlok provides transparent fare and trip-cost visibility:\n\n• Fares and rental charges are displayed before booking confirmation\n• Pooling settlement is done manually between passenger and driver\n• Wallet features may be used for eligible app-side credits and adjustments\n• Coins can be redeemed for fare discounts as per in-app limits\n• All prices are in Indian Rupees (INR)\n• Cancellation/refund outcomes are shown per booking policy in-app',
+          'The Platform allows drivers and passengers to share rides when traveling in similar directions. Features of the pooling service may include:\n\n- Ride matching based on routes\n- Trip scheduling\n- Trip cost visibility\n- Driver and passenger ratings\n- Real-time ride tracking\n\nDrivers may offer available seats in their vehicle, and passengers may request to join the ride.',
       },
       {
-        title: 'Safety & Conduct',
+        title: '6. Pricing and Payments',
         content:
-          'All users must adhere to safety standards and respectful conduct:\n\n• Follow all applicable traffic rules and regulations\n• Maintain a respectful and courteous attitude towards co-passengers\n• Do not transport illegal substances, weapons, or hazardous materials\n• Wear seatbelts at all times during the ride\n• Report any safety concerns immediately through the in-app SOS feature\n• Do not discriminate against users based on caste, religion, gender, or region\n• Drivers must not operate vehicles under the influence of alcohol or drugs',
+          'The Platform provides transparent trip cost visibility before a ride is confirmed. Payments may be processed through supported digital payment systems integrated into the Platform. The Company may introduce features such as:\n\n- Wallet balances\n- Coins or reward systems\n- Promotional discounts\n\nAll payments must be made through authorized payment methods available in the app.',
       },
       {
-        title: 'Prohibited Activities',
+        title: '7. Safety and User Conduct',
         content:
-          'The following activities are strictly prohibited on the Forlok platform:\n\n• Creating fake or duplicate accounts\n• Manipulating reviews, ratings, or booking data\n• Circumventing the platform to arrange off-app transactions\n• Harassing, threatening, or abusing other users\n• Using the platform for any unlawful purpose\n• Sharing account credentials with third parties\n• Tampering with fare calculations or GPS data\n\nViolation of these rules may result in immediate account suspension or termination.',
+          'All users must maintain a safe and respectful environment while using the Platform. Users agree to:\n\n- Treat other users with respect\n- Follow all applicable traffic and road safety laws\n- Provide accurate information during ride bookings\n- Maintain appropriate conduct during rides\n\nThe Company may suspend or terminate accounts that violate safety standards.',
       },
       {
-        title: 'Cancellation & Refund Policy',
+        title: '8. Prohibited Activities',
         content:
-          'Cancellation terms for Forlok services:\n\nPooling:\n• Free cancellation up to 30 minutes before departure time\n• Cancellation within 30 minutes incurs a fee of up to 20% of the fare\n• No-shows are charged the full fare amount\n\nRentals:\n• Free cancellation up to 24 hours before the rental period\n• Cancellation within 24 hours incurs a fee of up to 25% of the rental amount\n• Refund for unused days is subject to a processing fee\n\nForlok reserves the right to modify cancellation policies with prior notice.',
+          'Users must not engage in activities that misuse the Platform, including but not limited to:\n\n- Providing false identity or vehicle information\n- Harassing or threatening other users\n- Using the Platform for illegal activities\n- Transporting prohibited or illegal goods\n- Attempting to hack, disrupt, or reverse engineer the Platform\n- Creating multiple fraudulent accounts\n\nViolation of these rules may result in account suspension or permanent removal.',
       },
       {
-        title: 'Limitation of Liability',
+        title: '9. Cancellation Policy',
         content:
-          'To the maximum extent permitted by applicable Indian law:\n\n• Forlok is a technology platform and not a transportation company\n• We do not guarantee availability, punctuality, or quality of rides\n• We are not liable for any personal injury, property damage, or loss during rides\n• Our total liability shall not exceed the amount paid for the specific service\n• We are not responsible for actions of third-party drivers or passengers\n• Force majeure events (natural disasters, strikes, etc.) absolve liability',
+          'Users may cancel ride requests through the Platform. Cancellation terms may include:\n\n- Cancellation before ride confirmation\n- Cancellation after driver acceptance\n- No-show situations\n\nSpecific cancellation rules may be displayed within the app at the time of booking.',
       },
       {
-        title: 'Governing Law & Disputes',
+        title: '10. Limitation of Liability',
         content:
-          'These Terms are governed by and construed in accordance with the laws of India:\n\n• Any disputes shall be subject to the exclusive jurisdiction of courts in Hyderabad, Telangana\n• Disputes shall first be attempted to be resolved through mediation\n• If mediation fails, arbitration under the Arbitration and Conciliation Act, 1996 shall apply\n• The language of arbitration shall be English\n• Consumer complaints can be filed with the National Consumer Disputes Redressal Commission as applicable',
+          'To the maximum extent permitted by applicable law, Forlok Technologies Pvt. Ltd. provides a technology platform only and is not responsible for:\n\n- The behavior or actions of drivers or passengers\n- Accidents or incidents occurring during rides\n- Loss or damage of personal belongings\n- Vehicle condition or road safety compliance\n\nUsers participate in pooling rides at their own discretion and responsibility.',
       },
       {
-        title: 'Modifications to Terms',
+        title: '11. Account Suspension or Termination',
         content:
-          'Forlok reserves the right to modify these Terms at any time:\n\n• Users will be notified of material changes via email or in-app notifications\n• Continued use of the App after changes constitutes acceptance\n• Users who disagree with updated Terms should discontinue use\n• Previous versions of Terms are available upon request\n\nFor any questions regarding these Terms, contact us at legal@forlok.com.',
+          'The Company reserves the right to suspend or terminate accounts if a user:\n\n- Violates these Terms\n- Provides false information\n- Engages in unsafe or abusive behavior\n- Misuses the Platform\n\nUsers may also request deletion of their account through the app settings or by contacting support.',
+      },
+      {
+        title: '12. Modifications to Terms',
+        content:
+          'Forlok Technologies Pvt. Ltd. may update these Terms from time to time. Users will be notified of significant changes through:\n\n- In-app notifications\n- Email communications\n\nContinued use of the Platform after changes indicates acceptance of the updated Terms.',
+      },
+      {
+        title: '13. Governing Law and Disputes',
+        content:
+          'These Terms shall be governed by and interpreted in accordance with the laws of India. Any disputes arising from the use of the Platform shall be subject to the jurisdiction of the courts located in Hyderabad, Telangana, India, unless otherwise resolved through alternative dispute resolution mechanisms.',
+      },
+      {
+        title: '14. Contact Information',
+        content:
+          'For legal inquiries or questions regarding these Terms, please contact us at legal@forlok.com.',
       },
     ],
   },
   privacy_policy: {
     introTitle: 'Privacy Policy',
-    introSub: 'Your privacy matters to us. Learn how we collect, use, and protect your data.',
+    introSub: 'How eZway collects, uses, stores, and protects your information.',
     lastUpdatedText: 'Last Updated: January 2024',
     introBody:
-      'Forlok Technologies Pvt. Ltd. ("Forlok", "we", "us") respects your privacy and is committed to protecting the personal information you share with us. This Privacy Policy explains what data we collect, how we use it, and the choices you have regarding your information.',
+      'Forlok Technologies Pvt. Ltd. respects your privacy and is committed to protecting your personal information. This Privacy Policy explains how eZway collects, uses, stores, and protects the information you provide when using our mobile application and related services. By using the eZway application, you agree to the collection and use of information in accordance with this Privacy Policy.',
     dpoEmail: 'privacy@forlok.com',
-    footerLine1: '© 2024 Forlok Technologies Pvt. Ltd. All rights reserved.',
+    footerLine1: '© 2026 Forlok Technologies Pvt. Ltd. All rights reserved.',
     footerLine2: 'This policy is governed by the laws of India.',
     sections: [
       {
-        title: 'Information We Collect',
+        title: '1. Introduction',
         content:
-          'We collect information you provide directly (name, phone, email, profile details, IDs for verification), booking and trip information (pickup/drop, route, timestamps), communication data (support messages, feedback), and technical data (device type, app version, crash logs).',
+          'Forlok Technologies Pvt. Ltd. respects your privacy and is committed to protecting your personal information. This Privacy Policy explains how eZway collects, uses, stores, and protects the information you provide when using our mobile application and related services. By using the eZway application, you agree to the collection and use of information in accordance with this Privacy Policy.',
       },
       {
-        title: 'Location Data',
+        title: '2. Information We Collect',
         content:
-          'To provide ride discovery, tracking, and safety features, we process location data while you use the app. For active trips, location is used for navigation, ETA, and route monitoring. You can control background location permissions in device settings, but some features may be limited.',
+          'To provide our services effectively, we may collect the following types of information.\n\nPersonal Information\nWhen you create an account or use our services, we may collect:\n- Full name\n- Phone number\n- Email address\n- Profile photo\n- Date of birth\n- Government-issued ID for verification such as Aadhaar, PAN, or Driving License\n\nDriver Information\nIf you register as a driver on the platform, we may collect:\n- Driving license details and expiration date\n- Vehicle registration number\n- Vehicle make, model, and year\n- Vehicle insurance details\n- Other vehicle verification documents required by law\n\nUsage Information\nWe may also collect information related to how you interact with the app, including:\n- Ride booking history\n- Trip details and transaction records\n- In-app communications\n- App usage activity and preferences',
       },
       {
-        title: 'How We Use Your Information',
+        title: '3. Location Information',
         content:
-          'We use your information to create and manage accounts, verify user identity, match riders and drivers, enable bookings, improve safety, prevent fraud, provide support, and send essential service updates. Aggregated analytics may be used to improve platform quality and reliability.',
+          'Location information is essential for ride pooling services. The eZway app may collect:\n\n- Real-time GPS location while using the app\n- Background location during active rides\n- Pickup and drop-off locations for ride matching\n\nLocation information helps us:\n- Match drivers and passengers traveling in similar directions\n- Provide navigation and live trip tracking\n- Improve route suggestions\n\nYou can disable location access through your device settings, but some app features may not function properly without it.',
       },
       {
-        title: 'Information Sharing',
+        title: '4. How We Use Your Information',
         content:
-          'We share limited trip-related information between matched users to complete rides. We may share data with trusted service providers (cloud hosting, analytics, communication tools) under strict confidentiality. We may disclose data when required by law, court order, or to protect user safety.',
+          'We use the collected information for the following purposes:\n\n- Matching drivers and passengers for pooling rides\n- Processing ride bookings and transactions\n- Verifying user identity and driver credentials\n- Providing customer support\n- Sending ride confirmations, notifications, and updates\n- Improving ride matching algorithms and service performance\n- Detecting and preventing fraud or misuse of the platform\n- Complying with legal and regulatory requirements',
       },
       {
-        title: 'Data Security',
+        title: '5. Sharing of Information',
         content:
-          'We use reasonable administrative, technical, and organizational safeguards to protect personal data, including access controls, encryption in transit, and monitoring. No method is 100% secure, but we continuously improve controls to reduce risk and respond to incidents promptly.',
+          'We do not sell or rent your personal information to third parties. However, some information may be shared in the following situations.\n\nWith Other Users\nTo facilitate rides:\n- Your first name and profile photo may be visible to ride partners\n- Drivers and passengers may see pickup and drop-off locations\n- Phone numbers may be temporarily shared during active rides for coordination\n\nWith Service Providers\nWe may share limited information with trusted service providers who help operate the platform, such as:\n- Payment processing services\n- Cloud storage providers\n- Map and navigation services\n- Notification and communication providers\n\nThese partners are required to protect your data and use it only for service delivery.\n\nLegal Requirements\nWe may disclose information when required by law, including:\n- Government or law enforcement requests\n- Court orders\n- Legal compliance obligations',
       },
       {
-        title: 'Device Permissions',
+        title: '6. Data Security',
         content:
-          'Depending on features used, the app may request permissions for location, camera, microphone, storage, contacts, and notifications. These permissions are used only to provide requested functionality such as document upload, SOS support, and trip notifications.',
+          'We implement industry-standard security measures to protect your data. These include:\n\n- Encrypted communication between the app and servers\n- Secure storage of sensitive information\n- Restricted access to user data\n- Continuous monitoring for suspicious activity\n\nWhile we strive to protect your information, no internet-based system can guarantee absolute security.',
       },
       {
-        title: 'Cookies & Analytics',
+        title: '7. Device Permissions',
         content:
-          'We may use app analytics and similar technologies to understand feature usage, diagnose crashes, and improve performance. These insights help us optimize UX, reliability, and support quality while minimizing collection of unnecessary personal information.',
+          'The eZway application may request the following device permissions:\n\n- Location: For ride matching, navigation, and live tracking\n- Camera: For profile photo and document verification\n- Storage: For saving app data and receipts\n- Notifications: For ride alerts and updates\n- Phone: To allow drivers and passengers to call each other during rides\n\nUsers can control these permissions through their device settings.',
       },
       {
-        title: 'Data Retention & Deletion',
+        title: '8. Data Retention',
         content:
-          'We retain data for as long as necessary for service operations, legal obligations, dispute resolution, and safety/fraud prevention. You may request account deletion through app settings or support. Some records may be retained for compliance and audit requirements.',
+          'We retain user information only for as long as necessary to provide services and comply with legal obligations. Typical retention periods include:\n\n- Account data while the account is active\n- Transaction records as required by tax regulations\n- Ride history for dispute resolution and service improvement',
       },
       {
-        title: "Children's Privacy",
+        title: '9. Account Deletion',
         content:
-          'Forlok services are intended for users who are at least 18 years old. We do not knowingly collect personal data from children. If we learn that a minor account was created, we will take steps to deactivate the account and remove associated data as required.',
+          'Users may request deletion of their account and personal data by:\n\n- Using the Delete Account option in the app settings, or\n- Contacting us via email.\n\nWe will process deletion requests within a reasonable period, subject to legal requirements.',
       },
       {
-        title: 'Updates to This Policy',
+        title: "10. Children's Privacy",
         content:
-          'We may update this Privacy Policy from time to time to reflect legal, technical, or business changes. Material updates are communicated through in-app notices, email, or website updates. Continued use of the app after updates indicates acceptance of the revised policy.',
+          'The eZway platform is intended only for individuals 18 years and older. We do not knowingly collect personal information from individuals under 18 years of age. If we become aware that such information has been collected, it will be removed promptly.',
+      },
+      {
+        title: '11. Updates to This Policy',
+        content:
+          'We may update this Privacy Policy from time to time. When updates are made:\n\n- The Last Updated date will be revised\n- Significant changes may be communicated through the app\n\nContinued use of the platform after updates indicates acceptance of the revised policy.',
+      },
+      {
+        title: '12. Contact Us',
+        content:
+          'If you have any questions regarding this Privacy Policy or your personal data, please contact us at privacy@forlok.com.',
       },
     ],
-    rights: [
-      { title: 'Right to Access', desc: 'Request a copy of your personal data' },
-      { title: 'Right to Rectify', desc: 'Correct inaccurate or incomplete data' },
-      { title: 'Right to Delete', desc: 'Request deletion of your personal data' },
-      { title: 'Right to Restrict', desc: 'Limit how your data is processed' },
-      { title: 'Right to Portability', desc: 'Receive your data in a portable format' },
-      { title: 'Right to Object', desc: 'Object to certain processing activities' },
-    ],
+    rights: [],
   },
   intellectual_property: {
     introTitle: 'Intellectual Property',
-    introSub: 'Protecting our innovation and your trust',
+    introSub: 'Ownership, protection, and permitted use of the eZway platform, branding, software, and content.',
     lastUpdatedText: 'Last Updated: January 2024',
     introBody:
-      'Forlok Technologies Pvt. Ltd. is committed to protecting its intellectual property rights and respecting the intellectual property rights of others.',
+      'Forlok Technologies Pvt. Ltd. is committed to protecting its intellectual property rights and respecting the intellectual property rights of others. This Intellectual Property Policy explains the ownership, protection, and permitted use of intellectual property associated with the eZway platform, including its software, branding, technology, and digital content. All intellectual property associated with the platform is owned by or licensed to Forlok Technologies Pvt. Ltd.',
     warningTitle: 'Important Notice',
     warningText:
-      "Any unauthorized use, reproduction, or distribution of Forlok's intellectual property may result in severe civil and criminal penalties under Indian law.",
-    licensingTitle: 'Licensing & Partnerships',
-    licensingSub: 'For licensing opportunities, IP inquiries, or partnership proposals:',
+      'Unauthorized use, imitation, modification, or reproduction of eZway or Forlok intellectual property without prior written consent is strictly prohibited and may result in legal action.',
+    licensingTitle: 'Contact Information',
+    licensingSub: 'For intellectual property inquiries, licensing requests, or partnership proposals, please contact:',
     contactEmail1: 'legal@forlok.com',
-    contactEmail2: 'partnerships@forlok.com',
-    footerLine1: '© 2024 Forlok Technologies Pvt. Ltd. All rights reserved.',
-    footerLine2: 'This information is provided for general informational purposes and does not constitute legal advice.',
+    contactEmail2: '',
+    footerLine1: '© 2026 Forlok Technologies Pvt. Ltd. All rights reserved.',
+    footerLine2: 'All intellectual property associated with the platform is owned by or licensed to Forlok Technologies Pvt. Ltd.',
     sections: [
       {
-        title: 'Trademarks',
+        title: '1. Introduction',
         content:
-          'Forlok name, logo, brand symbols, taglines, and related marks are proprietary assets of Forlok Technologies Pvt. Ltd. Unauthorized use of these marks in any format, including app clones, marketing material, or domain names, is prohibited without prior written permission.',
+          'Forlok Technologies Pvt. Ltd. is committed to protecting its intellectual property rights and respecting the intellectual property rights of others. This Intellectual Property Policy explains the ownership, protection, and permitted use of intellectual property associated with the eZway platform, including its software, branding, technology, and digital content.',
       },
       {
-        title: 'Copyrights',
+        title: '2. Trademarks',
         content:
-          'All app content including source code, user interfaces, text, graphics, icons, images, videos, and documentation is protected by applicable copyright laws. Reproduction, republication, reverse engineering, or distribution without permission is not allowed.',
+          'The following names, logos, and branding elements are trademarks or service marks of Forlok Technologies Pvt. Ltd.:\n\n- Forlok\n- eZway\n- Forlok logo and brand design\n- eZway application icon and visual identity\n- Company taglines and marketing slogans\n\nThese trademarks are protected under applicable trademark laws. Unauthorized use, imitation, modification, or reproduction of these trademarks without prior written consent from Forlok Technologies Pvt. Ltd. is strictly prohibited and may result in legal action.',
       },
       {
-        title: 'Patents',
+        title: '3. Copyright',
         content:
-          'Certain platform capabilities, including ride matching logic, route optimization methods, and pricing mechanisms, may be protected by patent filings or proprietary claims. Use of these innovations without authorization may result in legal action.',
+          'All content available on the eZway platform is protected by copyright laws. This includes but is not limited to:\n\n- Software source code\n- Mobile application architecture\n- User interface design and layouts\n- Graphics, icons, and illustrations\n- Images and visual assets\n- Written content and documentation\n- Databases and compiled data\n- Marketing and promotional materials\n\nNo part of the platform or its content may be copied, reproduced, distributed, or transmitted without prior written permission from the Company.',
       },
       {
-        title: 'Trade Secrets',
+        title: '4. Proprietary Technology',
         content:
-          'Confidential know-how such as scoring models, anti-fraud rules, operational playbooks, and internal data pipelines are treated as trade secrets. Access is restricted and protected through organizational controls and confidentiality obligations.',
+          'Forlok Technologies Pvt. Ltd. develops and operates proprietary technologies used within the eZway platform. These technologies may include:\n\n- Ride-matching algorithms\n- Route optimization systems\n- Safety verification mechanisms\n- Data analysis and recommendation systems\n- Trip coordination and pooling systems\n\nThese technologies are the exclusive intellectual property of the Company and may be protected under applicable patent or intellectual property laws.',
       },
       {
-        title: 'Design Rights',
+        title: '5. Trade Secrets',
         content:
-          'Forlok visual identity, app flows, component styling, icon treatment, and branded design systems are protected under design and related rights. Copying distinctive layouts or brand presentation to mislead users is strictly prohibited.',
+          'Certain internal technologies, processes, and operational strategies used by Forlok Technologies Pvt. Ltd. constitute confidential trade secrets. These may include:\n\n- Ride matching algorithms and scoring models\n- Demand prediction models\n- Fraud detection systems\n- Operational workflows and internal processes\n- Data analytics frameworks\n- User trust and safety scoring methods\n\nThese trade secrets are protected under applicable laws and through confidentiality agreements with employees, contractors, and partners. Unauthorized disclosure or use of these trade secrets is strictly prohibited.',
       },
       {
-        title: 'Open Source Acknowledgments',
+        title: '6. Design Rights',
         content:
-          'Forlok uses selected open-source components in compliance with their respective licenses. License obligations for third-party packages are honored. Such usage does not grant rights over Forlok proprietary source code, product IP, or branding.',
+          'The visual identity of the eZway platform is the intellectual property of Forlok Technologies Pvt. Ltd. This includes:\n\n- Application interface design\n- Layout and screen structures\n- Color palette and typography\n- Icons and visual markers\n- Interaction patterns and animations\n- Branding and marketing designs\n\nAny imitation, copying, or reproduction of these designs without authorization is prohibited.',
+      },
+      {
+        title: '7. Open Source Software',
+        content:
+          'The eZway platform may incorporate certain open-source software components. These components are used in accordance with their respective licenses. Examples may include:\n\n- React Native\n- Node.js\n- Open-source libraries and packages\n\nThe use of open-source software does not affect the proprietary ownership of the Company\'s original code and technologies.',
+      },
+      {
+        title: '8. Restrictions',
+        content:
+          'Users of the eZway platform agree not to:\n\n- Copy or reproduce any part of the platform\n- Reverse engineer or decompile the software\n- Attempt to extract source code\n- Create derivative works based on the platform\n- Use platform content for commercial purposes without permission\n- Misuse the Company\'s intellectual property in any manner\n\nViolation of these restrictions may result in suspension of access and legal action.',
+      },
+      {
+        title: '9. Reporting Intellectual Property Violations',
+        content:
+          'If you believe that your intellectual property rights have been violated on the eZway platform, please contact us with the relevant details so that we can investigate the issue.',
       },
     ],
   },

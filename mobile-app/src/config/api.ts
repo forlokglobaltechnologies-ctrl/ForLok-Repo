@@ -219,6 +219,7 @@ export const API_CONFIG = {
       STATS: '/api/dashboard/stats',
       FINANCIAL: '/api/dashboard/financial',
       HOME: '/api/dashboard/home',
+      ABOUT_STATS: '/api/dashboard/about-stats',
     },
     // Saved Places
     PLACES: {

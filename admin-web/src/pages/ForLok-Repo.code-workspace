@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "../../.."
+		},
+		{
+			"path": "../../../../../Downloads/bootstrap-admin-template-free/bootstrap-admin-template-free"
+		}
+	],
+	"settings": {
+		"typescript.tsdk": "mobile-app/node_modules/typescript/lib",
+		"typescript.enablePromptUseWorkspaceTsdk": true
+	}
+}

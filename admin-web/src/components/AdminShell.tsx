@@ -46,9 +46,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     <div className={`admin-app ${open ? 'sidebar-open' : 'sidebar-collapsed'}`}>
       <aside className="sidebar sidebar-theme">
         <div className="navbar-brand px-4 py-3 border-bottom border-secondary-subtle">
-          <h4 className="brand-title mb-0">
-            <i className="bi bi-geo-alt-fill me-2"></i>FORLOK
-          </h4>
+          <img className="sidebar-brand-logo" src="/ezway-sidebar-logo.png" alt="ezway logo" />
         </div>
         <nav className="navbar-nav w-100">
           {allowedItems.map((item) => (

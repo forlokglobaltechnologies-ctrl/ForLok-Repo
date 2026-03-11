@@ -1191,6 +1191,12 @@ export const dashboardApi = {
       requiresAuth: true,
     }),
 
+  getAboutStats: () =>
+    apiCall(API_CONFIG.ENDPOINTS.DASHBOARD.ABOUT_STATS, {
+      method: 'GET',
+      requiresAuth: true,
+    }),
+
   getFinancial: () =>
     apiCall(API_CONFIG.ENDPOINTS.DASHBOARD.FINANCIAL, {
       method: 'GET',
