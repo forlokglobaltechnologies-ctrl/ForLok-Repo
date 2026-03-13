@@ -84,8 +84,18 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
         <div className="container-fluid pt-4 px-4">{children}</div>
         <div className="container-fluid pt-4 px-4">
-          <div className="footer-panel rounded-top p-4 text-center">
-            <span className="small text-muted">ForLok Admin Panel</span>
+          <div className="footer-panel rounded-top p-4 admin-footer-panel">
+            <div className="admin-footer-left">
+              <img src="/forlok_admin_login_logo.png" alt="ForLok" className="admin-footer-logo" />
+              <div>
+                <p className="admin-footer-title mb-0">ForLok Admin Console</p>
+                <p className="admin-footer-sub mb-0">Realtime monitoring and moderation controls</p>
+              </div>
+            </div>
+            <div className="admin-footer-status">
+              <span className="admin-footer-status-dot"></span>
+              <span>System online</span>
+            </div>
           </div>
         </div>
       </main>

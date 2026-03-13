@@ -57,10 +57,10 @@ export default function LoginPage() {
               Admin Console
             </div>
             <h1 style={{ fontSize: '3rem', lineHeight: 1.1, fontWeight: 800, marginBottom: 16 }}>
-              Manage ForLok with the new dark theme.
+              Control ForLok operations in real time.
             </h1>
             <p style={{ color: '#B8B8B8', fontSize: '1.05rem', marginBottom: 0 }}>
-              Secure access for administrators with the ForLok orange arrow branding and a cleaner login experience.
+              Secure admin access for users, bookings, analytics, and moderation workflows from one dashboard.
             </p>
           </div>
         </div>
