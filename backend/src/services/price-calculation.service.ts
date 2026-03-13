@@ -2,6 +2,7 @@ import PoolingOffer from '../models/PoolingOffer';
 import { calculateDistance } from '../utils/helpers';
 import logger from '../utils/logger';
 import { Route } from '../types';
+import { pricingDataService } from './pricing-data.service';
 
 interface PriceCalculationParams {
   passengerRoute: Route;
@@ -9,6 +10,34 @@ interface PriceCalculationParams {
   vehicleType: 'car' | 'bike' | 'scooty';
   offerDate: Date;
   offerTime: string;
+  vehicleDetails?: {
+    brand?: string;
+    model?: string;
+    fuelType?: string;
+    transmission?: string;
+    year?: number;
+  };
+  offerContext?: {
+    totalSeats?: number;
+    availableSeats?: number;
+    bookedSeats?: number;
+  };
+}
+
+interface CurrentOfferPricingSnapshot {
+  vehicle?: {
+    brand?: string;
+    model?: string;
+    fuelType?: string;
+    transmission?: string;
+    year?: number;
+  };
+  availableSeats?: number;
+  totalSeats?: number;
+  passengers?: Array<{
+    status?: 'pending' | 'confirmed' | 'cancelled';
+    seatsBooked?: number;
+  }>;
 }
 
 interface PriceBreakdown {
@@ -30,9 +59,73 @@ interface PriceBreakdown {
     timeCharge: number;
     supplyMultiplier: number;
     supplyAdjustment: number;
+    contextMultiplier?: number;
+    contextAdjustment?: number;
     subtotal: number;
     platformFee: number;
     total: number;
+    shareSeats?: number;
+    perSeatBeforeRounding?: number;
+  };
+  explanation: {
+    lookup: {
+      usedCsv: boolean;
+      fallbackLevel: string;
+        energyCostPerKm?: number;
+      matchedVehicle?: {
+        category: string;
+        brand: string;
+        model: string;
+        fuelType: string;
+        transmission: string;
+        launchYear?: number;
+        ageBucket?: string;
+        mileageUnit?: string;
+        realWorldMileageAvg?: number;
+      };
+      cityFuelSnapshot?: {
+        city: string;
+        state?: string;
+        requestedCity?: string;
+        requestedState?: string;
+        matchType?: 'exact' | 'nearest_city' | 'default';
+        petrol?: number;
+        diesel?: number;
+        cng?: number;
+        electricity?: number;
+      };
+      confidenceScore: number;
+    };
+    multipliers: {
+      context: {
+        label: string;
+        value: number;
+      };
+      time: {
+        label: string;
+        value: number;
+      };
+      supply: {
+        label: string;
+        value: number;
+      };
+      totalRaw: number;
+      totalApplied: number;
+    };
+    guardrails: {
+      totalMultiplierMin: number;
+      totalMultiplierMax: number;
+      wasClamped: boolean;
+      perSeatPerKmMin: number;
+      perSeatPerKmMax: number;
+      perSeatPerKmApplied: number;
+      wasPerSeatPerKmCapped: boolean;
+    };
+    poolingShare: {
+      shareSeats: number;
+      tripLevelPrice: number;
+      perSeatPrice: number;
+    };
   };
 }
 
@@ -43,8 +136,8 @@ class PriceCalculationService {
   private readonly BASE_RATE_SCOOTY = 4; // ₹4 per km for scooty
 
   // Time-based multipliers
-  private readonly DAY_TIME_MULTIPLIER = 1.0; // 6 AM - 10 PM
-  private readonly NIGHT_TIME_MULTIPLIER = 1.3; // 10 PM - 6 AM
+  private readonly DAY_TIME_MULTIPLIER = 1.0; // legacy fallback only
+  private readonly NIGHT_TIME_MULTIPLIER = 1.3; // legacy fallback only
 
   // Supply/demand multipliers
   private readonly HIGH_SUPPLY_MULTIPLIER = 0.92; // Many offers available
@@ -54,13 +147,25 @@ class PriceCalculationService {
   // Thresholds for supply/demand
   private readonly HIGH_SUPPLY_THRESHOLD = 5; // 5+ offers = high supply
   private readonly LOW_SUPPLY_THRESHOLD = 2; // <2 offers = low supply
+  private readonly POOLING_SUPPLY_MULTIPLIER_MIN = 0.9;
+  private readonly POOLING_SUPPLY_MULTIPLIER_MAX = 1.08;
 
   /**
    * Calculate dynamic price for passenger based on distance, time, and supply/demand
    */
   async calculatePrice(params: PriceCalculationParams): Promise<PriceBreakdown> {
     try {
-      const { passengerRoute, offerId, vehicleType, offerDate, offerTime } = params;
+      const { passengerRoute, offerId, vehicleType, offerDate, offerTime, vehicleDetails } = params;
+      const currentOffer = (await PoolingOffer.findOne({ offerId }).select(
+        'vehicle availableSeats totalSeats passengers'
+      ).lean()) as CurrentOfferPricingSnapshot | null;
+      const resolvedVehicleDetails = {
+        brand: vehicleDetails?.brand || currentOffer?.vehicle?.brand,
+        model: vehicleDetails?.model || currentOffer?.vehicle?.model,
+        fuelType: vehicleDetails?.fuelType || currentOffer?.vehicle?.fuelType,
+        transmission: vehicleDetails?.transmission || currentOffer?.vehicle?.transmission,
+        year: vehicleDetails?.year || currentOffer?.vehicle?.year,
+      };
 
       // 1. Calculate distance
       const distance = calculateDistance(
@@ -70,8 +175,22 @@ class PriceCalculationService {
         passengerRoute.to.lng
       );
 
-      // 2. Get base rate based on vehicle type
-      const baseRatePerKm = vehicleType === 'car' ? this.BASE_RATE_CAR : vehicleType === 'scooty' ? this.BASE_RATE_SCOOTY : this.BASE_RATE_BIKE;
+      // 2. Resolve base rate (CSV-driven if available, otherwise legacy type-based)
+      const legacyBaseRatePerKm = vehicleType === 'car' ? this.BASE_RATE_CAR : vehicleType === 'scooty' ? this.BASE_RATE_SCOOTY : this.BASE_RATE_BIKE;
+      const baseRateProfile = await pricingDataService.calculateVehicleBaseRate(
+        {
+          vehicleType,
+          brand: resolvedVehicleDetails.brand,
+          model: resolvedVehicleDetails.model,
+          fuelType: resolvedVehicleDetails.fuelType,
+          transmission: resolvedVehicleDetails.transmission,
+          year: resolvedVehicleDetails.year,
+          city: passengerRoute.from.city || passengerRoute.to.city,
+          state: passengerRoute.from.state || passengerRoute.to.state,
+        },
+        legacyBaseRatePerKm
+      );
+      const baseRatePerKm = baseRateProfile.baseRatePerKm;
 
       // 3. Calculate base price
       const basePrice = distance * baseRatePerKm;
@@ -110,19 +229,55 @@ class PriceCalculationService {
       // Set the hour and minute on the offer date
       offerDateTime.setHours(offerHour, offerMinute, 0, 0);
       
-      // Determine if it's night time (10 PM to 6 AM)
+      // Resolve time multiplier from pricing data (fallback in resolver)
       const tripHour = offerDateTime.getHours();
-      const isNightTime = tripHour >= 22 || tripHour < 6;
-      const timeMultiplier = isNightTime ? this.NIGHT_TIME_MULTIPLIER : this.DAY_TIME_MULTIPLIER;
-      const timeMultiplierLabel = isNightTime ? 'Night Time (+30%)' : 'Day Time';
+      const timeMultiplierInfo = pricingDataService.getTimeMultiplier(tripHour);
+      const timeMultiplier = timeMultiplierInfo.value;
+      const timeMultiplierLabel = timeMultiplierInfo.label;
 
       // 5. Calculate supply/demand multiplier
-      const supplyMultiplier = await this.calculateSupplyMultiplier(passengerRoute, offerId);
-      const supplyMultiplierLabel = this.getSupplyLabel(supplyMultiplier);
+      const supply = await this.calculateSupplyMultiplier(passengerRoute, offerId);
+      const supplyMultiplier = Math.max(
+        this.POOLING_SUPPLY_MULTIPLIER_MIN,
+        Math.min(this.POOLING_SUPPLY_MULTIPLIER_MAX, supply.value)
+      );
+      const supplyMultiplierLabel = supply.label;
 
-      // 6. Calculate final price
-      const priceAfterTime = basePrice * timeMultiplier;
-      const finalPrice = priceAfterTime * supplyMultiplier;
+      // 6. Apply additional context multiplier (city/traffic/age/confidence from CSV)
+      const contextMultiplier = baseRateProfile.contextMultiplier || 1;
+      const priceAfterContext = basePrice * contextMultiplier;
+      const priceAfterTime = priceAfterContext * timeMultiplier;
+      const computedPrice = priceAfterContext * timeMultiplier * supplyMultiplier;
+
+      // Apply total multiplier guardrail
+      const totalMultiplierRaw = computedPrice / basePrice;
+      const totalGuards = pricingDataService.getTotalMultiplierGuardrails();
+      const boundedTotalMultiplier = Math.max(totalGuards.min, Math.min(totalGuards.max, totalMultiplierRaw));
+      const finalTripPrice = basePrice * boundedTotalMultiplier;
+      const wasClamped = Math.abs(boundedTotalMultiplier - totalMultiplierRaw) > 0.0001;
+
+      // Core pooling fix: charge per-seat by splitting trip fare across shareable seats.
+      const bookedSeats =
+        Number(params.offerContext?.bookedSeats) ||
+        Number((currentOffer?.passengers || [])
+          .filter((p) => ['pending', 'confirmed'].includes(String(p?.status || '')))
+          .reduce((sum, p) => sum + Math.max(1, Number(p?.seatsBooked || 1)), 0));
+      const availableSeats = Number(params.offerContext?.availableSeats) || Number(currentOffer?.availableSeats || 0);
+      const totalSeats = Number(params.offerContext?.totalSeats) || Number(currentOffer?.totalSeats || 0);
+      const inferredShareSeats = availableSeats + bookedSeats;
+      const fallbackShareSeats = vehicleType === 'car' ? Math.max(1, totalSeats - 1) : 1;
+      const shareSeats = Math.max(1, inferredShareSeats || fallbackShareSeats || 1);
+      const initialPerSeatPrice = finalTripPrice / shareSeats;
+      const perSeatBand = pricingDataService.getPerSeatPerKmBand(vehicleType);
+      const safeDistance = Math.max(1, distance);
+      const minPerSeatTotal = perSeatBand.min * safeDistance;
+      const maxPerSeatTotal = perSeatBand.max * safeDistance;
+      const finalPrice = Math.max(minPerSeatTotal, Math.min(maxPerSeatTotal, initialPerSeatPrice));
+      const wasPerSeatPerKmCapped = Math.abs(finalPrice - initialPerSeatPrice) > 0.0001;
+      const perSeatPerKmApplied = finalPrice / safeDistance;
+      const perSeatBasePrice = basePrice / shareSeats;
+      const perSeatAfterContext = priceAfterContext / shareSeats;
+      const perSeatAfterTime = priceAfterTime / shareSeats;
 
       // 7. Service-mode pooling: no platform fee charged in-app.
       const platformFee = 0;
@@ -145,21 +300,67 @@ class PriceCalculationService {
         breakdown: {
           distance: parseFloat(distance.toFixed(2)),
           baseRate: baseRatePerKm,
-          distanceCharge: parseFloat(basePrice.toFixed(2)),
+          distanceCharge: parseFloat(perSeatBasePrice.toFixed(2)),
           timeMultiplier,
-          timeCharge: parseFloat((priceAfterTime - basePrice).toFixed(2)),
+          timeCharge: parseFloat((perSeatAfterTime - perSeatAfterContext).toFixed(2)),
           supplyMultiplier,
-          supplyAdjustment: parseFloat((finalPrice - priceAfterTime).toFixed(2)),
+          supplyAdjustment: parseFloat(((finalTripPrice - priceAfterTime) / shareSeats).toFixed(2)),
+          contextMultiplier: parseFloat(contextMultiplier.toFixed(4)),
+          contextAdjustment: parseFloat((perSeatAfterContext - perSeatBasePrice).toFixed(2)),
           subtotal: parseFloat(finalPrice.toFixed(2)),
           platformFee: parseFloat(platformFee.toFixed(2)),
           total: parseFloat(totalAmount.toFixed(2)),
+          shareSeats,
+          perSeatBeforeRounding: parseFloat(finalPrice.toFixed(4)),
+        },
+        explanation: {
+          lookup: {
+            usedCsv: baseRateProfile.usedCsv,
+            fallbackLevel: baseRateProfile.fallbackLevel,
+            energyCostPerKm: baseRateProfile.energyCostPerKm,
+            matchedVehicle: baseRateProfile.matchedVehicle,
+            cityFuelSnapshot: baseRateProfile.cityFuelSnapshot,
+            confidenceScore: baseRateProfile.confidenceScore,
+          },
+          multipliers: {
+            context: {
+              label: baseRateProfile.contextLabel,
+              value: parseFloat(contextMultiplier.toFixed(4)),
+            },
+            time: {
+              label: timeMultiplierLabel,
+              value: parseFloat(timeMultiplier.toFixed(4)),
+            },
+            supply: {
+              label: supplyMultiplierLabel,
+              value: parseFloat(supplyMultiplier.toFixed(4)),
+            },
+            totalRaw: parseFloat(totalMultiplierRaw.toFixed(4)),
+            totalApplied: parseFloat(boundedTotalMultiplier.toFixed(4)),
+          },
+          guardrails: {
+            totalMultiplierMin: parseFloat(totalGuards.min.toFixed(4)),
+            totalMultiplierMax: parseFloat(totalGuards.max.toFixed(4)),
+            wasClamped,
+            perSeatPerKmMin: parseFloat(perSeatBand.min.toFixed(4)),
+            perSeatPerKmMax: parseFloat(perSeatBand.max.toFixed(4)),
+            perSeatPerKmApplied: parseFloat(perSeatPerKmApplied.toFixed(4)),
+            wasPerSeatPerKmCapped,
+          },
+          poolingShare: {
+            shareSeats,
+            tripLevelPrice: parseFloat(finalTripPrice.toFixed(2)),
+            perSeatPrice: parseFloat(finalPrice.toFixed(2)),
+          },
         },
       };
 
       logger.info(
         `Price calculated for offer ${offerId}: Distance=${distance.toFixed(2)}km, ` +
-        `Base=₹${basePrice.toFixed(2)}, Time=${timeMultiplier}x, Supply=${supplyMultiplier.toFixed(2)}x, ` +
-        `Final=₹${finalPrice.toFixed(2)}, Total=₹${totalAmount.toFixed(2)}`
+        `BaseRate=₹${baseRatePerKm.toFixed(2)}/km (${baseRateProfile.fallbackLevel}), Base=₹${basePrice.toFixed(2)}, ` +
+        `Context=${contextMultiplier.toFixed(3)}x, Time=${timeMultiplier.toFixed(2)}x, Supply=${supplyMultiplier.toFixed(2)}x, ` +
+        `TotalMult=${boundedTotalMultiplier.toFixed(3)}x, Trip=₹${finalTripPrice.toFixed(2)}, ShareSeats=${shareSeats}, ` +
+        `PerSeat=₹${finalPrice.toFixed(2)}, Total=₹${totalAmount.toFixed(2)}`
       );
 
       return breakdown;
@@ -175,7 +376,7 @@ class PriceCalculationService {
   private async calculateSupplyMultiplier(
     passengerRoute: Route,
     currentOfferId: string
-  ): Promise<number> {
+  ): Promise<{ value: number; label: string }> {
     try {
       // Find similar offers (offers that match passenger's route)
       const similarOffers = await PoolingOffer.find({
@@ -220,30 +421,12 @@ class PriceCalculationService {
       }
 
       // Determine multiplier based on supply
-      if (matchingOffers >= this.HIGH_SUPPLY_THRESHOLD) {
-        return this.HIGH_SUPPLY_MULTIPLIER;
-      } else if (matchingOffers < this.LOW_SUPPLY_THRESHOLD) {
-        return this.LOW_SUPPLY_MULTIPLIER;
-      } else {
-        return this.MEDIUM_SUPPLY_MULTIPLIER;
-      }
+      const result = pricingDataService.getSupplyMultiplier(matchingOffers);
+      return result;
     } catch (error) {
       logger.error('Error calculating supply multiplier:', error);
       // Default to medium supply on error
-      return this.MEDIUM_SUPPLY_MULTIPLIER;
-    }
-  }
-
-  /**
-   * Get human-readable supply label
-   */
-  private getSupplyLabel(multiplier: number): string {
-    if (multiplier === this.HIGH_SUPPLY_MULTIPLIER) {
-      return 'High Supply (-8%)';
-    } else if (multiplier === this.LOW_SUPPLY_MULTIPLIER) {
-      return 'Low Supply (+25%)';
-    } else {
-      return 'Normal Supply';
+      return { value: this.MEDIUM_SUPPLY_MULTIPLIER, label: 'Normal Supply' };
     }
   }
 }

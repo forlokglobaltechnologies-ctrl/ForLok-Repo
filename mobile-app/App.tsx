@@ -71,6 +71,7 @@ import RatingScreen from './src/screens/history/RatingScreen';
 import CompanyRegistrationScreen from './src/screens/registration/CompanyRegistrationScreen';
 import CompanyDashboardScreen from './src/screens/main/CompanyDashboardScreen';
 import AddVehicleScreen from './src/screens/main/AddVehicleScreen';
+import ReportVehicleCatalogScreen from './src/screens/main/ReportVehicleCatalogScreen';
 import VehicleInformationScreen from './src/screens/main/VehicleInformationScreen';
 import VehicleDetailsScreen from './src/screens/profile/VehicleDetailsScreen';
 import FilterScreen from './src/screens/main/FilterScreen';
@@ -80,6 +81,7 @@ import HelpSupportScreen from './src/screens/main/HelpSupportScreen';
 import FeedbackScreen from './src/screens/main/FeedbackScreen';
 import FAQScreen from './src/screens/main/FAQScreen';
 import ReportBugScreen from './src/screens/main/ReportBugScreen';
+import MyReportsScreen from './src/screens/main/MyReportsScreen';
 import LoadingScreen from './src/screens/main/LoadingScreen';
 import ErrorScreen from './src/screens/main/ErrorScreen';
 import PinkPoolingSplashScreen from './src/screens/main/PinkPoolingSplashScreen';
@@ -104,6 +106,13 @@ import FeedbackManagementScreen from './src/screens/admin/FeedbackManagementScre
 import FeedbackDetailsScreen from './src/screens/admin/FeedbackDetailsScreen';
 import AnalyticsScreen from './src/screens/admin/AnalyticsScreen';
 import AdminSettingsScreen from './src/screens/admin/AdminSettingsScreen';
+import AdminContentManagementScreen from './src/screens/admin/AdminContentManagementScreen';
+import AdminMasterDataScreen from './src/screens/admin/AdminMasterDataScreen';
+import AdminContentFormsScreen from './src/screens/admin/AdminContentFormsScreen';
+import AdminWithdrawalsScreen from './src/screens/admin/AdminWithdrawalsScreen';
+import AdminRolesScreen from './src/screens/admin/AdminRolesScreen';
+import AdminUsersScreen from './src/screens/admin/AdminUsersScreen';
+import AdminPermissionMatrixScreen from './src/screens/admin/AdminPermissionMatrixScreen';
 import { LanguageProvider } from './src/context/LanguageContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { NotificationProvider } from './src/context/NotificationContext';
@@ -116,7 +125,6 @@ import { websocketService } from './src/services/websocket.service';
 
 const Stack = createNativeStackNavigator();
 const DEBUG_ENDPOINT = 'http://127.0.0.1:7775/ingest/9bdd2fd3-ac77-45be-b342-a40ab02f34f7';
-
 // StatusBar component — transparent so screens span the full height
 const ThemedStatusBar = () => {
   return <StatusBar style="light" translucent backgroundColor="transparent" />;
@@ -132,7 +140,7 @@ const getActiveRouteName = (state: any): string => {
 
 // Inner app that uses SOS context for route tracking
 const AppNavigator = () => {
-  const { setCurrentRoute } = useSOS();
+  const { setCurrentRoute, currentRoute } = useSOS();
   const { isAuthenticated, isLoading, user } = useAuth();
   const navigationRef = useRef<NavigationContainerRef<any>>(null);
 
@@ -156,13 +164,14 @@ const AppNavigator = () => {
         onReady={onNavigationReady}
       >
         <ThemedStatusBar />
-        <Stack.Navigator
-          screenOptions={{
-            headerShown: false,
-            animation: 'slide_from_right',
-          }}
-        >
-          {isLoading ? (
+        <View style={styles.stackHost}>
+          <Stack.Navigator
+            screenOptions={{
+              headerShown: false,
+              animation: 'slide_from_right',
+            }}
+          >
+            {isLoading ? (
             /* Show splash while checking auth state */
             <Stack.Screen name="Splash" component={SplashScreen} />
           ) : !isAuthenticated ? (
@@ -250,6 +259,7 @@ const AppNavigator = () => {
               
               {/* Company Screens */}
               <Stack.Screen name="AddVehicle" component={AddVehicleScreen} />
+              <Stack.Screen name="ReportVehicleCatalog" component={ReportVehicleCatalogScreen} />
               <Stack.Screen name="VehicleInformation" component={VehicleInformationScreen} />
               <Stack.Screen name="VehicleDetails" component={VehicleDetailsScreen} />
 
@@ -265,6 +275,7 @@ const AppNavigator = () => {
               <Stack.Screen name="Feedback" component={FeedbackScreen} />
               <Stack.Screen name="FAQ" component={FAQScreen} />
               <Stack.Screen name="ReportBug" component={ReportBugScreen} />
+              <Stack.Screen name="MyReports" component={MyReportsScreen} />
               <Stack.Screen name="Loading" component={LoadingScreen} />
               <Stack.Screen name="Error" component={ErrorScreen} />
               <Stack.Screen name="Wallet" component={WalletScreen} />
@@ -289,9 +300,17 @@ const AppNavigator = () => {
               <Stack.Screen name="FeedbackDetails" component={FeedbackDetailsScreen} />
               <Stack.Screen name="Analytics" component={AnalyticsScreen} />
               <Stack.Screen name="AdminSettings" component={AdminSettingsScreen} />
+              <Stack.Screen name="AdminContentManagement" component={AdminContentManagementScreen} />
+              <Stack.Screen name="AdminContentForms" component={AdminContentFormsScreen} />
+              <Stack.Screen name="AdminMasterData" component={AdminMasterDataScreen} />
+              <Stack.Screen name="AdminWithdrawals" component={AdminWithdrawalsScreen} />
+              <Stack.Screen name="AdminRoles" component={AdminRolesScreen} />
+              <Stack.Screen name="AdminUsers" component={AdminUsersScreen} />
+              <Stack.Screen name="AdminPermissionMatrix" component={AdminPermissionMatrixScreen} />
             </>
           )}
-        </Stack.Navigator>
+          </Stack.Navigator>
+        </View>
         <BottomTabNavigator enabled={isAuthenticated && user?.userType !== 'admin'} />
       </NavigationContainer>
       <SOSButton />
@@ -386,6 +405,9 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
+  stackHost: {
+    flex: 1,
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',

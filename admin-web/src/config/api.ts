@@ -1,0 +1,73 @@
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://10.254.10.16:3000';
+
+export const API_ENDPOINTS = {
+  ADMIN_LOGIN: '/api/admin/auth/login',
+  ADMIN_PERMISSIONS: '/api/admin/me/permissions',
+  DASHBOARD_STATS: '/api/admin/dashboard/stats',
+  ANALYTICS: {
+    REALTIME: '/api/admin/analytics/realtime',
+    TODAY: '/api/admin/analytics/today',
+    TRENDS: '/api/admin/analytics/trends',
+    POOLING: '/api/admin/analytics/pooling',
+    FINANCIAL: '/api/admin/analytics/financial',
+    USERS: '/api/admin/analytics/users',
+    LEADERBOARD_EARNERS: '/api/admin/analytics/leaderboards/earners',
+    LEADERBOARD_ACTIVE: '/api/admin/analytics/leaderboards/active',
+    LEADERBOARD_RATED: '/api/admin/analytics/leaderboards/rated',
+  },
+  USERS: '/api/admin/users',
+  USER_VERIFY: '/api/admin/users/:userId/verify',
+  USER_SUSPEND: '/api/admin/users/:userId/suspend',
+  USER_ACTIVATE: '/api/admin/users/:userId/activate',
+  POOLING_OFFERS: '/api/admin/pooling/offers',
+  POOLING_APPROVE: '/api/admin/pooling/offers/:offerId/approve',
+  POOLING_SUSPEND: '/api/admin/pooling/offers/:offerId/suspend',
+  RENTAL_OFFERS: '/api/admin/rental/offers',
+  RENTAL_APPROVE: '/api/admin/rental/offers/:offerId/approve',
+  RENTAL_SUSPEND: '/api/admin/rental/offers/:offerId/suspend',
+  BOOKINGS: '/api/admin/bookings',
+  PROMOS: '/api/admin/promos',
+  PROMO_APPROVE: '/api/admin/promos/:submissionId/approve',
+  PROMO_REJECT: '/api/admin/promos/:submissionId/reject',
+  FEEDBACK: '/api/admin/feedback',
+  FEEDBACK_STATS: '/api/admin/feedback/stats',
+  FEEDBACK_STATUS: '/api/admin/feedback/:feedbackId/status',
+  FEEDBACK_RESPOND: '/api/admin/feedback/:feedbackId/respond',
+  SETTINGS: '/api/admin/settings',
+  CONTENT_PAGES: '/api/admin/content-pages',
+  CONTENT_PAGE: '/api/admin/content-pages/:key',
+  MASTER_DATA_LIST: '/api/admin/master-data/:type',
+  MASTER_DATA_ITEM: '/api/admin/master-data/:type/:key',
+  PRICING_FUEL_CONFIG: '/api/admin/pricing/fuel',
+  PRICING_FUEL_DRAFT_CITY: '/api/admin/pricing/fuel/draft/cities/:cityKey',
+  PRICING_FUEL_DRAFT_BULK: '/api/admin/pricing/fuel/draft/bulk',
+  PRICING_FUEL_APPROVE_BULK: '/api/admin/pricing/fuel/draft/approve-bulk',
+  PRICING_FUEL_PUBLISH: '/api/admin/pricing/fuel/publish',
+  PRICING_FUEL_ROLLBACK: '/api/admin/pricing/fuel/rollback/:versionId',
+  PRICING_HEALTH: '/api/admin/pricing/health',
+  PRICING_SYNC_SUMMARY: '/api/admin/pricing/sync-summary',
+  PRICING_SYNC_NOW: '/api/admin/pricing/sync-now',
+  PRICING_FUEL_RATES: '/api/admin/pricing/fuel-rates',
+  PRICING_FUEL_RATE: '/api/admin/pricing/fuel-rates/:cityKey',
+  PRICING_VEHICLES: '/api/admin/pricing/vehicles',
+  VEHICLE_CATALOG_REQUESTS: '/api/admin/vehicle-catalog-requests',
+  VEHICLE_CATALOG_REVIEW: '/api/admin/vehicle-catalog-requests/:requestId/review',
+  WITHDRAWALS_PENDING: '/api/withdrawals/admin/pending',
+  WITHDRAWALS_APPROVED: '/api/withdrawals/admin/approved',
+  WITHDRAWALS_APPROVE: '/api/withdrawals/admin/:withdrawalId/approve',
+  WITHDRAWALS_COMPLETE: '/api/withdrawals/admin/:withdrawalId/complete',
+  WITHDRAWALS_REJECT: '/api/withdrawals/admin/:withdrawalId/reject',
+  ROLES: '/api/admin/roles',
+  ROLE: '/api/admin/roles/:roleKey',
+  ADMINS: '/api/admin/admins',
+  ADMIN: '/api/admin/admins/:adminId',
+  ADMIN_RESET_PASSWORD: '/api/admin/admins/:adminId/reset-password',
+};
+
+export const replaceParams = (path: string, params: Record<string, string>) => {
+  let output = path;
+  Object.entries(params).forEach(([key, value]) => {
+    output = output.replace(`:${key}`, encodeURIComponent(value));
+  });
+  return output;
+};

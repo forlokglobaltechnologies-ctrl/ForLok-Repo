@@ -5,7 +5,7 @@
  * Backend target is currently forced to development URL.
  */
 
-const DEV_API_URL = 'http://10.170.142.16:3000';
+const DEV_API_URL = 'http://10.254.10.16:3000';
 const PROD_API_URL = 'https://forlok-repo-1.onrender.com';
 
 const API_BASE_URL = DEV_API_URL;
@@ -32,8 +32,16 @@ export const API_CONFIG = {
       STATS: '/api/users/stats',
       LANGUAGE: '/api/users/language',
       CHANGE_PASSWORD: '/api/users/change-password',
+      NOTIFICATION_PREFERENCES: '/api/users/preferences/notifications',
       UPDATE_PHONE: '/api/users/update-phone',
       DELETE_ACCOUNT: '/api/users/account',
+    },
+    CONTENT: {
+      LIST: '/api/content',
+      GET: '/api/content/:key',
+    },
+    MASTER_DATA: {
+      GET_BY_TYPE: '/api/master-data/:type',
     },
     // Company Management
     COMPANY: {
@@ -56,6 +64,8 @@ export const API_CONFIG = {
       UPLOAD_PHOTOS: '/api/vehicles/:vehicleId/photos',
       UPLOAD_DOCUMENTS: '/api/vehicles/:vehicleId/documents',
       COMPANY_VEHICLES: '/api/vehicles/company/:companyId',
+      CATALOG_REQUESTS: '/api/vehicles/catalog-requests',
+      FUEL_TYPES: '/api/vehicles/catalog/fuel-types',
     },
     // Document Management
     DOCUMENT: {
@@ -186,6 +196,20 @@ export const API_CONFIG = {
       FEEDBACK_UPDATE_STATUS: '/api/admin/feedback/:feedbackId/status',
       FEEDBACK_RESPOND: '/api/admin/feedback/:feedbackId/respond',
       FEEDBACK_STATS: '/api/admin/feedback/stats',
+      FEEDBACK_ASSIGN: '/api/admin/feedback/:feedbackId/assign',
+      SETTINGS: '/api/admin/settings',
+      MY_PERMISSIONS: '/api/admin/me/permissions',
+      CONTENT_PAGES: '/api/admin/content-pages',
+      CONTENT_PAGE_UPSERT: '/api/admin/content-pages/:key',
+      MASTER_DATA_LIST: '/api/admin/master-data/:type',
+      MASTER_DATA_ITEM: '/api/admin/master-data/:type/:key',
+      VEHICLE_CATALOG_REQUESTS: '/api/admin/vehicle-catalog-requests',
+      VEHICLE_CATALOG_REVIEW: '/api/admin/vehicle-catalog-requests/:requestId/review',
+      ROLES: '/api/admin/roles',
+      ROLE_DETAIL: '/api/admin/roles/:roleKey',
+      ADMINS: '/api/admin/admins',
+      ADMIN_DETAIL: '/api/admin/admins/:adminId',
+      ADMIN_RESET_PASSWORD: '/api/admin/admins/:adminId/reset-password',
     },
     // Tracking
     TRACKING: {
@@ -199,6 +223,7 @@ export const API_CONFIG = {
       STATS: '/api/dashboard/stats',
       FINANCIAL: '/api/dashboard/financial',
       HOME: '/api/dashboard/home',
+      ABOUT_STATS: '/api/dashboard/about-stats',
     },
     // Saved Places
     PLACES: {
@@ -228,6 +253,21 @@ export const API_CONFIG = {
       TOP_UP: '/api/wallet/top-up',
       TRANSACTIONS: '/api/wallet/transactions',
       CONFIG: '/api/wallet/config',
+    },
+    WITHDRAWAL: {
+      CREATE: '/api/withdrawals/create',
+      MY_WITHDRAWALS: '/api/withdrawals/my-withdrawals',
+      GET: '/api/withdrawals/:withdrawalId',
+      ADMIN_PENDING: '/api/withdrawals/admin/pending',
+      ADMIN_APPROVED: '/api/withdrawals/admin/approved',
+      ADMIN_APPROVE: '/api/withdrawals/admin/:withdrawalId/approve',
+      ADMIN_COMPLETE: '/api/withdrawals/admin/:withdrawalId/complete',
+      ADMIN_REJECT: '/api/withdrawals/admin/:withdrawalId/reject',
+    },
+    PAYMENT: {
+      WALLET_TOP_UP: '/api/payments/wallet/top-up',
+      VERIFY: '/api/payments/verify',
+      SIMULATE_TEST: '/api/payments/simulate-test',
     },
     // Block Users
     BLOCK: {

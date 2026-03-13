@@ -30,10 +30,11 @@ import {
 } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { adminApi, analyticsApi } from '@utils/apiClient';
+import useMasterData from '../../hooks/useMasterData';
 
 const RidesHistoryScreen = () => {
   const navigation = useNavigation();
-  const [activeFilter, setActiveFilter] = useState('All');
+  const [activeFilter, setActiveFilter] = useState('all');
   const [bookings, setBookings] = useState<any[]>([]);
   const [summary, setSummary] = useState({
     total: 0,
@@ -44,6 +45,10 @@ const RidesHistoryScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(1);
+  const { items: serviceCategoryItems } = useMasterData('service_category', [
+    { type: 'service_category', key: 'pooling', label: 'Pooling' },
+    { type: 'service_category', key: 'rental', label: 'Rental' },
+  ]);
 
   const safeNum = (val: any): number => {
     if (val == null) return 0;
@@ -58,8 +63,7 @@ const RidesHistoryScreen = () => {
       if (!isRefresh) setLoading(true);
 
       const params: any = { page, limit: 20 };
-      if (activeFilter === 'Pooling') params.serviceType = 'pooling';
-      else if (activeFilter === 'Rental') params.serviceType = 'rental';
+      if (activeFilter !== 'all') params.serviceType = activeFilter;
 
       const [bookingsRes, dashRes, financialRes] = await Promise.all([
         adminApi.getBookings(params),
@@ -125,9 +129,17 @@ const RidesHistoryScreen = () => {
   };
 
   const FILTERS = [
-    { key: 'All', label: 'All', color: '#4A90D9' },
-    { key: 'Pooling', label: 'Pooling', color: '#00B894' },
-    { key: 'Rental', label: 'Rental', color: '#F39C12' },
+    { key: 'all', label: 'All', color: '#F99E3C' },
+    ...serviceCategoryItems
+      .map((item: any) => ({
+        key: String(item.value || item.key || '').toLowerCase(),
+        label: String(item.label || item.value || item.key || ''),
+        color:
+          String(item.value || item.key || '').toLowerCase() === 'pooling'
+            ? '#00B894'
+            : '#F39C12',
+      }))
+      .filter((item: any) => ['pooling', 'rental'].includes(item.key)),
   ];
 
   const getServiceConfig = (service: string) => {
@@ -141,7 +153,7 @@ const RidesHistoryScreen = () => {
     if (s === 'completed') return { color: '#00B894', bg: '#00B894' + '15' };
     if (s === 'cancelled') return { color: '#E74C3C', bg: '#E74C3C' + '15' };
     if (s === 'pending' || s === 'upcoming') return { color: '#F39C12', bg: '#F39C12' + '15' };
-    if (s === 'active' || s === 'in_progress') return { color: '#4A90D9', bg: '#4A90D9' + '15' };
+    if (s === 'active' || s === 'in_progress') return { color: '#F99E3C', bg: '#F99E3C' + '15' };
     return { color: '#64748B', bg: '#F1F5F9' };
   };
 
@@ -171,8 +183,8 @@ const RidesHistoryScreen = () => {
       {/* Stats Strip */}
       <View style={styles.statsStrip}>
         <View style={styles.statsStripItem}>
-          <View style={[styles.statsIcon, { backgroundColor: '#4A90D9' + '15' }]}><Clock size={16} color="#4A90D9" /></View>
-          <Text style={[styles.statsValue, { color: '#4A90D9' }]}>{formatNumber(summary.total)}</Text>
+          <View style={[styles.statsIcon, { backgroundColor: '#F99E3C' + '15' }]}><Clock size={16} color="#F99E3C" /></View>
+          <Text style={[styles.statsValue, { color: '#F99E3C' }]}>{formatNumber(summary.total)}</Text>
           <Text style={styles.statsLabel}>Total</Text>
         </View>
         <View style={styles.statsStripItem}>

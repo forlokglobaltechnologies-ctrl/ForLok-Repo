@@ -29,6 +29,8 @@ import { promoRoutes } from './promos/promo.routes';
 import { sosRoutes } from './sos/sos.routes';
 import { placeRoutes } from './places/place.routes';
 import { loadRoutes } from './loads/load.routes';
+import { contentRoutes } from './content/content.routes';
+import { masterDataRoutes } from './master-data/master-data.routes';
 
 export async function registerRoutes(app: FastifyInstance) {
   // Auth routes
@@ -117,6 +119,12 @@ export async function registerRoutes(app: FastifyInstance) {
 
   // Loads routes
   await app.register(loadRoutes, { prefix: '/api/loads' });
+
+  // Public content routes (CMS-managed)
+  await app.register(contentRoutes, { prefix: '/api/content' });
+
+  // Public master data routes
+  await app.register(masterDataRoutes, { prefix: '/api/master-data' });
 
   // Other routes will be registered here as we implement them
   // await app.register(userRoutes, { prefix: '/api/users' });

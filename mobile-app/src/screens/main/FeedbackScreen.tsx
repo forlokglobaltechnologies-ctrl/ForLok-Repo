@@ -11,7 +11,7 @@ import {
   Alert,
   Dimensions,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import {
   ArrowLeft,
   AlertTriangle,
@@ -36,11 +36,15 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const FeedbackScreen = () => {
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
   const { t } = useLanguage();
   const { theme } = useTheme();
-  const [feedbackType, setFeedbackType] = useState<'issue' | 'suggestion' | 'complaint' | null>(null);
-  const [subject, setSubject] = useState('');
-  const [description, setDescription] = useState('');
+  const initialType = route?.params?.type as 'issue' | 'suggestion' | 'complaint' | undefined;
+  const initialSubject = route?.params?.subject as string | undefined;
+  const initialDescription = route?.params?.description as string | undefined;
+  const [feedbackType, setFeedbackType] = useState<'issue' | 'suggestion' | 'complaint' | null>(initialType || null);
+  const [subject, setSubject] = useState(initialSubject || '');
+  const [description, setDescription] = useState(initialDescription || '');
   const [priority, setPriority] = useState<'high' | 'medium' | 'low'>('medium');
   const [rating, setRating] = useState(0);
   const [submitting, setSubmitting] = useState(false);

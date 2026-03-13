@@ -526,7 +526,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: SPACING.lg,
-    paddingBottom: normalize(100),
+    paddingBottom: normalize(24),
   },
   illustrationWrap: {
     alignItems: 'center',

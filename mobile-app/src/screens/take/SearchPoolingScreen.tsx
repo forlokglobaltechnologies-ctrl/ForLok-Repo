@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView,
-  ActivityIndicator, Alert, Platform, Modal, Animated, Dimensions,
+  ActivityIndicator, Alert, Platform, Modal, Animated, Dimensions, Image,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import {
@@ -20,19 +20,21 @@ import { useTheme } from '@context/ThemeContext';
 import { poolingApi, bookingApi } from '@utils/apiClient';
 import { LocationData } from '@components/common/LocationPicker';
 import { normalize } from '@utils/responsive';
+import useMasterData from '../../hooks/useMasterData';
 
 const { width: SCREEN_W } = Dimensions.get('window');
-const MODAL_BLUE_GRADIENT: [string, string] = ['#51A7EA', '#0284C7'];
-const MODAL_ORANGE_GRADIENT: [string, string] = ['#F99E3C', '#E08E35'];
-const FILTER_ACCENT = '#F99E3C';
-const FILTER_ACCENT_DARK = '#D47B1B';
-const FILTER_ACCENT_BG = '#FFF4E6';
+const MODAL_BLUE_GRADIENT: [string, string] = ['#232323', '#191919'];
+const MODAL_ORANGE_GRADIENT: [string, string] = ['#232323', '#191919'];
+const FILTER_ACCENT = '#FE8800';
+const FILTER_ACCENT_DARK = '#D97100';
+const FILTER_ACCENT_BG = '#2B2114';
+const POOLING_FLAG_LOGO = require('../../../assets/signin_arrow_orange_transparent.png');
 
 interface RouteParams {
   from?: LocationData;
   to?: LocationData;
   date?: string;
-  vehicleType?: 'Car' | 'Bike' | 'Scooty';
+  vehicleType?: string;
   passengers?: number;
 }
 
@@ -73,9 +75,18 @@ const SearchPoolingScreen = () => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [time, setTime] = useState<Date | null>(null);
   const [showTimePicker, setShowTimePicker] = useState(false);
-  const [vehicleType, setVehicleType] = useState<'Car' | 'Bike' | 'Scooty' | null>(params.vehicleType || null);
+  const [vehicleType, setVehicleType] = useState<string | null>(params.vehicleType || null);
   const [passengers, setPassengers] = useState<number>(params.passengers || 1);
   const [hasAutoSearched, setHasAutoSearched] = useState(false);
+  const { items: vehicleTypeMasterItems } = useMasterData('vehicle_type', [
+    { type: 'vehicle_type', key: 'car', label: 'Car' },
+    { type: 'vehicle_type', key: 'bike', label: 'Bike' },
+    { type: 'vehicle_type', key: 'scooty', label: 'Scooty' },
+  ]);
+  const vehicleTypeOptions = vehicleTypeMasterItems.map((item: any) => ({
+    code: String(item.value || item.key || '').toLowerCase(),
+    label: String(item.label || item.value || item.key || ''),
+  })).filter((item: any) => item.code && item.label);
 
   const isSameRoutePoint = (a?: LocationData | null, b?: LocationData | null) => {
     if (!a || !b) return false;
@@ -106,7 +117,7 @@ const SearchPoolingScreen = () => {
   }, []);
 
   useEffect(() => {
-    if (vehicleType !== 'Car' && passengers !== 1) {
+    if (vehicleType !== 'car' && passengers !== 1) {
       setPassengers(1);
     }
   }, [vehicleType, passengers]);
@@ -225,7 +236,7 @@ const SearchPoolingScreen = () => {
       const dateStr = anyDate ? undefined : date.toISOString().split('T')[0];
       const timeStr = time ? formatTimeDisplay(time) : undefined;
       const searchParams: any = { fromLat, fromLng, toLat, toLng, date: dateStr, time: timeStr, pinkOnly: isPinkMode };
-      if (vehicleType) searchParams.vehicleType = vehicleType;
+      if (vehicleType) searchParams.vehicleType = vehicleType.toLowerCase();
 
       // Use connected search API (returns both direct + connected)
       const response = await poolingApi.searchConnectedOffers(searchParams);
@@ -288,9 +299,9 @@ const SearchPoolingScreen = () => {
   const activeFilterCount = Number(!anyDate) + Number(!!time) + Number(!!vehicleType) + Number(passengers > 1);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: '#FFFFFF' }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       {/* ── Top Route Card ── */}
-      <View style={[styles.topCard, { backgroundColor: '#FFFFFF' }]}>
+      <View style={[styles.topCard, { backgroundColor: theme.colors.surface }]}>
         <View style={styles.topRow}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} activeOpacity={0.7}>
             <ArrowLeft size={22} color={theme.colors.text} />
@@ -342,7 +353,7 @@ const SearchPoolingScreen = () => {
           activeOpacity={0.8}
         >
           <LinearGradient
-            colors={['#51A7EA', '#0284C7']}
+            colors={['#232323', '#191919']}
             start={{ x: 0.5, y: 0 }}
             end={{ x: 0.5, y: 1 }}
             style={styles.searchBtnGradient}
@@ -396,28 +407,33 @@ const SearchPoolingScreen = () => {
 
             <Text style={[styles.filterLabel, { color: theme.colors.text }]}>Vehicle</Text>
             <View style={styles.vehicleMiniRow}>
-              {(['Car', 'Bike', 'Scooty'] as const).map((vt) => (
+              {vehicleTypeOptions.map((vt) => (
                 <TouchableOpacity
-                  key={vt}
+                  key={vt.code}
                   style={[
                     styles.vehicleMiniPill,
-                    vehicleType === vt && styles.vehicleMiniPillSelected,
+                    vehicleType === vt.code && styles.vehicleMiniPillSelected,
                   ]}
                   onPress={() => {
-                    const nextType = vehicleType === vt ? null : vt;
-                    setVehicleType(nextType as any);
-                    if (nextType === 'Bike' || nextType === 'Scooty') setPassengers(1);
+                    const nextType = vehicleType === vt.code ? null : vt.code;
+                    setVehicleType(nextType);
+                    if (nextType !== 'car') setPassengers(1);
                     setOffers([]);
                   }}
                 >
-                  {vt === 'Car' && <Car size={16} color={vehicleType === vt ? '#0F766E' : '#334155'} />}
-                  {vt === 'Bike' && <Bike size={16} color={vehicleType === vt ? '#0F766E' : '#334155'} />}
-                  {vt === 'Scooty' && <MaterialCommunityIcons name="moped" size={17} color={vehicleType === vt ? '#0F766E' : '#334155'} />}
+                  {vt.code === 'car' && <Car size={16} color={vehicleType === vt.code ? '#0F766E' : '#334155'} />}
+                  {vt.code === 'bike' && <Bike size={16} color={vehicleType === vt.code ? '#0F766E' : '#334155'} />}
+                  {vt.code === 'scooty' && <MaterialCommunityIcons name="moped" size={17} color={vehicleType === vt.code ? '#0F766E' : '#334155'} />}
+                  {!['car', 'bike', 'scooty'].includes(vt.code) && (
+                    <Text style={[styles.filterPillText, { color: vehicleType === vt.code ? '#0F766E' : '#334155' }]}>
+                      {vt.label}
+                    </Text>
+                  )}
                 </TouchableOpacity>
               ))}
             </View>
 
-            {vehicleType === 'Car' && (
+            {vehicleType === 'car' && (
               <>
                 <Text style={[styles.filterLabel, { color: theme.colors.text, marginTop: normalize(10) }]}>Seats</Text>
                 <View style={styles.seatMiniRow}>
@@ -430,7 +446,7 @@ const SearchPoolingScreen = () => {
                           styles.seatMiniPill,
                           seatSelected
                             ? { backgroundColor: FILTER_ACCENT, borderColor: FILTER_ACCENT }
-                            : { backgroundColor: '#FFFFFF', borderColor: '#E5E7EB' },
+                            : { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
                         ]}
                         onPress={() => {
                           setPassengers(n);
@@ -470,7 +486,7 @@ const SearchPoolingScreen = () => {
                 onPress={() => setShowFiltersModal(false)}
               >
                 <LinearGradient
-                  colors={[FILTER_ACCENT, FILTER_ACCENT_DARK]}
+                  colors={['#232323', '#191919']}
                   start={{ x: 0.5, y: 0 }}
                   end={{ x: 0.5, y: 1 }}
                   style={styles.filterApplyGradient}
@@ -527,9 +543,12 @@ const SearchPoolingScreen = () => {
                 seatsRequested: passengers,
               })}
             >
+              <View style={styles.poolingFlag}>
+                <Image source={POOLING_FLAG_LOGO} style={styles.poolingFlagImage} resizeMode="contain" />
+              </View>
               <View style={styles.rideTop}>
-                <View style={[styles.rideAvatar, { backgroundColor: isCarType ? '#E3F2FD' : isScootyType ? '#F3E5F5' : '#FFF3E0' }]}>
-                  {isCarType ? <Car size={20} color="#1565C0" /> : isScootyType ? <MaterialCommunityIcons name="moped" size={20} color="#6A1B9A" /> : <Bike size={20} color="#E65100" />}
+                <View style={[styles.rideAvatar, { backgroundColor: isCarType ? '#FFF4E6' : isScootyType ? '#F3E5F5' : '#FFF3E0' }]}>
+                  {isCarType ? <Car size={20} color="#B85E00" /> : isScootyType ? <MaterialCommunityIcons name="moped" size={20} color="#6A1B9A" /> : <Bike size={20} color="#E65100" />}
                 </View>
                 <View style={styles.rideInfo}>
                   <Text style={[styles.rideDriver, { color: theme.colors.text }]}>{offer.driver?.name || 'Driver'}</Text>
@@ -542,7 +561,6 @@ const SearchPoolingScreen = () => {
                 </View>
                 <View style={styles.ridePrice}>
                   <Text style={[styles.ridePriceAmount, { color: theme.colors.primary }]}>₹{offer.price || 0}</Text>
-                  <Text style={[styles.ridePricePer, { color: theme.colors.textSecondary }]}>per seat</Text>
                 </View>
               </View>
 
@@ -614,6 +632,9 @@ const SearchPoolingScreen = () => {
                   key={`connected-${idx}`}
                   style={[styles.connectedCard, { backgroundColor: theme.colors.surface }]}
                 >
+                  <View style={styles.poolingFlag}>
+                    <Image source={POOLING_FLAG_LOGO} style={styles.poolingFlagImage} resizeMode="contain" />
+                  </View>
                   {/* Total summary */}
                   <View style={styles.connectedSummary}>
                     <Text style={[styles.connectedTotal, { color: theme.colors.primary }]}>
@@ -638,9 +659,9 @@ const SearchPoolingScreen = () => {
                           {leg1.from?.city || leg1.from?.address?.split(',')[0] || 'Pickup'}
                         </Text>
                         <View style={styles.timelineLeg}>
-                          <View style={[styles.timelineLegIcon, { backgroundColor: leg1VType === 'car' ? '#E3F2FD' : '#FFF3E0' }]}>
+                          <View style={[styles.timelineLegIcon, { backgroundColor: leg1VType === 'car' ? '#FFF4E6' : '#FFF3E0' }]}>
                             {leg1VType === 'car'
-                              ? <Car size={14} color="#1565C0" />
+                              ? <Car size={14} color="#B85E00" />
                               : <Bike size={14} color="#E65100" />}
                           </View>
                           <View style={{ flex: 1 }}>
@@ -685,9 +706,9 @@ const SearchPoolingScreen = () => {
                           {leg2.from?.city || leg2.from?.address?.split(',')[0] || 'Pickup'}
                         </Text>
                         <View style={styles.timelineLeg}>
-                          <View style={[styles.timelineLegIcon, { backgroundColor: leg2VType === 'car' ? '#E3F2FD' : '#FFF3E0' }]}>
+                          <View style={[styles.timelineLegIcon, { backgroundColor: leg2VType === 'car' ? '#FFF4E6' : '#FFF3E0' }]}>
                             {leg2VType === 'car'
-                              ? <Car size={14} color="#1565C0" />
+                              ? <Car size={14} color="#B85E00" />
                               : <Bike size={14} color="#E65100" />}
                           </View>
                           <View style={{ flex: 1 }}>
@@ -990,8 +1011,8 @@ const SearchPoolingScreen = () => {
               </TouchableOpacity>
 
               <TouchableOpacity style={[styles.popupOption, { borderColor: theme.colors.border }]} onPress={handleCustomFrom} activeOpacity={0.7}>
-                <View style={[styles.popupOptionIcon, { backgroundColor: '#E3F2FD' }]}>
-                  <Edit3 size={20} color="#1565C0" />
+                <View style={[styles.popupOptionIcon, { backgroundColor: '#FFF4E6' }]}>
+                  <Edit3 size={20} color="#B85E00" />
                 </View>
                 <View style={styles.popupOptionInfo}>
                   <Text style={[styles.popupOptionTitle, { color: theme.colors.text }]}>Choose on map</Text>
@@ -1203,6 +1224,8 @@ const styles = StyleSheet.create({
   rideCard: {
     borderRadius: normalize(16), marginBottom: normalize(12),
     padding: SPACING.md, ...SHADOWS.sm,
+    position: 'relative',
+    overflow: 'hidden',
   },
   rideTop: { flexDirection: 'row', alignItems: 'center', marginBottom: normalize(12) },
   rideAvatar: {
@@ -1253,6 +1276,26 @@ const styles = StyleSheet.create({
   connectedCard: {
     borderRadius: normalize(16), marginBottom: normalize(14),
     padding: SPACING.md, ...SHADOWS.sm,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  poolingFlag: {
+    position: 'absolute',
+    top: normalize(8),
+    right: normalize(8),
+    zIndex: 6,
+    width: normalize(28),
+    height: normalize(28),
+    borderRadius: normalize(7),
+    backgroundColor: '#F99E3C',
+    borderWidth: 1,
+    borderColor: '#E08E35',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  poolingFlagImage: {
+    width: normalize(20),
+    height: normalize(20),
   },
   connectedSummary: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',

@@ -210,7 +210,7 @@ const BookingDetailsScreen = () => {
 
   const getStatusStyle = (status: string) => {
     switch (status) {
-      case 'confirmed': return { bg: '#E3F2FD', color: '#1565C0', label: 'Confirmed' };
+      case 'confirmed': return { bg: '#FFF4E6', color: '#B85E00', label: 'Confirmed' };
       case 'pending': return { bg: '#FFF3E0', color: '#E65100', label: 'Pending' };
       case 'in_progress': return { bg: '#E8F5E9', color: '#2E7D32', label: 'In Progress' };
       case 'completed': return { bg: '#E8F5E9', color: '#2E7D32', label: 'Completed' };
@@ -275,8 +275,8 @@ const BookingDetailsScreen = () => {
         </View>
 
         {/* ── Role Badge (what the user is) ── */}
-        <View style={[st.roleBadge, { backgroundColor: isPoolingDriver || isOwner ? '#E8F5E9' : '#E3F2FD' }]}>
-          <Text style={[st.roleBadgeText, { color: isPoolingDriver || isOwner ? '#2E7D32' : '#1565C0' }]}>
+        <View style={[st.roleBadge, { backgroundColor: isPoolingDriver || isOwner ? '#E8F5E9' : '#FFF4E6' }]}>
+          <Text style={[st.roleBadgeText, { color: isPoolingDriver || isOwner ? '#2E7D32' : '#B85E00' }]}>
             {isPoolingDriver ? '🚗  You are the driver' : isOwner ? '🚗  You are the owner' : isRenter ? '🧑  You are the renter' : '🧑  You are a passenger'}
           </Text>
         </View>

@@ -177,6 +177,60 @@ export const userApi = {
       method: 'GET',
       requiresAuth: true,
     }),
+
+  updateLanguage: (language: 'en' | 'te' | 'hi') =>
+    apiCall(API_CONFIG.ENDPOINTS.USER.LANGUAGE, {
+      method: 'PUT',
+      body: { language },
+      requiresAuth: true,
+    }),
+
+  changePassword: (currentPassword: string, newPassword: string) =>
+    apiCall(API_CONFIG.ENDPOINTS.USER.CHANGE_PASSWORD, {
+      method: 'POST',
+      body: { currentPassword, newPassword },
+      requiresAuth: true,
+    }),
+
+  getNotificationPreferences: () =>
+    apiCall(API_CONFIG.ENDPOINTS.USER.NOTIFICATION_PREFERENCES, {
+      method: 'GET',
+      requiresAuth: true,
+    }),
+
+  updateNotificationPreferences: (prefs: {
+    bookingUpdates: boolean;
+    messages: boolean;
+    promotions: boolean;
+  }) =>
+    apiCall(API_CONFIG.ENDPOINTS.USER.NOTIFICATION_PREFERENCES, {
+      method: 'PUT',
+      body: prefs,
+      requiresAuth: true,
+    }),
+};
+
+export const contentApi = {
+  getAll: () =>
+    apiCall(API_CONFIG.ENDPOINTS.CONTENT.LIST, {
+      method: 'GET',
+      requiresAuth: false,
+    }),
+  getByKey: (key: string) =>
+    apiCall(API_CONFIG.ENDPOINTS.CONTENT.GET, {
+      method: 'GET',
+      params: { key },
+      requiresAuth: false,
+    }),
+};
+
+export const masterDataApi = {
+  getByType: (type: string) =>
+    apiCall(API_CONFIG.ENDPOINTS.MASTER_DATA.GET_BY_TYPE, {
+      method: 'GET',
+      params: { type },
+      requiresAuth: false,
+    }),
 };
 
 /**
@@ -317,6 +371,33 @@ export const vehicleApi = {
     apiCall(API_CONFIG.ENDPOINTS.VEHICLE.COMPANY_VEHICLES, {
       method: 'GET',
       params: { companyId },
+      requiresAuth: true,
+    }),
+};
+
+export const vehicleCatalogApi = {
+  getFuelTypes: () =>
+    apiCall(API_CONFIG.ENDPOINTS.VEHICLE.FUEL_TYPES, {
+      method: 'GET',
+      requiresAuth: true,
+    }),
+
+  submitRequest: (data: {
+    vehicleType: 'car' | 'bike' | 'scooty';
+    brand: string;
+    model: string;
+    fuelType: string;
+    transmission?: string;
+    launchYear?: number;
+    realWorldMileageAvg?: number;
+    mileageUnit?: string;
+    estimatedCostPerKmInr?: number;
+    cityTier?: string;
+    notes?: string;
+  }) =>
+    apiCall(API_CONFIG.ENDPOINTS.VEHICLE.CATALOG_REQUESTS, {
+      method: 'POST',
+      body: data,
       requiresAuth: true,
     }),
 };
@@ -956,6 +1037,175 @@ export const adminApi = {
       query: params,
       requiresAuth: true,
     }),
+
+  getSettings: () =>
+    apiCall(API_CONFIG.ENDPOINTS.ADMIN.SETTINGS, {
+      method: 'GET',
+      requiresAuth: true,
+    }),
+
+  updateSettings: (settings: Record<string, any>) =>
+    apiCall(API_CONFIG.ENDPOINTS.ADMIN.SETTINGS, {
+      method: 'PUT',
+      body: settings,
+      requiresAuth: true,
+    }),
+
+  getMyPermissions: () =>
+    apiCall(API_CONFIG.ENDPOINTS.ADMIN.MY_PERMISSIONS, {
+      method: 'GET',
+      requiresAuth: true,
+    }),
+
+  getContentPages: () =>
+    apiCall(API_CONFIG.ENDPOINTS.ADMIN.CONTENT_PAGES, {
+      method: 'GET',
+      requiresAuth: true,
+    }),
+
+  upsertContentPage: (
+    key: string,
+    payload: {
+      title: string;
+      description?: string;
+      payload: Record<string, any>;
+      isPublished?: boolean;
+    }
+  ) =>
+    apiCall(API_CONFIG.ENDPOINTS.ADMIN.CONTENT_PAGE_UPSERT, {
+      method: 'PUT',
+      params: { key },
+      body: payload,
+      requiresAuth: true,
+    }),
+
+  getMasterData: (type: string) =>
+    apiCall(API_CONFIG.ENDPOINTS.ADMIN.MASTER_DATA_LIST, {
+      method: 'GET',
+      params: { type },
+      requiresAuth: true,
+    }),
+
+  upsertMasterDataItem: (
+    type: string,
+    key: string,
+    payload: {
+      label: string;
+      value?: string;
+      metadata?: Record<string, any>;
+      sortOrder?: number;
+      isActive?: boolean;
+    }
+  ) =>
+    apiCall(API_CONFIG.ENDPOINTS.ADMIN.MASTER_DATA_ITEM, {
+      method: 'PUT',
+      params: { type, key },
+      body: payload,
+      requiresAuth: true,
+    }),
+
+  deleteMasterDataItem: (type: string, key: string) =>
+    apiCall(API_CONFIG.ENDPOINTS.ADMIN.MASTER_DATA_ITEM, {
+      method: 'DELETE',
+      params: { type, key },
+      requiresAuth: true,
+    }),
+
+  getRoles: () =>
+    apiCall(API_CONFIG.ENDPOINTS.ADMIN.ROLES, {
+      method: 'GET',
+      requiresAuth: true,
+    }),
+
+  createRole: (payload: {
+    roleKey: string;
+    name: string;
+    description?: string;
+    permissions: string[];
+    isActive?: boolean;
+  }) =>
+    apiCall(API_CONFIG.ENDPOINTS.ADMIN.ROLES, {
+      method: 'POST',
+      body: payload,
+      requiresAuth: true,
+    }),
+
+  updateRole: (
+    roleKey: string,
+    payload: {
+      name?: string;
+      description?: string;
+      permissions?: string[];
+      isActive?: boolean;
+    }
+  ) =>
+    apiCall(API_CONFIG.ENDPOINTS.ADMIN.ROLE_DETAIL, {
+      method: 'PUT',
+      params: { roleKey },
+      body: payload,
+      requiresAuth: true,
+    }),
+
+  deleteRole: (roleKey: string) =>
+    apiCall(API_CONFIG.ENDPOINTS.ADMIN.ROLE_DETAIL, {
+      method: 'DELETE',
+      params: { roleKey },
+      requiresAuth: true,
+    }),
+
+  getAdminUsers: (params?: { page?: number; limit?: number; search?: string; status?: string }) =>
+    apiCall(API_CONFIG.ENDPOINTS.ADMIN.ADMINS, {
+      method: 'GET',
+      query: params,
+      requiresAuth: true,
+    }),
+
+  createAdminUser: (payload: {
+    username: string;
+    email: string;
+    password: string;
+    name: string;
+    role: string;
+    permissions?: string[];
+    isActive?: boolean;
+  }) =>
+    apiCall(API_CONFIG.ENDPOINTS.ADMIN.ADMINS, {
+      method: 'POST',
+      body: payload,
+      requiresAuth: true,
+    }),
+
+  updateAdminUser: (
+    adminId: string,
+    payload: {
+      name?: string;
+      email?: string;
+      role?: string;
+      permissions?: string[];
+      isActive?: boolean;
+    }
+  ) =>
+    apiCall(API_CONFIG.ENDPOINTS.ADMIN.ADMIN_DETAIL, {
+      method: 'PUT',
+      params: { adminId },
+      body: payload,
+      requiresAuth: true,
+    }),
+
+  resetAdminUserPassword: (adminId: string, password: string) =>
+    apiCall(API_CONFIG.ENDPOINTS.ADMIN.ADMIN_RESET_PASSWORD, {
+      method: 'PUT',
+      params: { adminId },
+      body: { password },
+      requiresAuth: true,
+    }),
+
+  deleteAdminUser: (adminId: string) =>
+    apiCall(API_CONFIG.ENDPOINTS.ADMIN.ADMIN_DETAIL, {
+      method: 'DELETE',
+      params: { adminId },
+      requiresAuth: true,
+    }),
 };
 
 /**
@@ -964,6 +1214,12 @@ export const adminApi = {
 export const dashboardApi = {
   getStats: () =>
     apiCall(API_CONFIG.ENDPOINTS.DASHBOARD.STATS, {
+      method: 'GET',
+      requiresAuth: true,
+    }),
+
+  getAboutStats: () =>
+    apiCall(API_CONFIG.ENDPOINTS.DASHBOARD.ABOUT_STATS, {
       method: 'GET',
       requiresAuth: true,
     }),
@@ -1206,13 +1462,6 @@ export const walletApi = {
       requiresAuth: true,
     }),
 
-  topUp: (amount: number) =>
-    apiCall(API_CONFIG.ENDPOINTS.WALLET.TOP_UP, {
-      method: 'POST',
-      body: { amount },
-      requiresAuth: true,
-    }),
-
   getTransactions: (options?: { page?: number; limit?: number; type?: string }) =>
     apiCall(API_CONFIG.ENDPOINTS.WALLET.TRANSACTIONS, {
       method: 'GET',
@@ -1224,6 +1473,79 @@ export const walletApi = {
     apiCall(API_CONFIG.ENDPOINTS.WALLET.CONFIG, {
       method: 'GET',
       requiresAuth: false,
+    }),
+};
+
+export const withdrawalApi = {
+  create: (data: {
+    amount: number;
+    paymentMethod: 'bank' | 'upi';
+    bankAccount?: {
+      accountNumber: string;
+      ifscCode: string;
+      accountHolderName: string;
+      bankName: string;
+    };
+    upiId?: string;
+  }) =>
+    apiCall(API_CONFIG.ENDPOINTS.WITHDRAWAL.CREATE, {
+      method: 'POST',
+      body: data,
+      requiresAuth: true,
+    }),
+
+  getMyWithdrawals: (query?: { status?: string; page?: number; limit?: number }) =>
+    apiCall(API_CONFIG.ENDPOINTS.WITHDRAWAL.MY_WITHDRAWALS, {
+      method: 'GET',
+      query,
+      requiresAuth: true,
+    }),
+
+  getById: (withdrawalId: string) =>
+    apiCall(API_CONFIG.ENDPOINTS.WITHDRAWAL.GET, {
+      method: 'GET',
+      params: { withdrawalId },
+      requiresAuth: true,
+    }),
+};
+
+export const adminWithdrawalApi = {
+  getPending: (query?: { page?: number; limit?: number }) =>
+    apiCall(API_CONFIG.ENDPOINTS.WITHDRAWAL.ADMIN_PENDING, {
+      method: 'GET',
+      query,
+      requiresAuth: true,
+    }),
+
+  getApproved: (query?: { page?: number; limit?: number }) =>
+    apiCall(API_CONFIG.ENDPOINTS.WITHDRAWAL.ADMIN_APPROVED, {
+      method: 'GET',
+      query,
+      requiresAuth: true,
+    }),
+
+  approve: (withdrawalId: string) =>
+    apiCall(API_CONFIG.ENDPOINTS.WITHDRAWAL.ADMIN_APPROVE, {
+      method: 'POST',
+      params: { withdrawalId },
+      body: {},
+      requiresAuth: true,
+    }),
+
+  complete: (withdrawalId: string, payload: { transactionId: string; notes?: string }) =>
+    apiCall(API_CONFIG.ENDPOINTS.WITHDRAWAL.ADMIN_COMPLETE, {
+      method: 'POST',
+      params: { withdrawalId },
+      body: payload,
+      requiresAuth: true,
+    }),
+
+  reject: (withdrawalId: string, reason: string) =>
+    apiCall(API_CONFIG.ENDPOINTS.WITHDRAWAL.ADMIN_REJECT, {
+      method: 'POST',
+      params: { withdrawalId },
+      body: { reason },
+      requiresAuth: true,
     }),
 };
 
@@ -1631,6 +1953,14 @@ export const adminFeedbackApi = {
       method: 'POST',
       params: { feedbackId },
       body: { response },
+      requiresAuth: true,
+    }),
+
+  assign: (feedbackId: string, assigneeAdminId: string) =>
+    apiCall(API_CONFIG.ENDPOINTS.ADMIN.FEEDBACK_ASSIGN, {
+      method: 'PUT',
+      params: { feedbackId },
+      body: { assigneeAdminId },
       requiresAuth: true,
     }),
 

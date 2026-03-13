@@ -1127,7 +1127,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: SPACING.lg,
-    paddingBottom: normalize(100),
+    paddingBottom: normalize(24),
   },
   stepTitle: {
     fontFamily: FONTS.bold,

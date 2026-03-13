@@ -22,6 +22,12 @@ export interface IWithdrawal extends Document {
   adminId?: string; // Reference to Admin
   transactionId?: string;
   notes?: string;
+  earningReferences?: Array<{
+    bookingId?: string;
+    amount: number;
+    createdAt: Date;
+    description?: string;
+  }>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -98,6 +104,17 @@ const withdrawalSchema = new Schema<IWithdrawal>(
     },
     notes: {
       type: String,
+    },
+    earningReferences: {
+      type: [
+        {
+          bookingId: { type: String },
+          amount: { type: Number, required: true },
+          createdAt: { type: Date, required: true },
+          description: { type: String },
+        },
+      ],
+      default: [],
     },
   },
   {

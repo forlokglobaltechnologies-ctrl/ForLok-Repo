@@ -34,18 +34,22 @@ import {
 import { FONTS } from '@constants/theme';
 import { normalize } from '@utils/responsive';
 import { useTheme } from '@context/ThemeContext';
+import { useContentPage } from '../../hooks/useContentPage';
+import { resolveContentIcon } from '@utils/contentIcons';
+import { CONTENT_DEFAULTS } from '@constants/contentDefaults';
 
 const HelpSupportScreen = () => {
   const navigation = useNavigation<any>();
   const { theme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
+  const { data: contentData } = useContentPage<any>('help_support', CONTENT_DEFAULTS.help_support as any);
 
-  const quickActions = [
+  const defaultQuickActions = [
     {
       icon: BookOpen,
       label: 'FAQs',
       desc: 'Find quick answers',
-      color: '#2196F3',
+      color: '#F99E3C',
       onPress: () => navigation.navigate('FAQ'),
     },
     {
@@ -64,9 +68,9 @@ const HelpSupportScreen = () => {
     },
   ];
 
-  const [selectedTopic, setSelectedTopic] = useState<typeof popularTopics[0] | null>(null);
+  const [selectedTopic, setSelectedTopic] = useState<any>(null);
 
-  const popularTopics = [
+  const defaultPopularTopics = [
     {
       icon: Car,
       title: 'How to create a pooling offer',
@@ -84,7 +88,7 @@ const HelpSupportScreen = () => {
     {
       icon: CreditCard,
       title: 'Trip completion & refunds',
-      color: '#2196F3',
+      color: '#F99E3C',
       category: 'Trips',
       explanation: 'Common trip-completion and refund guidance:\n\nTrip Completion:\n\u2022 Driver marks passenger as dropped\n\u2022 Passenger settles manually with driver\n\u2022 Passenger shares 4-digit completion code\n\u2022 Driver verifies code to close the trip\n\nRefund / Cancellation:\n\u2022 Eligible cancellations are handled per policy\n\u2022 Cancellation impact appears in booking details\n\u2022 Check Booking History for trip and cancellation status\n\nFor unresolved issues, contact support@forlok.com with your booking ID.',
     },
@@ -125,7 +129,7 @@ const HelpSupportScreen = () => {
     },
   ];
 
-  const contactOptions = [
+  const defaultContactOptions = [
     {
       icon: MessageCircle,
       label: 'Live Chat',
@@ -137,7 +141,7 @@ const HelpSupportScreen = () => {
       icon: Phone,
       label: 'Call Us',
       desc: 'Toll-free: 1800-XXX-XXXX',
-      color: '#2196F3',
+      color: '#F99E3C',
       action: () => Linking.openURL('tel:+911800XXXXXXX'),
     },
     {
@@ -148,10 +152,57 @@ const HelpSupportScreen = () => {
       action: () => Linking.openURL('mailto:support@forlok.com'),
     },
   ];
+  void defaultQuickActions;
+  void defaultPopularTopics;
+  void defaultContactOptions;
+
+  const quickActions = contentData.quickActions.map((item: any) => ({
+    ...item,
+    icon: typeof item.icon === 'string' ? resolveContentIcon(item.icon, HelpCircle) : item.icon,
+  }));
+  const popularTopics = contentData.popularTopics.map((item: any) => ({
+    ...item,
+    icon: typeof item.icon === 'string' ? resolveContentIcon(item.icon, HelpCircle) : item.icon,
+  }));
+  const contactOptions = contentData.contactOptions.map((item: any) => ({
+    ...item,
+    icon: typeof item.icon === 'string' ? resolveContentIcon(item.icon, Headphones) : item.icon,
+  }));
+
+  const handleQuickAction = (action: any) => {
+    if (typeof action.onPress === 'function') {
+      action.onPress();
+      return;
+    }
+    if (action.route) {
+      navigation.navigate(action.route);
+      return;
+    }
+    if (action.actionType === 'url' && action.actionValue) {
+      void Linking.openURL(action.actionValue);
+    }
+  };
+
+  const handleContactAction = (contact: any) => {
+    if (typeof contact.action === 'function') {
+      contact.action();
+      return;
+    }
+    if (contact.actionType && contact.actionValue) {
+      void Linking.openURL(contact.actionValue);
+    }
+  };
 
   const filteredTopics = searchQuery.trim()
-    ? popularTopics.filter(tp => tp.title.toLowerCase().includes(searchQuery.toLowerCase()))
+    ? popularTopics.filter((tp: any) => tp.title.toLowerCase().includes(searchQuery.toLowerCase()))
     : popularTopics;
+
+  const renderIcon = (IconComp: any, size: number, color: string) => {
+    if (typeof IconComp === 'function') {
+      return <IconComp size={size} color={color} />;
+    }
+    return <HelpCircle size={size} color={color} />;
+  };
 
   return (
     <View style={[s.container, { backgroundColor: theme.colors.background }]}>
@@ -179,15 +230,15 @@ const HelpSupportScreen = () => {
 
         {/* Quick Actions */}
         <View style={s.quickActionsRow}>
-          {quickActions.map((action, index) => (
+          {quickActions.map((action: any, index: number) => (
             <TouchableOpacity
               key={index}
               style={[s.quickActionCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
-              onPress={action.onPress}
+              onPress={() => handleQuickAction(action)}
               activeOpacity={0.7}
             >
               <View style={[s.quickActionIcon, { backgroundColor: action.color + '14' }]}>
-                <action.icon size={normalize(20)} color={action.color} />
+                {renderIcon(action.icon, normalize(20), action.color)}
               </View>
               <Text style={[s.quickActionLabel, { color: theme.colors.text }]}>{action.label}</Text>
               <Text style={[s.quickActionDesc, { color: theme.colors.textSecondary }]}>{action.desc}</Text>
@@ -201,7 +252,7 @@ const HelpSupportScreen = () => {
           <Text style={[s.sectionTitle, { color: theme.colors.text }]}>Popular Topics</Text>
         </View>
         <View style={[s.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-          {filteredTopics.map((topic, index) => (
+          {filteredTopics.map((topic: any, index: number) => (
             <React.Fragment key={index}>
               {index > 0 && <View style={[s.divider, { backgroundColor: theme.colors.border }]} />}
               <TouchableOpacity
@@ -210,7 +261,7 @@ const HelpSupportScreen = () => {
                 activeOpacity={0.7}
               >
                 <View style={[s.topicIconWrap, { backgroundColor: topic.color + '14' }]}>
-                  <topic.icon size={normalize(17)} color={topic.color} />
+                  {renderIcon(topic.icon, normalize(17), topic.color)}
                 </View>
                 <View style={s.topicInfo}>
                   <Text style={[s.topicTitle, { color: theme.colors.text }]}>{topic.title}</Text>
@@ -234,12 +285,12 @@ const HelpSupportScreen = () => {
           <Text style={[s.sectionTitle, { color: theme.colors.text }]}>Contact Support</Text>
         </View>
         <View style={[s.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-          {contactOptions.map((contact, index) => (
+          {contactOptions.map((contact: any, index: number) => (
             <React.Fragment key={index}>
               {index > 0 && <View style={[s.divider, { backgroundColor: theme.colors.border }]} />}
-              <TouchableOpacity style={s.contactRow} onPress={contact.action} activeOpacity={0.7}>
+              <TouchableOpacity style={s.contactRow} onPress={() => handleContactAction(contact)} activeOpacity={0.7}>
                 <View style={[s.contactIconWrap, { backgroundColor: contact.color + '14' }]}>
-                  <contact.icon size={normalize(19)} color={contact.color} />
+                  {renderIcon(contact.icon, normalize(19), contact.color)}
                 </View>
                 <View style={s.contactInfo}>
                   <Text style={[s.contactLabel, { color: theme.colors.text }]}>{contact.label}</Text>
@@ -255,9 +306,7 @@ const HelpSupportScreen = () => {
         <View style={[s.supportHoursCard, { backgroundColor: theme.colors.primary + '08', borderColor: theme.colors.primary + '20' }]}>
           <Text style={[s.supportHoursTitle, { color: theme.colors.text }]}>Support Hours</Text>
           <Text style={[s.supportHoursText, { color: theme.colors.textSecondary }]}>
-            Monday - Saturday: 9:00 AM - 9:00 PM IST{'\n'}
-            Sunday: 10:00 AM - 6:00 PM IST{'\n'}
-            Emergency SOS: Available 24/7
+            {contentData.supportHoursText}
           </Text>
         </View>
       </ScrollView>
@@ -353,6 +402,7 @@ const s = StyleSheet.create({
     fontSize: normalize(18),
     fontWeight: '800',
     textAlign: 'center',
+    marginTop: -normalize(4),
   },
 
   scrollContent: {

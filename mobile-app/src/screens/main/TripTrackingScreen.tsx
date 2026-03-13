@@ -9,9 +9,11 @@ import {
   Image,
   Alert,
   Modal,
+  Platform,
+  StatusBar,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { ArrowLeft, Phone, MessageCircle, Info, MapPin, Clock, Navigation, AlertCircle, Banknote, CheckCircle, Coins } from 'lucide-react-native';
+import { ArrowLeft, MessageCircle, MapPin, Clock, Banknote, CheckCircle, Coins } from 'lucide-react-native';
 import { normalize, wp, hp } from '@utils/responsive';
 import { COLORS, FONTS, SPACING } from '@constants/theme';
 import { Card } from '@components/common/Card';
@@ -38,6 +40,7 @@ const TripTrackingScreen = () => {
   
   const [booking, setBooking] = useState<any>(params.booking || null);
   const [driverLocation, setDriverLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [lastLocationUpdatedAt, setLastLocationUpdatedAt] = useState<Date | null>(null);
   const [eta, setEta] = useState(0);
   const [distance, setDistance] = useState(0);
   const [duration, setDuration] = useState('0m');
@@ -60,6 +63,57 @@ const TripTrackingScreen = () => {
   // Coin celebration modal
   const [showCoinCelebration, setShowCoinCelebration] = useState(false);
   const [coinsEarnedText, setCoinsEarnedText] = useState('');
+  const DEFAULT_MAP_CENTER = { lat: 20.5937, lng: 78.9629 };
+
+  const toPositiveNumber = (value: any): number | null => {
+    const n = Number(value);
+    if (Number.isNaN(n) || n <= 0) return null;
+    return n;
+  };
+
+  const normalizeDistanceKm = (rawDistance: number | null): number | null => {
+    if (!rawDistance) return null;
+    // Some providers return meters; convert when clearly in meters range.
+    return rawDistance > 200 ? rawDistance / 1000 : rawDistance;
+  };
+
+  const normalizeDurationMinutes = (rawDuration: number | null): number | null => {
+    if (!rawDuration) return null;
+    // Some providers return seconds; convert when clearly in seconds range.
+    return rawDuration > 600 ? rawDuration / 60 : rawDuration;
+  };
+
+  const formatDurationText = (totalMinutes: number): string => {
+    const rounded = Math.max(1, Math.round(totalMinutes));
+    const hours = Math.floor(rounded / 60);
+    const minutes = rounded % 60;
+    return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+  };
+
+  const applyBookingRouteMetrics = (bookingData: any) => {
+    const rawDistance =
+      toPositiveNumber(bookingData?.route?.distance) ??
+      toPositiveNumber(bookingData?.distance) ??
+      toPositiveNumber(bookingData?.estimatedDistance);
+
+    const rawDuration =
+      toPositiveNumber(bookingData?.route?.duration) ??
+      toPositiveNumber(bookingData?.duration) ??
+      toPositiveNumber(bookingData?.estimatedDuration);
+
+    const distanceKm = normalizeDistanceKm(rawDistance);
+    const durationMinutes = normalizeDurationMinutes(rawDuration);
+
+    if (distanceKm) {
+      setDistance(Math.round(distanceKm * 10) / 10);
+    }
+    if (durationMinutes) {
+      setDuration(formatDurationText(durationMinutes));
+      if (eta <= 0) {
+        setEta(Math.max(1, Math.round(durationMinutes)));
+      }
+    }
+  };
 
   useEffect(() => {
     if (bookingId) {
@@ -83,6 +137,13 @@ const TripTrackingScreen = () => {
       const response = await bookingApi.getBooking(bookingId);
       if (response.success && response.data) {
         setBooking(response.data);
+        applyBookingRouteMetrics(response.data);
+
+        // Ensure map is visible even before live driver GPS arrives.
+        if (!driverLocation) {
+          const fallback = getFallbackCoordinates(response.data);
+          updateMap(fallback.lat, fallback.lng);
+        }
         
         // If driver marked passenger as got_out → show payment choice
         if (response.data.passengerStatus === 'got_out' && !response.data.paymentMethod) {
@@ -109,12 +170,12 @@ const TripTrackingScreen = () => {
     fetchDriverLocation();
     fetchTripMetrics();
 
-    // Poll for location updates + booking status every 5 seconds
+    // Poll for location updates + booking status every 5 minutes
     locationIntervalRef.current = setInterval(() => {
       fetchDriverLocation();
       fetchTripMetrics();
       loadBooking(); // Re-check booking status (detects got_out / completed)
-    }, 5000);
+    }, 300000);
   };
 
   const fetchDriverLocation = async () => {
@@ -125,6 +186,7 @@ const TripTrackingScreen = () => {
       if (response.success && response.data) {
         const location = response.data.location;
         setDriverLocation({ lat: location.lat, lng: location.lng });
+        setLastLocationUpdatedAt(new Date());
         updateMap(location.lat, location.lng);
       }
     } catch (error: any) {
@@ -140,13 +202,97 @@ const TripTrackingScreen = () => {
     try {
       const response = await trackingApi.getTripMetrics(bookingId);
       if (response.success && response.data) {
-        setEta(response.data.eta || 0);
-        setDistance(response.data.distance || 0);
-        setDuration(response.data.duration || '0m');
+        const etaMinutes = Number(response.data.eta);
+        const distanceKm = Number(response.data.distance);
+        const durationText = response.data.duration;
+
+        if (!Number.isNaN(etaMinutes) && etaMinutes > 0) {
+          setEta(etaMinutes);
+        } else if (booking) {
+          applyBookingRouteMetrics(booking);
+        }
+        if (!Number.isNaN(distanceKm) && distanceKm > 0) {
+          setDistance(distanceKm);
+        } else if (booking) {
+          applyBookingRouteMetrics(booking);
+        }
+        if (durationText && typeof durationText === 'string') {
+          setDuration(durationText);
+        } else if (booking) {
+          applyBookingRouteMetrics(booking);
+        }
       }
     } catch (error: any) {
       console.error('Error fetching trip metrics:', error);
     }
+  };
+
+  const getFallbackCoordinates = (bookingData?: any) => {
+    const from =
+      typeof bookingData?.route?.from === 'object' && bookingData?.route?.from
+        ? bookingData.route.from
+        : null;
+    const to =
+      typeof bookingData?.route?.to === 'object' && bookingData?.route?.to
+        ? bookingData.route.to
+        : null;
+
+    const fromLat = from?.lat;
+    const fromLng = from?.lng;
+    if (typeof fromLat === 'number' && typeof fromLng === 'number') {
+      return { lat: fromLat, lng: fromLng };
+    }
+
+    const toLat = to?.lat;
+    const toLng = to?.lng;
+    if (typeof toLat === 'number' && typeof toLng === 'number') {
+      return { lat: toLat, lng: toLng };
+    }
+
+    return DEFAULT_MAP_CENTER;
+  };
+
+  const getTripStartedAt = () => {
+    const startedAt = booking?.tripStartedAt || booking?.startedAt || booking?.updatedAt;
+    return startedAt ? new Date(startedAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'N/A';
+  };
+
+  useEffect(() => {
+    // Keep a real map visible even before tracking data arrives.
+    if (!mapHTML) {
+      const fallback = getFallbackCoordinates(booking);
+      updateMap(fallback.lat, fallback.lng);
+    }
+  }, [booking, mapHTML]);
+
+  const handleOpenChat = async () => {
+    if (!bookingId && !booking?.bookingId && !booking?.id) {
+      navigation.navigate('ChatList' as never);
+      return;
+    }
+
+    const effectiveBookingId = bookingId || booking?.bookingId || booking?.id;
+    const otherUser = booking?.driver || booking?.owner || null;
+
+    navigation.navigate(
+      'Chat' as never,
+      {
+        bookingId: effectiveBookingId,
+        type: booking?.serviceType || (booking?.rentalOfferId ? 'rental' : 'pooling'),
+        otherUser,
+      } as never
+    );
+  };
+
+  const handleReportIssue = () => {
+    navigation.navigate(
+      'Feedback' as never,
+      {
+        type: 'issue',
+        subject: `Trip issue: ${bookingId || booking?.bookingId || ''}`,
+        description: `Please help with issue for booking ${bookingId || booking?.bookingId || ''}.`,
+      } as never
+    );
   };
 
   const updateMap = (lat: number, lng: number) => {
@@ -325,35 +471,51 @@ const TripTrackingScreen = () => {
     }
   };
 
+  const statusLabel = tripCompleted
+    ? 'Trip Completed'
+    : showPaymentChoice
+      ? 'Settle & Confirm'
+      : passengerCode
+        ? 'Show Code to Driver'
+        : t('tripTracking.tripInProgress');
+
+  const pickupText =
+    typeof booking?.route?.from === 'string' ? booking.route.from : booking?.route?.from?.address || 'N/A';
+  const dropText =
+    typeof booking?.route?.to === 'string' ? booking.route.to : booking?.route?.to?.address || 'N/A';
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <ArrowLeft size={24} color={COLORS.white} />
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <ArrowLeft size={24} color={COLORS.text} />
         </TouchableOpacity>
-        <View style={styles.headerRight}>
-          <TouchableOpacity onPress={() => {}}>
-            <Phone size={24} color={COLORS.white} />
-          </TouchableOpacity>
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>Live Trip Tracking</Text>
+        </View>
+        <View>
           <TouchableOpacity
-            onPress={() => navigation.navigate('Chat' as never)}
-            style={styles.headerButton}
+            onPress={handleOpenChat}
+            style={styles.headerIconButton}
           >
-            <MessageCircle size={24} color={COLORS.white} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => {}}>
-            <Info size={24} color={COLORS.white} />
+            <MessageCircle size={20} color={COLORS.text} />
           </TouchableOpacity>
         </View>
       </View>
 
-      <View style={[styles.statusBar, tripCompleted && styles.statusBarCompleted, showPaymentChoice && styles.statusBarPayment]}>
-        <Text style={styles.statusText}>
-          {tripCompleted ? '✅ Trip Completed' : showPaymentChoice ? '💵 Settle & Confirm' : passengerCode ? '🔑 Show Code to Driver' : t('tripTracking.tripInProgress')}
+      <View style={styles.statusBar}>
+        <View
+          style={[
+            styles.statusBadge,
+            tripCompleted && styles.statusBadgeCompleted,
+            showPaymentChoice && styles.statusBadgePayment,
+          ]}
+        >
+          <Text style={styles.statusText}>{statusLabel}</Text>
+        </View>
+        <Text style={styles.etaText}>
+          ETA: {eta} {t('common.minutes')}
         </Text>
-        {!tripCompleted && !showPaymentChoice && !passengerCode && (
-          <Text style={styles.etaText}>{t('tripTracking.eta')}: {eta} {t('common.minutes')}</Text>
-        )}
       </View>
 
       <View style={styles.mapContainer}>
@@ -377,37 +539,46 @@ const TripTrackingScreen = () => {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.metricsRow}>
+          <View style={styles.metricCard}>
+            <Text style={styles.metricLabel}>ETA</Text>
+            <Text style={styles.metricValue}>{eta} min</Text>
+          </View>
+          <View style={styles.metricCard}>
+            <Text style={styles.metricLabel}>{t('tripTracking.distance')}</Text>
+            <Text style={styles.metricValue}>{distance} km</Text>
+          </View>
+          <View style={styles.metricCard}>
+            <Text style={styles.metricLabel}>{t('tripTracking.duration')}</Text>
+            <Text style={styles.metricValue}>{duration}</Text>
+          </View>
+        </View>
+
         <Card style={styles.tripDetailsCard}>
-          <Text style={styles.sectionTitle}>{t('tripTracking.tripDetails')}:</Text>
+          <Text style={styles.sectionTitle}>{t('tripTracking.tripDetails')}</Text>
           <View style={styles.detailItem}>
-            <MapPin size={20} color={COLORS.primary} />
+            <View style={styles.detailIconWrap}>
+              <MapPin size={16} color={COLORS.primary} />
+            </View>
             <Text style={styles.detailText}>
-              {t('tripTracking.pickup')}: {typeof booking?.route?.from === 'string' 
-                ? booking.route.from 
-                : booking?.route?.from?.address || 'N/A'}
+              {t('tripTracking.pickup')}: {pickupText}
             </Text>
           </View>
           <View style={styles.detailItem}>
-            <MapPin size={20} color={COLORS.primary} />
+            <View style={styles.detailIconWrap}>
+              <MapPin size={16} color={COLORS.success} />
+            </View>
             <Text style={styles.detailText}>
-              {t('tripTracking.drop')}: {typeof booking?.route?.to === 'string' 
-                ? booking.route.to 
-                : booking?.route?.to?.address || 'N/A'}
+              {t('tripTracking.drop')}: {dropText}
             </Text>
           </View>
           <View style={styles.detailItem}>
-            <Clock size={20} color={COLORS.primary} />
+            <View style={styles.detailIconWrap}>
+              <Clock size={16} color={COLORS.primary} />
+            </View>
             <Text style={styles.detailText}>
-              {t('tripTracking.started')}: {booking?.time || booking?.date ? new Date(booking.date).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
+              {t('tripTracking.started')}: {getTripStartedAt()}
             </Text>
-          </View>
-          <View style={styles.detailItem}>
-            <Navigation size={20} color={COLORS.primary} />
-            <Text style={styles.detailText}>{t('tripTracking.distance')}: {distance} km</Text>
-          </View>
-          <View style={styles.detailItem}>
-            <Clock size={20} color={COLORS.primary} />
-            <Text style={styles.detailText}>{t('tripTracking.duration')}: {duration}</Text>
           </View>
         </Card>
 
@@ -420,22 +591,25 @@ const TripTrackingScreen = () => {
             <View style={styles.driverDetails}>
               <Text style={styles.driverName}>{booking?.driver?.name || booking?.owner?.name || 'Driver'}</Text>
               <Text style={styles.driverRating}>⭐ {booking?.driver?.rating || 0} ({booking?.driver?.totalReviews || 0} {t('common.reviews')})</Text>
+              <Text style={styles.driverMeta}>
+                {driverLocation
+                  ? `Driver location: ${driverLocation.lat.toFixed(5)}, ${driverLocation.lng.toFixed(5)}`
+                  : 'Driver location: waiting for GPS...'}
+              </Text>
+              {lastLocationUpdatedAt && (
+                <Text style={styles.driverMeta}>
+                  Last updated: {lastLocationUpdatedAt.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                </Text>
+              )}
             </View>
           </View>
           <View style={styles.driverActions}>
             <Button
-              title={t('tripTracking.call')}
-              onPress={() => {}}
-              variant="primary"
-              size="small"
-              style={styles.actionButton}
-            />
-            <Button
               title={t('tripTracking.message')}
-              onPress={() => navigation.navigate('Chat' as never)}
+              onPress={handleOpenChat}
               variant="outline"
               size="small"
-              style={styles.actionButton}
+              style={styles.singleActionButton}
             />
           </View>
         </Card>
@@ -536,38 +710,8 @@ const TripTrackingScreen = () => {
         {!showPaymentChoice && !passengerCode && !tripCompleted && (
           <View style={styles.emergencyContainer}>
             <Button
-              title={t('tripTracking.bookFood')}
-              onPress={() => {
-                const fromLocation = typeof booking?.route?.from === 'object' 
-                  ? booking.route.from 
-                  : { address: booking?.route?.from || 'N/A' };
-                const toLocation = typeof booking?.route?.to === 'object' 
-                  ? booking.route.to 
-                  : { address: booking?.route?.to || 'N/A' };
-                
-                navigation.navigate('BookFood' as never, { 
-                  from: fromLocation.address || fromLocation,
-                  to: toLocation.address || toLocation,
-                  fromLat: fromLocation.lat,
-                  fromLng: fromLocation.lng,
-                  toLat: toLocation.lat,
-                  toLng: toLocation.lng,
-                } as never);
-              }}
-              variant="primary"
-              size="medium"
-              style={styles.emergencyButton}
-            />
-            <Button
-              title={t('tripTracking.emergencyContact')}
-              onPress={() => {}}
-              variant="outline"
-              size="medium"
-              style={styles.emergencyButton}
-            />
-            <Button
               title={t('tripTracking.reportIssue')}
-              onPress={() => {}}
+              onPress={handleReportIssue}
               variant="outline"
               size="medium"
               style={styles.emergencyButton}
@@ -606,50 +750,85 @@ const TripTrackingScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
+  container: { flex: 1, backgroundColor: '#F4F7FB' },
   header: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.white,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.md,
-    paddingTop: SPACING.xl,
+    paddingVertical: SPACING.sm,
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + SPACING.sm : SPACING.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
-  headerRight: {
-    flexDirection: 'row',
-    gap: SPACING.md,
+  headerCenter: {
+    flex: 1,
+    marginHorizontal: SPACING.md,
   },
-  headerButton: {
-    marginLeft: SPACING.sm,
+  headerTitle: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.md,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  backButton: {
+    paddingVertical: 4,
+    paddingRight: 8,
+  },
+  headerIconButton: {
+    width: normalize(36),
+    height: normalize(36),
+    borderRadius: normalize(18),
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.white,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   statusBar: {
-    backgroundColor: COLORS.primary + '20',
-    padding: SPACING.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  statusBadge: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+    borderRadius: 999,
+    backgroundColor: COLORS.primary + '16',
+  },
+  statusBadgeCompleted: {
+    backgroundColor: COLORS.success + '20',
+  },
+  statusBadgePayment: {
+    backgroundColor: '#FFF3CD',
+  },
   statusText: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
+    fontSize: FONTS.sizes.sm,
     color: COLORS.text,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
   etaText: {
     fontFamily: FONTS.regular,
-    fontSize: FONTS.sizes.md,
+    fontSize: FONTS.sizes.sm,
     color: COLORS.primary,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   mapContainer: {
-    height: hp(37),
-    backgroundColor: COLORS.lightGray,
+    height: hp(30),
+    marginHorizontal: SPACING.md,
+    marginTop: SPACING.xs,
+    borderRadius: 18,
+    overflow: 'hidden',
+    backgroundColor: COLORS.white,
     position: 'relative',
   },
   webView: {
     flex: 1,
-    height: hp(37),
+    height: hp(30),
   },
   mapPlaceholder: {
     width: '100%',
@@ -683,29 +862,77 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.sm,
     color: COLORS.textSecondary,
-    marginTop: SPACING.lg,
   },
-  scrollContent: { padding: SPACING.md },
-  tripDetailsCard: { padding: SPACING.md, marginBottom: SPACING.md },
+  scrollContent: { padding: SPACING.md, paddingTop: SPACING.sm, paddingBottom: SPACING.xl },
+  metricsRow: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    marginBottom: SPACING.md,
+  },
+  metricCard: {
+    flex: 1,
+    backgroundColor: COLORS.white,
+    borderRadius: 14,
+    paddingVertical: SPACING.sm + 2,
+    paddingHorizontal: SPACING.sm,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  metricLabel: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.xs,
+    color: COLORS.textSecondary,
+    marginBottom: 2,
+  },
+  metricValue: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.md,
+    color: COLORS.text,
+    fontWeight: '700',
+  },
+  tripDetailsCard: {
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.white,
+  },
   sectionTitle: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.md,
     color: COLORS.text,
-    fontWeight: 'bold',
-    marginBottom: SPACING.md,
+    fontWeight: '700',
+    marginBottom: SPACING.sm,
+  },
+  detailIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: COLORS.primary + '12',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   detailItem: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: SPACING.sm,
-    marginBottom: SPACING.sm,
+    marginBottom: SPACING.md,
   },
   detailText: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.sm,
-    color: COLORS.textSecondary,
+    color: COLORS.text,
+    flex: 1,
   },
-  driverCard: { padding: SPACING.md, marginBottom: SPACING.md },
+  driverCard: {
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.white,
+  },
   driverInfo: {
     flexDirection: 'row',
     gap: SPACING.md,
@@ -731,27 +958,26 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.sm,
     color: COLORS.textSecondary,
+    marginBottom: 2,
+  },
+  driverMeta: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.xs,
+    color: COLORS.textSecondary,
+    marginTop: 2,
   },
   driverActions: {
     flexDirection: 'row',
     gap: SPACING.sm,
   },
-  actionButton: {
-    flex: 1,
+  singleActionButton: {
+    width: '100%',
   },
   emergencyContainer: {
-    gap: SPACING.sm,
-    marginTop: SPACING.md,
+    marginTop: SPACING.xs,
   },
   emergencyButton: {
-    marginBottom: SPACING.sm,
-  },
-  // Status bar variants
-  statusBarCompleted: {
-    backgroundColor: COLORS.success + '20',
-  },
-  statusBarPayment: {
-    backgroundColor: '#FFF3CD',
+    borderRadius: 12,
   },
   // Payment choice card
   paymentCard: {

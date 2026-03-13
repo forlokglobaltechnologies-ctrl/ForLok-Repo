@@ -1,22 +1,20 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, StatusBar, Text, Animated } from 'react-native';
+import { View, StyleSheet, StatusBar, Text, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { normalize, hp } from '@utils/responsive';
 import { useAuth } from '@context/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppLoader } from '@components/common/AppLoader';
-import { LinearGradient } from 'expo-linear-gradient';
 
 const ONBOARDING_KEY = '@forlok_onboarding_seen';
-const BRAND_TEXT = 'ForLok';
 const DEBUG_ENDPOINT = 'http://127.0.0.1:7775/ingest/9bdd2fd3-ac77-45be-b342-a40ab02f34f7';
+const SPLASH_LOGO = require('../../../assets/forlok_splash_arrow_sharp_dark.png');
 
 const SplashScreen = () => {
   const navigation = useNavigation();
   const { isAuthenticated, isLoading } = useAuth();
   const [onboardingChecked, setOnboardingChecked] = useState(false);
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
-  const letterAnims = React.useRef(BRAND_TEXT.split('').map(() => new Animated.Value(0))).current;
   const hasNavigatedRef = React.useRef(false);
 
   // Check if user has seen onboarding before
@@ -43,20 +41,6 @@ const SplashScreen = () => {
     };
     checkOnboarding();
   }, []);
-
-  useEffect(() => {
-    const appearAnim = Animated.stagger(
-      90,
-      letterAnims.map((anim: Animated.Value) =>
-        Animated.timing(anim, {
-          toValue: 1,
-          duration: 360,
-          useNativeDriver: true,
-        })
-      )
-    );
-    appearAnim.start();
-  }, [letterAnims]);
 
   useEffect(() => {
     // Wait for both auth check and onboarding check to complete
@@ -110,37 +94,18 @@ const SplashScreen = () => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#F99E3C" />
-      <LinearGradient colors={['#F99E3C', '#D47B1B']} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} style={styles.gradient}>
+      <StatusBar barStyle="light-content" backgroundColor="#191919" />
+      <View style={styles.gradient}>
         <View style={styles.brandTag}>
-          {BRAND_TEXT.split('').map((char, index) => (
-            <Animated.Text
-              key={`${char}-${index}`}
-              style={[
-                styles.brandLetter,
-                {
-                  opacity: letterAnims[index],
-                  transform: [
-                    {
-                      translateY: letterAnims[index].interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [8, 0],
-                      }),
-                    },
-                  ],
-                },
-              ]}
-            >
-              {char}
-            </Animated.Text>
-          ))}
+          <Image source={SPLASH_LOGO} style={styles.brandImage} resizeMode="contain" />
+        
         </View>
 
         <View style={styles.loaderWrap}>
-          <AppLoader size="small" color="#FFFFFF" style={styles.loader} />
+          <AppLoader size="small" color="#FE8800" style={styles.loader} />
           <Text style={styles.loadingText}>Loading</Text>
         </View>
-      </LinearGradient>
+      </View>
     </View>
   );
 };
@@ -148,24 +113,29 @@ const SplashScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F99E3C',
+    backgroundColor: '#191919',
   },
   gradient: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#191919',
   },
   brandTag: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',
   },
-  brandLetter: {
-    color: '#FFFFFF',
-    fontSize: normalize(42),
+  brandImage: {
+    width: normalize(400),
+    height: normalize(400),
+  },
+  brandText: {
+    marginTop: normalize(10),
+    color: '#FE8800',
+    fontSize: normalize(26),
     fontFamily: 'MomoTrustDisplay-Regular',
-    letterSpacing: 0.6,
+    letterSpacing: 0.4,
   },
   loaderWrap: {
     position: 'absolute',

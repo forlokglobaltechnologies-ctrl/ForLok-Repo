@@ -23,13 +23,13 @@ import * as Location from 'expo-location';
 import { WebView } from 'react-native-webview';
 import { LinearGradient } from 'expo-linear-gradient';
 
-const BLUE_ACCENT = '#0284C7';
-const BLUE_LIGHT = '#51A7EA';
+const BLUE_ACCENT = '#D47B1B';
+const BLUE_LIGHT = '#FFB55A';
 const BLUE_GRADIENT: [string, string] = [BLUE_LIGHT, BLUE_ACCENT];
 const GREEN_LIGHT = '#04645E';
 const GREEN_DARK = '#013532';
 const GREEN_GRADIENT: [string, string] = [GREEN_LIGHT, GREEN_DARK];
-const MODAL_BLUE_GRADIENT: [string, string] = ['#51A7EA', '#0284C7'];
+const MODAL_BLUE_GRADIENT: [string, string] = ['#F99E3C', '#E08E35'];
 const MODAL_ORANGE_GRADIENT: [string, string] = ['#F99E3C', '#E08E35'];
 
 interface RouteParams {
@@ -78,6 +78,7 @@ const DriverTripScreen = () => {
   const [selectedPassenger, setSelectedPassenger] = useState<any>(null);
   const [passengerCode, setPassengerCode] = useState('');
   const [verifyingCode, setVerifyingCode] = useState(false);
+  const [endingTrip, setEndingTrip] = useState(false);
   // Payment method selection now happens on passenger's device
 
   /**
@@ -701,6 +702,7 @@ const DriverTripScreen = () => {
   };
 
   const endTrip = async () => {
+    if (endingTrip) return;
     if (!resolvedOfferId) {
       Alert.alert('Error', 'Offer ID not found');
       return;
@@ -710,22 +712,38 @@ const DriverTripScreen = () => {
 
   const confirmEndTrip = async () => {
     try {
-      stopLocationTracking();
-      setIsTracking(false);
+      setEndingTrip(true);
       setShowEndTripConfirmModal(false);
 
       const serviceType = resolvedServiceType;
       const response = await bookingApi.endTrip(resolvedOfferId || '', serviceType);
 
       if (response.success) {
-        Alert.alert('Trip Ended', 'Trip has been completed successfully. The offer has been removed from My Offers.');
-        navigation.goBack();
+        stopLocationTracking();
+        setIsTracking(false);
+        setBooking((prev: any) => prev ? { ...prev, status: 'completed' } : prev);
+        Alert.alert(
+          'Trip Ended',
+          'Trip has been completed successfully.',
+          [
+            {
+              text: 'OK',
+              onPress: () =>
+                (navigation as any).reset({
+                  index: 0,
+                  routes: [{ name: 'MyOffers', params: { initialTab: 'Completed' } }],
+                }),
+            },
+          ]
+        );
       } else {
         Alert.alert('Error', response.error || 'Failed to end trip');
       }
     } catch (error: any) {
       console.error('Error ending trip:', error);
       Alert.alert('Error', error.message || 'Failed to end trip');
+    } finally {
+      setEndingTrip(false);
     }
   };
 
@@ -1173,7 +1191,7 @@ const DriverTripScreen = () => {
                         activeOpacity={0.8}
                       >
                         <LinearGradient
-                          colors={GREEN_GRADIENT}
+                          colors={['#232323', '#191919']}
                           start={{ x: 0, y: 0 }}
                           end={{ x: 1, y: 1 }}
                           style={styles.pBtnGradient}
@@ -1186,12 +1204,24 @@ const DriverTripScreen = () => {
 
                     {isInVehicle && (
                       <TouchableOpacity
-                        style={[styles.pBtn, { backgroundColor: '#FF9800' }]}
+                        style={[styles.pBtn, styles.pBtnWide]}
                         onPress={() => handleGetOut(passenger.bookingId)}
                         activeOpacity={0.8}
                       >
-                        <LogOut size={15} color="#FFF" />
-                        <Text style={styles.pBtnText}>Drop Off</Text>
+                        <LinearGradient
+                          colors={['#FB923C', '#F97316']}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                          style={[styles.pBtnGradient, styles.pBtnGradientWide]}
+                        >
+                          <View style={styles.dropOffIconBadge}>
+                            <LogOut size={14} color="#FFF" />
+                          </View>
+                          <View style={styles.pBtnLabelWrap}>
+                            <Text style={styles.pBtnText}>Drop Off</Text>
+                            <Text style={styles.pBtnSubtext}>Mark passenger as arrived</Text>
+                          </View>
+                        </LinearGradient>
                       </TouchableOpacity>
                     )}
 
@@ -1279,7 +1309,7 @@ const DriverTripScreen = () => {
           {!isTracking ? (
             <TouchableOpacity style={styles.startBtn} onPress={startTrip} activeOpacity={0.85}>
               <LinearGradient
-                colors={BLUE_GRADIENT}
+                colors={['#232323', '#191919']}
                 start={{ x: 0.5, y: 0 }}
                 end={{ x: 0.5, y: 1 }}
                 style={styles.startBtnGradient}
@@ -1289,14 +1319,14 @@ const DriverTripScreen = () => {
               </LinearGradient>
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity style={styles.endBtn} onPress={endTrip} activeOpacity={0.85}>
+            <TouchableOpacity style={[styles.endBtn, endingTrip && styles.endBtnDisabled]} onPress={endTrip} activeOpacity={0.85} disabled={endingTrip}>
               <View style={styles.stopIcon} />
-              <Text style={styles.endBtnText}>End Trip</Text>
+              <Text style={styles.endBtnText}>{endingTrip ? 'Ending Trip...' : 'End Trip'}</Text>
             </TouchableOpacity>
           )}
         </View>
 
-        <View style={{ height: normalize(120) }} />
+        <View style={{ height: normalize(24) }} />
       </ScrollView>
 
       {/* ── Completion Code Modal ── */}
@@ -1401,6 +1431,7 @@ const DriverTripScreen = () => {
                 style={styles.confirmBtn}
                 activeOpacity={0.85}
                 onPress={confirmEndTrip}
+                disabled={endingTrip}
               >
                 <LinearGradient
                   colors={MODAL_ORANGE_GRADIENT}
@@ -1408,7 +1439,7 @@ const DriverTripScreen = () => {
                   end={{ x: 0.5, y: 1 }}
                   style={styles.confirmBtnGradient}
                 >
-                  <Text style={styles.confirmBtnText}>End Trip</Text>
+                  <Text style={styles.confirmBtnText}>{endingTrip ? 'Ending...' : 'End Trip'}</Text>
                 </LinearGradient>
               </TouchableOpacity>
             </View>
@@ -1486,9 +1517,21 @@ const styles = StyleSheet.create({
   pStatusLabel: { fontFamily: FONTS.medium, fontSize: normalize(10), fontWeight: '700' },
   pActions: { flexDirection: 'row', alignItems: 'center', gap: normalize(8), marginTop: normalize(10), paddingTop: normalize(10), borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(0,0,0,0.06)' },
   pBtn: { borderRadius: normalize(10), overflow: 'hidden' },
+  pBtnWide: { flex: 1, minWidth: normalize(170) },
   pBtnGradient: { flexDirection: 'row', alignItems: 'center', gap: normalize(6), paddingHorizontal: normalize(16), paddingVertical: normalize(9) },
+  pBtnGradientWide: { width: '100%', paddingVertical: normalize(10), paddingHorizontal: normalize(12) },
+  pBtnLabelWrap: { flex: 1 },
   pBtnSolid: { flexDirection: 'row', alignItems: 'center', gap: normalize(6), paddingHorizontal: normalize(16), paddingVertical: normalize(9), borderRadius: normalize(10) },
   pBtnText: { fontFamily: FONTS.medium, fontSize: normalize(13), fontWeight: '600', color: '#FFF' },
+  pBtnSubtext: { fontFamily: FONTS.regular, fontSize: normalize(10.5), color: 'rgba(255,255,255,0.9)', marginTop: normalize(1) },
+  dropOffIconBadge: {
+    width: normalize(28),
+    height: normalize(28),
+    borderRadius: normalize(14),
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.18)',
+  },
   pIconBtn: { width: normalize(36), height: normalize(36), borderRadius: normalize(10), alignItems: 'center', justifyContent: 'center', marginLeft: 'auto' },
   pDoneBadge: { flexDirection: 'row', alignItems: 'center', gap: normalize(5), paddingHorizontal: normalize(12), paddingVertical: normalize(8), borderRadius: normalize(10) },
   pDoneText: { fontFamily: FONTS.medium, fontSize: normalize(12), fontWeight: '600', color: GREEN_LIGHT },
@@ -1519,6 +1562,9 @@ const styles = StyleSheet.create({
     borderRadius: normalize(30),
     backgroundColor: '#FF0000',
     ...SHADOWS.md,
+  },
+  endBtnDisabled: {
+    opacity: 0.7,
   },
   endBtnText: { fontFamily: FONTS.medium, fontSize: normalize(16), fontWeight: '700', color: '#FFF' },
   stopIcon: { width: normalize(14), height: normalize(14), borderRadius: normalize(3), backgroundColor: '#FFF' },

@@ -127,7 +127,7 @@ export async function rentalRoutes(fastify: FastifyInstance) {
     model: z.string().optional(),
     year: z.number().optional(),
     seats: z.number().optional(),
-    fuelType: z.enum(['Petrol', 'Diesel', 'Electric', 'CNG']).optional(),
+    fuelType: z.string().optional(),
     transmission: z.enum(['Manual', 'Automatic']).optional(),
     location: z.object({
       city: z.string().optional(),

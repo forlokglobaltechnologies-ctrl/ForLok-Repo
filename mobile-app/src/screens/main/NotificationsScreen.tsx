@@ -165,7 +165,7 @@ const NotificationsScreen = () => {
   // ── Notification icon mapping ────────────────────────────────
   const getNotificationIcon = (type: string): { icon: React.ReactNode; color: string; bg: string } => {
     const iconMap: Record<string, { Icon: any; color: string; bg: string }> = {
-      booking_request:     { Icon: Bell,         color: '#4A90D9', bg: '#EBF5FF' },
+      booking_request:     { Icon: Bell,         color: '#F99E3C', bg: '#FFF4E6' },
       booking_confirmed:   { Icon: CheckCircle,  color: '#00B894', bg: '#E8FFF3' },
       booking_cancelled:   { Icon: XCircle,      color: '#E74C3C', bg: '#FFEBEE' },
       payment_required:    { Icon: CreditCard,   color: '#F39C12', bg: '#FFF8E1' },
@@ -176,13 +176,13 @@ const NotificationsScreen = () => {
       document_rejected:   { Icon: FileText,     color: '#E74C3C', bg: '#FFEBEE' },
       coin_earned:         { Icon: Coins,        color: '#F5A623', bg: '#FFF8E1' },
       coin_redeemed:       { Icon: Coins,        color: '#27AE60', bg: '#E8FFF3' },
-      referral_reward:     { Icon: Users,        color: '#4A90D9', bg: '#EBF5FF' },
+      referral_reward:     { Icon: Users,        color: '#F99E3C', bg: '#FFF4E6' },
       milestone_achieved:  { Icon: Trophy,       color: '#F5A623', bg: '#FFF8E1' },
       promo_approved:      { Icon: Gift,         color: '#00B894', bg: '#E8FFF3' },
       promo_rejected:      { Icon: Gift,         color: '#E74C3C', bg: '#FFEBEE' },
       sos_alert:           { Icon: ShieldAlert,  color: '#D32F2F', bg: '#FFEBEE' },
       // ── Feedback notification types ──
-      feedback_acknowledged: { Icon: Eye,          color: '#4A90D9', bg: '#EBF5FF' },
+      feedback_acknowledged: { Icon: Eye,          color: '#F99E3C', bg: '#FFF4E6' },
       feedback_resolved:     { Icon: CheckCheck,   color: '#00B894', bg: '#E8FFF3' },
       feedback_response:     { Icon: MessageCircle, color: '#7B61FF', bg: '#F0EBFF' },
       feedback_archived:     { Icon: Archive,       color: '#94A3B8', bg: '#F1F5F9' },
@@ -307,7 +307,7 @@ const NotificationsScreen = () => {
             onPress={() => handleAction(notification, 'view_booking')}
           >
             <Text style={styles.actionBtnOutlineText}>View Details</Text>
-            <ChevronRight size={14} color="#4A90D9" />
+            <ChevronRight size={14} color="#F99E3C" />
           </TouchableOpacity>
         </View>
       );
@@ -416,9 +416,9 @@ const NotificationsScreen = () => {
             {/* Amount / Coins badges */}
             <View style={styles.badgeRow}>
               {notification.data?.amount && (
-                <View style={[styles.infoBadge, { backgroundColor: '#4A90D9' + '15' }]}>
-                  <CreditCard size={12} color="#4A90D9" />
-                  <Text style={[styles.infoBadgeText, { color: '#4A90D9' }]}>
+                <View style={[styles.infoBadge, { backgroundColor: '#F99E3C' + '15' }]}>
+                  <CreditCard size={12} color="#F99E3C" />
+                  <Text style={[styles.infoBadgeText, { color: '#F99E3C' }]}>
                     ₹{notification.data.amount}
                   </Text>
                 </View>
@@ -502,7 +502,7 @@ const NotificationsScreen = () => {
       {/* ─── Content ──────────────────────────────────────────── */}
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#4A90D9" />
+          <ActivityIndicator size="large" color="#F99E3C" />
           <Text style={styles.loadingText}>Loading notifications...</Text>
         </View>
       ) : (
@@ -510,7 +510,7 @@ const NotificationsScreen = () => {
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#4A90D9" />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#F99E3C" />
           }
           showsVerticalScrollIndicator={false}
         >
@@ -529,7 +529,7 @@ const NotificationsScreen = () => {
               {/* Filter pills */}
               <View style={styles.filterRow}>
                 <View style={styles.filterPill}>
-                  <Bell size={12} color="#4A90D9" />
+                  <Bell size={12} color="#F99E3C" />
                   <Text style={styles.filterPillText}>All ({notifications.length})</Text>
                 </View>
                 {unreadCount > 0 && (
@@ -554,7 +554,7 @@ const NotificationsScreen = () => {
                   activeOpacity={0.7}
                 >
                   <Text style={styles.loadMoreText}>Load More</Text>
-                  <ChevronRight size={14} color="#4A90D9" />
+                  <ChevronRight size={14} color="#F99E3C" />
                 </TouchableOpacity>
               )}
             </>
@@ -638,7 +638,7 @@ const NotificationsScreen = () => {
                         selectedNotification.data.status === 'resolved'
                           ? '#00B894' + '15'
                           : selectedNotification.data.status === 'acknowledged'
-                          ? '#4A90D9' + '15'
+                          ? '#F99E3C' + '15'
                           : '#94A3B8' + '15',
                     },
                   ]}
@@ -651,7 +651,7 @@ const NotificationsScreen = () => {
                           selectedNotification.data.status === 'resolved'
                             ? '#00B894'
                             : selectedNotification.data.status === 'acknowledged'
-                            ? '#4A90D9'
+                            ? '#F99E3C'
                             : '#94A3B8',
                       },
                     ]}
@@ -786,7 +786,7 @@ const styles = StyleSheet.create({
     ...SHADOWS.sm,
   },
   filterPillActive: {
-    backgroundColor: '#4A90D9',
+    backgroundColor: '#F99E3C',
   },
   filterPillText: {
     fontFamily: FONTS.regular,
@@ -815,7 +815,7 @@ const styles = StyleSheet.create({
   notifCardUnread: {
     backgroundColor: '#fff',
     borderWidth: 1,
-    borderColor: '#4A90D9' + '30',
+    borderColor: '#F99E3C' + '30',
     ...SHADOWS.md,
   },
   notifCardRead: {
@@ -928,7 +928,7 @@ const styles = StyleSheet.create({
     borderRadius: normalize(10),
   },
   actionBtnPrimary: {
-    backgroundColor: '#4A90D9',
+    backgroundColor: '#191919',
   },
   actionBtnPrimaryText: {
     fontFamily: FONTS.regular,
@@ -937,14 +937,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   actionBtnOutline: {
-    backgroundColor: '#4A90D9' + '10',
+    backgroundColor: '#232323',
     borderWidth: 1,
-    borderColor: '#4A90D9' + '30',
+    borderColor: '#343434',
   },
   actionBtnOutlineText: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.sm,
-    color: '#4A90D9',
+    color: '#F99E3C',
     fontWeight: '600',
   },
 
@@ -1008,7 +1008,7 @@ const styles = StyleSheet.create({
   loadMoreText: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.sm,
-    color: '#4A90D9',
+    color: '#F99E3C',
     fontWeight: '600',
   },
 
@@ -1164,7 +1164,7 @@ const styles = StyleSheet.create({
 
   /* ── Modal Done Button ──────────────────────────────────────── */
   modalDoneBtn: {
-    backgroundColor: '#4A90D9',
+    backgroundColor: '#F99E3C',
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',

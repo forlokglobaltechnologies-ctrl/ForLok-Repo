@@ -24,6 +24,15 @@ class FeedbackService {
         ...data,
         priority: data.priority || 'medium',
         status: 'pending',
+        timeline: [
+          {
+            action: 'created',
+            toStatus: 'pending',
+            message: 'Feedback submitted',
+            actorId: data.userId,
+            createdAt: new Date(),
+          },
+        ],
       });
 
       logger.info(`Feedback submitted: ${feedbackId}`);
@@ -218,6 +227,13 @@ class FeedbackService {
       if (adminUserId) {
         feedback.respondedBy = adminUserId;
       }
+      feedback.timeline.push({
+        action: 'status_changed',
+        fromStatus: previousStatus,
+        toStatus: status,
+        actorId: adminUserId,
+        createdAt: new Date(),
+      } as any);
       await feedback.save();
 
       logger.info(`Feedback ${feedbackId} status updated to ${status}`);
@@ -291,6 +307,14 @@ class FeedbackService {
       if (feedback.status === 'pending') {
         feedback.status = 'acknowledged' as FeedbackStatus;
       }
+      feedback.timeline.push({
+        action: 'responded',
+        fromStatus: feedback.status,
+        toStatus: feedback.status,
+        actorId: adminUserId,
+        message: responseText,
+        createdAt: new Date(),
+      } as any);
       await feedback.save();
 
       logger.info(`Feedback ${feedbackId} responded to by admin ${adminUserId}`);
@@ -375,6 +399,23 @@ class FeedbackService {
       logger.error('Error getting feedback stats:', error);
       throw error;
     }
+  }
+
+  async assignFeedback(feedbackId: string, assigneeAdminId: string, actorAdminId: string): Promise<any> {
+    const feedback = await Feedback.findOne({ feedbackId });
+    if (!feedback) {
+      throw new NotFoundError('Feedback not found');
+    }
+
+    feedback.assignedTo = assigneeAdminId;
+    feedback.timeline.push({
+      action: 'assigned',
+      message: `Assigned to ${assigneeAdminId}`,
+      actorId: actorAdminId,
+      createdAt: new Date(),
+    } as any);
+    await feedback.save();
+    return feedback.toJSON();
   }
 }
 

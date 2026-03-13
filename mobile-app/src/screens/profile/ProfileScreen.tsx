@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,8 +12,9 @@ import {
   Linking,
   ImageBackground,
   Modal,
+  StatusBar,
 } from 'react-native';
-import { useNavigation, CommonActions } from '@react-navigation/native';
+import { useNavigation, CommonActions, useFocusEffect } from '@react-navigation/native';
 import LottieView from 'lottie-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
@@ -77,6 +78,16 @@ const ProfileScreen = () => {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const lottieRef = useRef<LottieView>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      StatusBar.setHidden(true, 'fade');
+
+      return () => {
+        StatusBar.setHidden(false, 'fade');
+      };
+    }, [])
+  );
 
   const handleLogout = () => {
     setShowLogoutModal(true);
@@ -275,15 +286,19 @@ const ProfileScreen = () => {
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <StatusBar hidden />
         <ImageBackground
           source={require('../../../assets/forlok_profile_banner_blue_bg_v1.png')}
           style={styles.headerImage}
+          imageStyle={{ tintColor: '#191919' }}
           resizeMode="cover"
         >
-          <View style={[styles.headerOverlay, { backgroundColor: PROFILE_ACCENT }]} />
+          <View style={styles.headerOverlay} />
+          <View pointerEvents="none" style={styles.headerAccentLarge} />
+          <View pointerEvents="none" style={styles.headerAccentSmall} />
           <BlurView intensity={40} style={styles.blurContainer}>
             <View style={styles.headerNav}>
-              <TouchableOpacity onPress={() => navigation.goBack()} style={styles.navButton}>
+              <TouchableOpacity onPress={() => navigation.goBack()} style={styles.navButtonPlain}>
                 <ArrowLeft size={22} color="#FFF" />
               </TouchableOpacity>
               <Text style={styles.navTitle}>Profile</Text>
@@ -302,6 +317,7 @@ const ProfileScreen = () => {
   if (!user) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <StatusBar hidden />
         <View style={styles.loadingWrap}>
           <Text style={[styles.loadingLabel, { color: theme.colors.textSecondary }]}>No profile data available</Text>
         </View>
@@ -320,17 +336,21 @@ const ProfileScreen = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <StatusBar hidden />
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* ── Hero Header with Image ── */}
         <ImageBackground
           source={require('../../../assets/forlok_profile_banner_blue_bg_v1.png')}
           style={styles.headerImage}
+          imageStyle={{ tintColor: '#191919' }}
           resizeMode="cover"
         >
-          <View style={[styles.headerOverlay, { backgroundColor: PROFILE_ACCENT }]} />
+          <View style={styles.headerOverlay} />
+          <View pointerEvents="none" style={styles.headerAccentLarge} />
+          <View pointerEvents="none" style={styles.headerAccentSmall} />
           <BlurView intensity={40} style={styles.blurContainer}>
             <View style={styles.headerNav}>
-              <TouchableOpacity onPress={() => navigation.goBack()} style={styles.navButton}>
+              <TouchableOpacity onPress={() => navigation.goBack()} style={styles.navButtonPlain}>
                 <ArrowLeft size={22} color="#FFF" />
               </TouchableOpacity>
               <Text style={styles.navTitle}>My Profile</Text>
@@ -596,7 +616,7 @@ const ProfileScreen = () => {
             <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t('profile.myVehicles')}</Text>
             <TouchableOpacity
               onPress={() => navigation.navigate('AddVehicle' as never)}
-              style={[styles.addBtn, { backgroundColor: PROFILE_ACCENT }]}
+              style={[styles.addBtn, { backgroundColor: COLORS.black, borderColor: theme.colors.border }]}
             >
               <Text style={styles.addBtnText}>+ Add</Text>
             </TouchableOpacity>
@@ -647,7 +667,7 @@ const ProfileScreen = () => {
               <Car size={36} color={theme.colors.textSecondary} />
               <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>No vehicles added yet</Text>
               <TouchableOpacity
-                style={[styles.addVehicleBtn, { backgroundColor: PROFILE_ACCENT }]}
+                style={[styles.addVehicleBtn, { backgroundColor: COLORS.black, borderColor: theme.colors.border }]}
                 onPress={() => navigation.navigate('AddVehicle' as never)}
               >
                 <Text style={styles.addVehicleBtnText}>+ Add Vehicle</Text>
@@ -682,8 +702,6 @@ const ProfileScreen = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Bottom spacing to clear floating tab bar */}
-        <View style={{ height: normalize(120) }} />
       </ScrollView>
       {/* ── Logout Modal ── */}
       <Modal
@@ -751,7 +769,26 @@ const styles = StyleSheet.create({
   },
   headerOverlay: {
     ...StyleSheet.absoluteFillObject,
-    opacity: 0.75,
+    backgroundColor: '#191919',
+    opacity: 0.9,
+  },
+  headerAccentLarge: {
+    position: 'absolute',
+    top: -normalize(34),
+    right: -normalize(18),
+    width: normalize(150),
+    height: normalize(150),
+    borderRadius: normalize(75),
+    backgroundColor: 'rgba(254, 136, 0, 0.2)',
+  },
+  headerAccentSmall: {
+    position: 'absolute',
+    bottom: -normalize(28),
+    left: normalize(18),
+    width: normalize(92),
+    height: normalize(92),
+    borderRadius: normalize(46),
+    backgroundColor: 'rgba(254, 136, 0, 0.14)',
   },
   blurContainer: {
     flex: 1,
@@ -768,7 +805,15 @@ const styles = StyleSheet.create({
     width: normalize(36),
     height: normalize(36),
     borderRadius: normalize(18),
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(254, 136, 0, 0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(254, 136, 0, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  navButtonPlain: {
+    paddingVertical: normalize(6),
+    paddingRight: normalize(8),
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1076,6 +1121,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.sm,
     paddingVertical: normalize(5),
     borderRadius: BORDER_RADIUS.round,
+    borderWidth: 1,
   },
   addBtnText: {
     fontFamily: FONTS.regular,
@@ -1088,6 +1134,7 @@ const styles = StyleSheet.create({
     paddingVertical: normalize(10),
     paddingHorizontal: SPACING.lg,
     borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
   },
   addVehicleBtnText: {
     fontFamily: FONTS.regular,

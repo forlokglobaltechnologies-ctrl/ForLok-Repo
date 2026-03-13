@@ -64,6 +64,18 @@ class WithdrawalService {
       }
 
       // Create withdrawal
+      const earningReferences = wallet.transactions
+        .filter((tx) => tx.type === 'credit' && tx.reason === 'ride_earning')
+        .slice()
+        .reverse()
+        .slice(0, 10)
+        .map((tx) => ({
+          bookingId: tx.bookingId,
+          amount: tx.amount,
+          createdAt: tx.createdAt,
+          description: tx.description,
+        }));
+
       const withdrawal = await Withdrawal.create({
         userId,
         amount: data.amount,
@@ -72,6 +84,7 @@ class WithdrawalService {
         upiId: data.upiId,
         status: 'pending',
         requestedAt: new Date(),
+        earningReferences,
       });
 
       logger.info(`Withdrawal requested: ${withdrawal.withdrawalId} by user ${userId} for ₹${data.amount}`);
@@ -242,7 +255,7 @@ class WithdrawalService {
 
   /**
    * Approve withdrawal (Admin)
-   * Deducts from user's wallet balance
+   * Marks request as approved for payout processing
    */
   async approveWithdrawal(withdrawalId: string, adminId: string): Promise<any> {
     try {
@@ -260,13 +273,6 @@ class WithdrawalService {
       if (wallet.balance < withdrawal.amount) {
         throw new ValidationError(`User has insufficient wallet balance. Available: ₹${wallet.balance}`);
       }
-
-      // Deduct from wallet
-      await walletService.processWithdrawal(
-        withdrawal.userId,
-        withdrawal.amount,
-        withdrawal.withdrawalId
-      );
 
       // Update withdrawal
       withdrawal.status = 'approved';
@@ -305,6 +311,18 @@ class WithdrawalService {
       if (!transactionId) {
         throw new ValidationError('Transaction ID is required');
       }
+
+      // Debit wallet only when payout is actually sent (completion step)
+      const wallet = await walletService.getOrCreateWallet(withdrawal.userId);
+      if (wallet.balance < withdrawal.amount) {
+        throw new ValidationError(`User has insufficient wallet balance. Available: ₹${wallet.balance}`);
+      }
+
+      await walletService.processWithdrawal(
+        withdrawal.userId,
+        withdrawal.amount,
+        withdrawal.withdrawalId
+      );
 
       withdrawal.status = 'completed';
       withdrawal.completedAt = new Date();

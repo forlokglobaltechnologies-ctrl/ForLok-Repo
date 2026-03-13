@@ -250,7 +250,7 @@ class WalletService {
 
   /**
    * Process withdrawal request - debit wallet
-   * Used when admin approves a withdrawal
+   * Used when admin completes/sends a withdrawal
    */
   async processWithdrawal(
     userId: string,
@@ -268,7 +268,7 @@ class WalletService {
         userId,
         amount,
         'withdrawal',
-        `Withdrawal approved: ${withdrawalId}`,
+        `Withdrawal completed: ${withdrawalId}`,
         withdrawalId
       );
     } catch (error) {

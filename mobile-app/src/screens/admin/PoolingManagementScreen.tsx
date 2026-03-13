@@ -29,6 +29,7 @@ import {
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { normalize, wp, hp } from '@utils/responsive';
 import { adminApi, analyticsApi } from '@utils/apiClient';
+import useMasterData from '../../hooks/useMasterData';
 
 const formatNumber = (n: number) => {
   if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
@@ -37,20 +38,38 @@ const formatNumber = (n: number) => {
 
 const PoolingManagementScreen = () => {
   const navigation = useNavigation();
-  const [activeTab, setActiveTab] = useState('All');
+  const [activeTab, setActiveTab] = useState('all');
   const [offers, setOffers] = useState<any[]>([]);
   const [stats, setStats] = useState({ total: 0, active: 0, pending: 0, suspended: 0 });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(1);
   const [totalOffers, setTotalOffers] = useState(0);
+  const { items: poolingStatusItems } = useMasterData('pooling_offer_status', [
+    { type: 'pooling_offer_status', key: 'active', label: 'Active' },
+    { type: 'pooling_offer_status', key: 'pending', label: 'Pending' },
+    { type: 'pooling_offer_status', key: 'expired', label: 'Expired' },
+    { type: 'pooling_offer_status', key: 'suspended', label: 'Suspended' },
+  ]);
+
+  const getTabMeta = (key: string) => {
+    const map: Record<string, { icon: any; color: string }> = {
+      all: { icon: Inbox, color: '#F99E3C' },
+      active: { icon: CheckCircle, color: '#00B894' },
+      pending: { icon: Clock, color: '#F39C12' },
+      expired: { icon: AlertCircle, color: '#94A3B8' },
+      suspended: { icon: Shield, color: '#E74C3C' },
+    };
+    return map[key] || { icon: Inbox, color: '#94A3B8' };
+  };
 
   const tabs = [
-    { key: 'All', label: 'All', icon: Inbox, color: '#4A90D9' },
-    { key: 'active', label: 'Active', icon: CheckCircle, color: '#00B894' },
-    { key: 'pending', label: 'Pending', icon: Clock, color: '#F39C12' },
-    { key: 'expired', label: 'Expired', icon: AlertCircle, color: '#94A3B8' },
-    { key: 'suspended', label: 'Suspended', icon: Shield, color: '#E74C3C' },
+    { key: 'all', label: 'All', ...getTabMeta('all') },
+    ...poolingStatusItems.map((item: any) => {
+      const key = String(item.value || item.key || '').toLowerCase();
+      const label = String(item.label || item.value || item.key || key);
+      return { key, label, ...getTabMeta(key) };
+    }).filter((item: any) => item.key),
   ];
 
   const fetchData = useCallback(async (isRefresh = false) => {
@@ -58,7 +77,7 @@ const PoolingManagementScreen = () => {
       if (!isRefresh) setLoading(true);
 
       const params: any = { page, limit: 20 };
-      if (activeTab !== 'All') params.status = activeTab;
+      if (activeTab !== 'all') params.status = activeTab;
 
       const [offersRes, statsRes] = await Promise.all([
         adminApi.getPoolingOffers(params),
@@ -114,7 +133,7 @@ const PoolingManagementScreen = () => {
   };
 
   const statItems = [
-    { label: 'Total', value: stats.total, color: '#4A90D9', icon: Car },
+    { label: 'Total', value: stats.total, color: '#F99E3C', icon: Car },
     { label: 'Active', value: stats.active, color: '#00B894', icon: CheckCircle },
     { label: 'Pending', value: stats.pending, color: '#F39C12', icon: Clock },
     { label: 'Suspended', value: stats.suspended, color: '#E74C3C', icon: Shield },
@@ -218,8 +237,8 @@ const PoolingManagementScreen = () => {
             return (
               <View key={offerId} style={styles.offerCard}>
                 <View style={styles.cardHeaderRow}>
-                  <View style={[styles.cardServiceIcon, { backgroundColor: '#4A90D9' + '15' }]}>
-                    <Car size={20} color="#4A90D9" />
+                  <View style={[styles.cardServiceIcon, { backgroundColor: '#F99E3C' + '15' }]}>
+                    <Car size={20} color="#F99E3C" />
                   </View>
                   <View style={styles.cardHeaderInfo}>
                     <Text style={styles.cardDriverName}>{driverName}</Text>
@@ -255,7 +274,7 @@ const PoolingManagementScreen = () => {
                 <View style={styles.actionRow}>
                   <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('PoolingOfferDetails' as never, { offerId } as never)}>
                     <Text style={styles.actionButtonText}>View Details</Text>
-                    <ChevronRight size={14} color="#4A90D9" />
+                    <ChevronRight size={14} color="#F99E3C" />
                   </TouchableOpacity>
                   {status === 'pending' && (
                     <TouchableOpacity style={[styles.actionButton, styles.approveButton]} onPress={() => handleApprove(offerId)}>
@@ -342,8 +361,8 @@ const styles = StyleSheet.create({
   detailMetaText: { fontFamily: FONTS.regular, fontSize: normalize(12), color: '#94A3B8', fontWeight: '500' },
   priceText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: '#1E293B', fontWeight: '700' },
   actionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm },
-  actionButton: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, borderRadius: BORDER_RADIUS.md, backgroundColor: '#4A90D9' + '15', gap: normalize(6) },
-  actionButtonText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: '#4A90D9', fontWeight: '600' },
+  actionButton: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.md, paddingVertical: SPACING.sm, borderRadius: BORDER_RADIUS.md, backgroundColor: '#F99E3C' + '15', gap: normalize(6) },
+  actionButtonText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: '#F99E3C', fontWeight: '600' },
   approveButton: { backgroundColor: '#00B894' },
   approveButtonText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: '#fff', fontWeight: '600' },
   suspendButton: { backgroundColor: '#E74C3C' + '15' },

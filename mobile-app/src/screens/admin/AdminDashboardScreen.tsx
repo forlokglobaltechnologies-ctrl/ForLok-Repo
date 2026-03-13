@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -24,6 +24,7 @@ import {
   MessageSquare,
   Car,
   KeyRound,
+  FileText,
   Clock,
   ChevronRight,
   CheckCircle,
@@ -36,6 +37,8 @@ import {
   ArrowDownRight,
   Circle,
   Zap,
+  Send,
+  Table2,
 } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { useLanguage } from '@context/LanguageContext';
@@ -57,13 +60,110 @@ const CAROUSEL_IMAGES = [
 
 // ── Quick-action config ──────────────────────────────────────────
 const QUICK_ACTIONS = [
-  { key: 'pooling', icon: Car, label: 'Pooling', color: '#4A90D9', route: 'PoolingManagement' },
-  { key: 'rental', icon: KeyRound, label: 'Rentals', color: '#7B61FF', route: 'RentalManagement' },
-  { key: 'users', icon: Users, label: 'Users', color: '#00B894', route: 'UserManagement' },
-  { key: 'history', icon: Clock, label: 'History', color: '#F39C12', route: 'RidesHistory' },
-  { key: 'feedback', icon: MessageSquare, label: 'Feedback', color: '#E74C3C', route: 'FeedbackManagement' },
-  { key: 'analytics', icon: BarChart3, label: 'Analytics', color: '#0984E3', route: 'Analytics' },
-  { key: 'promos', icon: Lightbulb, label: 'Promos', color: '#F5A623', route: 'AdminPromoReview' },
+  {
+    key: 'pooling',
+    icon: Car,
+    label: 'Pooling',
+    color: '#F99E3C',
+    route: 'PoolingManagement',
+    requiredPermissions: ['offers:view'],
+  },
+  {
+    key: 'rental',
+    icon: KeyRound,
+    label: 'Rentals',
+    color: '#7B61FF',
+    route: 'RentalManagement',
+    requiredPermissions: ['offers:view'],
+  },
+  {
+    key: 'users',
+    icon: Users,
+    label: 'Users',
+    color: '#00B894',
+    route: 'UserManagement',
+    requiredPermissions: ['users:view'],
+  },
+  {
+    key: 'history',
+    icon: Clock,
+    label: 'History',
+    color: '#F39C12',
+    route: 'RidesHistory',
+    requiredPermissions: ['bookings:view'],
+  },
+  {
+    key: 'feedback',
+    icon: MessageSquare,
+    label: 'Feedback',
+    color: '#E74C3C',
+    route: 'FeedbackManagement',
+    requiredPermissions: ['feedback:view'],
+  },
+  {
+    key: 'analytics',
+    icon: BarChart3,
+    label: 'Analytics',
+    color: '#0984E3',
+    route: 'Analytics',
+    requiredPermissions: ['analytics:view'],
+  },
+  {
+    key: 'promos',
+    icon: Lightbulb,
+    label: 'Promos',
+    color: '#F5A623',
+    route: 'AdminPromoReview',
+    requiredPermissions: ['promos:review'],
+  },
+  {
+    key: 'cms',
+    icon: FileText,
+    label: 'CMS',
+    color: '#5C6BC0',
+    route: 'AdminContentForms',
+    requiredPermissions: ['content:view'],
+  },
+  {
+    key: 'master_data',
+    icon: Settings,
+    label: 'Master Data',
+    color: '#16A085',
+    route: 'AdminMasterData',
+    requiredPermissions: ['master_data:view'],
+  },
+  {
+    key: 'withdrawals',
+    icon: Send,
+    label: 'Withdrawals',
+    color: '#2563EB',
+    route: 'AdminWithdrawals',
+    requiredPermissions: ['withdrawals:view'],
+  },
+  {
+    key: 'roles',
+    icon: Shield,
+    label: 'Roles',
+    color: '#0EA5E9',
+    route: 'AdminRoles',
+    requiredPermissions: ['roles:view'],
+  },
+  {
+    key: 'admin_users',
+    icon: Users,
+    label: 'Admins',
+    color: '#2563EB',
+    route: 'AdminUsers',
+    requiredPermissions: ['admins:view'],
+  },
+  {
+    key: 'permission_matrix',
+    icon: Table2,
+    label: 'Matrix',
+    color: '#1D4ED8',
+    route: 'AdminPermissionMatrix',
+    requiredPermissions: ['roles:view'],
+  },
 ];
 
 const AdminDashboardScreen = () => {
@@ -87,15 +187,22 @@ const AdminDashboardScreen = () => {
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
   const [coinStats, setCoinStats] = useState<any>(null);
   const [pendingPromos, setPendingPromos] = useState(0);
+  const [adminPermissionContext, setAdminPermissionContext] = useState<{
+    role: string;
+    permissions: string[];
+  }>({ role: '', permissions: [] });
+  const [permissionsLoaded, setPermissionsLoaded] = useState(false);
+  const [permissionsFetchFailed, setPermissionsFetchFailed] = useState(false);
 
   // ── Data fetch ────────────────────────────────────────────────
   const fetchDashboardData = useCallback(async () => {
     try {
-      const [statsRes, realtimeRes, coinStatsRes, pendingPromosRes] = await Promise.all([
+      const [statsRes, realtimeRes, coinStatsRes, pendingPromosRes, myPermissionsRes] = await Promise.all([
         adminApi.getDashboardStats(),
         analyticsApi.getRealtime().catch(() => ({ success: false })),
         apiCall('/api/admin/coins/stats', { method: 'GET', requiresAuth: true }).catch(() => ({ success: false })),
         apiCall('/api/admin/promos?status=pending', { method: 'GET', requiresAuth: true }).catch(() => ({ success: false })),
+        adminApi.getMyPermissions().catch(() => ({ success: false })),
       ]);
 
       if (statsRes.success && statsRes.data) setStats(statsRes.data);
@@ -105,8 +212,23 @@ const AdminDashboardScreen = () => {
         const submissions = pendingPromosRes.data?.submissions || pendingPromosRes.data || [];
         setPendingPromos(Array.isArray(submissions) ? submissions.length : 0);
       }
+      if (myPermissionsRes.success && myPermissionsRes.data) {
+        setAdminPermissionContext({
+          role: myPermissionsRes.data.role || '',
+          permissions: myPermissionsRes.data.permissions || [],
+        });
+        setPermissionsFetchFailed(false);
+        setPermissionsLoaded(true);
+      } else {
+        // Fallback: do not hide quick actions if permission API is unavailable.
+        setPermissionsFetchFailed(true);
+        setPermissionsLoaded(false);
+      }
+      setPermissionsLoaded(true);
     } catch (error) {
       console.error('Error fetching admin dashboard data:', error);
+      setPermissionsFetchFailed(true);
+      setPermissionsLoaded(false);
     } finally {
       setDataDone(true);
     }
@@ -154,12 +276,36 @@ const AdminDashboardScreen = () => {
     return num.toLocaleString();
   };
 
+  const canAccessQuickAction = useCallback(
+    (action: any) => {
+      const requiredPermissions: string[] = action.requiredPermissions || [];
+      if (permissionsFetchFailed) return true;
+      if (!permissionsLoaded) return true;
+      if (requiredPermissions.length === 0) return true;
+      if (
+        adminPermissionContext.role === 'super_admin' ||
+        adminPermissionContext.permissions.includes('*')
+      ) {
+        return true;
+      }
+      return requiredPermissions.every((permission) =>
+        adminPermissionContext.permissions.includes(permission)
+      );
+    },
+    [adminPermissionContext, permissionsFetchFailed, permissionsLoaded]
+  );
+
+  const visibleQuickActions = useMemo(
+    () => QUICK_ACTIONS.filter((action) => canAccessQuickAction(action)),
+    [canAccessQuickAction]
+  );
+
   // ── Loading state ─────────────────────────────────────────────
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
         <StatusBar barStyle="dark-content" translucent backgroundColor="transparent" />
-        <ActivityIndicator size="large" color="#4A90D9" />
+        <ActivityIndicator size="large" color="#F99E3C" />
         <Text style={styles.loadingText}>Loading Dashboard...</Text>
       </View>
     );
@@ -181,7 +327,7 @@ const AdminDashboardScreen = () => {
         <View style={styles.headerContent}>
           <View style={styles.headerLeft}>
             <View style={styles.adminAvatarWrap}>
-              <Shield size={18} color="#4A90D9" />
+              <Shield size={18} color="#F99E3C" />
             </View>
             <View>
               <Text style={styles.headerGreeting}>Welcome back</Text>
@@ -215,7 +361,7 @@ const AdminDashboardScreen = () => {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#4A90D9" />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#F99E3C" />
         }
         showsVerticalScrollIndicator={false}
       >
@@ -256,9 +402,9 @@ const AdminDashboardScreen = () => {
         {/* ─── Stat Cards (2x2 grid) ─────────────────────────── */}
         <View style={styles.statsGrid}>
           {/* Active Users */}
-          <View style={[styles.statCard, { backgroundColor: '#EBF5FF' }]}>
+          <View style={[styles.statCard, { backgroundColor: '#FFF4E6' }]}>
             <View style={styles.statCardHeader}>
-              <View style={[styles.statIconWrap, { backgroundColor: '#4A90D9' }]}>
+              <View style={[styles.statIconWrap, { backgroundColor: '#F99E3C' }]}>
                 <Activity size={18} color="#fff" />
               </View>
               <View style={styles.liveBadge}>
@@ -266,7 +412,7 @@ const AdminDashboardScreen = () => {
                 <Text style={styles.liveBadgeText}>Live</Text>
               </View>
             </View>
-            <Text style={[styles.statCardValue, { color: '#4A90D9' }]}>
+            <Text style={[styles.statCardValue, { color: '#F99E3C' }]}>
               {formatNumber(stats.users?.active || 0)}
             </Text>
             <Text style={styles.statCardLabel}>Active Users</Text>
@@ -320,7 +466,7 @@ const AdminDashboardScreen = () => {
         <View style={styles.sectionWrap}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
           <View style={styles.quickActionsGrid}>
-            {QUICK_ACTIONS.map((action) => {
+            {visibleQuickActions.map((action) => {
               const Icon = action.icon;
               return (
                 <TouchableOpacity
@@ -353,7 +499,7 @@ const AdminDashboardScreen = () => {
               onPress={() => navigation.navigate('RidesHistory' as never)}
             >
               <Text style={styles.viewAllText}>View All</Text>
-              <ChevronRight size={14} color="#4A90D9" />
+              <ChevronRight size={14} color="#F99E3C" />
             </TouchableOpacity>
           </View>
 
@@ -361,7 +507,7 @@ const AdminDashboardScreen = () => {
             {/* Today */}
             <View style={styles.bookingCard}>
               <LinearGradient
-                colors={['#4A90D9', '#357ABD']}
+                colors={['#F99E3C', '#E08E35']}
                 style={styles.bookingCardGradient}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
@@ -412,7 +558,7 @@ const AdminDashboardScreen = () => {
                 onPress={() => navigation.navigate('AdminPromoReview' as never)}
               >
                 <Text style={styles.viewAllText}>Manage</Text>
-                <ChevronRight size={14} color="#4A90D9" />
+                <ChevronRight size={14} color="#F99E3C" />
               </TouchableOpacity>
             </View>
 
@@ -432,8 +578,8 @@ const AdminDashboardScreen = () => {
                 <Text style={styles.coinLabel}>Total Issued</Text>
               </View>
               <View style={styles.coinCard}>
-                <View style={[styles.coinIconWrap, { backgroundColor: '#4A90D9' + '20' }]}>
-                  <DollarSign size={20} color="#4A90D9" />
+                <View style={[styles.coinIconWrap, { backgroundColor: '#F99E3C' + '20' }]}>
+                  <DollarSign size={20} color="#F99E3C" />
                 </View>
                 <Text style={styles.coinValue}>{formatNumber(coinStats.totalCoinsRedeemed || 0)}</Text>
                 <Text style={styles.coinLabel}>Redeemed</Text>
@@ -472,7 +618,7 @@ const AdminDashboardScreen = () => {
                     onPress={() => navigation.navigate('AdminPromoReview' as never)}
                   >
                     <LinearGradient
-                      colors={['#F5A623', '#E69500']}
+                      colors={['#F99E3C', '#E08E35']}
                       style={styles.reviewButtonGradient}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 0 }}
@@ -499,7 +645,7 @@ const AdminDashboardScreen = () => {
                 onPress={() => navigation.navigate('RidesHistory' as never)}
               >
                 <Text style={styles.viewAllText}>View All</Text>
-                <ChevronRight size={14} color="#4A90D9" />
+                <ChevronRight size={14} color="#F99E3C" />
               </TouchableOpacity>
             </View>
 
@@ -511,7 +657,7 @@ const AdminDashboardScreen = () => {
                 onPress={() => navigation.navigate('RidesHistory' as never)}
               >
                 <View style={styles.activityIconWrap}>
-                  <DollarSign size={18} color="#4A90D9" />
+                  <DollarSign size={18} color="#F99E3C" />
                 </View>
                 <View style={styles.activityInfo}>
                   <Text style={styles.activityUser} numberOfLines={1}>
@@ -659,7 +805,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#D1D5DB',
   },
   dotActive: {
-    backgroundColor: '#4A90D9',
+    backgroundColor: '#F99E3C',
     width: normalize(24),
     borderRadius: normalize(12),
   },
@@ -754,7 +900,7 @@ const styles = StyleSheet.create({
   viewAllText: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.sm,
-    color: '#4A90D9',
+    color: '#F99E3C',
     fontWeight: '600',
   },
 
@@ -939,7 +1085,7 @@ const styles = StyleSheet.create({
     width: normalize(42),
     height: normalize(42),
     borderRadius: normalize(12),
-    backgroundColor: '#4A90D9' + '15',
+    backgroundColor: '#F99E3C' + '15',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: SPACING.sm,

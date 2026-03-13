@@ -5,12 +5,12 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "newArchEnabled": true,
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "icon": "./assets/forlok_app_icon_dark_orange.png",
+    "userInterfaceStyle": "dark",
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/forlok_splash_arrow_sharp_dark.png",
       "resizeMode": "contain",
-      "backgroundColor": "#071952"
+      "backgroundColor": "#191919"
     },
     "assetBundlePatterns": [
       "**/*"
@@ -20,12 +20,12 @@
       "bundleIdentifier": "com.forlok.mobile"
     },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#071952"
-      },
       "package": "com.forlok.mobile",
       "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/forlok_adaptive_foreground_orange.png",
+        "backgroundColor": "#191919"
+      },
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
@@ -35,7 +35,7 @@
       ]
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/forlok_app_icon_dark_orange.png"
     },
     "plugins": [
       "expo-font",

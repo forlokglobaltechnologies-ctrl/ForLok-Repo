@@ -6,6 +6,9 @@ import { validateFileUpload } from '../../middleware/upload.middleware';
 import multipart from '@fastify/multipart';
 import { z } from 'zod';
 import { ApiResponse } from '../../types';
+import MasterDataItem from '../../models/MasterDataItem';
+import VehicleCatalogRequest from '../../models/VehicleCatalogRequest';
+import { generateUserId } from '../../utils/helpers';
 
 // Request schemas
 const addVehicleSchema = z.object({
@@ -19,7 +22,7 @@ const addVehicleSchema = z.object({
   number: z.string().min(1),
   plateType: z.enum(['white', 'yellow', 'green']).optional(),
   seats: z.number().min(1).max(50),
-  fuelType: z.enum(['Petrol', 'Diesel', 'Electric', 'CNG']),
+  fuelType: z.string().min(1),
   transmission: z.enum(['Manual', 'Automatic']),
   insuranceExpiry: z.string().datetime().optional(),
 });
@@ -30,15 +33,89 @@ const updateVehicleSchema = z.object({
   year: z.number().min(1900).max(new Date().getFullYear() + 1).optional(),
   color: z.string().optional(),
   seats: z.number().min(1).max(50).optional(),
-  fuelType: z.enum(['Petrol', 'Diesel', 'Electric', 'CNG']).optional(),
+  fuelType: z.string().min(1).optional(),
   transmission: z.enum(['Manual', 'Automatic']).optional(),
   status: z.enum(['active', 'inactive', 'under_maintenance']).optional(),
   insuranceExpiry: z.string().datetime().optional(),
 });
 
+const createVehicleCatalogRequestSchema = z.object({
+  vehicleType: z.enum(['car', 'bike', 'scooty']),
+  brand: z.string().min(1),
+  model: z.string().min(1),
+  fuelType: z.string().min(1),
+  transmission: z.string().optional(),
+  launchYear: z.number().min(1900).max(new Date().getFullYear() + 1).optional(),
+  realWorldMileageAvg: z.number().positive().optional(),
+  mileageUnit: z.string().optional(),
+  estimatedCostPerKmInr: z.number().nonnegative().optional(),
+  cityTier: z.string().optional(),
+  notes: z.string().max(1000).optional(),
+});
+
 export async function vehicleRoutes(fastify: FastifyInstance) {
   // Register multipart plugin for file uploads
   await fastify.register(multipart);
+
+  /**
+   * GET /api/vehicles/catalog/fuel-types
+   * Get dynamic fuel options for vehicle forms
+   */
+  fastify.get('/catalog/fuel-types', async (_request: FastifyRequest, reply: FastifyReply) => {
+    const masterItems = await MasterDataItem.find({ type: 'fuel_type', isActive: true })
+      .sort({ sortOrder: 1, label: 1 })
+      .lean();
+    const values = new Set<string>(['Petrol', 'Diesel', 'Electric', 'CNG', 'AutoGas', 'LPG']);
+    masterItems.forEach((item: any) => {
+      const label = String(item?.label || '').trim();
+      if (label) values.add(label);
+    });
+    return reply.status(200).send({
+      success: true,
+      message: 'Fuel types retrieved successfully',
+      data: { items: Array.from(values) },
+    });
+  });
+
+  /**
+   * POST /api/vehicles/catalog-requests
+   * Submit missing vehicle/brand/model details for admin review
+   */
+  fastify.post(
+    '/catalog-requests',
+    {
+      preHandler: [authenticate, validate(createVehicleCatalogRequestSchema)],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const userId = (request as any).user.userId;
+      const body = request.body as any;
+      const requestId = generateUserId('VR');
+      const doc = await VehicleCatalogRequest.create({
+        requestId,
+        userId,
+        vehicleType: body.vehicleType,
+        brand: String(body.brand || '').trim(),
+        vehicleModel: String(body.model || '').trim(),
+        fuelType: String(body.fuelType || '').trim(),
+        transmission: body.transmission ? String(body.transmission).trim() : undefined,
+        launchYear: body.launchYear,
+        realWorldMileageAvg: body.realWorldMileageAvg,
+        mileageUnit: body.mileageUnit ? String(body.mileageUnit).trim() : undefined,
+        estimatedCostPerKmInr: body.estimatedCostPerKmInr,
+        cityTier: body.cityTier ? String(body.cityTier).trim() : undefined,
+        notes: body.notes ? String(body.notes).trim() : undefined,
+        status: 'pending',
+      });
+      return reply.status(201).send({
+        success: true,
+        message: 'Vehicle request submitted for admin approval',
+        data: {
+          ...doc.toObject(),
+          model: doc.vehicleModel,
+        },
+      });
+    }
+  );
 
   /**
    * POST /api/vehicles

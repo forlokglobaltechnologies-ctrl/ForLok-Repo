@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
   Image,
 } from 'react-native';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import { ArrowLeft, Plus, Car, AlertCircle, X, Clock, MessageCircle, MapPin, ArrowRight, Calendar, Users, Bike, ChevronRight, Play, Eye, Navigation } from 'lucide-react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -21,22 +21,28 @@ import { useLanguage } from '@context/LanguageContext';
 import { useTheme } from '@context/ThemeContext';
 import { poolingApi, rentalApi } from '@utils/apiClient';
 
-const OFFER_ACCENT = '#F99E3C';
-const OFFER_ACCENT_DARK = '#D47B1B';
-const MODAL_BLUE_GRADIENT: [string, string] = ['#51A7EA', '#0284C7'];
-const MODAL_ORANGE_GRADIENT: [string, string] = ['#F99E3C', '#E08E35'];
+const OFFER_ACCENT = '#FE8800';
+const OFFER_ACCENT_DARK = '#D97100';
+const MODAL_BLUE_GRADIENT: [string, string] = ['#232323', '#191919'];
+const MODAL_ORANGE_GRADIENT: [string, string] = ['#232323', '#191919'];
+
+interface MyOffersRouteParams {
+  initialTab?: 'All' | 'In Trip' | 'Pending' | 'Completed';
+}
 
 const MyOffersScreen = () => {
   const navigation = useNavigation();
+  const route = useRoute();
   const { t } = useLanguage();
   const { theme } = useTheme();
+  const routeParams = (route.params as MyOffersRouteParams | undefined) || {};
   const [activeTab, setActiveTab] = useState('All');
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
   const [selectedOffer, setSelectedOffer] = useState<any>(null);
   const [myOffers, setMyOffers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const tabs = ['All', 'Active', 'In Trip', 'Pending'];
+  const tabs = ['All', 'In Trip', 'Pending', 'Completed'];
 
   const loadOffers = async () => {
     try {
@@ -104,9 +110,8 @@ const MyOffersScreen = () => {
         offers.push(...rentalMapped);
       }
 
-      const activeOffers = offers.filter((offer) => offer.status !== 'completed');
-      setMyOffers(activeOffers);
-      console.log(`✅ Loaded ${activeOffers.length} active offers (filtered out ${offers.length - activeOffers.length} completed) out of ${offers.length} total`);
+      setMyOffers(offers);
+      console.log(`✅ Loaded ${offers.length} offers in My Offers`);
     } catch (error: any) {
       console.error('❌ Error loading offers:', error);
       Alert.alert('Error', `Failed to load offers: ${error.message || 'Unknown error'}`);
@@ -118,16 +123,21 @@ const MyOffersScreen = () => {
 
   useEffect(() => { loadOffers(); }, []);
 
+  useEffect(() => {
+    if (routeParams.initialTab) {
+      setActiveTab(routeParams.initialTab);
+    }
+  }, [routeParams.initialTab]);
+
   useFocusEffect(
     React.useCallback(() => { loadOffers(); }, [])
   );
 
   const filteredOffers = myOffers.filter((offer) => {
-    if (offer.status === 'completed') return false;
     if (activeTab === 'All') return true;
-    if (activeTab === 'Active') return offer.status === 'active' || offer.status === 'booked';
     if (activeTab === 'In Trip') return offer.status === 'in_progress';
     if (activeTab === 'Pending') return offer.status === 'pending';
+    if (activeTab === 'Completed') return offer.status === 'completed';
     return offer.status === activeTab.toLowerCase();
   });
 
@@ -181,6 +191,7 @@ const MyOffersScreen = () => {
       case 'in_progress': return { bg: '#FFF3E0', color: OFFER_ACCENT_DARK, label: 'In Trip', dotColor: OFFER_ACCENT };
       case 'booked': return { bg: '#FFF3E0', color: OFFER_ACCENT_DARK, label: 'Booked', dotColor: OFFER_ACCENT };
       case 'pending': return { bg: '#FFF3E0', color: '#E65100', label: 'Pending', dotColor: '#FF9800' };
+      case 'completed': return { bg: '#E8F5E9', color: '#2E7D32', label: 'Completed', dotColor: '#4CAF50' };
       case 'expired': return { bg: '#F5F5F5', color: '#757575', label: 'Expired', dotColor: '#9E9E9E' };
       default: return { bg: '#F5F5F5', color: '#757575', label: status, dotColor: '#9E9E9E' };
     }
@@ -361,7 +372,7 @@ const MyOffersScreen = () => {
                   activeOpacity={0.8}
                 >
                   <LinearGradient
-                    colors={[OFFER_ACCENT, OFFER_ACCENT_DARK]}
+                    colors={['#232323', '#191919']}
                     start={{ x: 0.5, y: 0 }}
                     end={{ x: 0.5, y: 1 }}
                     style={styles.primaryBtnGradient}
@@ -384,7 +395,7 @@ const MyOffersScreen = () => {
           {/* Rental: Manage */}
           {!isPooling && offer.totalBookings > 0 && (
             <TouchableOpacity
-              style={[styles.primaryBtn, styles.primaryBtnSolid, { backgroundColor: OFFER_ACCENT }]}
+              style={[styles.primaryBtn, styles.primaryBtnSolid, { backgroundColor: '#191919', borderWidth: 1, borderColor: theme.colors.border }]}
               onPress={() => handleView(offer)}
               activeOpacity={0.8}
             >
@@ -418,7 +429,7 @@ const MyOffersScreen = () => {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       {/* Clean header */}
-      <View style={[styles.header, { backgroundColor: theme.colors.surface }]}>
+      <View style={[styles.header, { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <ArrowLeft size={22} color={theme.colors.text} />
         </TouchableOpacity>
@@ -441,11 +452,10 @@ const MyOffersScreen = () => {
         {tabs.map((tab) => {
           const isActive = activeTab === tab;
           const count = myOffers.filter((o) => {
-            if (o.status === 'completed') return false;
             if (tab === 'All') return true;
-            if (tab === 'Active') return o.status === 'active' || o.status === 'booked';
             if (tab === 'In Trip') return o.status === 'in_progress';
             if (tab === 'Pending') return o.status === 'pending';
+            if (tab === 'Completed') return o.status === 'completed';
             return false;
           }).length;
 
@@ -477,13 +487,21 @@ const MyOffersScreen = () => {
             <View style={[styles.emptyIcon, { backgroundColor: OFFER_ACCENT + '12' }]}>
               <Car size={32} color={OFFER_ACCENT} />
             </View>
-            <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>No offers yet</Text>
-            <Text style={[styles.centerText, { color: theme.colors.textSecondary }]}>Create your first ride or rental offer</Text>
-            <TouchableOpacity style={[styles.createBtn, { backgroundColor: OFFER_ACCENT }]}
-              onPress={() => navigation.navigate('OfferServices' as never)}>
-              <Plus size={18} color="#FFF" />
-              <Text style={styles.createBtnText}>Create Offer</Text>
-            </TouchableOpacity>
+            <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
+              {activeTab === 'Completed' ? 'No completed offers' : 'No offers yet'}
+            </Text>
+            <Text style={[styles.centerText, { color: theme.colors.textSecondary }]}>
+              {activeTab === 'Completed'
+                ? 'Completed trips and rentals will appear here.'
+                : 'Create your first ride or rental offer'}
+            </Text>
+            {activeTab !== 'Completed' && (
+              <TouchableOpacity style={[styles.createBtn, { backgroundColor: OFFER_ACCENT }]}
+                onPress={() => navigation.navigate('OfferServices' as never)}>
+                <Plus size={18} color="#FFF" />
+                <Text style={styles.createBtnText}>Create Offer</Text>
+              </TouchableOpacity>
+            )}
           </View>
         ) : (
           filteredOffers.map(renderOfferCard)
@@ -553,7 +571,7 @@ const styles = StyleSheet.create({
   tabBadgeText: { fontFamily: FONTS.medium, fontSize: normalize(10), fontWeight: '700' },
 
   // Scroll
-  scrollContent: { padding: normalize(14), paddingBottom: normalize(100) },
+  scrollContent: { padding: normalize(14), paddingBottom: normalize(24) },
 
   // Card
   card: { borderRadius: normalize(14), padding: normalize(14), marginBottom: normalize(10), ...SHADOWS.sm },

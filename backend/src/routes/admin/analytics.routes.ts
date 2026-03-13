@@ -1,26 +1,21 @@
 import { FastifyPluginAsync } from 'fastify';
 import { z } from 'zod';
 import { analyticsService } from '../../services/analytics.service';
-import { authenticate, requireAdmin } from '../../middleware/auth.middleware';
+import { authenticate, requireAdminPermission } from '../../middleware/auth.middleware';
 import { validate } from '../../middleware/validation.middleware';
+import { ADMIN_PERMISSIONS } from '../../constants/admin-permissions';
 
 // Schemas
 const trendQuerySchema = z.object({
-  querystring: z.object({
-    period: z.enum(['week', 'month']).optional().default('week'),
-  }),
+  period: z.enum(['week', 'month']).optional(),
 });
 
 const financialQuerySchema = z.object({
-  querystring: z.object({
-    period: z.enum(['week', 'month', 'year']).optional().default('month'),
-  }),
+  period: z.enum(['week', 'month', 'year']).optional(),
 });
 
 const leaderboardQuerySchema = z.object({
-  querystring: z.object({
-    limit: z.string().optional().transform((v) => (v ? parseInt(v) : 10)),
-  }),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
 });
 
 export const analyticsRoutes: FastifyPluginAsync = async (app) => {
@@ -30,7 +25,7 @@ export const analyticsRoutes: FastifyPluginAsync = async (app) => {
   app.get(
     '/realtime',
     {
-      preHandler: [authenticate, requireAdmin],
+      preHandler: [authenticate, requireAdminPermission(ADMIN_PERMISSIONS.ANALYTICS_VIEW)],
     },
     async (_request, reply) => {
       try {
@@ -55,7 +50,7 @@ export const analyticsRoutes: FastifyPluginAsync = async (app) => {
   app.get(
     '/today',
     {
-      preHandler: [authenticate, requireAdmin],
+      preHandler: [authenticate, requireAdminPermission(ADMIN_PERMISSIONS.ANALYTICS_VIEW)],
     },
     async (_request, reply) => {
       try {
@@ -80,11 +75,15 @@ export const analyticsRoutes: FastifyPluginAsync = async (app) => {
   app.get(
     '/trends',
     {
-      preHandler: [authenticate, requireAdmin, validate(trendQuerySchema)],
+      preHandler: [
+        authenticate,
+        requireAdminPermission(ADMIN_PERMISSIONS.ANALYTICS_VIEW),
+        validate(trendQuerySchema),
+      ],
     },
     async (request, reply) => {
       try {
-        const { period } = request.query as { period: 'week' | 'month' };
+        const { period = 'week' } = request.query as { period?: 'week' | 'month' };
         const data = await analyticsService.getTrendData(period);
 
         return reply.send({
@@ -106,7 +105,7 @@ export const analyticsRoutes: FastifyPluginAsync = async (app) => {
   app.get(
     '/pooling',
     {
-      preHandler: [authenticate, requireAdmin],
+      preHandler: [authenticate, requireAdminPermission(ADMIN_PERMISSIONS.ANALYTICS_VIEW)],
     },
     async (_request, reply) => {
       try {
@@ -131,11 +130,15 @@ export const analyticsRoutes: FastifyPluginAsync = async (app) => {
   app.get(
     '/financial',
     {
-      preHandler: [authenticate, requireAdmin, validate(financialQuerySchema)],
+      preHandler: [
+        authenticate,
+        requireAdminPermission(ADMIN_PERMISSIONS.ANALYTICS_VIEW),
+        validate(financialQuerySchema),
+      ],
     },
     async (request, reply) => {
       try {
-        const { period } = request.query as { period: 'week' | 'month' | 'year' };
+        const { period = 'month' } = request.query as { period?: 'week' | 'month' | 'year' };
         const data = await analyticsService.getFinancialSummary(period);
 
         return reply.send({
@@ -157,7 +160,7 @@ export const analyticsRoutes: FastifyPluginAsync = async (app) => {
   app.get(
     '/users',
     {
-      preHandler: [authenticate, requireAdmin],
+      preHandler: [authenticate, requireAdminPermission(ADMIN_PERMISSIONS.ANALYTICS_VIEW)],
     },
     async (_request, reply) => {
       try {
@@ -182,11 +185,15 @@ export const analyticsRoutes: FastifyPluginAsync = async (app) => {
   app.get(
     '/leaderboards/earners',
     {
-      preHandler: [authenticate, requireAdmin, validate(leaderboardQuerySchema)],
+      preHandler: [
+        authenticate,
+        requireAdminPermission(ADMIN_PERMISSIONS.ANALYTICS_VIEW),
+        validate(leaderboardQuerySchema),
+      ],
     },
     async (request, reply) => {
       try {
-        const { limit } = request.query as { limit: number };
+        const { limit = 10 } = request.query as { limit?: number };
         const data = await analyticsService.getTopEarners(limit);
 
         return reply.send({
@@ -205,11 +212,15 @@ export const analyticsRoutes: FastifyPluginAsync = async (app) => {
   app.get(
     '/leaderboards/active',
     {
-      preHandler: [authenticate, requireAdmin, validate(leaderboardQuerySchema)],
+      preHandler: [
+        authenticate,
+        requireAdminPermission(ADMIN_PERMISSIONS.ANALYTICS_VIEW),
+        validate(leaderboardQuerySchema),
+      ],
     },
     async (request, reply) => {
       try {
-        const { limit } = request.query as { limit: number };
+        const { limit = 10 } = request.query as { limit?: number };
         const data = await analyticsService.getMostActiveUsers(limit);
 
         return reply.send({
@@ -228,11 +239,15 @@ export const analyticsRoutes: FastifyPluginAsync = async (app) => {
   app.get(
     '/leaderboards/rated',
     {
-      preHandler: [authenticate, requireAdmin, validate(leaderboardQuerySchema)],
+      preHandler: [
+        authenticate,
+        requireAdminPermission(ADMIN_PERMISSIONS.ANALYTICS_VIEW),
+        validate(leaderboardQuerySchema),
+      ],
     },
     async (request, reply) => {
       try {
-        const { limit } = request.query as { limit: number };
+        const { limit = 10 } = request.query as { limit?: number };
         const data = await analyticsService.getHighestRatedDrivers(limit);
 
         return reply.send({

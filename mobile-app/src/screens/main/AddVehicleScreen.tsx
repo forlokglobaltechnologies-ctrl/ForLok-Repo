@@ -14,8 +14,7 @@ import {
   Modal,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { ArrowLeft, Camera, Car, Bike, CheckCircle, X, FileText, Calendar, Shield, Fuel, Settings2, ChevronDown } from 'lucide-react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { ArrowLeft, Camera, X, FileText, Calendar, Shield, Fuel, Settings2, ChevronDown } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '@constants/theme';
 import { normalize, wp, hp } from '@utils/responsive';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -23,7 +22,7 @@ import { Input } from '@components/common/Input';
 
 import { useLanguage } from '@context/LanguageContext';
 import { useSnackbar } from '@context/SnackbarContext';
-import { vehicleApi, rentalApi, uploadFile, companyApi } from '@utils/apiClient';
+import { vehicleApi, rentalApi, uploadFile, companyApi, masterDataApi, vehicleCatalogApi } from '@utils/apiClient';
 import { API_CONFIG } from '../../config/api';
 import { getUserErrorMessage } from '@utils/errorUtils';
 import * as ImagePicker from 'expo-image-picker';
@@ -31,36 +30,46 @@ import * as DocumentPicker from 'expo-document-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const VEHICLE_ACCENT = '#F99E3C';
-const VEHICLE_ACCENT_DARK = '#D47B1B';
-const OTHER_OPTION = 'Other';
+const VEHICLE_ACCENT = '#FE8800';
+const VEHICLE_ACCENT_DARK = '#D97100';
 
 const VEHICLE_BRAND_MODELS: Record<'car' | 'bike' | 'scooty', Record<string, string[]>> = {
   car: {
-    'Maruti Suzuki': ['Swift', 'Baleno', 'WagonR', 'Dzire', 'Brezza'],
-    Hyundai: ['i10', 'i20', 'Venue', 'Creta', 'Verna'],
-    Tata: ['Tiago', 'Altroz', 'Nexon', 'Punch', 'Harrier'],
-    Mahindra: ['XUV300', 'XUV700', 'Scorpio', 'Bolero', 'Thar'],
+    'Maruti Suzuki': ['Alto K10', 'Swift', 'Baleno', 'WagonR', 'WagonR CNG', 'Dzire', 'Brezza'],
+    Hyundai: ['i10', 'i20', 'Venue', 'Creta', 'Verna', 'Verna Facelift'],
+    Tata: ['Tiago', 'Altroz', 'Tigor', 'Nexon', 'Punch', 'Harrier'],
+    'Tata Motors': ['Tiago', 'Altroz', 'Tigor', 'Nexon', 'Punch', 'Harrier'],
+    Mahindra: ['XUV300', 'XUV700', 'Scorpio', 'Scorpio-N', 'Bolero', 'Thar'],
     Kia: ['Sonet', 'Seltos', 'Carens'],
-    Toyota: ['Glanza', 'Innova', 'Fortuner'],
+    Toyota: ['Glanza', 'Innova', 'Innova Hycross', 'Fortuner'],
+    Renault: ['Kwid', 'Kiger'],
+    Nissan: ['Magnite'],
   },
   bike: {
-    Honda: ['Shine', 'Unicorn', 'Hornet', 'CB350'],
-    Hero: ['Splendor', 'HF Deluxe', 'Glamour', 'Xtreme'],
-    Bajaj: ['Pulsar', 'Platina', 'Dominar', 'Avenger'],
+    Honda: ['Shine', 'Shine 125', 'Unicorn', 'Hornet', 'CB350'],
+    Hero: ['Splendor', 'Splendor Plus', 'HF Deluxe', 'Glamour', 'Xtreme'],
+    'Hero MotoCorp': ['Splendor Plus', 'HF Deluxe', 'Glamour', 'Xtreme'],
+    Bajaj: ['Pulsar', 'Pulsar 150', 'Platina', 'Dominar', 'Avenger', 'Freedom 125'],
     Yamaha: ['FZ', 'R15', 'MT-15', 'RayZR'],
-    TVS: ['Apache', 'Raider', 'Sport', 'Ronin'],
-    RoyalEnfield: ['Classic 350', 'Hunter 350', 'Bullet', 'Meteor'],
+    TVS: ['Apache', 'Apache RTR 200 4V', 'Raider', 'Sport', 'Ronin'],
+    RoyalEnfield: ['Classic 350', 'Hunter 350', 'Bullet', 'Meteor', 'Himalayan 411'],
+    'Royal Enfield': ['Classic 350', 'Hunter 350', 'Bullet', 'Meteor', 'Himalayan 411'],
+    KTM: ['Duke 200'],
   },
   scooty: {
-    Honda: ['Activa', 'Dio', 'Aviator'],
-    TVS: ['Jupiter', 'Ntorq', 'Scooty Zest'],
+    Honda: ['Activa', 'Activa 6G', 'Dio', 'Aviator'],
+    TVS: ['Jupiter', 'Jupiter 125', 'Ntorq', 'Ntorq 125', 'Scooty Zest', 'iQube ST (5.3kWh)'],
     Suzuki: ['Access 125', 'Burgman Street'],
     Yamaha: ['Fascino', 'RayZR'],
     Hero: ['Pleasure+', 'Destini 125'],
     Ola: ['S1 Air', 'S1 X', 'S1 Pro'],
+    'Ola Electric': ['S1 Air', 'S1 X', 'S1 Pro'],
+    Bajaj: ['Chetak Facelift'],
   },
 };
+
+const normalizeKey = (value: string) =>
+  value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
 
 const AddVehicleScreen = () => {
   const navigation = useNavigation();
@@ -77,16 +86,14 @@ const AddVehicleScreen = () => {
   const [companyName, setCompanyName] = useState('');
   const [brand, setBrand] = useState('');
   const [model, setModel] = useState('');
-  const [isBrandOther, setIsBrandOther] = useState(false);
-  const [isModelOther, setIsModelOther] = useState(false);
   const [showSelectionModal, setShowSelectionModal] = useState(false);
-  const [selectionType, setSelectionType] = useState<'brand' | 'model' | null>(null);
+  const [selectionType, setSelectionType] = useState<'vehicleType' | 'brand' | 'model' | 'fuelType' | 'transmission' | 'year' | null>(null);
   const [year, setYear] = useState<number | null>(null);
   const [color, setColor] = useState('');
   
   // Vehicle Specs
   const [seats, setSeats] = useState<number>(5);
-  const [fuelType, setFuelType] = useState<'Petrol' | 'Diesel' | 'Electric' | 'CNG' | ''>('');
+  const [fuelType, setFuelType] = useState<string>('');
   const [transmission, setTransmission] = useState<'Manual' | 'Automatic' | ''>('');
   const [insuranceExpiry, setInsuranceExpiry] = useState<Date | null>(null);
   const [showInsuranceDatePicker, setShowInsuranceDatePicker] = useState(false);
@@ -113,10 +120,38 @@ const AddVehicleScreen = () => {
   const [suggestedPrice, setSuggestedPrice] = useState<number | null>(null);
   const [priceBreakdown, setPriceBreakdown] = useState<any>(null);
   const [calculatingPrice, setCalculatingPrice] = useState(false);
+  const [masterBrands, setMasterBrands] = useState<any[]>([]);
+  const [masterModels, setMasterModels] = useState<any[]>([]);
+  const [masterFuelTypes, setMasterFuelTypes] = useState<any[]>([]);
+  const [masterTransmissions, setMasterTransmissions] = useState<any[]>([]);
 
   useEffect(() => {
     loadUserType();
+    void loadMasterDropdowns();
   }, []);
+
+  const loadMasterDropdowns = async () => {
+    try {
+      const [brandsRes, modelsRes, fuelRes, fuelCatalogRes, transmissionRes] = await Promise.all([
+        masterDataApi.getByType('vehicle_brand'),
+        masterDataApi.getByType('vehicle_model'),
+        masterDataApi.getByType('fuel_type'),
+        vehicleCatalogApi.getFuelTypes(),
+        masterDataApi.getByType('transmission_type'),
+      ]);
+      setMasterBrands((brandsRes.data as any)?.items || []);
+      setMasterModels((modelsRes.data as any)?.items || []);
+      const fuelMasterItems = (fuelRes.data as any)?.items || [];
+      const fuelCatalogItems = ((fuelCatalogRes.data as any)?.items || []).map((label: string) => ({
+        label,
+        value: String(label || '').toLowerCase(),
+      }));
+      setMasterFuelTypes([...fuelMasterItems, ...fuelCatalogItems]);
+      setMasterTransmissions((transmissionRes.data as any)?.items || []);
+    } catch (error) {
+      console.error('Failed to load master dropdowns:', error);
+    }
+  };
 
   useEffect(() => {
     if (!editingVehicle) return;
@@ -143,8 +178,6 @@ const AddVehicleScreen = () => {
 
     setBrand(incomingBrand);
     setModel(incomingModel);
-    setIsBrandOther(!!incomingBrand && !knownBrands.includes(incomingBrand));
-    setIsModelOther(!!incomingModel && (!incomingBrand || !knownModels.includes(incomingModel)));
     setYear(editingVehicle.year || null);
     setColor(editingVehicle.color || '');
     setSeats(editingVehicle.seats || (parsedType === 'car' ? 5 : 2));
@@ -174,21 +207,47 @@ const AddVehicleScreen = () => {
 
   useEffect(() => {
     if (!vehicleType) return;
-    const availableBrands = Object.keys(VEHICLE_BRAND_MODELS[vehicleType] || {});
-    if (!isBrandOther && brand && !availableBrands.includes(brand)) {
+    const availableBrands = new Set([
+      ...Object.keys(VEHICLE_BRAND_MODELS[vehicleType] || {}),
+      ...masterBrands
+        .filter((item: any) => {
+          const vt = String(item?.metadata?.vehicleType || '').toLowerCase();
+          return !vt || vt === vehicleType;
+        })
+        .map((item: any) => String(item?.label || '').trim())
+        .filter(Boolean),
+    ]);
+    if (brand && !availableBrands.has(brand)) {
       setBrand('');
       setModel('');
-      setIsModelOther(false);
     }
-  }, [vehicleType, brand, isBrandOther]);
+  }, [vehicleType, brand, masterBrands]);
 
   useEffect(() => {
-    if (!vehicleType || !brand || isBrandOther || isModelOther) return;
-    const allowedModels = VEHICLE_BRAND_MODELS[vehicleType]?.[brand] || [];
-    if (model && !allowedModels.includes(model)) {
+    if (!vehicleType || !brand) return;
+    const allowedModels = new Set([
+      ...(VEHICLE_BRAND_MODELS[vehicleType]?.[brand] || []),
+      ...masterModels
+        .filter((item: any) => {
+          const vt = String(item?.metadata?.vehicleType || '').toLowerCase();
+          const brandKey = String(item?.metadata?.brandKey || '').toLowerCase();
+          const brandName = String(item?.metadata?.brand || '').toLowerCase();
+          const selectedBrandKey = normalizeKey(brand);
+          const matchesVehicleType = !vt || vt === vehicleType;
+          const matchesBrand =
+            !selectedBrandKey ||
+            !brandKey && !brandName ||
+            brandKey === selectedBrandKey ||
+            brandName === brand.toLowerCase();
+          return matchesVehicleType && matchesBrand;
+        })
+        .map((item: any) => String(item?.label || '').trim())
+        .filter(Boolean),
+    ]);
+    if (model && !allowedModels.has(model)) {
       setModel('');
     }
-  }, [vehicleType, brand, model, isBrandOther, isModelOther]);
+  }, [vehicleType, brand, model, masterModels]);
 
   // Calculate suggested price when vehicle details change
   useEffect(() => {
@@ -703,39 +762,91 @@ const AddVehicleScreen = () => {
   // Generate year options (last 20 years)
   const currentYear = new Date().getFullYear();
   const yearOptions = Array.from({ length: 20 }, (_, i) => currentYear - i);
+  const fallbackBrands = vehicleType ? Object.keys(VEHICLE_BRAND_MODELS[vehicleType] || {}) : [];
+  const fallbackModels = vehicleType && brand
+    ? (VEHICLE_BRAND_MODELS[vehicleType]?.[brand] || [])
+    : [];
+  const masterBrandOptions = masterBrands
+    .filter((item: any) => {
+      const vt = String(item?.metadata?.vehicleType || '').toLowerCase();
+      return !!vehicleType && (!vt || vt === vehicleType);
+    })
+    .map((item: any) => item.label)
+    .filter(Boolean);
+  const selectedBrandKey = normalizeKey(brand);
+  const masterModelOptions = masterModels
+    .filter((item: any) => {
+      const vt = String(item?.metadata?.vehicleType || '').toLowerCase();
+      const brandKey = String(item?.metadata?.brandKey || '').toLowerCase();
+      const brandName = String(item?.metadata?.brand || '').toLowerCase();
+      const matchesVehicleType = !!vehicleType && (!vt || vt === vehicleType);
+      const matchesBrand =
+        !brand || !selectedBrandKey || !brandKey && !brandName
+          ? true
+          : brandKey === selectedBrandKey || brandName === brand.toLowerCase();
+      return matchesVehicleType && matchesBrand;
+    })
+    .map((item: any) => item.label)
+    .filter(Boolean);
   const brandOptions = vehicleType
-    ? [...Object.keys(VEHICLE_BRAND_MODELS[vehicleType] || {}), OTHER_OPTION]
-    : [OTHER_OPTION];
-  const modelOptions = vehicleType && brand && !isBrandOther
-    ? [...(VEHICLE_BRAND_MODELS[vehicleType]?.[brand] || []), OTHER_OPTION]
-    : [OTHER_OPTION];
+    ? Array.from(new Set([...masterBrandOptions, ...fallbackBrands, brand].filter(Boolean)))
+    : [];
+  const modelOptions = vehicleType && brand
+    ? Array.from(new Set([...masterModelOptions, ...fallbackModels, model].filter(Boolean)))
+    : [];
+  const fallbackFuelOptions = vehicleType === 'scooty' || vehicleType === 'bike'
+    ? ['Petrol', 'Electric']
+    : ['Petrol', 'Diesel', 'Electric', 'CNG'];
+  const fuelOptions = Array.from(
+    new Set([
+      ...masterFuelTypes
+        .filter((item: any) => {
+          const vt = String(item?.metadata?.vehicleType || '').toLowerCase();
+          return !vehicleType || !vt || vt === vehicleType;
+        })
+        .map((item: any) => item.label)
+        .filter(Boolean),
+      ...fallbackFuelOptions,
+    ])
+  );
+  const transmissionOptions = Array.from(
+    new Set([
+      ...masterTransmissions
+        .filter((item: any) => {
+          const vt = String(item?.metadata?.vehicleType || '').toLowerCase();
+          return !vehicleType || !vt || vt === vehicleType;
+        })
+        .map((item: any) => item.label)
+        .filter(Boolean),
+      ...['Manual', 'Automatic'],
+    ])
+  );
 
-  const openSelectionModal = (type: 'brand' | 'model') => {
+  const openSelectionModal = (type: 'vehicleType' | 'brand' | 'model' | 'fuelType' | 'transmission' | 'year') => {
     setSelectionType(type);
     setShowSelectionModal(true);
   };
 
   const handleSelectDropdownValue = (value: string) => {
-    if (selectionType === 'brand') {
-      if (value === OTHER_OPTION) {
-        setIsBrandOther(true);
-        setBrand('');
-        setModel('');
-        setIsModelOther(false);
-      } else {
-        setIsBrandOther(false);
-        setBrand(value);
-        setModel('');
-        setIsModelOther(false);
-      }
+    if (selectionType === 'vehicleType') {
+      const nextType = value as 'car' | 'bike' | 'scooty';
+      setVehicleType(nextType);
+      setSeats(nextType === 'car' ? 5 : 2);
+      setBrand('');
+      setModel('');
+      setFuelType('');
+      setTransmission(nextType === 'scooty' ? 'Automatic' : '');
+    } else if (selectionType === 'brand') {
+      setBrand(value);
+      setModel('');
     } else if (selectionType === 'model') {
-      if (value === OTHER_OPTION) {
-        setIsModelOther(true);
-        setModel('');
-      } else {
-        setIsModelOther(false);
-        setModel(value);
-      }
+      setModel(value);
+    } else if (selectionType === 'fuelType') {
+      setFuelType(value);
+    } else if (selectionType === 'transmission') {
+      setTransmission(value as any);
+    } else if (selectionType === 'year') {
+      setYear(Number(value));
     }
     setShowSelectionModal(false);
     setSelectionType(null);
@@ -759,47 +870,17 @@ const AddVehicleScreen = () => {
           {/* Vehicle Type */}
           <View style={styles.sectionCard}>
             <Text style={styles.sectionTitle}>Choose Vehicle Type</Text>
-            <View style={styles.vehicleTypeOptions}>
-              {([
-                { type: 'car' as const, icon: 'car', color: VEHICLE_ACCENT, bg: '#FFF1E6', label: 'Car', seats: 5 },
-                { type: 'bike' as const, icon: 'bike', color: '#E65100', bg: '#FFF3E0', label: 'Bike', seats: 2 },
-                { type: 'scooty' as const, icon: 'scooty', color: '#6A1B9A', bg: '#F3E5F5', label: 'Scooty', seats: 2 },
-              ]).map((vt) => {
-                const isSelected = vehicleType === vt.type;
-                return (
-                  <TouchableOpacity
-                    key={vt.type}
-                    style={[
-                      styles.vehicleTypeButton,
-                      { backgroundColor: isSelected ? vt.color : COLORS.white, borderColor: isSelected ? vt.color : COLORS.border },
-                    ]}
-                    onPress={() => {
-                      setVehicleType(vt.type);
-                      setSeats(vt.seats);
-                      setBrand('');
-                      setModel('');
-                      setIsBrandOther(false);
-                      setIsModelOther(false);
-                    }}
-                    activeOpacity={0.7}
-                  >
-                    <View style={[styles.vehicleIconWrap, { backgroundColor: isSelected ? 'rgba(255,255,255,0.25)' : vt.bg }]}>
-                      {vt.icon === 'car' && <Car size={24} color={isSelected ? '#FFF' : vt.color} />}
-                      {vt.icon === 'bike' && <Bike size={24} color={isSelected ? '#FFF' : vt.color} />}
-                      {vt.icon === 'scooty' && <MaterialCommunityIcons name="moped" size={24} color={isSelected ? '#FFF' : vt.color} />}
-                    </View>
-                    <Text style={[styles.vehicleTypeText, { color: isSelected ? '#FFF' : COLORS.text }]}>
-                      {vt.label}
-                    </Text>
-                    {isSelected && (
-                      <View style={styles.vehicleCheckBadge}>
-                        <CheckCircle size={14} color={vt.color} />
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+            <Text style={styles.label}>Vehicle Type *</Text>
+            <TouchableOpacity
+              style={[styles.dropdownField, styles.input]}
+              onPress={() => openSelectionModal('vehicleType')}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.dropdownValue, !vehicleType && styles.dropdownPlaceholder]}>
+                {vehicleType ? vehicleType.charAt(0).toUpperCase() + vehicleType.slice(1) : 'Select vehicle type'}
+              </Text>
+              <ChevronDown size={16} color="#7A7A7A" />
+            </TouchableOpacity>
           </View>
 
           {/* Basic Information */}
@@ -854,15 +935,6 @@ const AddVehicleScreen = () => {
                   </Text>
                   <ChevronDown size={16} color="#7A7A7A" />
                 </TouchableOpacity>
-                {isBrandOther && (
-                  <Input
-                    value={brand}
-                    onChangeText={setBrand}
-                    placeholder="Enter brand name"
-                    containerStyle={styles.input}
-                    inputStyle={styles.compactInputText}
-                  />
-                )}
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.label}>Model *</Text>
@@ -881,31 +953,39 @@ const AddVehicleScreen = () => {
                   </Text>
                   <ChevronDown size={16} color="#7A7A7A" />
                 </TouchableOpacity>
-                {isModelOther && (
-                  <Input
-                    value={model}
-                    onChangeText={setModel}
-                    placeholder="Enter model name"
-                    containerStyle={styles.input}
-                    inputStyle={styles.compactInputText}
-                  />
-                )}
               </View>
+            </View>
+
+            <View style={styles.reportHintRow}>
+              <Text style={styles.reportHintText}>Can't find your vehicle in list?</Text>
+              <TouchableOpacity
+                style={styles.reportHintButton}
+                onPress={() =>
+                  navigation.navigate('ReportVehicleCatalog' as never, {
+                    vehicleType,
+                    brand,
+                    model,
+                    fuelType,
+                    transmission,
+                  } as never)
+                }
+              >
+                <Text style={styles.reportHintLink}>Report to Admin</Text>
+              </TouchableOpacity>
             </View>
 
             <View style={styles.input}>
               <Text style={styles.label}>Year of Manufacture *</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.yearScroll}>
-                {yearOptions.map((y) => (
-                  <TouchableOpacity
-                    key={y}
-                    style={[styles.yearButton, year === y && styles.yearButtonSelected]}
-                    onPress={() => setYear(y)}
-                  >
-                    <Text style={[styles.yearText, year === y && styles.yearTextSelected]}>{y}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
+              <TouchableOpacity
+                style={styles.dropdownField}
+                onPress={() => openSelectionModal('year')}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.dropdownValue, !year && styles.dropdownPlaceholder]}>
+                  {year ? String(year) : 'Select year'}
+                </Text>
+                <ChevronDown size={16} color="#7A7A7A" />
+              </TouchableOpacity>
             </View>
 
           </View>
@@ -947,22 +1027,16 @@ const AddVehicleScreen = () => {
                 <Fuel size={14} color={COLORS.textSecondary} />
                 <Text style={styles.label}>Fuel Type *</Text>
               </View>
-              <View style={styles.optionsRow}>
-                {(vehicleType === 'scooty' || vehicleType === 'bike'
-                  ? ['Petrol', 'Electric']
-                  : ['Petrol', 'Diesel', 'Electric', 'CNG']
-                ).map((fuel) => (
-                  <TouchableOpacity
-                    key={fuel}
-                    style={[styles.optionButton, fuelType === fuel && styles.optionButtonSelected]}
-                    onPress={() => setFuelType(fuel as any)}
-                  >
-                    <Text style={[styles.optionText, fuelType === fuel && styles.optionTextSelected]}>
-                      {fuel}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+              <TouchableOpacity
+                style={styles.dropdownField}
+                onPress={() => openSelectionModal('fuelType')}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.dropdownValue, !fuelType && styles.dropdownPlaceholder]}>
+                  {fuelType || 'Select fuel type'}
+                </Text>
+                <ChevronDown size={16} color="#7A7A7A" />
+              </TouchableOpacity>
             </View>
 
             <View style={styles.input}>
@@ -970,42 +1044,16 @@ const AddVehicleScreen = () => {
                 <Settings2 size={14} color={COLORS.textSecondary} />
                 <Text style={styles.label}>Transmission *</Text>
               </View>
-              {vehicleType === 'scooty' ? (
-                <View style={styles.lockedSpecRow}>
-                  <View style={[styles.lockedSpecBadge, { backgroundColor: '#6A1B9A' }]}>
-                    <Text style={styles.lockedSpecValue}>Auto</Text>
-                  </View>
-                  <Text style={styles.lockedSpecNote}>Scooties use CVT automatic transmission</Text>
-                </View>
-              ) : vehicleType === 'bike' ? (
-                <View style={styles.optionsRow}>
-                  {['Manual', 'Automatic'].map((trans) => (
-                    <TouchableOpacity
-                      key={trans}
-                      style={[styles.optionButton, transmission === trans && styles.optionButtonSelected]}
-                      onPress={() => setTransmission(trans as any)}
-                    >
-                      <Text style={[styles.optionText, transmission === trans && styles.optionTextSelected]}>
-                        {trans === 'Manual' ? 'Gear' : 'CVT/Auto'}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              ) : (
-                <View style={styles.optionsRow}>
-                  {['Manual', 'Automatic'].map((trans) => (
-                    <TouchableOpacity
-                      key={trans}
-                      style={[styles.optionButton, transmission === trans && styles.optionButtonSelected]}
-                      onPress={() => setTransmission(trans as any)}
-                    >
-                      <Text style={[styles.optionText, transmission === trans && styles.optionTextSelected]}>
-                        {trans}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
+              <TouchableOpacity
+                style={styles.dropdownField}
+                onPress={() => openSelectionModal('transmission')}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.dropdownValue, !transmission && styles.dropdownPlaceholder]}>
+                  {transmission || 'Select transmission'}
+                </Text>
+                <ChevronDown size={16} color="#7A7A7A" />
+              </TouchableOpacity>
             </View>
 
             <TouchableOpacity onPress={() => setShowInsuranceDatePicker(true)} style={styles.input}>
@@ -1132,7 +1180,7 @@ const AddVehicleScreen = () => {
             style={[styles.saveButton, saving && styles.saveButtonDisabled]}
           >
             <LinearGradient
-              colors={[VEHICLE_ACCENT, VEHICLE_ACCENT_DARK]}
+              colors={['#232323', '#191919']}
               start={{ x: 0.5, y: 0 }}
               end={{ x: 0.5, y: 1 }}
               style={styles.saveButtonGradient}
@@ -1162,18 +1210,60 @@ const AddVehicleScreen = () => {
         >
           <TouchableOpacity activeOpacity={1} style={styles.modalCard}>
             <Text style={styles.modalTitle}>
-              {selectionType === 'brand' ? 'Select Brand' : 'Select Model'}
+              {selectionType === 'vehicleType'
+                ? 'Select Vehicle Type'
+                : selectionType === 'brand'
+                  ? 'Select Brand'
+                  : selectionType === 'fuelType'
+                    ? 'Select Fuel Type'
+                    : selectionType === 'transmission'
+                      ? 'Select Transmission'
+                      : selectionType === 'year'
+                        ? 'Select Year'
+                      : 'Select Model'}
             </Text>
             <ScrollView style={styles.modalList} showsVerticalScrollIndicator={false}>
-              {(selectionType === 'brand' ? brandOptions : modelOptions).map((option) => (
-                <TouchableOpacity
-                  key={option}
-                  style={styles.modalOption}
-                  onPress={() => handleSelectDropdownValue(option)}
-                >
-                  <Text style={styles.modalOptionText}>{option}</Text>
-                </TouchableOpacity>
-              ))}
+              {(
+                selectionType === 'vehicleType'
+                  ? ['car', 'bike', 'scooty']
+                  : selectionType === 'brand'
+                    ? brandOptions
+                    : selectionType === 'fuelType'
+                      ? fuelOptions
+                      : selectionType === 'transmission'
+                        ? transmissionOptions
+                        : selectionType === 'year'
+                          ? yearOptions.map((y) => String(y))
+                        : modelOptions
+              ).length === 0 ? (
+                <Text style={styles.modalEmptyText}>No options available yet. Please report to admin.</Text>
+              ) : (
+                (
+                  selectionType === 'vehicleType'
+                    ? ['car', 'bike', 'scooty']
+                    : selectionType === 'brand'
+                      ? brandOptions
+                      : selectionType === 'fuelType'
+                        ? fuelOptions
+                        : selectionType === 'transmission'
+                          ? transmissionOptions
+                          : selectionType === 'year'
+                            ? yearOptions.map((y) => String(y))
+                          : modelOptions
+                ).map((option) => (
+                  <TouchableOpacity
+                    key={option}
+                    style={styles.modalOption}
+                    onPress={() => handleSelectDropdownValue(option)}
+                  >
+                    <Text style={styles.modalOptionText}>
+                      {selectionType === 'vehicleType'
+                        ? option.charAt(0).toUpperCase() + option.slice(1)
+                        : option}
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              )}
             </ScrollView>
           </TouchableOpacity>
         </TouchableOpacity>
@@ -1247,42 +1337,37 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: normalize(8),
   },
-  vehicleTypeOptions: {
+  reportHintRow: {
     flexDirection: 'row',
-    gap: normalize(10),
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: normalize(4),
+    marginBottom: normalize(12),
+    backgroundColor: '#FFF8EE',
+    borderWidth: 1,
+    borderColor: '#F3D6AB',
+    borderRadius: normalize(12),
+    paddingHorizontal: normalize(10),
+    paddingVertical: normalize(9),
   },
-  vehicleTypeButton: {
+  reportHintText: {
+    fontFamily: FONTS.regular,
+    fontSize: normalize(12),
+    color: '#7A6548',
     flex: 1,
-    alignItems: 'center',
-    paddingVertical: normalize(16),
-    paddingHorizontal: normalize(8),
-    borderRadius: normalize(16),
-    borderWidth: 2,
-    position: 'relative',
+    marginRight: normalize(8),
   },
-  vehicleIconWrap: {
-    width: normalize(48),
-    height: normalize(48),
-    borderRadius: normalize(24),
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: normalize(8),
+  reportHintButton: {
+    backgroundColor: '#FFE5BF',
+    borderRadius: normalize(18),
+    paddingHorizontal: normalize(10),
+    paddingVertical: normalize(6),
   },
-  vehicleTypeText: {
+  reportHintLink: {
     fontFamily: FONTS.medium || FONTS.regular,
-    fontSize: normalize(13),
-    fontWeight: '600',
-  },
-  vehicleCheckBadge: {
-    position: 'absolute',
-    top: normalize(6),
-    right: normalize(6),
-    width: normalize(20),
-    height: normalize(20),
-    borderRadius: normalize(10),
-    backgroundColor: '#FFF',
-    alignItems: 'center',
-    justifyContent: 'center',
+    fontSize: normalize(12),
+    color: VEHICLE_ACCENT_DARK,
+    fontWeight: '700',
   },
   input: { marginBottom: normalize(10) },
   compactInputText: {
@@ -1314,32 +1399,6 @@ const styles = StyleSheet.create({
   },
   dropdownDisabled: {
     backgroundColor: '#F4F4F4',
-  },
-  yearScroll: {
-    marginTop: normalize(4),
-  },
-  yearButton: {
-    paddingHorizontal: normalize(14),
-    paddingVertical: normalize(8),
-    borderRadius: normalize(22),
-    borderWidth: 1.5,
-    borderColor: '#E0E0E0',
-    marginRight: normalize(8),
-    backgroundColor: '#FFF',
-  },
-  yearButtonSelected: {
-    backgroundColor: VEHICLE_ACCENT,
-    borderColor: VEHICLE_ACCENT,
-  },
-  yearText: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(12),
-    color: COLORS.text,
-    fontWeight: '500',
-  },
-  yearTextSelected: {
-    color: '#FFF',
-    fontWeight: '700',
   },
   seatsContainer: {
     flexDirection: 'row',
@@ -1477,6 +1536,13 @@ const styles = StyleSheet.create({
     fontSize: normalize(13),
     color: COLORS.text,
     fontWeight: '500',
+  },
+  modalEmptyText: {
+    fontFamily: FONTS.regular,
+    fontSize: normalize(12),
+    color: '#8A8A8A',
+    paddingVertical: normalize(10),
+    paddingHorizontal: normalize(10),
   },
   datePlaceholder: {
     color: '#999',

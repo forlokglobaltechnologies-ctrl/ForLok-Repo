@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import { Input } from '@components/common/Input';
 import { Button } from '@components/common/Button';
 import { useLanguage } from '@context/LanguageContext';
 import { normalize } from '@utils/responsive';
+import { adminApi } from '@utils/apiClient';
 
 const AdminSettingsScreen = () => {
   const navigation = useNavigation();
@@ -28,6 +29,24 @@ const AdminSettingsScreen = () => {
   const [requireManualApproval, setRequireManualApproval] = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [smsNotifications, setSmsNotifications] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      const res = await adminApi.getSettings();
+      if (res.success && res.data) {
+        const data = res.data as any;
+        setPlatformFee(String(data.platformFee ?? '10'));
+        setMinBookingAmount(String(data.minBookingAmount ?? '100'));
+        setMaxBookingAmount(String(data.maxBookingAmount ?? '50000'));
+        setAutoApproveHours(String(data.autoApproveHours ?? '24'));
+        setRequireManualApproval(Boolean(data.requireManualApproval ?? true));
+        setEmailNotifications(Boolean(data.emailNotifications ?? true));
+        setSmsNotifications(Boolean(data.smsNotifications ?? false));
+      }
+    };
+    void loadSettings();
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -145,10 +164,29 @@ const AdminSettingsScreen = () => {
         <View style={styles.actionButtons}>
           <Button
             title={t('admin.settings.saveChanges')}
-            onPress={() => Alert.alert('Coming Soon', 'Settings API is not yet configured on the backend. Changes are only local.')}
+            onPress={async () => {
+              setLoading(true);
+              const payload = {
+                platformFee: Number(platformFee || 0),
+                minBookingAmount: Number(minBookingAmount || 0),
+                maxBookingAmount: Number(maxBookingAmount || 0),
+                autoApproveHours: Number(autoApproveHours || 0),
+                requireManualApproval,
+                emailNotifications,
+                smsNotifications,
+              };
+              const res = await adminApi.updateSettings(payload);
+              setLoading(false);
+              if (res.success) {
+                Alert.alert('Success', 'Settings saved successfully.');
+              } else {
+                Alert.alert('Error', res.error || 'Failed to save settings.');
+              }
+            }}
             variant="primary"
             size="large"
             style={styles.saveButton}
+            loading={loading}
           />
           <Button
             title={t('admin.settings.resetToDefault')}

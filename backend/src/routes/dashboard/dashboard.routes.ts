@@ -52,6 +52,24 @@ export async function dashboardRoutes(fastify: FastifyInstance) {
     }
   );
 
+  fastify.get(
+    '/about-stats',
+    {
+      preHandler: [authenticate],
+    },
+    async (_request: FastifyRequest, reply: FastifyReply) => {
+      const stats = await dashboardService.getAboutStats();
+
+      const response: ApiResponse = {
+        success: true,
+        message: 'About stats retrieved successfully',
+        data: stats,
+      };
+
+      return reply.status(200).send(response);
+    }
+  );
+
   /**
    * GET /api/dashboard/home
    * Single endpoint for the home screen — returns everything in one call

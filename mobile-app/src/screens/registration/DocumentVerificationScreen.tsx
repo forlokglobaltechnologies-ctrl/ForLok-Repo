@@ -35,22 +35,12 @@ import * as DocumentPicker from 'expo-document-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { normalize, wp, hp } from '@utils/responsive';
 import { LinearGradient } from 'expo-linear-gradient';
+import useMasterData from '../../hooks/useMasterData';
 
 interface RouteParams {
   serviceType: 'createPooling' | 'createRental' | 'takePooling' | 'takeRental';
   onComplete?: () => void;
 }
-
-const INDIAN_STATES = [
-  'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
-  'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand',
-  'Karnataka', 'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur',
-  'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab',
-  'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura',
-  'Uttar Pradesh', 'Uttarakhand', 'West Bengal',
-  'Andaman and Nicobar Islands', 'Chandigarh', 'Dadra and Nagar Haveli and Daman and Diu',
-  'Delhi', 'Jammu and Kashmir', 'Ladakh', 'Lakshadweep', 'Puducherry',
-];
 
 const DocumentVerificationScreen = () => {
   const navigation = useNavigation();
@@ -112,6 +102,8 @@ const DocumentVerificationScreen = () => {
   const [requiredDocs, setRequiredDocs] = useState<ReturnType<typeof getRequiredDocuments> | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { items: masterStates } = useMasterData('state', []);
+  const stateOptions = masterStates.map((item: any) => item.label).filter(Boolean);
 
   const isOfferingService = serviceType === 'createPooling' || serviceType === 'createRental';
 
@@ -1166,8 +1158,15 @@ const DocumentVerificationScreen = () => {
               </TouchableOpacity>
             </View>
             <FlatList
-              data={INDIAN_STATES}
+              data={stateOptions}
               keyExtractor={(item) => item}
+              ListEmptyComponent={
+                <View style={{ padding: SPACING.md }}>
+                  <Text style={{ fontFamily: FONTS.regular, color: COLORS.textSecondary }}>
+                    No states configured in master data.
+                  </Text>
+                </View>
+              }
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={[styles.stateItem, dlState === item && styles.stateItemSelected]}

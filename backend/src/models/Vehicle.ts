@@ -13,7 +13,7 @@ export interface IVehicle extends Document {
   number: string; // Vehicle registration number
   plateType?: 'white' | 'yellow' | 'green';
   seats: number;
-  fuelType: 'Petrol' | 'Diesel' | 'Electric' | 'CNG';
+  fuelType: string;
   transmission: 'Manual' | 'Automatic';
   photos: {
     front?: string;
@@ -92,8 +92,8 @@ const vehicleSchema = new Schema<IVehicle>(
     },
     fuelType: {
       type: String,
-      enum: ['Petrol', 'Diesel', 'Electric', 'CNG'],
       required: true,
+      trim: true,
     },
     transmission: {
       type: String,

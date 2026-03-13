@@ -7,6 +7,7 @@ import {
   TextStyle,
   View,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { FONTS, BORDER_RADIUS } from '@constants/theme';
 import { useTheme } from '@context/ThemeContext';
 import { AppLoader } from '@components/common/AppLoader';
@@ -64,10 +65,14 @@ export const Button: React.FC<ButtonProps> = ({
 
     switch (variant) {
       case 'primary':
-        baseStyle.backgroundColor = colors.primary;
+        baseStyle.backgroundColor = colors.black;
+        baseStyle.borderWidth = 1;
+        baseStyle.borderColor = colors.border;
         break;
       case 'secondary':
-        baseStyle.backgroundColor = colors.secondary;
+        baseStyle.backgroundColor = colors.black;
+        baseStyle.borderWidth = 1;
+        baseStyle.borderColor = colors.border;
         break;
       case 'outline':
         baseStyle.backgroundColor = 'transparent';
@@ -124,17 +129,27 @@ export const Button: React.FC<ButtonProps> = ({
       disabled={disabled || loading}
       activeOpacity={0.7}
     >
-      {loading ? (
-        <AppLoader
-          color={variant === 'primary' || variant === 'secondary' ? colors.white : colors.primary}
-          size="small"
+      {variant === 'primary' || variant === 'secondary' ? (
+        <LinearGradient
+          colors={['#232323', '#191919']}
+          start={{ x: 0.5, y: 0 }}
+          end={{ x: 0.5, y: 1 }}
+          style={[StyleSheet.absoluteFillObject, { borderRadius: BORDER_RADIUS.md }]}
         />
-      ) : (
-        <>
-          {icon && <View style={{ marginRight: title ? 8 : 0 }}>{icon}</View>}
-          {title && <Text style={[getTextStyle(), textStyle]}>{title}</Text>}
-        </>
-      )}
+      ) : null}
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+        {loading ? (
+          <AppLoader
+            color={variant === 'primary' || variant === 'secondary' ? colors.white : colors.primary}
+            size="small"
+          />
+        ) : (
+          <>
+            {icon && <View style={{ marginRight: title ? 8 : 0 }}>{icon}</View>}
+            {title && <Text style={[getTextStyle(), textStyle]}>{title}</Text>}
+          </>
+        )}
+      </View>
     </TouchableOpacity>
   );
 };

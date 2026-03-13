@@ -1,9 +1,10 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { withdrawalService } from '../../services/withdrawal.service';
-import { authenticate, requireAdmin } from '../../middleware/auth.middleware';
+import { authenticate, requireAdminPermission } from '../../middleware/auth.middleware';
 import { validate } from '../../middleware/validation.middleware';
 import { z } from 'zod';
 import { ApiResponse } from '../../types';
+import { ADMIN_PERMISSIONS } from '../../constants/admin-permissions';
 
 // Request schemas
 const createWithdrawalSchema = z.object({
@@ -140,7 +141,10 @@ export async function withdrawalRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/admin/pending',
     {
-      preHandler: [authenticate, requireAdmin],
+      preHandler: [
+        authenticate,
+        requireAdminPermission(ADMIN_PERMISSIONS.WITHDRAWALS_VIEW),
+      ],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { page, limit } = request.query as {
@@ -170,7 +174,10 @@ export async function withdrawalRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/admin/approved',
     {
-      preHandler: [authenticate, requireAdmin],
+      preHandler: [
+        authenticate,
+        requireAdminPermission(ADMIN_PERMISSIONS.WITHDRAWALS_VIEW),
+      ],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { page, limit } = request.query as {
@@ -200,7 +207,10 @@ export async function withdrawalRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/admin/:withdrawalId/approve',
     {
-      preHandler: [authenticate, requireAdmin],
+      preHandler: [
+        authenticate,
+        requireAdminPermission(ADMIN_PERMISSIONS.WITHDRAWALS_MANAGE),
+      ],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const adminId = (request as any).user.userId;
@@ -225,7 +235,11 @@ export async function withdrawalRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/admin/:withdrawalId/complete',
     {
-      preHandler: [authenticate, requireAdmin, validate(completeWithdrawalSchema)],
+      preHandler: [
+        authenticate,
+        requireAdminPermission(ADMIN_PERMISSIONS.WITHDRAWALS_MANAGE),
+        validate(completeWithdrawalSchema),
+      ],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const adminId = (request as any).user.userId;
@@ -254,7 +268,11 @@ export async function withdrawalRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/admin/:withdrawalId/reject',
     {
-      preHandler: [authenticate, requireAdmin, validate(rejectWithdrawalSchema)],
+      preHandler: [
+        authenticate,
+        requireAdminPermission(ADMIN_PERMISSIONS.WITHDRAWALS_MANAGE),
+        validate(rejectWithdrawalSchema),
+      ],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const adminId = (request as any).user.userId;

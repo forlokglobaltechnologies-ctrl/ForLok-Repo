@@ -1,0 +1,199 @@
+Vehicle_Category,Brand,Model,Sub_Category,Fuel_Type,Launch_Year,Initial_Mileage_New,After_2_Years,After_4_Years,After_6Plus_Years,Unit,Notes
+2-Wheeler,Royal Enfield,Continental GT 535,Sport/Cafe Racer,Petrol,2013,26-28,~25,~23,~20-22,kmpl,
+2-Wheeler,Royal Enfield,Himalayan 411,Adventure,Petrol,2016,30-32,~29,~27,~25,kmpl,
+2-Wheeler,Royal Enfield,Interceptor 650,Retro/Cruiser,Petrol,2018,24-26,~23,~22,~21,kmpl,
+2-Wheeler,Royal Enfield,Meteor 350,Cruiser,Petrol,2020,35-40,~36,~34,,kmpl,
+2-Wheeler,Royal Enfield,Hunter 350,Roadster,Petrol,2022,36-38,~35,~34 (Est.),,kmpl,
+2-Wheeler,Royal Enfield,Bear 650,Adventure,Petrol,2024,22,~21 (Est.),~20 (Est.),,kmpl,
+2-Wheeler,Royal Enfield,Classic 650,Classic/Retro,Petrol,2025,22-25,~23,,,kmpl,
+2-Wheeler,Royal Enfield,Bullet 650,Classic/Retro,Petrol,2026,23-25,~23,,,kmpl,
+2-Wheeler,Royal Enfield,Flying Flea C6,Electric Motorcycle,Electric,2026,~150,~145 (Battery Health),,,km per charge,EV - range per charge
+2-Wheeler,Bajaj,Pulsar NS200,Sports Naked,Petrol,2012,35-40,~36,~34,~30-32,kmpl,
+2-Wheeler,Bajaj,Pulsar RS200,Sports Faired,Petrol,2015,35,~33,~31,~28-30,kmpl,
+2-Wheeler,Bajaj,Dominar 400,Sport Tourer,Petrol,2016,27-30,~26,~24,~22-23,kmpl,
+2-Wheeler,Bajaj,Pulsar NS400Z,Sports Naked,Petrol,2024,32,~30,,,kmpl,
+2-Wheeler,Bajaj,Avenger 160,Cruiser,Petrol,2019,45-50,~44,~42,,kmpl,
+2-Wheeler,Bajaj,V15,Cruiser,Petrol,2016,50-55,~48,~45,,kmpl,
+2-Wheeler,Bajaj,Freedom 125,Commuter,CNG,2024,102,~95,~92,,km/kg,World's first CNG bike
+2-Wheeler,Bajaj,Chetak (Original),Electric Scooter,Electric,2019,90-95,~88,~82,,km (IDC),EV range
+2-Wheeler,Bajaj,Chetak Facelift,Electric Scooter,Electric,2024,126,~120,~117,,km (IDC),EV range
+2-Wheeler,Bajaj,Chetak (2026 Gen),Electric Scooter,Electric,2026,~155,~150 (Proj.),~146 (Proj.),,km (IDC),EV range
+2-Wheeler,Bajaj,CT 100,Entry Commuter,Petrol,2004,85-90,~82,~78,~70-75,kmpl,
+2-Wheeler,Bajaj,Platina 110,Entry Commuter,Petrol,2019,70-75,~68,~65,~60-62,kmpl,
+2-Wheeler,Bajaj,Pulsar 125,Commuter Sports,Petrol,2019,50-55,~48,~46,~42-44,kmpl,
+2-Wheeler,Bajaj,Pulsar 150,Commuter Sports,Petrol,2001,45-50,~43,~40,~36-38,kmpl,
+2-Wheeler,TVS,Apache RTR 200 4V,Sports Naked,Petrol,2016,38-40,~37,~35,~32,kmpl,
+2-Wheeler,TVS,Apache RR 310,Sports Faired,Petrol,2017,30-34,~30,~28,~26,kmpl,
+2-Wheeler,TVS,Apache RTX 300,Sports Naked,Petrol,2025,32-35,~32 (Est.),,,kmpl,
+2-Wheeler,TVS,Apache RR 450,Sports Faired,Petrol,2026,25-28,~25 (Proj.),,,kmpl,
+2-Wheeler,TVS,Raider 125,Commuter Sports,Petrol,2021,57-62,~56,~54,,kmpl,
+2-Wheeler,TVS,Ronin 225,Roadster,Petrol,2022,40-42,~39,~37 (Est.),,kmpl,
+2-Wheeler,TVS,Jupiter 125,Scooter,Petrol,2021,50-55,~48,~45,,kmpl,
+2-Wheeler,TVS,Ntorq 125,Sports Scooter,Petrol,2018,40-45,~38,~35,,kmpl,
+2-Wheeler,TVS,iQube ST (5.3kWh),Electric Scooter,Electric,2024,145-150,~140,~132 (Est.),,km (IDC),EV range
+2-Wheeler,TVS,TVS X,Electric Scooter,Electric,2024,105-110,~100,,,km (IDC),EV range
+2-Wheeler,TVS,Scooty Pep+,Scooter,Petrol,2005,50-55,48-50,45-48,40-44,kmpl,
+2-Wheeler,TVS,Jupiter (110/125),Scooter,Petrol,2013,47-51,45-49,43-47,40-44,kmpl,
+2-Wheeler,Hero MotoCorp,Impulse 150,Adventure,Petrol,2011,50-55,~48,~45,~40,kmpl,
+2-Wheeler,Hero MotoCorp,Xpulse 200 (4V),Adventure,Petrol,2019,38-40,~36,~34,~31,kmpl,
+2-Wheeler,Hero MotoCorp,Xpulse 210,Adventure,Petrol,2025,36-38,~35 (Est.),,,kmpl,
+2-Wheeler,Hero MotoCorp,Xtreme 200S,Sports Naked,Petrol,2019,40-45,~41,~38,,kmpl,
+2-Wheeler,Hero MotoCorp,Karizma XMR 210,Sports Faired,Petrol,2023,35-40,~34,~32 (Est.),,kmpl,
+2-Wheeler,Hero MotoCorp,Mavrick 440,Roadster,Petrol,2024,30-34,~29,,,kmpl,
+2-Wheeler,Hero MotoCorp,Karizma XMR 250,Sports Faired,Petrol,2026,32-35,~31 (Proj.),,,kmpl,
+2-Wheeler,Hero MotoCorp,Mavrick Scrambler,Scrambler,Petrol,2026,28-32,~28 (Proj.),,,kmpl,
+2-Wheeler,Hero MotoCorp,Vida Dirt.E K3,Electric,Electric,2026,~142,~135,,,km (IDC),EV range
+2-Wheeler,Hero MotoCorp,HF Deluxe,Entry Commuter,Petrol,2014,70-75,68-70,,60-65,kmpl,Approx launch year
+2-Wheeler,Hero MotoCorp,Splendor Plus,Entry Commuter,Petrol,2010,65-70,63-65,,55-60,kmpl,Iconic model - multiple generations
+2-Wheeler,Hero MotoCorp,Passion Pro,Commuter,Petrol,2012,60-65,58-60,,50-55,kmpl,Approx launch year
+2-Wheeler,Hero MotoCorp,Glamour,Premium Commuter,Petrol,2015,55-60,52-55,,45-50,kmpl,
+2-Wheeler,Hero MotoCorp,Xtreme 160R,Street Fighter,Petrol,2020,45-50,42-45,,38-40,kmpl,
+2-Wheeler,Hero MotoCorp,Xpulse 200 (Commuter spec),Adventure/Off-road,Petrol,2019,35-40,33-35,,30-32,kmpl,
+2-Wheeler,Hero MotoCorp,Pleasure+,Scooter,Petrol,2014,48-52,46-50,44-48,40-44,kmpl,
+2-Wheeler,Hero MotoCorp,Destini 125,Scooter,Petrol,2018,45-49,43-47,41-45,38-42,kmpl,
+2-Wheeler,Hero MotoCorp,Xoom 110,Scooter,Petrol,2022,45-49,43-47,41-45,38-42,kmpl,
+2-Wheeler,Yamaha,R15 V3,Sports Faired,Petrol,2018,42-45,~40,~38,~35,kmpl,
+2-Wheeler,Yamaha,R15 V4,Sports Faired,Petrol,2021,45-48,~44,~42,,kmpl,
+2-Wheeler,Yamaha,MT-15,Naked Street,Petrol,2019,45-50,~47,~44,~40,kmpl,
+2-Wheeler,Yamaha,R3/MT-03,Sports/Naked,Petrol,2023,24-27,~25,~23,,kmpl,
+2-Wheeler,Yamaha,FZ-25,Naked Street,Petrol,2017,35-38,~34,~32,,kmpl,
+2-Wheeler,Yamaha,Aerox 155,Sports Scooter,Petrol,2021,42-45,~40,~38,,kmpl,
+2-Wheeler,Yamaha,RayZR Hybrid (Motorcycle),Hybrid,Petrol/Hybrid,2021,55-60,~54,~52,,kmpl,
+2-Wheeler,Yamaha,XSR 155,Retro/Neo-Classic,Petrol,2025,40-42,~39 (Est.),,,kmpl,
+2-Wheeler,Yamaha,Fascino 125,Scooter,Petrol,2015,48-52,46-50,44-48,42-46,kmpl,
+2-Wheeler,Yamaha,RayZR 125 (Scooter),Scooter,Petrol,2017,48-52,46-50,44-48,42-46,kmpl,
+2-Wheeler,KTM,Duke 200,Naked Street,Petrol,2012,35,~33,~31,~28-30,kmpl,
+2-Wheeler,KTM,RC 160,Sports Faired,Petrol,2026,36,~34,,,kmpl,
+2-Wheeler,KTM,Duke 390 (Gen 3),Naked Street,Petrol,2025,30,~28,,,kmpl,
+2-Wheeler,KTM,RC Series (General),Sports Faired,Petrol,Various,29-35,~27-33,~25-30,~22-26,kmpl,Multiple variants across years
+2-Wheeler,KTM,Adventure 250,Adventure,Petrol,2020,38,~36,~33,,kmpl,
+2-Wheeler,KTM,Adventure 390 (R),Adventure,Petrol,2025,30,~28,,,kmpl,
+2-Wheeler,Ola Electric,S1 Pro,Electric Scooter,Electric,2021,170-180,~160-170,~150-160,~140-150,km (IDC),EV range
+2-Wheeler,Ola Electric,S1 Air,Electric Scooter,Electric,2023,~151,~145,~138,,km (IDC),EV range
+2-Wheeler,Ola Electric,S1 X (Gen 3),Electric Scooter,Electric,2026,108-242,~105-235,,,km (IDC),Range varies by variant
+2-Wheeler,Ola Electric,Roadster X,Electric Motorcycle,Electric,2025,140-252,~135-245,,,km (IDC),Range varies by variant
+2-Wheeler,Ola Electric,Roadster,Electric Motorcycle,Electric,2025,~248,~240,,,km (IDC),EV range
+2-Wheeler,Ola Electric,Roadster Pro,Electric Motorcycle,Electric,2025,316-579,~305-560,,,km (IDC),Range varies by variant - flagship
+2-Wheeler,Honda,Shine 125,Commuter,Petrol,2006,55-60,54-58,52-56,50-54,kmpl,
+2-Wheeler,Honda,SP 125,Commuter,Petrol,2019,60-65,58-62,56-60,54-58,kmpl,
+2-Wheeler,Honda,Unicorn,Commuter,Petrol,2004,50-55,48-53,47-52,45-50,kmpl,
+2-Wheeler,Honda,XBlade,Sports Naked,Petrol,2018,45-50,43-48,41-46,38-43,kmpl,
+2-Wheeler,Honda,Hornet 2.0,Sports Naked,Petrol,2020,40-45,38-43,36-41,,kmpl,
+2-Wheeler,Honda,Activa 6G,Scooter,Petrol,2019,48-52,46-50,44-48,40-45,kmpl,
+2-Wheeler,Honda,Dio,Scooter,Petrol,2001,47-51,45-49,43-47,40-44,kmpl,
+2-Wheeler,Honda,Grazia,Scooter,Petrol,2017,42-46,40-44,38-42,35-40,kmpl,
+2-Wheeler,Suzuki,Gixxer 155,Sports Naked,Petrol,2014,45-50,~45,~42,~38-40,kmpl,Approx launch year
+2-Wheeler,Suzuki,Gixxer SF,Sports Faired,Petrol,2015,45-50,~45,~42,~38-40,kmpl,Approx launch year
+2-Wheeler,Suzuki,Access 125,Scooter,Petrol,2016,45-50,~45,~42,~38-40,kmpl,Approx launch year
+2-Wheeler,Suzuki,Burgman Street,Maxi Scooter,Petrol,2018,45-50,~45,~42,~38-40,kmpl,Approx launch year
+4-Wheeler,Maruti Suzuki,Alto K10,Hatchback,Petrol,2022,24-25,,,,kmpl,Economy king
+4-Wheeler,Maruti Suzuki,WagonR,Hatchback,Petrol,2019,24-25,,,,kmpl,Petrol variant
+4-Wheeler,Maruti Suzuki,WagonR CNG,Hatchback,CNG,2019,34,,,,km/kg,CNG variant
+4-Wheeler,Maruti Suzuki,Swift,Hatchback,Petrol,2023,24-25,,,,kmpl,
+4-Wheeler,Maruti Suzuki,Dzire,Sedan,Petrol,2023,23-24,,,,kmpl,Excellent highway cruiser
+4-Wheeler,Maruti Suzuki,Baleno,Premium Hatchback,Petrol,2022,22-23,,,,kmpl,
+4-Wheeler,Maruti Suzuki,Fronx,Compact Crossover,Petrol,2023,22-23,,,,kmpl,
+4-Wheeler,Maruti Suzuki,Brezza,Compact SUV,Petrol,2022,20-22,,,,kmpl,Sub-4m SUV
+4-Wheeler,Maruti Suzuki,Grand Vitara,Midsize SUV,Petrol/Hybrid,2022,20-28,,,,kmpl,Strong hybrid offers 28 kmpl
+4-Wheeler,Maruti Suzuki,XL6,MPV,Petrol,2019,20-22,,,,kmpl,
+4-Wheeler,Maruti Suzuki,e-Vitara,EV SUV,Electric,2025,440-543,,,,km (ARAI),First Maruti EV; 543 km ARAI range
+4-Wheeler,Tata Motors,Nano,Micro Hatchback,Petrol,2010,18-20,,,,km/l,Discontinued
+4-Wheeler,Tata Motors,Aria,MPV,Diesel,2011,11-13,,,,km/l,Discontinued
+4-Wheeler,Tata Motors,Zest,Compact Sedan,Petrol/Diesel,2014,16-18,,,,km/l,Discontinued
+4-Wheeler,Tata Motors,Tiago,Hatchback,Petrol,2016,18-20,,,,km/l,
+4-Wheeler,Tata Motors,Tigor,Compact Sedan,Petrol,2017,18-20,,,,km/l,
+4-Wheeler,Tata Motors,Hexa,MPV,Diesel,2017,12-14,,,,km/l,Discontinued
+4-Wheeler,Tata Motors,Nexon,Compact SUV,Petrol/Diesel,2017,15-17,,,,km/l,
+4-Wheeler,Tata Motors,Altroz,Premium Hatchback,Petrol/Diesel,2020,16-19,,,,km/l,
+4-Wheeler,Tata Motors,Punch,Micro SUV,Petrol,2021,16-18,,,,km/l,
+4-Wheeler,Tata Motors,Safari (New),SUV,Diesel,2021,14-16,,,,km/l,
+4-Wheeler,Tata Motors,Curvv,SUV Coupe,Petrol/Diesel,2024,15-17,,,,km/l,
+4-Wheeler,Tata Motors,Sierra EV,EV SUV,Electric,2025,400-500,,,,km (Est.),
+4-Wheeler,Tata Motors,Avinya,EV,Electric,2025,500+,,,,km (Est.),
+4-Wheeler,Tata Motors,Punch EV,EV Micro SUV,Electric,2024,300-400,,,,km (Est.),
+4-Wheeler,Tata Motors,Harrier EV,EV SUV,Electric,2024,500+,,,,km (Est.),
+4-Wheeler,Mahindra,XUV500,SUV,Diesel,2011,13-15,,,,km/l,
+4-Wheeler,Mahindra,TUV300,Compact SUV,Diesel,2015,14-16,,,,km/l,
+4-Wheeler,Mahindra,KUV100,Micro SUV,Petrol/Diesel,2016,16-18,,,,km/l,
+4-Wheeler,Mahindra,Marazzo,MPV,Diesel,2018,15-17,,,,km/l,
+4-Wheeler,Mahindra,Thar (2020),Off-road SUV,Petrol/Diesel,2020,11-14,,,,km/l,
+4-Wheeler,Mahindra,XUV700,SUV,Petrol/Diesel,2021,12-15,,,,km/l,
+4-Wheeler,Mahindra,Scorpio-N,SUV,Petrol/Diesel,2022,12-15,,,,km/l,
+4-Wheeler,Mahindra,Thar ROXX,Off-road SUV,Petrol/Diesel,2024,12-14,,,,km/l,
+4-Wheeler,Mahindra,XUV 3XO,Compact SUV,Petrol/Diesel,2024,17-20,,,,km/l,
+4-Wheeler,Mahindra,XEV 9e,EV SUV,Electric,2024,~500,,,,km (Real-world),
+4-Wheeler,Mahindra,BE 6e,EV SUV Coupe,Electric,2024,~500,,,,km (Real-world),
+4-Wheeler,Mahindra,Bolero (2026),SUV,Diesel,2026,14-16,,,,km/l,
+4-Wheeler,Hyundai,Eon,Hatchback,Petrol,2011,18-21,,,,km/l,Discontinued
+4-Wheeler,Hyundai,Xcent,Compact Sedan,Petrol/Diesel,2014,17-20,,,,km/l,
+4-Wheeler,Hyundai,Venue,Compact SUV,Petrol/Diesel,2019,17-20,,,,km/l,
+4-Wheeler,Hyundai,Alcazar,3-Row SUV,Petrol/Diesel,2021,15-18,,,,km/l,
+4-Wheeler,Hyundai,Tucson,Midsize SUV,Petrol/Diesel,2022,13-16,,,,km/l,
+4-Wheeler,Hyundai,Verna Facelift,Sedan,Petrol,2023,17-19,,,,km/l,
+4-Wheeler,Hyundai,Exter,Micro SUV,Petrol,2023,17-19,,,,km/l,
+4-Wheeler,Hyundai,Palisade,Large SUV,Petrol,2023,10-13,,,,km/l,
+4-Wheeler,Hyundai,Ioniq 5,EV SUV,Electric,2022,430-500,,,,km (Real-world),
+4-Wheeler,Hyundai,Creta EV,EV Compact SUV,Electric,2024,400-450,,,,km (Real-world),
+4-Wheeler,Kia,Seltos,Compact SUV,Petrol/Diesel,2019,16-20,,,,km/l,
+4-Wheeler,Kia,Sonet,Compact SUV,Petrol/Diesel,2020,17-24,,,,km/l,
+4-Wheeler,Kia,Carens,MPV,Petrol/Diesel,2022,15-21,,,,km/l,
+4-Wheeler,Kia,Carnival,Luxury MPV,Diesel,2020,12-14,,,,km/l,
+4-Wheeler,Kia,Sorento,Large SUV,Petrol/Hybrid,2021,12-15,,,,km/l,
+4-Wheeler,Kia,EV6,Electric Car,Electric,2022,450-500,,,,km (Real-world),
+4-Wheeler,Kia,EV9,Electric SUV,Electric,2024,450-500,,,,km (Real-world),
+4-Wheeler,Kia,Clavis EV,Electric SUV,Electric,2024,400-490,,,,km (Claimed),
+4-Wheeler,Kia,Syros EV,Electric SUV,Electric,2025,400+,,,,km (Est.),TBD - official figures awaited
+4-Wheeler,Toyota,Etios/Liva,Sedan/Hatchback,Petrol/Diesel,2010,17-23,,,,km/l,Discontinued
+4-Wheeler,Toyota,Yaris,Sedan,Petrol,2018,17-18,,,,km/l,
+4-Wheeler,Toyota,Glanza,Premium Hatchback,Petrol/CNG,2019,22-26,,,,km/l,
+4-Wheeler,Toyota,Hyryder,Compact SUV,Petrol/Hybrid/CNG,2022,20-28,,,,km/l,Hybrid offers class-leading efficiency
+4-Wheeler,Toyota,Innova Hycross,MPV,Hybrid,2022,21-23,,,,km/l,
+4-Wheeler,Toyota,Fortuner (Next-Gen),Full-size SUV,Diesel/Petrol,2016,10-14,,,,km/l,
+4-Wheeler,Toyota,Taisor,Compact SUV,Petrol/CNG,2024,20-28,,,,km/l,
+4-Wheeler,Toyota,Urban Cruiser Ebella,EV SUV,Electric,2025,400-450,,,,km (Est.),
+4-Wheeler,Skoda,Rapid,Sedan,Petrol,2011,15-18,,,,km/l,
+4-Wheeler,Skoda,Kushaq,Compact SUV,Petrol,2021,17-19,,,,km/l,
+4-Wheeler,Skoda,Slavia,Sedan,Petrol,2022,18-20,,,,km/l,
+4-Wheeler,Skoda,Kodiaq,Full-size SUV,Petrol,2017,12-14,,,,km/l,
+4-Wheeler,Skoda,Kylaq,Compact SUV,Petrol,2025,18-19,,,,km/l,
+4-Wheeler,Skoda,Kushaq Facelift,Compact SUV,Petrol,2024,17-19,,,,km/l,
+4-Wheeler,Skoda,Octavia RS,Sedan,Petrol,2021,10-12,,,,km/l,Performance variant
+4-Wheeler,Skoda,Elroq (EV),EV SUV,Electric,2025,400-550,,,,km (Battery dependent),
+4-Wheeler,Volkswagen,Vento,Sedan,Petrol,2010,15-17,,,,km/l,
+4-Wheeler,Volkswagen,Ameo,Compact Sedan,Petrol/Diesel,2016,16-21,,,,km/l,
+4-Wheeler,Volkswagen,Tiguan,Midsize SUV,Petrol,2017,12-13,,,,km/l,
+4-Wheeler,Volkswagen,Taigun,Compact SUV,Petrol,2021,17-19,,,,km/l,
+4-Wheeler,Volkswagen,Virtus,Sedan,Petrol,2022,18-20,,,,km/l,
+4-Wheeler,Volkswagen,Tayron R-Line,SUV,Petrol,2024,12-14,,,,km/l,
+4-Wheeler,Volkswagen,ID.4 EV,EV SUV,Electric,2023,400-500,,,,km (Battery dependent),
+4-Wheeler,MG Motor,Hector,SUV,Petrol/Diesel,2019,11-15,,,,km/l,
+4-Wheeler,MG Motor,Astor,Compact SUV,Petrol,2021,13-17,,,,km/l,
+4-Wheeler,MG Motor,Gloster,Full-size SUV,Diesel,2020,10-13,,,,km/l,
+4-Wheeler,MG Motor,ZS EV,EV Compact SUV,Electric,2020,~460,,,,km (Est. real-world),
+4-Wheeler,MG Motor,Comet EV,EV City Car,Electric,2023,200-230,,,,km (Est. real-world),
+4-Wheeler,MG Motor,Windsor EV,EV SUV,Electric,2024,330-350,,,,km (Est. real-world),
+4-Wheeler,MG Motor,Cyberster,EV Sports Car,Electric,2024,400+,,,,km (Est. range),
+4-Wheeler,Renault,Fluence,Sedan,Petrol/Diesel,2011,13-20,,,,km/l,Discontinued
+4-Wheeler,Renault,Duster (Legacy),Compact SUV,Petrol/Diesel,2012,13-19,,,,km/l,
+4-Wheeler,Renault,Kwid,Hatchback,Petrol,2015,17-22,,,,km/l,
+4-Wheeler,Renault,Captur,Compact SUV,Petrol/Diesel,2017,13-19,,,,km/l,Discontinued
+4-Wheeler,Renault,Triber,MPV,Petrol,2019,17-20,,,,km/l,
+4-Wheeler,Renault,Kiger,Compact SUV,Petrol,2021,17-20,,,,km/l,
+4-Wheeler,Renault,New Duster (2026),Compact SUV,Petrol/Hybrid,2026,14-22 (Est.),,,,km/l,
+4-Wheeler,Renault,Duster 7-Seater,SUV,Petrol/Hybrid,2026,13-20 (Est.),,,,km/l,
+4-Wheeler,Nissan,Micra,Hatchback,Petrol/Diesel,2010,18-22,,,,km/l,Discontinued
+4-Wheeler,Nissan,Sunny,Sedan,Petrol/Diesel,2011,17-22,,,,km/l,Discontinued
+4-Wheeler,Nissan,Terrano,Compact SUV,Petrol/Diesel,2013,14-19,,,,km/l,Discontinued
+4-Wheeler,Nissan,Kicks,Compact SUV,Petrol/Diesel,2019,14-19,,,,km/l,
+4-Wheeler,Nissan,Magnite,Compact SUV,Petrol,2020,18-20,,,,km/l,
+4-Wheeler,Nissan,Gravite (7-Seater),SUV,Petrol,2025,19-20,,,,km/l,
+4-Wheeler,Nissan,X-Trail,Midsize SUV,Hybrid,2023,~13,,,,km/l,
+4-Wheeler,Nissan,Tekton,SUV,Petrol/Hybrid,2026,15-19 (Est.),,,,km/l,Official figures awaited
+4-Wheeler,Mercedes-Benz,C-Class (W205),Luxury Sedan,Petrol/Diesel,2014,10-14,,,,km/l,Luxury segment
+4-Wheeler,BMW,3 Series (G20),Luxury Sedan,Petrol/Diesel,2019,12-15,,,,km/l,Luxury segment
+4-Wheeler,Audi,Q3 Sportback,Luxury SUV,Petrol,2021,11-14,,,,km/l,Luxury segment
+4-Wheeler,Volvo,XC40,Luxury SUV,Petrol/Electric,2018,12-15 / 400+ km,,,,km/l or km (EV),Luxury segment
+4-Wheeler,Mercedes-Benz,EQS,Luxury EV Sedan,Electric,2022,600-700,,,,km (WLTP),Ultra-luxury EV
+4-Wheeler,BMW,i7,Luxury EV Sedan,Electric,2022,500-600,,,,km (WLTP),Luxury EV
+4-Wheeler,Audi,SQ8 e-tron,Luxury EV SUV,Electric,2023,400-500,,,,km (WLTP),Luxury EV
+4-Wheeler,Lexus,ES (New),Luxury Sedan,Petrol/Hybrid,2023,15-20,,,,km/l,Hybrid option available

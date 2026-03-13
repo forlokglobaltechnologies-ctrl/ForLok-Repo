@@ -4,6 +4,7 @@ import { walletService } from '../../services/wallet.service';
 import { authenticate } from '../../middleware/auth.middleware';
 import { validate } from '../../middleware/validation.middleware';
 import { PRICING_CONFIG } from '../../config/pricing.config';
+import { config } from '../../config/env';
 
 // Schemas
 const topUpSchema = z.object({
@@ -28,6 +29,13 @@ export const walletRoutes: FastifyPluginAsync = async (app) => {
     },
     async (request, reply) => {
       try {
+        if (config.server.nodeEnv === 'production') {
+          return reply.status(403).send({
+            success: false,
+            error: 'Direct wallet top-up is disabled in production. Use /api/payments/wallet/top-up',
+          });
+        }
+
         const userId = (request as any).user.userId;
         const summary = await walletService.getWalletSummary(userId);
 

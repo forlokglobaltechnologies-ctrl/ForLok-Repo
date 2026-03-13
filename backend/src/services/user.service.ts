@@ -163,6 +163,57 @@ class UserService {
   }
 
   /**
+   * Get notification preferences
+   */
+  async getNotificationPreferences(userId: string): Promise<{
+    bookingUpdates: boolean;
+    messages: boolean;
+    promotions: boolean;
+  }> {
+    const user = await User.findOne({ userId });
+    if (!user) {
+      throw new NotFoundError('User not found');
+    }
+
+    return {
+      bookingUpdates: user.notificationPreferences?.bookingUpdates ?? true,
+      messages: user.notificationPreferences?.messages ?? true,
+      promotions: user.notificationPreferences?.promotions ?? false,
+    };
+  }
+
+  /**
+   * Update notification preferences
+   */
+  async updateNotificationPreferences(
+    userId: string,
+    preferences: {
+      bookingUpdates: boolean;
+      messages: boolean;
+      promotions: boolean;
+    }
+  ): Promise<{
+    bookingUpdates: boolean;
+    messages: boolean;
+    promotions: boolean;
+  }> {
+    const user = await User.findOne({ userId });
+    if (!user) {
+      throw new NotFoundError('User not found');
+    }
+
+    user.notificationPreferences = {
+      bookingUpdates: !!preferences.bookingUpdates,
+      messages: !!preferences.messages,
+      promotions: !!preferences.promotions,
+    };
+
+    await user.save();
+    logger.info(`Notification preferences updated for user ${userId}`);
+    return user.notificationPreferences;
+  }
+
+  /**
    * Change password
    */
   async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void> {

@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   StatusBar,
+  Image,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { ArrowLeft, Car, Bike, Key, ChevronRight, Star, Link2, Navigation } from 'lucide-react-native';
@@ -17,6 +18,8 @@ import { FONTS } from '@constants/theme';
 import { useTheme } from '@context/ThemeContext';
 import { useAuth } from '@context/AuthContext';
 import { bookingApi } from '@utils/apiClient';
+
+const POOLING_FLAG_LOGO = require('../../../assets/signin_arrow_orange_transparent.png');
 
 const shorten = (addr: string, maxLen = 30): string => {
   if (!addr || addr === 'N/A') return 'Unknown';
@@ -144,7 +147,7 @@ const HistoryScreen = () => {
 
   const getStatusMeta = (status: string) => {
     switch (status) {
-      case 'confirmed': return { color: '#1976D2', label: 'Confirmed' };
+      case 'confirmed': return { color: '#D47B1B', label: 'Confirmed' };
       case 'pending': return { color: '#F57C00', label: 'Pending' };
       case 'in_progress': return { color: '#2E7D32', label: 'In Progress' };
       case 'completed': return { color: '#2E7D32', label: 'Completed' };
@@ -185,6 +188,11 @@ const HistoryScreen = () => {
         onPress={onPress}
         style={[s.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
       >
+        {(isPooling || isConnected) && (
+          <View style={s.poolingFlag}>
+            <Image source={POOLING_FLAG_LOGO} style={s.poolingFlagImage} resizeMode="contain" />
+          </View>
+        )}
         {/* Row 1: Icon + Route + Amount */}
         <View style={s.cardMain}>
           <View style={[s.iconCircle, { backgroundColor: isConnected ? '#E8EAF6' : (isPooling ? theme.colors.primary + '12' : '#FFF3E0') }]}>
@@ -399,7 +407,7 @@ const s = StyleSheet.create({
   listContent: {
     paddingHorizontal: normalize(16),
     paddingTop: normalize(12),
-    paddingBottom: normalize(100),
+    paddingBottom: normalize(24),
   },
 
   card: {
@@ -407,6 +415,25 @@ const s = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     marginBottom: normalize(10),
     overflow: 'hidden',
+    position: 'relative',
+  },
+  poolingFlag: {
+    position: 'absolute',
+    bottom: normalize(8),
+    right: normalize(8),
+    zIndex: 5,
+    width: normalize(26),
+    height: normalize(26),
+    borderRadius: normalize(7),
+    backgroundColor: '#F99E3C',
+    borderWidth: 1,
+    borderColor: '#E08E35',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  poolingFlagImage: {
+    width: normalize(18),
+    height: normalize(18),
   },
   cardMain: {
     flexDirection: 'row',
