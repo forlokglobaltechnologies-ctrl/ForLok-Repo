@@ -11,9 +11,11 @@ import {
   ContentPage,
   FeedbackDetailsPage,
   FeedbackPage,
+  FuelRatesPage,
   MasterDataPage,
   PermissionMatrixPage,
   PoolingPage,
+  PricingSyncPage,
   PromosPage,
   RentalPage,
   RolesPage,
@@ -51,6 +53,10 @@ function App() {
       <Route path="/settings" element={<ShellRoute permission="settings:view"><SettingsPage /></ShellRoute>} />
       <Route path="/content" element={<ShellRoute permission="content:view"><ContentPage /></ShellRoute>} />
       <Route path="/master-data" element={<ShellRoute permission="master_data:view"><MasterDataPage /></ShellRoute>} />
+      <Route path="/fuel-rates" element={<ShellRoute permission="settings:view"><FuelRatesPage /></ShellRoute>} />
+      <Route path="/pricing-control" element={<ShellRoute permission="settings:view"><PricingSyncPage /></ShellRoute>} />
+      <Route path="/pricing-sync" element={<Navigate to="/pricing-control" replace />} />
+      <Route path="/fuel-pricing" element={<Navigate to="/pricing-control" replace />} />
       <Route path="/withdrawals" element={<ShellRoute permission="withdrawals:view"><WithdrawalsPage /></ShellRoute>} />
       <Route path="/roles" element={<ShellRoute permission="roles:view"><RolesPage /></ShellRoute>} />
       <Route path="/admin-users" element={<ShellRoute permission="admins:view"><AdminUsersPage /></ShellRoute>} />

@@ -5,13 +5,13 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   RefreshControl,
   Modal,
   TextInput,
   Alert,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ArrowLeft,
   Wallet,
@@ -81,6 +81,7 @@ const WalletScreen = () => {
   const route = useRoute<any>();
   const { t } = useLanguage();
   const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [walletSummary, setWalletSummary] = useState<any>(null);
@@ -260,8 +261,8 @@ const WalletScreen = () => {
   // ── Loading State ──
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <View style={[styles.simpleHeader, { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.border }]}>
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <View style={[styles.simpleHeader, { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.border, paddingTop: insets.top + SPACING.sm }]}>
           <TouchableOpacity onPress={() => navigation.goBack()}>
             <ArrowLeft size={22} color={theme.colors.text} />
           </TouchableOpacity>
@@ -272,13 +273,13 @@ const WalletScreen = () => {
           <AppLoader size="large" color={BLUE_ACCENT} />
           <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Loading wallet...</Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <View style={[styles.simpleHeader, { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.border }]}>
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <View style={[styles.simpleHeader, { backgroundColor: theme.colors.surface, borderBottomColor: theme.colors.border, paddingTop: insets.top + SPACING.sm }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <ArrowLeft size={22} color={theme.colors.text} />
         </TouchableOpacity>
@@ -732,7 +733,7 @@ const WalletScreen = () => {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -765,7 +766,7 @@ const styles = StyleSheet.create({
   tabText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, fontWeight: '500' },
 
   // ── Scroll ──
-  scrollContent: { padding: SPACING.md, paddingBottom: SPACING.xl * 2 },
+  scrollContent: { padding: SPACING.md, paddingBottom: normalize(24) },
 
   // ── Balance Card (Wallet Tab) ──
   balanceCard: {

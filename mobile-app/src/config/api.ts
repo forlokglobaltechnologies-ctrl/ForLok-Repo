@@ -64,6 +64,8 @@ export const API_CONFIG = {
       UPLOAD_PHOTOS: '/api/vehicles/:vehicleId/photos',
       UPLOAD_DOCUMENTS: '/api/vehicles/:vehicleId/documents',
       COMPANY_VEHICLES: '/api/vehicles/company/:companyId',
+      CATALOG_REQUESTS: '/api/vehicles/catalog-requests',
+      FUEL_TYPES: '/api/vehicles/catalog/fuel-types',
     },
     // Document Management
     DOCUMENT: {
@@ -201,6 +203,8 @@ export const API_CONFIG = {
       CONTENT_PAGE_UPSERT: '/api/admin/content-pages/:key',
       MASTER_DATA_LIST: '/api/admin/master-data/:type',
       MASTER_DATA_ITEM: '/api/admin/master-data/:type/:key',
+      VEHICLE_CATALOG_REQUESTS: '/api/admin/vehicle-catalog-requests',
+      VEHICLE_CATALOG_REVIEW: '/api/admin/vehicle-catalog-requests/:requestId/review',
       ROLES: '/api/admin/roles',
       ROLE_DETAIL: '/api/admin/roles/:roleKey',
       ADMINS: '/api/admin/admins',

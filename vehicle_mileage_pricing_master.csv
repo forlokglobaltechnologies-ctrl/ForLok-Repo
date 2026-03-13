@@ -1,0 +1,43 @@
+Vehicle_Category,Brand,Model,Fuel_Type,Transmission,Launch_Year,Vehicle_Age_Bucket,Source_Mileage_Min,Source_Mileage_Max,Real_World_Mileage_Min,Real_World_Mileage_Max,Real_World_Mileage_Avg,Mileage_Unit,Energy_Unit_Price_INR,Estimated_Cost_Per_Km_INR,City_Tier,Traffic_Profile,Data_Source,Confidence_Score,Pricing_Eligible,Fallback_Level,Record_Status,Effective_From,Effective_To,Notes
+4-Wheeler,Maruti Suzuki,Alto K10,Petrol,Manual,2022,0-2,24,25,18,21,19.5,kmpl,105,5.38,metro,high,ARAI+fleet_observation,88,Y,model_exact,active,2026-03-12,,High confidence commuter baseline
+4-Wheeler,Maruti Suzuki,WagonR,Petrol,Manual,2019,2-4,24,25,17,20,18.5,kmpl,105,5.68,metro,high,ARAI+fleet_observation,86,Y,model_exact,active,2026-03-12,,Urban hatchback baseline
+4-Wheeler,Maruti Suzuki,WagonR CNG,CNG,Manual,2019,2-4,34,34,24,27,25.5,kmkg,85,3.33,metro,high,OEM+CNG_fleet_observation,84,Y,model_exact,active,2026-03-12,,CNG efficiency reference
+4-Wheeler,Maruti Suzuki,Swift,Petrol,Manual,2023,0-2,24,25,17,20,18.5,kmpl,105,5.68,metro,high,ARAI+fleet_observation,87,Y,model_exact,active,2026-03-12,,Popular pooling hatchback
+4-Wheeler,Maruti Suzuki,Dzire,Petrol,Manual,2023,0-2,23,24,16.5,19,17.8,kmpl,105,5.90,metro,high,ARAI+fleet_observation,86,Y,model_exact,active,2026-03-12,,Sedan commute profile
+4-Wheeler,Maruti Suzuki,Brezza,Petrol,Automatic,2022,0-2,20,22,13.5,16.5,15.0,kmpl,105,7.00,metro,high,ARAI+fleet_observation,83,Y,model_exact,active,2026-03-12,,Automatic SUV city behavior
+4-Wheeler,Tata Motors,Tiago,Petrol,Manual,2016,6+,18,20,13,15.5,14.2,kmpl,105,7.39,metro,high,OEM+fleet_observation,80,Y,model_exact,active,2026-03-12,,Aging fleet penalty included
+4-Wheeler,Tata Motors,Tigor,Petrol,Manual,2017,6+,18,20,13,15,14.0,kmpl,105,7.50,metro,high,OEM+fleet_observation,79,Y,model_exact,active,2026-03-12,,Sedan city-load estimate
+4-Wheeler,Tata Motors,Nexon,Diesel,Manual,2017,6+,15,17,12,14,13.0,kmpl,92,7.08,metro,high,OEM+fleet_observation,81,Y,model_exact,active,2026-03-12,,Diesel compact SUV profile
+4-Wheeler,Tata Motors,Punch,Petrol,Manual,2021,2-4,16,18,12.5,15,13.8,kmpl,105,7.61,metro,high,OEM+fleet_observation,82,Y,model_exact,active,2026-03-12,,Micro-SUV reference
+4-Wheeler,Hyundai,Venue,Petrol,Automatic,2019,4-6,17,20,12,15,13.5,kmpl,105,7.78,metro,high,OEM+fleet_observation,81,Y,model_exact,active,2026-03-12,,Turbo automatic city reference
+4-Wheeler,Hyundai,Verna Facelift,Petrol,Automatic,2023,0-2,17,19,12.5,15.5,14.0,kmpl,105,7.50,metro,high,OEM+fleet_observation,82,Y,model_exact,active,2026-03-12,,Premium sedan city profile
+4-Wheeler,Kia,Seltos,Diesel,Automatic,2019,4-6,16,20,12,15,13.5,kmpl,92,6.81,metro,high,OEM+fleet_observation,81,Y,model_exact,active,2026-03-12,,Popular SUV diesel reference
+4-Wheeler,Kia,Sonet,Petrol,Manual,2020,4-6,17,24,13,17,15.0,kmpl,105,7.00,metro,high,OEM+fleet_observation,80,Y,model_exact,active,2026-03-12,,Compact SUV city profile
+4-Wheeler,Toyota,Glanza,Petrol,Manual,2019,4-6,22,26,17,21,19.0,kmpl,105,5.53,metro,high,OEM+fleet_observation,85,Y,model_exact,active,2026-03-12,,Efficient hatchback baseline
+4-Wheeler,Toyota,Innova Hycross,Hybrid,Automatic,2022,0-2,21,23,14,18,16.0,kmpl,105,6.56,metro,high,OEM+fleet_observation,76,Y,model_exact,active,2026-03-12,,Hybrid modeled with petrol equivalent
+4-Wheeler,Mahindra,Scorpio-N,Diesel,Manual,2022,0-2,12,15,9.5,12,10.8,kmpl,92,8.52,metro,high,OEM+fleet_observation,80,Y,model_exact,active,2026-03-12,,Heavy SUV city penalty
+4-Wheeler,Mahindra,XUV700,Petrol,Automatic,2021,2-4,12,15,9,11.5,10.2,kmpl,105,10.29,metro,high,OEM+fleet_observation,79,Y,model_exact,active,2026-03-12,,Large SUV pooling high-cost band
+4-Wheeler,Renault,Kwid,Petrol,Manual,2015,6+,17,22,13,17,15.0,kmpl,105,7.00,metro,high,OEM+fleet_observation,78,Y,model_exact,active,2026-03-12,,Budget hatchback aging profile
+4-Wheeler,Nissan,Magnite,Petrol,Manual,2020,4-6,18,20,13,16,14.5,kmpl,105,7.24,metro,high,OEM+fleet_observation,80,Y,model_exact,active,2026-03-12,,Compact SUV baseline
+2-Wheeler,Honda,Activa 6G,Petrol,Automatic,2019,2-4,48,52,38,44,41.0,kmpl,105,2.56,metro,high,OEM+2w_fleet_observation,90,Y,model_exact,active,2026-03-12,,Scooty high-volume baseline
+2-Wheeler,TVS,Jupiter 125,Petrol,Automatic,2021,2-4,50,55,40,46,43.0,kmpl,105,2.44,metro,high,OEM+2w_fleet_observation,88,Y,model_exact,active,2026-03-12,,Scooty city average
+2-Wheeler,TVS,Ntorq 125,Petrol,Automatic,2018,6+,40,45,31,37,34.0,kmpl,105,3.09,metro,high,OEM+2w_fleet_observation,86,Y,model_exact,active,2026-03-12,,Sports scooter behavior
+2-Wheeler,Hero MotoCorp,Splendor Plus,Petrol,Manual,2010,6+,65,70,50,58,54.0,kmpl,105,1.94,metro,high,OEM+2w_fleet_observation,92,Y,model_exact,active,2026-03-12,,Commuter bike anchor row
+2-Wheeler,Honda,Shine 125,Petrol,Manual,2006,6+,55,60,44,51,47.0,kmpl,105,2.23,metro,high,OEM+2w_fleet_observation,90,Y,model_exact,active,2026-03-12,,Stable commuter bike
+2-Wheeler,Bajaj,Pulsar 150,Petrol,Manual,2001,6+,45,50,35,41,38.0,kmpl,105,2.76,metro,high,OEM+2w_fleet_observation,89,Y,model_exact,active,2026-03-12,,High usage city reference
+2-Wheeler,TVS,Apache RTR 200 4V,Petrol,Manual,2016,6+,38,40,30,35,32.5,kmpl,105,3.23,metro,high,OEM+2w_fleet_observation,85,Y,model_exact,active,2026-03-12,,Performance bike city behavior
+2-Wheeler,Royal Enfield,Classic 350,Petrol,Manual,2012,6+,35,40,28,33,30.5,kmpl,105,3.44,metro,high,OEM+2w_fleet_observation,84,Y,brand_fallback,active,2026-03-12,,Mapped to RE classic family
+2-Wheeler,Royal Enfield,Himalayan 411,Petrol,Manual,2016,6+,30,32,24,28,26.0,kmpl,105,4.04,metro,high,OEM+2w_fleet_observation,83,Y,model_exact,active,2026-03-12,,Adventure bike profile
+2-Wheeler,Yamaha,MT-15,Petrol,Manual,2019,2-4,45,50,36,42,39.0,kmpl,105,2.69,metro,high,OEM+2w_fleet_observation,86,Y,model_exact,active,2026-03-12,,Urban sporty bike
+2-Wheeler,KTM,Duke 200,Petrol,Manual,2012,6+,35,35,27,32,29.5,kmpl,105,3.56,metro,high,OEM+2w_fleet_observation,84,Y,model_exact,active,2026-03-12,,Performance bike cost band
+2-Wheeler,Bajaj,Freedom 125,CNG,Manual,2024,0-2,102,102,80,92,86.0,kmkg,85,0.99,metro,high,OEM+early_fleet_observation,70,Y,model_exact,active,2026-03-12,,New model; confidence intentionally lower
+2-Wheeler,Ola Electric,S1 Pro,Electric,Automatic,2021,2-4,150,180,95,120,107.0,km_per_charge,12,1.80,metro,high,IDC+real_world_estimate,62,Y,model_exact,active,2026-03-12,,Converted using typical 4.5 kWh/charge assumption
+2-Wheeler,TVS,iQube ST (5.3kWh),Electric,Automatic,2024,0-2,145,150,95,115,105.0,km_per_charge,12,1.82,metro,high,IDC+real_world_estimate,64,Y,model_exact,active,2026-03-12,,Converted using 4.7 kWh/charge equivalent
+2-Wheeler,Bajaj,Chetak Facelift,Electric,Automatic,2024,0-2,117,126,85,105,95.0,km_per_charge,12,1.89,metro,high,IDC+real_world_estimate,63,Y,model_exact,active,2026-03-12,,Scooter EV conservative estimate
+4-Wheeler,GENERIC,GENERIC_CAR,Petrol,Manual,2018,2-6,15,25,11,18,14.5,kmpl,105,7.24,mixed,mixed,config_default+fleet_blend,75,Y,category_fallback,active,2026-03-12,,Fallback for unmatched petrol cars
+4-Wheeler,GENERIC,GENERIC_CAR,Diesel,Manual,2018,2-6,12,20,10,16,13.0,kmpl,92,7.08,mixed,mixed,config_default+fleet_blend,75,Y,category_fallback,active,2026-03-12,,Fallback for unmatched diesel cars
+4-Wheeler,GENERIC,GENERIC_CAR,CNG,Manual,2019,2-6,20,34,16,26,21.0,kmkg,85,4.05,mixed,mixed,config_default+fleet_blend,74,Y,category_fallback,active,2026-03-12,,Fallback for unmatched CNG cars
+4-Wheeler,GENERIC,GENERIC_CAR,Electric,Automatic,2023,0-4,5.5,6.5,4.5,5.8,5.2,km_per_kwh,12,2.31,mixed,mixed,config_default+fleet_blend,68,Y,category_fallback,active,2026-03-12,,Uses km_per_kwh for EV cars
+2-Wheeler,GENERIC,GENERIC_BIKE,Petrol,Manual,2018,2-6,30,65,24,48,34.0,kmpl,105,3.09,mixed,mixed,config_default+fleet_blend,78,Y,category_fallback,active,2026-03-12,,Fallback for unmatched bikes
+2-Wheeler,GENERIC,GENERIC_SCOOTY,Petrol,Automatic,2019,2-6,40,55,32,44,38.0,kmpl,105,2.76,mixed,mixed,config_default+fleet_blend,79,Y,category_fallback,active,2026-03-12,,Fallback for unmatched scooties
+2-Wheeler,GENERIC,GENERIC_2W,Electric,Automatic,2024,0-4,22,35,18,30,24.0,km_per_kwh,12,0.50,mixed,mixed,config_default+fleet_blend,66,Y,category_fallback,active,2026-03-12,,EV two-wheeler fallback using kWh basis

@@ -5,11 +5,10 @@ import { normalize, hp } from '@utils/responsive';
 import { useAuth } from '@context/AuthContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppLoader } from '@components/common/AppLoader';
-import { LinearGradient } from 'expo-linear-gradient';
 
 const ONBOARDING_KEY = '@forlok_onboarding_seen';
 const DEBUG_ENDPOINT = 'http://127.0.0.1:7775/ingest/9bdd2fd3-ac77-45be-b342-a40ab02f34f7';
-const SPLASH_LOGO = require('../../../assets/ezway_ez_white_transparent.png');
+const SPLASH_LOGO = require('../../../assets/splash_arrow_orange_white_bg.png');
 
 const SplashScreen = () => {
   const navigation = useNavigation();
@@ -95,17 +94,17 @@ const SplashScreen = () => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#F99E3C" />
-      <LinearGradient colors={['#F99E3C', '#D47B1B']} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} style={styles.gradient}>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <View style={styles.gradient}>
         <View style={styles.brandTag}>
           <Image source={SPLASH_LOGO} style={styles.brandImage} resizeMode="contain" />
         </View>
 
         <View style={styles.loaderWrap}>
-          <AppLoader size="small" color="#FFFFFF" style={styles.loader} />
+          <AppLoader size="small" color="#F99E3C" style={styles.loader} />
           <Text style={styles.loadingText}>Loading</Text>
         </View>
-      </LinearGradient>
+      </View>
     </View>
   );
 };
@@ -113,22 +112,24 @@ const SplashScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F99E3C',
+    backgroundColor: '#FFFFFF',
   },
   gradient: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#FFFFFF',
   },
   brandTag: {
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',
+    marginLeft: 28,
   },
   brandImage: {
-    width: '82%',
-    maxWidth: 360,
-    aspectRatio: 1024 / 571,
+    width: '88%',
+    maxWidth: 380,
+    aspectRatio: 309 / 275,
   },
   loaderWrap: {
     position: 'absolute',
@@ -141,7 +142,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   loadingText: {
-    color: '#FFFFFF',
+    color: '#F99E3C',
     fontSize: normalize(12),
     fontFamily: 'MomoTrustDisplay-Regular',
     letterSpacing: 0.2,

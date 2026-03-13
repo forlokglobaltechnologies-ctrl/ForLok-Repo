@@ -21,7 +21,7 @@ import {
 import { normalize, wp, hp, SCREEN_WIDTH } from '@utils/responsive';
 import { useNavigation, useIsFocused, useNavigationState } from '@react-navigation/native';
 import {
-  Bell, User, Clock, TrendingUp, IndianRupee, Heart, Coins, LogOut,
+  Bell, Clock, TrendingUp, IndianRupee, Heart, Coins, LogOut,
   Search, CarFront, CreditCard, PartyPopper, Wallet, X, MapPin, Home as HomeIcon,
   Briefcase, Leaf, Star, ChevronRight, Users, Gift, Car, UtensilsCrossed,
   Navigation, Share2, Shield, Menu, History, HelpCircle, MessageSquare, FileText,
@@ -40,6 +40,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 const SCREEN_W = Dimensions.get('window').width;
 const STEP_CARD_W = SCREEN_W;
 const QUICK_ACTION_ACCENT = '#8D1F1F';
+const POOLING_FLAG_LOGO = require('../../../assets/splash_arrow_white_transparent.png');
 
 const bookingSteps = [
   { id: '1', step: 'Step 1', title: 'Search your\nroute', cta: 'Get started →', icon: Search },
@@ -134,7 +135,6 @@ const MainDashboardScreen = () => {
   const [homeData, setHomeData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [userGender, setUserGender] = useState<string | null>(null);
-  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
@@ -410,6 +410,15 @@ const MainDashboardScreen = () => {
   const referral = homeData?.referral;
   const coins = homeData?.coins;
   const showSteps = (homeData?.greenImpact?.totalRidesShared || 0) < 5;
+  const canUseHerPooling = userGender === 'Female' || isPinkMode;
+
+  const handleHerPoolingToggle = () => {
+    if (isPinkMode) {
+      setPinkMode(false);
+      return;
+    }
+    navigation.navigate('PinkPoolingSplash' as never);
+  };
 
   return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -431,35 +440,15 @@ const MainDashboardScreen = () => {
             <TouchableOpacity style={styles.iconButton} onPress={() => setShowWalletModal(true)}>
               <Wallet size={22} color={theme.colors.text} />
             </TouchableOpacity>
-            <View style={styles.profileIconContainer}>
-              <TouchableOpacity style={styles.iconButton} onPress={(e) => { e.stopPropagation(); setShowProfileDropdown(!showProfileDropdown); }}>
-                <User size={22} color={theme.colors.text} />
+            {canUseHerPooling && (
+              <TouchableOpacity style={styles.iconButton} onPress={handleHerPoolingToggle}>
+                <Heart
+                  size={22}
+                  color={isPinkMode ? '#FF6B9D' : theme.colors.text}
+                  fill={isPinkMode ? '#FF6B9D' : 'transparent'}
+                />
               </TouchableOpacity>
-              {showProfileDropdown && (
-                <TouchableWithoutFeedback onPress={() => setShowProfileDropdown(false)}>
-                  <View style={[styles.dropdown, { backgroundColor: theme.colors.surface }]}>
-                    <TouchableOpacity style={styles.dropdownItem} onPress={() => { setShowProfileDropdown(false); navigation.navigate('Profile' as never); }}>
-                      <User size={18} color={theme.colors.text} />++
-                      <Text style={[styles.dropdownText, { color: theme.colors.text }]}>View Profile</Text>
-                    </TouchableOpacity>
-                    {(userGender === 'Female' || isPinkMode) && (
-                      <>
-                        <View style={[styles.dropdownDivider, { backgroundColor: theme.colors.border }]} />
-                        <TouchableOpacity style={styles.dropdownItem} onPress={() => { setShowProfileDropdown(false); isPinkMode ? setPinkMode(false) : navigation.navigate('PinkPoolingSplash' as never); }}>
-                          <Heart size={18} color={isPinkMode ? theme.colors.primary : theme.colors.text} />
-                          <Text style={[styles.dropdownText, { color: theme.colors.text }]}>{isPinkMode ? 'Exit HerPooling' : 'Enter HerPooling'}</Text>
-                        </TouchableOpacity>
-                      </>
-                    )}
-                    <View style={[styles.dropdownDivider, { backgroundColor: theme.colors.border }]} />
-                    <TouchableOpacity style={styles.dropdownItem} onPress={() => { setShowProfileDropdown(false); logout(); }}>
-                      <LogOut size={18} color="#E53E3E" />
-                      <Text style={[styles.dropdownText, { color: '#E53E3E' }]}>Logout</Text>
-                    </TouchableOpacity>
-                  </View>
-                </TouchableWithoutFeedback>
-              )}
-            </View>
+            )}
           </View>
         </View>
 
@@ -468,7 +457,7 @@ const MainDashboardScreen = () => {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-          onScrollBeginDrag={() => { setShowProfileDropdown(false); Keyboard.dismiss(); }}
+          onScrollBeginDrag={() => { Keyboard.dismiss(); }}
         >
           {/* ── Greeting ── */}
           <Text style={[styles.greeting, { color: theme.colors.text }]}>
@@ -725,6 +714,9 @@ const MainDashboardScreen = () => {
                     activeOpacity={0.75}
                     onPress={() => (navigation.navigate as any)('PoolingDetails', { offerId: ride.offerId })}
                   >
+                    <View style={styles.poolingFlag}>
+                      <Image source={POOLING_FLAG_LOGO} style={styles.poolingFlagImage} resizeMode="contain" />
+                    </View>
                     <View style={styles.nearbyCardTop}>
                       <View style={[styles.nearbyAvatar, { backgroundColor: theme.colors.primary + '20' }]}>
                         <Text style={[styles.nearbyAvatarText, { color: theme.colors.primary }]}>
@@ -882,7 +874,7 @@ const MainDashboardScreen = () => {
             </View>
           )}
 
-          <View style={{ height: normalize(16) }} />
+          <View style={{ height: normalize(4) }} />
         </ScrollView>
 
         {/* ── Wallet Modal ── */}
@@ -930,11 +922,17 @@ const MainDashboardScreen = () => {
                         end={{ x: 0.5, y: 1 }}
                         style={styles.walletModalBtnGradient}
                       >
-                        <Text style={styles.walletModalBtnText}>Withdrawal</Text>
+                        <Text style={styles.walletModalBtnText}>Withdraw Funds</Text>
                       </LinearGradient>
                     </TouchableOpacity>
-                    <TouchableOpacity style={[styles.walletModalBtn, { backgroundColor: '#0369A1' }]} onPress={() => { setShowWalletModal(false); (navigation.navigate as any)('Wallet', {}); }}>
-                      <Text style={styles.walletModalBtnText}>Wallet</Text>
+                    <TouchableOpacity
+                      style={[styles.walletModalBtn, styles.walletModalBtnSecondary]}
+                      onPress={() => {
+                        setShowWalletModal(false);
+                        (navigation.navigate as any)('Wallet', { tab: 'coins' });
+                      }}
+                    >
+                      <Text style={styles.walletModalBtnSecondaryText}>Add Coins</Text>
                     </TouchableOpacity>
                   </View>
                   <TouchableOpacity style={[styles.walletModalViewAll, { borderColor: theme.colors.border }]} onPress={() => { setShowWalletModal(false); (navigation.navigate as any)('Wallet', {}); }}>
@@ -1086,7 +1084,7 @@ const styles = StyleSheet.create({
 
   // ── ScrollView ──
   scrollView: { flex: 1 },
-  scrollContent: { paddingHorizontal: SPACING.md, paddingTop: SPACING.md, paddingBottom: normalize(120) },
+  scrollContent: { paddingHorizontal: SPACING.md, paddingTop: SPACING.md, paddingBottom: normalize(76) },
 
   // ── Greeting ──
   greeting: { fontFamily: FONTS.medium, fontSize: normalize(22), fontWeight: 'bold', marginBottom: normalize(2) },
@@ -1276,6 +1274,7 @@ const styles = StyleSheet.create({
   activeRideCard: {
     borderRadius: normalize(16), marginBottom: SPACING.lg,
     overflow: 'hidden',
+    position: 'relative',
   },
   activeRideFill: {
     flexDirection: 'row',
@@ -1362,6 +1361,26 @@ const styles = StyleSheet.create({
   nearbyScroll: { gap: SPACING.sm },
   nearbyCard: {
     width: normalize(220), borderRadius: normalize(16), padding: SPACING.md, ...SHADOWS.sm,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  poolingFlag: {
+    position: 'absolute',
+    top: normalize(8),
+    right: normalize(8),
+    zIndex: 8,
+    width: normalize(26),
+    height: normalize(26),
+    borderRadius: normalize(7),
+    backgroundColor: '#F99E3C',
+    borderWidth: 1,
+    borderColor: '#E08E35',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  poolingFlagImage: {
+    width: normalize(18),
+    height: normalize(18),
   },
   nearbyCardTop: { flexDirection: 'row', alignItems: 'center', marginBottom: normalize(10), gap: normalize(8) },
   nearbyAvatar: { width: normalize(36), height: normalize(36), borderRadius: normalize(18), alignItems: 'center', justifyContent: 'center' },
@@ -1448,8 +1467,13 @@ const styles = StyleSheet.create({
   stepDotInactive: { width: normalize(8), height: normalize(8), backgroundColor: 'rgba(255,255,255,0.4)' },
 
   // ── Wallet Modal ──
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
-  walletModal: { borderTopLeftRadius: normalize(24), borderTopRightRadius: normalize(24), padding: SPACING.lg, paddingBottom: normalize(40) },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.22)', justifyContent: 'flex-end' },
+  walletModal: {
+    borderTopLeftRadius: normalize(24),
+    borderTopRightRadius: normalize(24),
+    padding: SPACING.lg,
+    paddingBottom: Platform.OS === 'ios' ? normalize(34) : normalize(22),
+  },
   walletModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.lg },
   walletModalTitle: { fontFamily: FONTS.medium, fontSize: normalize(20), fontWeight: 'bold' },
   walletModalRow: { flexDirection: 'row', gap: normalize(12), marginBottom: SPACING.lg },
@@ -1458,10 +1482,33 @@ const styles = StyleSheet.create({
   walletModalAmountRow: { flexDirection: 'row', alignItems: 'center' },
   walletModalAmount: { fontFamily: FONTS.medium, fontSize: normalize(24), fontWeight: 'bold' },
   walletModalButtons: { flexDirection: 'row', gap: SPACING.md, marginBottom: SPACING.md },
-  walletModalBtn: { flex: 1, borderRadius: normalize(14), overflow: 'hidden' },
-  walletModalBtnGradient: { alignItems: 'center', justifyContent: 'center', paddingVertical: normalize(14) },
+  walletModalBtn: {
+    flex: 1,
+    height: normalize(54),
+    borderRadius: normalize(14),
+    overflow: 'hidden',
+    justifyContent: 'center',
+  },
+  walletModalBtnGradient: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: '100%',
+  },
   walletModalBtnText: { fontFamily: FONTS.medium, fontSize: normalize(15), fontWeight: '600', color: '#FFFFFF' },
-  walletModalViewAll: { borderTopWidth: 1, paddingTop: SPACING.md, alignItems: 'center' },
+  walletModalBtnSecondary: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#0284C7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  walletModalBtnSecondaryText: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(15),
+    fontWeight: '600',
+    color: '#0284C7',
+  },
+  walletModalViewAll: { borderTopWidth: 1, borderTopColor: '#D8E0E8', paddingTop: SPACING.md, alignItems: 'center' },
   walletModalViewAllText: { fontFamily: FONTS.medium, fontSize: normalize(14), fontWeight: '600' },
 
   // ── Schedule Modal ──

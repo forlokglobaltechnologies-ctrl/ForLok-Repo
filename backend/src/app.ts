@@ -82,6 +82,15 @@ async function start() {
     // Connect to database
     await database.connect();
 
+    // Hydrate pricing caches from database tables.
+    try {
+      const { pricingDataService } = await import('./services/pricing-data.service');
+      await pricingDataService.refreshFromDatabase();
+      logger.info('✅ Pricing data cache loaded from database');
+    } catch (error) {
+      logger.warn('Could not preload pricing data cache:', error);
+    }
+
     // Initialize Firebase (for OTP)
     if (config.otp.provider === 'firebase') {
       initializeFirebase();

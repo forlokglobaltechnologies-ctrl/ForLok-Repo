@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView,
-  ActivityIndicator, Alert, Platform, Modal, Animated, Dimensions,
+  ActivityIndicator, Alert, Platform, Modal, Animated, Dimensions, Image,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import {
@@ -28,6 +28,7 @@ const MODAL_ORANGE_GRADIENT: [string, string] = ['#F99E3C', '#E08E35'];
 const FILTER_ACCENT = '#F99E3C';
 const FILTER_ACCENT_DARK = '#D47B1B';
 const FILTER_ACCENT_BG = '#FFF4E6';
+const POOLING_FLAG_LOGO = require('../../../assets/splash_arrow_white_transparent.png');
 
 interface RouteParams {
   from?: LocationData;
@@ -542,6 +543,9 @@ const SearchPoolingScreen = () => {
                 seatsRequested: passengers,
               })}
             >
+              <View style={styles.poolingFlag}>
+                <Image source={POOLING_FLAG_LOGO} style={styles.poolingFlagImage} resizeMode="contain" />
+              </View>
               <View style={styles.rideTop}>
                 <View style={[styles.rideAvatar, { backgroundColor: isCarType ? '#FFF4E6' : isScootyType ? '#F3E5F5' : '#FFF3E0' }]}>
                   {isCarType ? <Car size={20} color="#B85E00" /> : isScootyType ? <MaterialCommunityIcons name="moped" size={20} color="#6A1B9A" /> : <Bike size={20} color="#E65100" />}
@@ -557,7 +561,6 @@ const SearchPoolingScreen = () => {
                 </View>
                 <View style={styles.ridePrice}>
                   <Text style={[styles.ridePriceAmount, { color: theme.colors.primary }]}>₹{offer.price || 0}</Text>
-                  <Text style={[styles.ridePricePer, { color: theme.colors.textSecondary }]}>per seat</Text>
                 </View>
               </View>
 
@@ -629,6 +632,9 @@ const SearchPoolingScreen = () => {
                   key={`connected-${idx}`}
                   style={[styles.connectedCard, { backgroundColor: theme.colors.surface }]}
                 >
+                  <View style={styles.poolingFlag}>
+                    <Image source={POOLING_FLAG_LOGO} style={styles.poolingFlagImage} resizeMode="contain" />
+                  </View>
                   {/* Total summary */}
                   <View style={styles.connectedSummary}>
                     <Text style={[styles.connectedTotal, { color: theme.colors.primary }]}>
@@ -1218,6 +1224,8 @@ const styles = StyleSheet.create({
   rideCard: {
     borderRadius: normalize(16), marginBottom: normalize(12),
     padding: SPACING.md, ...SHADOWS.sm,
+    position: 'relative',
+    overflow: 'hidden',
   },
   rideTop: { flexDirection: 'row', alignItems: 'center', marginBottom: normalize(12) },
   rideAvatar: {
@@ -1268,6 +1276,26 @@ const styles = StyleSheet.create({
   connectedCard: {
     borderRadius: normalize(16), marginBottom: normalize(14),
     padding: SPACING.md, ...SHADOWS.sm,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  poolingFlag: {
+    position: 'absolute',
+    top: normalize(8),
+    right: normalize(8),
+    zIndex: 6,
+    width: normalize(28),
+    height: normalize(28),
+    borderRadius: normalize(7),
+    backgroundColor: '#F99E3C',
+    borderWidth: 1,
+    borderColor: '#E08E35',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  poolingFlagImage: {
+    width: normalize(20),
+    height: normalize(20),
   },
   connectedSummary: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',

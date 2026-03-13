@@ -1691,6 +1691,848 @@ export function MasterDataPage() {
   );
 }
 
+export function FuelPricingPage() {
+  const { admin } = useAuth();
+  const canManage = hasPermission(admin?.role, admin?.permissions, 'settings:manage');
+  const isSuperAdmin = admin?.role === 'super_admin';
+  const [loading, setLoading] = useState(true);
+  const [rows, setRows] = useState<any[]>([]);
+  const [activeVersionId, setActiveVersionId] = useState<string>('');
+  const [pendingBulkApproval, setPendingBulkApproval] = useState(false);
+  const [pendingBulkCount, setPendingBulkCount] = useState(0);
+  const [versions, setVersions] = useState<any[]>([]);
+  const [publishNote, setPublishNote] = useState('');
+  const [overrideLimit, setOverrideLimit] = useState(false);
+  const [bulkText, setBulkText] = useState('');
+
+  const sortRows = (list: any[]) =>
+    [...list].sort((a, b) => {
+      const ak = String(a.cityKey || '').toUpperCase();
+      const bk = String(b.cityKey || '').toUpperCase();
+      if (ak === 'DEFAULT') return -1;
+      if (bk === 'DEFAULT') return 1;
+      return ak.localeCompare(bk);
+    });
+
+  const parseConfig = (payload: any) => {
+    const data = getDataPayload(payload) || {};
+    const draftCities = data?.draft?.cities || {};
+    const parsedRows = Object.entries(draftCities).map(([cityKey, row]: [string, any]) => ({
+      cityKey,
+      city: row?.city || cityKey,
+      state: row?.state || '',
+      cityTier: row?.cityTier || 'urban',
+      petrol: row?.petrol ?? '',
+      diesel: row?.diesel ?? '',
+      cng: row?.cng ?? '',
+      electricity: row?.electricity ?? '',
+      trafficProfile: row?.trafficProfile || 'medium',
+      isActive: row?.isActive !== false,
+    }));
+    setRows(sortRows(parsedRows));
+    setActiveVersionId(data?.activeVersionId || '');
+    setPendingBulkApproval(Boolean(data?.draft?.pendingBulkApproval));
+    setPendingBulkCount(Number(data?.draft?.pendingBulkCount || 0));
+    setVersions(data?.versions || []);
+  };
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const response = await apiCall(API_ENDPOINTS.PRICING_FUEL_CONFIG);
+      parseConfig(response);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const updateRow = (cityKey: string, patch: Record<string, any>) => {
+    setRows((prev) =>
+      sortRows(
+        prev.map((row) =>
+          row.cityKey === cityKey
+            ? {
+                ...row,
+                ...patch,
+              }
+            : row
+        )
+      )
+    );
+  };
+
+  const addRow = () => {
+    const cityKey = `CITY_${Date.now()}`;
+    setRows((prev) =>
+      sortRows([
+        ...prev,
+        {
+          cityKey,
+          city: '',
+          state: '',
+          cityTier: 'urban',
+          petrol: '',
+          diesel: '',
+          cng: '',
+          electricity: '',
+          trafficProfile: 'medium',
+          isActive: true,
+        },
+      ])
+    );
+  };
+
+  const saveRow = async (row: any) => {
+    if (!canManage) return;
+    const key = String(row.cityKey || '').trim().toUpperCase();
+    if (!key) return;
+    await apiCall(API_ENDPOINTS.PRICING_FUEL_DRAFT_CITY, {
+      method: 'PUT',
+      params: { cityKey: key },
+      body: {
+        city: row.city,
+        state: row.state,
+        cityTier: row.cityTier,
+        petrol: Number(row.petrol),
+        diesel: Number(row.diesel),
+        cng: Number(row.cng),
+        electricity: Number(row.electricity),
+        trafficProfile: row.trafficProfile,
+        isActive: row.isActive,
+      },
+    });
+    await load();
+  };
+
+  const removeRow = async (cityKey: string) => {
+    if (!canManage) return;
+    if (String(cityKey).toUpperCase() === 'DEFAULT') return;
+    if (!window.confirm(`Delete draft row ${cityKey}?`)) return;
+    await apiCall(API_ENDPOINTS.PRICING_FUEL_DRAFT_CITY, {
+      method: 'DELETE',
+      params: { cityKey },
+    });
+    await load();
+  };
+
+  const bulkUpload = async () => {
+    if (!canManage) return;
+    const lines = bulkText
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean);
+    if (lines.length === 0) return;
+    const parsedRows = lines.map((line) => {
+      const [cityKey, city, state, cityTier, petrol, diesel, cng, electricity, trafficProfile] = line
+        .split(',')
+        .map((v) => v.trim());
+      return {
+        cityKey: cityKey || city,
+        city: city || cityKey,
+        state,
+        cityTier: cityTier || 'urban',
+        petrol: Number(petrol || 0),
+        diesel: Number(diesel || 0),
+        cng: Number(cng || 0),
+        electricity: Number(electricity || 0),
+        trafficProfile: trafficProfile || 'medium',
+        isActive: true,
+      };
+    });
+    await apiCall(API_ENDPOINTS.PRICING_FUEL_DRAFT_BULK, {
+      method: 'POST',
+      body: { rows: parsedRows },
+    });
+    setBulkText('');
+    await load();
+  };
+
+  const approveBulk = async () => {
+    if (!canManage || !isSuperAdmin) return;
+    await apiCall(API_ENDPOINTS.PRICING_FUEL_APPROVE_BULK, { method: 'POST', body: {} });
+    await load();
+  };
+
+  const publish = async () => {
+    if (!canManage) return;
+    await apiCall(API_ENDPOINTS.PRICING_FUEL_PUBLISH, {
+      method: 'POST',
+      body: { note: publishNote, overrideLimit: overrideLimit && isSuperAdmin },
+    });
+    setPublishNote('');
+    setOverrideLimit(false);
+    await load();
+  };
+
+  const rollback = async (versionId: string) => {
+    if (!canManage || !isSuperAdmin) return;
+    if (!window.confirm(`Rollback to ${versionId}?`)) return;
+    await apiCall(API_ENDPOINTS.PRICING_FUEL_ROLLBACK, {
+      method: 'POST',
+      params: { versionId },
+      body: { note: `Rollback from admin panel to ${versionId}` },
+    });
+    await load();
+  };
+
+  return (
+    <>
+      <PageCard title="Fuel Pricing Governance">
+        <div className="row g-2">
+          <div className="col-md-3">
+            <div className="small text-body-secondary">Active Version</div>
+            <div className="fw-semibold">{activeVersionId || '-'}</div>
+          </div>
+          <div className="col-md-4">
+            <div className="small text-body-secondary">Bulk Approval</div>
+            <div className={pendingBulkApproval ? 'text-warning fw-semibold' : 'text-success fw-semibold'}>
+              {pendingBulkApproval ? `Pending (${pendingBulkCount} rows)` : 'Not pending'}
+            </div>
+          </div>
+          <div className="col-md-5 text-md-end">
+            {canManage ? <button className="btn btn-outline-primary me-2" onClick={addRow}>Add City Row</button> : null}
+            {canManage && pendingBulkApproval && isSuperAdmin ? (
+              <button className="btn btn-warning" onClick={approveBulk}>Approve Bulk</button>
+            ) : null}
+          </div>
+        </div>
+      </PageCard>
+
+      <PageCard title="Draft Fuel Prices (prefilled)" actions={canManage ? <button className="btn btn-primary" onClick={publish}>Publish Draft</button> : undefined}>
+        <div className="d-flex flex-column gap-2 mb-3">
+          <div className="small text-body-secondary">
+            Notes: max ±10% fuel change per publish (unless super-admin override). DEFAULT row is mandatory.
+          </div>
+          <div className="d-flex gap-2 align-items-center flex-wrap">
+            <input
+              className="form-control"
+              style={{ maxWidth: 420 }}
+              placeholder="Publish note (optional)"
+              value={publishNote}
+              onChange={(e) => setPublishNote(e.target.value)}
+              disabled={!canManage}
+            />
+            <label className="form-check d-flex align-items-center gap-2 m-0">
+              <input
+                className="form-check-input"
+                type="checkbox"
+                checked={overrideLimit}
+                onChange={(e) => setOverrideLimit(e.target.checked)}
+                disabled={!canManage || !isSuperAdmin}
+              />
+              Override 10% limit (super-admin only)
+            </label>
+          </div>
+        </div>
+        {loading ? (
+          <div>Loading...</div>
+        ) : (
+          <DataTable
+            rows={rows}
+            columns={[
+              { key: 'cityKey', label: 'City Key' },
+              {
+                key: 'city',
+                label: 'City',
+                render: (row) => (
+                  <input className="form-control form-control-sm" value={row.city || ''} onChange={(e) => updateRow(row.cityKey, { city: e.target.value })} disabled={!canManage} />
+                ),
+              },
+              {
+                key: 'petrol',
+                label: 'Petrol',
+                render: (row) => <input type="number" className="form-control form-control-sm" value={row.petrol} onChange={(e) => updateRow(row.cityKey, { petrol: Number(e.target.value) })} disabled={!canManage} />,
+              },
+              {
+                key: 'diesel',
+                label: 'Diesel',
+                render: (row) => <input type="number" className="form-control form-control-sm" value={row.diesel} onChange={(e) => updateRow(row.cityKey, { diesel: Number(e.target.value) })} disabled={!canManage} />,
+              },
+              {
+                key: 'cng',
+                label: 'CNG',
+                render: (row) => <input type="number" className="form-control form-control-sm" value={row.cng} onChange={(e) => updateRow(row.cityKey, { cng: Number(e.target.value) })} disabled={!canManage} />,
+              },
+              {
+                key: 'electricity',
+                label: 'Electricity',
+                render: (row) => <input type="number" className="form-control form-control-sm" value={row.electricity} onChange={(e) => updateRow(row.cityKey, { electricity: Number(e.target.value) })} disabled={!canManage} />,
+              },
+              {
+                key: 'active',
+                label: 'Active',
+                render: (row) => (
+                  <input
+                    type="checkbox"
+                    className="form-check-input"
+                    checked={row.isActive !== false}
+                    onChange={(e) => updateRow(row.cityKey, { isActive: e.target.checked })}
+                    disabled={!canManage || String(row.cityKey).toUpperCase() === 'DEFAULT'}
+                  />
+                ),
+              },
+              {
+                key: 'actions',
+                label: 'Actions',
+                render: (row) => (
+                  <div className="d-flex gap-2">
+                    {canManage ? <button className="btn btn-sm btn-outline-primary" onClick={() => saveRow(row)}>Save</button> : null}
+                    {canManage && String(row.cityKey).toUpperCase() !== 'DEFAULT' ? (
+                      <button className="btn btn-sm btn-danger" onClick={() => removeRow(row.cityKey)}>Delete</button>
+                    ) : null}
+                  </div>
+                ),
+              },
+            ]}
+          />
+        )}
+      </PageCard>
+
+      <PageCard title="Bulk Update (requires approval)">
+        <div className="small text-body-secondary mb-2">
+          CSV lines format: CITY_KEY,City,State,CityTier,Petrol,Diesel,CNG,Electricity,TrafficProfile
+        </div>
+        <textarea
+          className="form-control"
+          rows={5}
+          placeholder="MUMBAI,Mumbai,Maharashtra,metro,108,96,79,12.5,high"
+          value={bulkText}
+          onChange={(e) => setBulkText(e.target.value)}
+          disabled={!canManage}
+        />
+        <div className="mt-2">
+          {canManage ? <button className="btn btn-outline-primary" onClick={bulkUpload}>Submit Bulk Draft</button> : null}
+        </div>
+      </PageCard>
+
+      <PageCard title="Version History">
+        <DataTable
+          rows={versions}
+          columns={[
+            { key: 'versionId', label: 'Version ID' },
+            { key: 'createdAt', label: 'Created At', render: (r) => (r.createdAt ? new Date(r.createdAt).toLocaleString() : '-') },
+            { key: 'createdBy', label: 'Created By' },
+            { key: 'note', label: 'Note' },
+            { key: 'cityCount', label: 'Cities' },
+            {
+              key: 'actions',
+              label: 'Actions',
+              render: (r) =>
+                isSuperAdmin ? (
+                  <button className="btn btn-sm btn-warning" onClick={() => rollback(r.versionId)}>
+                    Rollback
+                  </button>
+                ) : (
+                  '-'
+                ),
+            },
+          ]}
+        />
+      </PageCard>
+    </>
+  );
+}
+
+export function FuelRatesPage() {
+  const { admin } = useAuth();
+  const canManage = hasPermission(admin?.role, admin?.permissions, 'settings:manage');
+  const [loading, setLoading] = useState(true);
+  const [rows, setRows] = useState<any[]>([]);
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [search, setSearch] = useState('');
+  const [stateFilter, setStateFilter] = useState('');
+  const [cityTierFilter, setCityTierFilter] = useState('');
+  const [fuelTypeFilter, setFuelTypeFilter] = useState('');
+  const [editTarget, setEditTarget] = useState<any>(null);
+  const [editForm, setEditForm] = useState<any>({
+    city: '',
+    state: '',
+    cityTier: 'mixed',
+    petrol: '',
+    diesel: '',
+    cng: '',
+    electricity: '',
+    trafficProfile: 'medium',
+    isActive: true,
+  });
+
+  const load = async (targetPage?: number) => {
+    const nextPage = targetPage ?? page;
+    setLoading(true);
+    try {
+      const res = await apiCall(API_ENDPOINTS.PRICING_FUEL_RATES, {
+        query: {
+          page: nextPage,
+          limit: 20,
+          search: search.trim() || undefined,
+          state: stateFilter || undefined,
+          cityTier: cityTierFilter || undefined,
+          fuelType: fuelTypeFilter || undefined,
+        },
+      });
+      const payload = getDataPayload(res);
+      setRows(readItems(payload));
+      setPages(Math.max(1, Number(payload?.pagination?.pages || 1)));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void load();
+  }, [page]);
+
+  const applySearch = () => {
+    setPage(1);
+    void load(1);
+  };
+
+  const openEdit = (row: any) => {
+    setEditTarget(row);
+    setEditForm({
+      city: row.city || '',
+      state: row.state || '',
+      cityTier: row.cityTier || 'mixed',
+      petrol: row.petrol ?? '',
+      diesel: row.diesel ?? '',
+      cng: row.cng ?? '',
+      electricity: row.electricity ?? '',
+      trafficProfile: row.trafficProfile || 'medium',
+      isActive: row.isActive !== false,
+    });
+  };
+
+  const saveEdit = async () => {
+    if (!canManage || !editTarget?.cityKey) return;
+    await apiCall(API_ENDPOINTS.PRICING_FUEL_RATE, {
+      method: 'PUT',
+      params: { cityKey: editTarget.cityKey },
+      body: {
+        city: editForm.city,
+        state: editForm.state,
+        cityTier: editForm.cityTier,
+        petrol: editForm.petrol === '' ? undefined : Number(editForm.petrol),
+        diesel: editForm.diesel === '' ? undefined : Number(editForm.diesel),
+        cng: editForm.cng === '' ? undefined : Number(editForm.cng),
+        electricity: editForm.electricity === '' ? undefined : Number(editForm.electricity),
+        trafficProfile: editForm.trafficProfile,
+        isActive: !!editForm.isActive,
+      },
+    });
+    setEditTarget(null);
+    await load();
+  };
+
+  return (
+    <>
+      <PageCard title="Fuel Rates" actions={canManage ? <button className="btn btn-outline-primary" onClick={() => void load()}>Refresh</button> : undefined}>
+        <div className="row g-2">
+          <div className="col-md-4">
+            <input
+              className="form-control"
+              placeholder="Search city / state / city key"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') void applySearch();
+              }}
+            />
+          </div>
+          <div className="col-md-2">
+            <input className="form-control" placeholder="State" value={stateFilter} onChange={(e) => setStateFilter(e.target.value)} />
+          </div>
+          <div className="col-md-2">
+            <select className="form-select" value={cityTierFilter} onChange={(e) => setCityTierFilter(e.target.value)}>
+              <option value="">All City Tiers</option>
+              <option value="metro">metro</option>
+              <option value="urban">urban</option>
+              <option value="mixed">mixed</option>
+            </select>
+          </div>
+          <div className="col-md-2">
+            <select className="form-select" value={fuelTypeFilter} onChange={(e) => setFuelTypeFilter(e.target.value)}>
+              <option value="">All Fuel Columns</option>
+              <option value="petrol">petrol</option>
+              <option value="diesel">diesel</option>
+              <option value="cng">cng</option>
+              <option value="electricity">electricity</option>
+            </select>
+          </div>
+          <div className="col-md-2 d-grid">
+            <button className="btn btn-primary" onClick={() => void applySearch()}>Apply Filters</button>
+          </div>
+        </div>
+      </PageCard>
+
+      {loading ? (
+        <PageCard><div>Loading...</div></PageCard>
+      ) : (
+        <DataTable
+          rows={rows}
+          tableMinHeight={460}
+          pagination={{ page, total: pages, onPage: setPage }}
+          columns={[
+            { key: 'cityKey', label: 'City Key' },
+            { key: 'city', label: 'City' },
+            { key: 'state', label: 'State' },
+            { key: 'cityTier', label: 'City Tier' },
+            { key: 'petrol', label: 'Petrol' },
+            { key: 'diesel', label: 'Diesel' },
+            { key: 'cng', label: 'CNG' },
+            { key: 'electricity', label: 'Electricity' },
+            { key: 'trafficProfile', label: 'Traffic' },
+            { key: 'isActive', label: 'Active', render: (r) => (r.isActive !== false ? 'Yes' : 'No') },
+            { key: 'effectiveDate', label: 'Effective Date' },
+            { key: 'actions', label: 'Actions', render: (r) => canManage ? <button className="btn btn-sm btn-outline-primary" onClick={() => openEdit(r)}>Edit</button> : '-' },
+          ]}
+        />
+      )}
+
+      {editTarget ? (
+        <div className="app-modal-backdrop" onClick={() => setEditTarget(null)}>
+          <div className="app-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <h6 className="mb-0">Edit Fuel Rate - {editTarget.cityKey}</h6>
+              <button className="btn btn-sm btn-link text-secondary p-0 border-0" onClick={() => setEditTarget(null)}>
+                <i className="bi bi-x-lg"></i>
+              </button>
+            </div>
+            <div className="row g-2">
+              <div className="col-md-4"><label className="form-label mb-1">City</label><input className="form-control" value={editForm.city} onChange={(e) => setEditForm((p: any) => ({ ...p, city: e.target.value }))} /></div>
+              <div className="col-md-4"><label className="form-label mb-1">State</label><input className="form-control" value={editForm.state} onChange={(e) => setEditForm((p: any) => ({ ...p, state: e.target.value }))} /></div>
+              <div className="col-md-4"><label className="form-label mb-1">City Tier</label><input className="form-control" value={editForm.cityTier} onChange={(e) => setEditForm((p: any) => ({ ...p, cityTier: e.target.value }))} /></div>
+              <div className="col-md-3"><label className="form-label mb-1">Petrol</label><input className="form-control" type="number" value={editForm.petrol} onChange={(e) => setEditForm((p: any) => ({ ...p, petrol: e.target.value }))} /></div>
+              <div className="col-md-3"><label className="form-label mb-1">Diesel</label><input className="form-control" type="number" value={editForm.diesel} onChange={(e) => setEditForm((p: any) => ({ ...p, diesel: e.target.value }))} /></div>
+              <div className="col-md-3"><label className="form-label mb-1">CNG</label><input className="form-control" type="number" value={editForm.cng} onChange={(e) => setEditForm((p: any) => ({ ...p, cng: e.target.value }))} /></div>
+              <div className="col-md-3"><label className="form-label mb-1">Electricity</label><input className="form-control" type="number" value={editForm.electricity} onChange={(e) => setEditForm((p: any) => ({ ...p, electricity: e.target.value }))} /></div>
+              <div className="col-md-6"><label className="form-label mb-1">Traffic Profile</label><input className="form-control" value={editForm.trafficProfile} onChange={(e) => setEditForm((p: any) => ({ ...p, trafficProfile: e.target.value }))} /></div>
+              <div className="col-md-6"><label className="form-label mb-1">Active</label><select className="form-select" value={String(editForm.isActive)} onChange={(e) => setEditForm((p: any) => ({ ...p, isActive: e.target.value === 'true' }))}><option value="true">Yes</option><option value="false">No</option></select></div>
+            </div>
+            <div className="d-flex justify-content-end gap-2 mt-3">
+              <button className="btn btn-secondary" onClick={() => setEditTarget(null)}>Cancel</button>
+              <button className="btn btn-primary" onClick={saveEdit}>Save Changes</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+export function PricingSyncPage() {
+  const { admin } = useAuth();
+  const canManage = hasPermission(admin?.role, admin?.permissions, 'settings:manage');
+  const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [summary, setSummary] = useState<any>(null);
+  const [vehicleRows, setVehicleRows] = useState<any[]>([]);
+  const [vehiclePage, setVehiclePage] = useState(1);
+  const [vehiclePages, setVehiclePages] = useState(1);
+  const [catalogRequests, setCatalogRequests] = useState<any[]>([]);
+  const [reviewingRequestId, setReviewingRequestId] = useState('');
+  const [showVehicleFormModal, setShowVehicleFormModal] = useState(false);
+  const [editingVehicleRowId, setEditingVehicleRowId] = useState('');
+  const [form, setForm] = useState({
+    vehicleCategory: '4-wheeler',
+    brand: '',
+    model: '',
+    fuelType: 'Petrol',
+    transmission: 'Manual',
+    vehicleAgeBucket: '2-6',
+    launchYear: '',
+    realWorldMileageAvg: '',
+    mileageUnit: 'kmpl',
+    estimatedCostPerKmInr: '',
+    confidenceScore: '75',
+    pricingEligible: 'Y',
+  });
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const [sumRes, vehiclesRes, requestsRes] = await Promise.all([
+        apiCall(API_ENDPOINTS.PRICING_SYNC_SUMMARY),
+        apiCall(API_ENDPOINTS.PRICING_VEHICLES, { query: { page: vehiclePage, limit: 20 } }),
+        apiCall(API_ENDPOINTS.VEHICLE_CATALOG_REQUESTS, { query: { status: 'pending' } }),
+      ]);
+      setSummary(getDataPayload(sumRes));
+      const vehiclesPayload = getDataPayload(vehiclesRes);
+      setVehicleRows(readItems(vehiclesPayload).map((row: any) => ({
+        ...row,
+        model: row.model || row.vehicleModel || '',
+      })));
+      setVehiclePages(Math.max(1, Number(vehiclesPayload?.pagination?.pages || 1)));
+      setCatalogRequests(readItems(getDataPayload(requestsRes)));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+  }, [vehiclePage]);
+
+  const syncNow = async () => {
+    if (!canManage) return;
+    setSyncing(true);
+    try {
+      await apiCall(API_ENDPOINTS.PRICING_SYNC_NOW, { method: 'POST', body: {} });
+      await load();
+      window.alert('Fuel rates synced and saved to database.');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const saveVehicleRow = async () => {
+    if (!canManage) return;
+    if (!form.brand || !form.model || !form.realWorldMileageAvg) {
+      window.alert('Brand, model and mileage are required.');
+      return;
+    }
+    await apiCall(API_ENDPOINTS.PRICING_VEHICLES, {
+      method: 'POST',
+      body: {
+        vehicleCategory: form.vehicleCategory,
+        brand: form.brand,
+        model: form.model,
+        fuelType: form.fuelType,
+        transmission: form.transmission,
+        vehicleAgeBucket: form.vehicleAgeBucket,
+        launchYear: form.launchYear ? Number(form.launchYear) : undefined,
+        realWorldMileageAvg: Number(form.realWorldMileageAvg),
+        mileageUnit: form.mileageUnit,
+        estimatedCostPerKmInr: form.estimatedCostPerKmInr ? Number(form.estimatedCostPerKmInr) : undefined,
+        confidenceScore: form.confidenceScore ? Number(form.confidenceScore) : 75,
+        pricingEligible: form.pricingEligible,
+      },
+    });
+    setEditingVehicleRowId('');
+    setShowVehicleFormModal(false);
+    await load();
+  };
+
+  const editVehicleRow = (row: any) => {
+    setEditingVehicleRowId(String(row._id || row.id || `${row.brand}-${row.model}-${row.fuelType}`));
+    setForm({
+      vehicleCategory: String(row.vehicleCategory || '4-wheeler'),
+      brand: String(row.brand || ''),
+      model: String(row.model || row.vehicleModel || ''),
+      fuelType: String(row.fuelType || 'Petrol'),
+      transmission: String(row.transmission || 'Manual'),
+      vehicleAgeBucket: String(row.vehicleAgeBucket || ''),
+      launchYear: row.launchYear ? String(row.launchYear) : '',
+      realWorldMileageAvg: row.realWorldMileageAvg ? String(row.realWorldMileageAvg) : '',
+      mileageUnit: String(row.mileageUnit || 'kmpl'),
+      estimatedCostPerKmInr: row.estimatedCostPerKmInr ? String(row.estimatedCostPerKmInr) : '',
+      confidenceScore: row.confidenceScore ? String(row.confidenceScore) : '75',
+      pricingEligible: String(row.pricingEligible || 'Y'),
+    });
+    setShowVehicleFormModal(true);
+  };
+
+  const resetVehicleForm = () => {
+    setEditingVehicleRowId('');
+    setForm({
+      vehicleCategory: '4-wheeler',
+      brand: '',
+      model: '',
+      fuelType: 'Petrol',
+      transmission: 'Manual',
+      vehicleAgeBucket: '2-6',
+      launchYear: '',
+      realWorldMileageAvg: '',
+      mileageUnit: 'kmpl',
+      estimatedCostPerKmInr: '',
+      confidenceScore: '75',
+      pricingEligible: 'Y',
+    });
+  };
+
+  const reviewCatalogRequest = async (requestId: string, action: 'approve' | 'reject') => {
+    if (!canManage || !requestId) return;
+    setReviewingRequestId(requestId);
+    try {
+      await apiCall(API_ENDPOINTS.VEHICLE_CATALOG_REVIEW, {
+        method: 'POST',
+        params: { requestId },
+        body: { action },
+      });
+      await load();
+    } finally {
+      setReviewingRequestId('');
+    }
+  };
+
+  return (
+    <>
+      <PageCard
+        title="Vehicle Pricing Control"
+        actions={
+          canManage ? (
+            <button className="btn btn-primary" onClick={syncNow} disabled={syncing}>
+              {syncing ? 'Syncing...' : 'Sync Fuel Rates Now'}
+            </button>
+          ) : undefined
+        }
+      >
+        {loading ? (
+          <div>Loading...</div>
+        ) : (
+          <div className="row g-3">
+            <div className="col-md-3">
+              <div className="small text-body-secondary">Fuel Rows (DB)</div>
+              <div className="fw-semibold">{summary?.fuelRows ?? 0}</div>
+            </div>
+            <div className="col-md-3">
+              <div className="small text-body-secondary">Mileage Rows (DB)</div>
+              <div className="fw-semibold">{summary?.mileageRows ?? 0}</div>
+            </div>
+            <div className="col-md-3">
+              <div className="small text-body-secondary">Pending Vehicle Requests</div>
+              <div className="fw-semibold">
+                {catalogRequests.length}
+              </div>
+            </div>
+            <div className="col-md-3">
+              <div className="small text-body-secondary">Last Loaded</div>
+              <div className="fw-semibold">{summary?.health?.loadedAt ? new Date(summary.health.loadedAt).toLocaleString() : '-'}</div>
+            </div>
+          </div>
+        )}
+      </PageCard>
+
+      <PageCard
+        title="Vehicle Mileage Rows (Database)"
+        actions={
+          canManage ? (
+            <button
+              className="btn btn-outline-primary"
+              onClick={() => {
+                resetVehicleForm();
+                setShowVehicleFormModal(true);
+              }}
+            >
+              Add Vehicle Mileage Row
+            </button>
+          ) : undefined
+        }
+      >
+        <div className="small text-body-secondary">
+          Use <strong>Edit</strong> on a row to update existing vehicle mileage details.
+        </div>
+      </PageCard>
+
+      <PageCard title="Mileage Rows">
+        <DataTable
+          rows={vehicleRows}
+          pagination={{ page: vehiclePage, total: vehiclePages, onPage: setVehiclePage }}
+          columns={[
+            { key: 'vehicleCategory', label: 'Category' },
+            { key: 'brand', label: 'Brand' },
+            { key: 'model', label: 'Model' },
+            { key: 'fuelType', label: 'Fuel' },
+            { key: 'transmission', label: 'Trans' },
+            { key: 'vehicleAgeBucket', label: 'Age' },
+            { key: 'realWorldMileageAvg', label: 'Mileage' },
+            { key: 'mileageUnit', label: 'Unit' },
+            { key: 'launchYear', label: 'Launch Year', render: (r) => r.launchYear || '-' },
+            { key: 'recordStatus', label: 'Status' },
+            {
+              key: 'actions',
+              label: 'Actions',
+              render: (r) =>
+                canManage ? (
+                  <button className="btn btn-sm btn-outline-primary" onClick={() => editVehicleRow(r)}>
+                    Edit
+                  </button>
+                ) : (
+                  '-'
+                ),
+            },
+          ]}
+        />
+      </PageCard>
+
+      <PageCard title="Vehicle Catalog Requests (Pending Admin Review)">
+        <DataTable
+          rows={catalogRequests}
+          columns={[
+            { key: 'requestId', label: 'Request ID' },
+            { key: 'vehicleType', label: 'Type' },
+            { key: 'brand', label: 'Brand' },
+            { key: 'model', label: 'Model' },
+            { key: 'fuelType', label: 'Fuel' },
+            { key: 'realWorldMileageAvg', label: 'Mileage', render: (r) => (r.realWorldMileageAvg ? `${r.realWorldMileageAvg} ${r.mileageUnit || ''}` : '-') },
+            { key: 'cityTier', label: 'City Tier', render: (r) => r.cityTier || '-' },
+            { key: 'createdAt', label: 'Requested At', render: (r) => (r.createdAt ? new Date(r.createdAt).toLocaleString() : '-') },
+            {
+              key: 'actions',
+              label: 'Actions',
+              render: (r) => canManage ? (
+                <div className="d-flex gap-2">
+                  <button
+                    className="btn btn-sm btn-success"
+                    onClick={() => reviewCatalogRequest(String(r.requestId), 'approve')}
+                    disabled={reviewingRequestId === String(r.requestId)}
+                  >
+                    Approve
+                  </button>
+                  <button
+                    className="btn btn-sm btn-danger"
+                    onClick={() => reviewCatalogRequest(String(r.requestId), 'reject')}
+                    disabled={reviewingRequestId === String(r.requestId)}
+                  >
+                    Reject
+                  </button>
+                </div>
+              ) : '-',
+            },
+          ]}
+        />
+      </PageCard>
+
+      {showVehicleFormModal ? (
+        <div className="app-modal-backdrop" onClick={() => setShowVehicleFormModal(false)}>
+          <div className="app-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <h6 className="mb-0">{editingVehicleRowId ? 'Edit Vehicle Mileage Row' : 'Add Vehicle Mileage Row'}</h6>
+              <button className="btn btn-sm btn-link text-secondary p-0 border-0" onClick={() => setShowVehicleFormModal(false)}>
+                <i className="bi bi-x-lg"></i>
+              </button>
+            </div>
+            <div className="row g-2">
+              <div className="col-md-4"><label className="form-label mb-1">Vehicle Category</label><input className="form-control" value={form.vehicleCategory} onChange={(e) => setForm((p) => ({ ...p, vehicleCategory: e.target.value }))} /></div>
+              <div className="col-md-4"><label className="form-label mb-1">Brand</label><input className="form-control" value={form.brand} onChange={(e) => setForm((p) => ({ ...p, brand: e.target.value }))} /></div>
+              <div className="col-md-4"><label className="form-label mb-1">Model</label><input className="form-control" value={form.model} onChange={(e) => setForm((p) => ({ ...p, model: e.target.value }))} /></div>
+              <div className="col-md-4"><label className="form-label mb-1">Fuel Type</label><input className="form-control" value={form.fuelType} onChange={(e) => setForm((p) => ({ ...p, fuelType: e.target.value }))} /></div>
+              <div className="col-md-4"><label className="form-label mb-1">Transmission</label><input className="form-control" value={form.transmission} onChange={(e) => setForm((p) => ({ ...p, transmission: e.target.value }))} /></div>
+              <div className="col-md-4"><label className="form-label mb-1">Age Bucket</label><input className="form-control" value={form.vehicleAgeBucket} onChange={(e) => setForm((p) => ({ ...p, vehicleAgeBucket: e.target.value }))} /></div>
+              <div className="col-md-4"><label className="form-label mb-1">Launch Year</label><input className="form-control" value={form.launchYear} onChange={(e) => setForm((p) => ({ ...p, launchYear: e.target.value }))} /></div>
+              <div className="col-md-4"><label className="form-label mb-1">Real-world Mileage</label><input className="form-control" value={form.realWorldMileageAvg} onChange={(e) => setForm((p) => ({ ...p, realWorldMileageAvg: e.target.value }))} /></div>
+              <div className="col-md-4"><label className="form-label mb-1">Mileage Unit</label><input className="form-control" value={form.mileageUnit} onChange={(e) => setForm((p) => ({ ...p, mileageUnit: e.target.value }))} /></div>
+              <div className="col-md-4"><label className="form-label mb-1">Estimated Cost per Km</label><input className="form-control" value={form.estimatedCostPerKmInr} onChange={(e) => setForm((p) => ({ ...p, estimatedCostPerKmInr: e.target.value }))} /></div>
+              <div className="col-md-4"><label className="form-label mb-1">Confidence Score</label><input className="form-control" value={form.confidenceScore} onChange={(e) => setForm((p) => ({ ...p, confidenceScore: e.target.value }))} /></div>
+            </div>
+            <div className="d-flex justify-content-end gap-2 mt-3">
+              <button className="btn btn-outline-secondary" onClick={resetVehicleForm}>Clear</button>
+              <button className="btn btn-secondary" onClick={() => setShowVehicleFormModal(false)}>Cancel</button>
+              <button className="btn btn-primary" onClick={saveVehicleRow}>
+                {editingVehicleRowId ? 'Update Mileage Row' : 'Save Mileage Row'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
 export function WithdrawalsPage() {
   const { admin } = useAuth();
   const canManage = hasPermission(admin?.role, admin?.permissions, 'withdrawals:manage');

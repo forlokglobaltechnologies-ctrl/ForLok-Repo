@@ -71,6 +71,7 @@ import RatingScreen from './src/screens/history/RatingScreen';
 import CompanyRegistrationScreen from './src/screens/registration/CompanyRegistrationScreen';
 import CompanyDashboardScreen from './src/screens/main/CompanyDashboardScreen';
 import AddVehicleScreen from './src/screens/main/AddVehicleScreen';
+import ReportVehicleCatalogScreen from './src/screens/main/ReportVehicleCatalogScreen';
 import VehicleInformationScreen from './src/screens/main/VehicleInformationScreen';
 import VehicleDetailsScreen from './src/screens/profile/VehicleDetailsScreen';
 import FilterScreen from './src/screens/main/FilterScreen';
@@ -144,7 +145,7 @@ const AppNavigator = () => {
   const { setCurrentRoute, currentRoute } = useSOS();
   const { isAuthenticated, isLoading, user } = useAuth();
   const navigationRef = useRef<NavigationContainerRef<any>>(null);
-  const tabBarHiddenRoutes = new Set(['LocationPicker', 'Chat']);
+  const tabBarHiddenRoutes = new Set(['LocationPicker', 'Chat', 'Wallet']);
   const shouldReserveTabSpace =
     isAuthenticated &&
     user?.userType !== 'admin' &&
@@ -270,6 +271,7 @@ const AppNavigator = () => {
               
               {/* Company Screens */}
               <Stack.Screen name="AddVehicle" component={AddVehicleScreen} />
+              <Stack.Screen name="ReportVehicleCatalog" component={ReportVehicleCatalogScreen} />
               <Stack.Screen name="VehicleInformation" component={VehicleInformationScreen} />
               <Stack.Screen name="VehicleDetails" component={VehicleDetailsScreen} />
 

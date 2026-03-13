@@ -22,6 +22,8 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Withdrawals', to: '/withdrawals', icon: 'bi bi-cash-stack', permission: 'withdrawals:view' },
   { label: 'Content', to: '/content', icon: 'bi bi-journal-text', permission: 'content:view' },
   { label: 'Master Data', to: '/master-data', icon: 'bi bi-sliders', permission: 'master_data:view' },
+  { label: 'Fuel Rates', to: '/fuel-rates', icon: 'bi bi-fuel-pump', permission: 'settings:view' },
+  { label: 'Vehicle Pricing Control', to: '/pricing-control', icon: 'bi bi-sliders2', permission: 'settings:view' },
   { label: 'Settings', to: '/settings', icon: 'bi bi-gear', permission: 'settings:view' },
   { label: 'Roles', to: '/roles', icon: 'bi bi-shield-lock', permission: 'roles:view' },
   { label: 'Admin Users', to: '/admin-users', icon: 'bi bi-person-badge', permission: 'admins:view' },
@@ -46,7 +48,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     <div className={`admin-app ${open ? 'sidebar-open' : 'sidebar-collapsed'}`}>
       <aside className="sidebar sidebar-theme">
         <div className="navbar-brand px-4 py-3 border-bottom border-secondary-subtle">
-          <img className="sidebar-brand-logo" src="/ezway-sidebar-logo.png" alt="ezway logo" />
+          <img className="sidebar-brand-logo" src="/forlok_admin_sidebar_logo.png" alt="Forlok logo" />
         </div>
         <nav className="navbar-nav w-100">
           {allowedItems.map((item) => (

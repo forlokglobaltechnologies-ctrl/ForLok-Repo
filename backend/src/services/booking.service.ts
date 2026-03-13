@@ -92,12 +92,26 @@ class BookingService {
         totalAmount = data.calculatedPrice.finalPrice;
       } else {
         // Calculate price dynamically
+        const offerVehicle = offer.vehicle as {
+          brand?: string;
+          model?: string;
+          fuelType?: 'Petrol' | 'Diesel' | 'Electric' | 'CNG';
+          transmission?: 'Manual' | 'Automatic';
+          year?: number;
+        };
         const priceBreakdown = await priceCalculationService.calculatePrice({
           passengerRoute: data.passengerRoute,
           offerId: data.poolingOfferId,
           vehicleType: offer.vehicle.type,
           offerDate: offer.date,
           offerTime: offer.time,
+          vehicleDetails: {
+            brand: offerVehicle.brand,
+            model: offerVehicle.model,
+            fuelType: offerVehicle.fuelType,
+            transmission: offerVehicle.transmission,
+            year: offerVehicle.year,
+          },
         });
         amount = priceBreakdown.finalPrice;
         platformFee = priceBreakdown.platformFee;

@@ -554,6 +554,12 @@ const CreatePoolingOfferScreen = () => {
   };
 
   const cleanFieldLabel = (label: string) => label.replace(/\s*\*+\s*/g, '').trim();
+  const formatVehicleMeta = (vehicle: any) => {
+    const bits = [vehicle?.vehicleModel, vehicle?.fuelType, vehicle?.transmission, vehicle?.year]
+      .filter(Boolean)
+      .map((v) => String(v));
+    return bits.join(' | ');
+  };
 
   const onDateChange = (event: any, selectedDate?: Date) => {
     setShowDatePicker(Platform.OS === 'ios');
@@ -1017,7 +1023,7 @@ const CreatePoolingOfferScreen = () => {
                     >
                       <Text style={[styles.vehicleDropdownText, !selectedVehicle && styles.placeholderText]}>
                         {selectedVehicle
-                          ? `${selectedVehicle.brand || 'Vehicle'} - ${selectedVehicle.number}`
+                          ? `${selectedVehicle.brand || 'Vehicle'} ${selectedVehicle.vehicleModel ? `• ${selectedVehicle.vehicleModel}` : ''} - ${selectedVehicle.number}`
                           : `Select a ${vehicleType.toLowerCase()}`}
                       </Text>
                       <ChevronDown size={20} color={COLORS.textSecondary} />
@@ -1028,6 +1034,7 @@ const CreatePoolingOfferScreen = () => {
                     <View style={styles.vehicleDropdownList}>
                       {filteredVehicles.map((vehicle) => {
                         const isLocked = lockedVehicleIds.has(vehicle.number);
+                        const vehicleMeta = formatVehicleMeta(vehicle);
                         console.log(`📋 Dropdown item: ${vehicle.brand} - ${vehicle.number}, locked=${isLocked}`);
                         return (
                           <TouchableOpacity
@@ -1048,15 +1055,16 @@ const CreatePoolingOfferScreen = () => {
                             }}
                           >
                             <Text style={[styles.vehicleDropdownItemText, isLocked && { color: '#999' }]}>
-                              {vehicle.brand || 'Vehicle'} - {vehicle.number || 'N/A'}
+                              {vehicle.brand || 'Vehicle'} {vehicle.vehicleModel ? `• ${vehicle.vehicleModel}` : ''} - {vehicle.number || 'N/A'}
                             </Text>
                             {isLocked ? (
                               <Text style={styles.vehicleLockedText}>In active offer — not available</Text>
-                            ) : vehicle.seats ? (
+                            ) : (
                               <Text style={styles.vehicleDropdownItemSubtext}>
-                                {vehicle.seats} seats
+                                {vehicleMeta}
+                                {vehicle.seats ? ` ${vehicleMeta ? '| ' : ''}${vehicle.seats} seats` : ''}
                               </Text>
-                            ) : null}
+                            )}
                           </TouchableOpacity>
                         );
                       })}

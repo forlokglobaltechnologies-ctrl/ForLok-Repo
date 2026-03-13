@@ -21,3 +21,6 @@ export { default as Withdrawal, IWithdrawal } from './Withdrawal';
 export { default as Wallet, IWallet, IWalletTransaction } from './Wallet';
 export { default as Refund, IRefund } from './Refund';
 export { default as Block, IBlock } from './Block';
+export { default as PricingFuelRate, IPricingFuelRate } from './PricingFuelRate';
+export { default as PricingVehicleMileage, IPricingVehicleMileage } from './PricingVehicleMileage';
+export { default as VehicleCatalogRequest, IVehicleCatalogRequest } from './VehicleCatalogRequest';

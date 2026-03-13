@@ -288,31 +288,41 @@ class PoolingService {
         );
       }
 
-      let chainStart = { lat: data.route.from.lat, lng: data.route.from.lng };
+      // Validate waypoint ordering against existing route polyline.
+      // Avoid expensive per-waypoint OSRM calls that can cause request timeouts.
+      const basePolyline = routeWithPolyline.polyline || [];
+      let prevNearestIndex = -1;
       for (let i = 0; i < providedWaypoints.length; i++) {
         const wp = providedWaypoints[i];
-        const legPolyline = await getRoutePolyline(
-          chainStart.lat,
-          chainStart.lng,
-          data.route.to.lat,
-          data.route.to.lng
-        );
-        const waypointCheck = validateWaypointOnRoute(wp.lat, wp.lng, legPolyline);
+        const waypointCheck = validateWaypointOnRoute(wp.lat, wp.lng, basePolyline);
 
         if (!waypointCheck.valid) {
           throw new ValidationError(
-            `Via point "${wp.address}" is invalid for the current route leg.`,
+            `Via point "${wp.address}" is invalid for this route.`,
             [
               {
                 field: `route.waypoints[${i}]`,
-                message: waypointCheck.reason || 'Waypoint is not on the current route leg',
+                message: waypointCheck.reason || 'Waypoint is not on the selected route',
                 code: 'WAYPOINT_NOT_ON_ROUTE',
               },
             ]
           );
         }
 
-        chainStart = { lat: wp.lat, lng: wp.lng };
+        // Waypoints must progress forward along route order.
+        if (waypointCheck.nearestIndex < prevNearestIndex) {
+          throw new ValidationError(
+            `Via point "${wp.address}" is out of route order.`,
+            [
+              {
+                field: `route.waypoints[${i}]`,
+                message: 'Waypoints must follow route order from pickup to destination',
+                code: 'WAYPOINT_ORDER_INVALID',
+              },
+            ]
+          );
+        }
+        prevNearestIndex = waypointCheck.nearestIndex;
       }
 
       routeWithPolyline.waypoints = providedWaypoints.map((wp: any, idx: number) => ({
@@ -335,7 +345,12 @@ class PoolingService {
         vehicle: {
           type: vehicle.type,
           brand: vehicle.brand,
+          model: vehicle.vehicleModel,
           number: vehicle.number,
+          seats: vehicle.seats,
+          fuelType: vehicle.fuelType,
+          transmission: vehicle.transmission,
+          year: vehicle.year,
           photos: vehicle.photos ? Object.values(vehicle.photos).filter(Boolean) : [],
         },
         availableSeats: data.availableSeats,

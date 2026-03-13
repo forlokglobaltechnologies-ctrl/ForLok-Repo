@@ -16,6 +16,141 @@ import AdminSetting from '../../models/AdminSetting';
 import Admin from '../../models/Admin';
 import AdminRole from '../../models/AdminRole';
 import AdminAuditLog from '../../models/AdminAuditLog';
+import PricingFuelRate from '../../models/PricingFuelRate';
+import PricingVehicleMileage from '../../models/PricingVehicleMileage';
+import VehicleCatalogRequest from '../../models/VehicleCatalogRequest';
+import { pricingDataService } from '../../services/pricing-data.service';
+import { fuelSyncService } from '../../services/fuel-sync.service';
+
+type FuelField = 'petrol' | 'diesel' | 'cng' | 'electricity';
+
+interface FuelCityRow {
+  city: string;
+  state?: string;
+  cityTier?: string;
+  petrol?: number;
+  diesel?: number;
+  cng?: number;
+  electricity?: number;
+  trafficProfile?: string;
+  isActive: boolean;
+  effectiveFrom?: string;
+  updatedAt?: string;
+}
+
+interface FuelVersion {
+  versionId: string;
+  createdAt: string;
+  createdBy: string;
+  note?: string;
+  rollbackFromVersionId?: string;
+  cities: Record<string, FuelCityRow>;
+}
+
+interface FuelDraft {
+  cities: Record<string, FuelCityRow>;
+  pendingBulkApproval: boolean;
+  pendingBulkCount?: number;
+  bulkApprovedAt?: string;
+  bulkApprovedBy?: string;
+  updatedAt?: string;
+  updatedBy?: string;
+}
+
+interface FuelPricingConfig {
+  activeVersionId?: string;
+  versions: FuelVersion[];
+  draft: FuelDraft;
+}
+
+const FUEL_SETTINGS_KEY = 'fuel_pricing_config';
+const FUEL_FIELDS: FuelField[] = ['petrol', 'diesel', 'cng', 'electricity'];
+
+const normalizeCityKey = (input?: string) => {
+  const cleaned = String(input || '').trim();
+  if (!cleaned) return '';
+  if (cleaned.toUpperCase() === 'DEFAULT') return 'DEFAULT';
+  return cleaned.toUpperCase().replace(/\s+/g, '_');
+};
+
+const normalizeMasterKey = (input?: string) =>
+  String(input || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
+const toTitleLabel = (value?: string) =>
+  String(value || '')
+    .trim()
+    .split(/[\s_]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(' ');
+
+const getAgeBucketFromLaunchYear = (launchYear?: number) => {
+  if (!launchYear || !Number.isFinite(launchYear)) return '';
+  const age = Math.max(0, new Date().getFullYear() - launchYear);
+  if (age <= 2) return '0-2';
+  if (age <= 4) return '2-4';
+  if (age <= 6) return '4-6';
+  return '6+';
+};
+
+const sortFuelCities = (cities: Record<string, FuelCityRow>) =>
+  Object.entries(cities)
+    .sort(([a], [b]) => (a === 'DEFAULT' ? -1 : b === 'DEFAULT' ? 1 : a.localeCompare(b)))
+    .reduce<Record<string, FuelCityRow>>((acc, [key, value]) => {
+      acc[key] = value;
+      return acc;
+    }, {});
+
+const sanitizeFuelNumber = (value: unknown) => {
+  const num = Number(value);
+  if (!Number.isFinite(num) || num < 0) return undefined;
+  return Number(num.toFixed(2));
+};
+
+const sanitizeFuelCityRow = (input: Partial<FuelCityRow>, fallbackCityKey?: string): FuelCityRow => {
+  const key = normalizeCityKey(input.city || fallbackCityKey || 'DEFAULT');
+  return {
+    city: input.city?.trim() || (key === 'DEFAULT' ? 'DEFAULT' : key.replace(/_/g, ' ')),
+    state: input.state?.trim() || (key === 'DEFAULT' ? 'NA' : undefined),
+    cityTier: (input.cityTier || (key === 'DEFAULT' ? 'mixed' : 'urban')) as string,
+    petrol: sanitizeFuelNumber(input.petrol),
+    diesel: sanitizeFuelNumber(input.diesel),
+    cng: sanitizeFuelNumber(input.cng),
+    electricity: sanitizeFuelNumber(input.electricity),
+    trafficProfile: (input.trafficProfile || (key === 'DEFAULT' ? 'medium' : 'medium')) as string,
+    isActive: input.isActive !== false,
+    effectiveFrom: input.effectiveFrom || new Date().toISOString().slice(0, 10),
+    updatedAt: new Date().toISOString(),
+  };
+};
+
+const readPricingJsonSeedCities = (): Record<string, FuelCityRow> => {
+  return {
+    DEFAULT: sanitizeFuelCityRow(
+      { city: 'DEFAULT', cityTier: 'mixed', petrol: 105, diesel: 92, cng: 85, electricity: 12, isActive: true },
+      'DEFAULT'
+    ),
+  };
+};
+
+const persistFuelCitiesToPricingJson = (cities: Record<string, FuelCityRow>) => {
+  void cities;
+  pricingDataService.reload();
+  return true;
+};
+
+const cloneCities = (cities: Record<string, FuelCityRow>) =>
+  JSON.parse(JSON.stringify(cities || {})) as Record<string, FuelCityRow>;
+
+const isWithinTenPercent = (nextValue?: number, baseValue?: number) => {
+  if (baseValue === undefined || baseValue <= 0 || nextValue === undefined) return true;
+  const delta = Math.abs(nextValue - baseValue) / baseValue;
+  return delta <= 0.1;
+};
 
 export async function adminRoutes(fastify: FastifyInstance) {
   const writeAuditLog = async (params: {
@@ -1410,6 +1545,902 @@ export async function adminRoutes(fastify: FastifyInstance) {
       return reply.status(200).send({
         success: true,
         message: 'Master data item deleted successfully',
+      });
+    }
+  );
+
+  // Fuel pricing governance (admin managed, engine multipliers fixed)
+  fastify.get(
+    '/pricing/fuel',
+    { preHandler: [authenticate, requireAdminPermission(ADMIN_PERMISSIONS.SETTINGS_VIEW)] },
+    async (_request: FastifyRequest, reply: FastifyReply) => {
+      const setting = await AdminSetting.findOne({ key: FUEL_SETTINGS_KEY }).lean();
+      let value = (setting?.value || {}) as Partial<FuelPricingConfig>;
+      if (!value.versions || value.versions.length === 0) {
+        const seedCities = readPricingJsonSeedCities();
+        const seedVersion: FuelVersion = {
+          versionId: `fuel_v_${Date.now()}`,
+          createdAt: new Date().toISOString(),
+          createdBy: 'system_seed',
+          note: 'Seeded from pricing_engine_data.json',
+          cities: cloneCities(seedCities),
+        };
+        value = {
+          activeVersionId: seedVersion.versionId,
+          versions: [seedVersion],
+          draft: {
+            cities: cloneCities(seedCities),
+            pendingBulkApproval: false,
+            updatedAt: new Date().toISOString(),
+            updatedBy: 'system_seed',
+          },
+        };
+        await AdminSetting.findOneAndUpdate(
+          { key: FUEL_SETTINGS_KEY },
+          { key: FUEL_SETTINGS_KEY, value },
+          { upsert: true, new: true, setDefaultsOnInsert: true }
+        );
+      }
+
+      const activeVersion = (value.versions || []).find((v) => v.versionId === value.activeVersionId) || value.versions?.[0];
+      const draftCities = cloneCities(value.draft?.cities || activeVersion?.cities || {});
+      if (!draftCities.DEFAULT) {
+        draftCities.DEFAULT = sanitizeFuelCityRow(
+          { city: 'DEFAULT', cityTier: 'mixed', petrol: 105, diesel: 92, cng: 85, electricity: 12, isActive: true },
+          'DEFAULT'
+        );
+      }
+
+      return reply.status(200).send({
+        success: true,
+        message: 'Fuel pricing config retrieved successfully',
+        data: {
+          activeVersionId: value.activeVersionId,
+          activeVersion,
+          draft: {
+            ...(value.draft || { pendingBulkApproval: false }),
+            cities: sortFuelCities(draftCities),
+          },
+          versions: (value.versions || []).map((v) => ({
+            versionId: v.versionId,
+            createdAt: v.createdAt,
+            createdBy: v.createdBy,
+            note: v.note,
+            rollbackFromVersionId: v.rollbackFromVersionId,
+            cityCount: Object.keys(v.cities || {}).length,
+          })),
+        },
+      });
+    }
+  );
+
+  fastify.get(
+    '/pricing/health',
+    { preHandler: [authenticate, requireAdminPermission(ADMIN_PERMISSIONS.SETTINGS_VIEW)] },
+    async (_request: FastifyRequest, reply: FastifyReply) => {
+      const report = pricingDataService.getPricingHealthReport();
+      return reply.status(200).send({
+        success: true,
+        message: 'Pricing data health report generated successfully',
+        data: report,
+      });
+    }
+  );
+
+  fastify.get(
+    '/pricing/sync-summary',
+    { preHandler: [authenticate, requireAdminPermission(ADMIN_PERMISSIONS.SETTINGS_VIEW)] },
+    async (_request: FastifyRequest, reply: FastifyReply) => {
+      const [fuelRows, mileageRows] = await Promise.all([
+        PricingFuelRate.countDocuments({ isActive: true }),
+        PricingVehicleMileage.countDocuments({ recordStatus: { $ne: 'inactive' } }),
+      ]);
+      const health = pricingDataService.getPricingHealthReport();
+      return reply.status(200).send({
+        success: true,
+        message: 'Pricing sync summary retrieved successfully',
+        data: {
+          fuelRows,
+          mileageRows,
+          health,
+        },
+      });
+    }
+  );
+
+  fastify.post(
+    '/pricing/sync-now',
+    { preHandler: [authenticate, requireAdminPermission(ADMIN_PERMISSIONS.SETTINGS_MANAGE)] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const adminId = (request as any).user.userId;
+      const result = await fuelSyncService.syncMyPetrolPrice(adminId);
+      const syncedFuelLabels = Array.from(
+        new Set(
+          (result.pages || []).map((page: any) => {
+            const fuel = String(page?.fuel || '').toLowerCase();
+            if (fuel === 'autogas') return 'AutoGas';
+            if (fuel === 'lpg') return 'LPG';
+            if (fuel === 'cng') return 'CNG';
+            if (fuel === 'electricity' || fuel === 'electric') return 'Electric';
+            if (fuel === 'diesel') return 'Diesel';
+            return 'Petrol';
+          })
+        )
+      );
+      await Promise.all(
+        syncedFuelLabels.map((label) => {
+          const key = normalizeMasterKey(label);
+          return MasterDataItem.findOneAndUpdate(
+            { type: 'fuel_type', key },
+            {
+              type: 'fuel_type',
+              key,
+              label,
+              value: label.toLowerCase(),
+              metadata: { source: 'fuel_sync', dynamic: true },
+              isActive: true,
+              sortOrder: 0,
+              updatedBy: adminId,
+              createdBy: adminId,
+            },
+            { upsert: true, new: true, setDefaultsOnInsert: true }
+          );
+        })
+      );
+      await pricingDataService.refreshFromDatabase();
+      return reply.status(200).send({
+        success: true,
+        message: 'Fuel rates synced from scrape source and saved to database',
+        data: result,
+      });
+    }
+  );
+
+  fastify.get(
+    '/pricing/fuel-rates',
+    { preHandler: [authenticate, requireAdminPermission(ADMIN_PERMISSIONS.SETTINGS_VIEW)] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const query = (request.query as {
+        page?: string;
+        limit?: string;
+        search?: string;
+        state?: string;
+        cityTier?: string;
+        fuelType?: string;
+      }) || {};
+
+      const page = Math.max(1, Number(query.page || 1));
+      const limit = Math.min(200, Math.max(1, Number(query.limit || 20)));
+      const skip = (page - 1) * limit;
+
+      const where: Record<string, any> = {};
+      const searchText = String(query.search || '').trim();
+      const stateText = String(query.state || '').trim();
+      const cityTierText = String(query.cityTier || '').trim();
+      const fuelTypeText = String(query.fuelType || '').trim().toLowerCase();
+
+      if (searchText) {
+        const regex = new RegExp(searchText, 'i');
+        where.$or = [{ city: regex }, { state: regex }, { cityKey: regex }];
+      }
+      if (stateText) where.state = new RegExp(stateText, 'i');
+      if (cityTierText) where.cityTier = cityTierText;
+      if (['petrol', 'diesel', 'cng', 'electricity'].includes(fuelTypeText)) {
+        where[fuelTypeText] = { $exists: true, $ne: null };
+      }
+
+      const [rows, total] = await Promise.all([
+        PricingFuelRate.find(where).sort({ cityKey: 1 }).skip(skip).limit(limit).lean(),
+        PricingFuelRate.countDocuments(where),
+      ]);
+
+      return reply.status(200).send({
+        success: true,
+        message: 'Fuel rates retrieved successfully',
+        data: {
+          items: rows,
+          pagination: {
+            page,
+            limit,
+            total,
+            pages: Math.max(1, Math.ceil(total / limit)),
+          },
+        },
+      });
+    }
+  );
+
+  fastify.put(
+    '/pricing/fuel-rates/:cityKey',
+    {
+      preHandler: [
+        authenticate,
+        requireAdminPermission(ADMIN_PERMISSIONS.SETTINGS_MANAGE),
+        validate(
+          z.object({
+            city: z.string().optional(),
+            state: z.string().optional(),
+            cityTier: z.string().optional(),
+            petrol: z.number().min(0).optional(),
+            diesel: z.number().min(0).optional(),
+            cng: z.number().min(0).optional(),
+            electricity: z.number().min(0).optional(),
+            trafficProfile: z.string().optional(),
+            isActive: z.boolean().optional(),
+          })
+        ),
+      ],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const adminId = (request as any).user.userId;
+      const { cityKey } = request.params as { cityKey: string };
+      const body = request.body as any;
+      const normalizedCityKey = normalizeCityKey(cityKey);
+      if (!normalizedCityKey) {
+        return reply.status(400).send({
+          success: false,
+          message: 'Invalid city key',
+        });
+      }
+
+      const updated = await PricingFuelRate.findOneAndUpdate(
+        { cityKey: normalizedCityKey },
+        {
+          cityKey: normalizedCityKey,
+          city: body.city,
+          state: body.state,
+          cityTier: body.cityTier,
+          petrol: body.petrol,
+          diesel: body.diesel,
+          cng: body.cng,
+          electricity: body.electricity,
+          trafficProfile: body.trafficProfile || 'medium',
+          isActive: body.isActive !== false,
+          source: 'manual',
+          effectiveDate: new Date().toISOString().slice(0, 10),
+          updatedBy: adminId,
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+
+      await pricingDataService.refreshFromDatabase();
+      return reply.status(200).send({
+        success: true,
+        message: 'Fuel rate saved successfully',
+        data: updated,
+      });
+    }
+  );
+
+  fastify.get(
+    '/pricing/vehicles',
+    { preHandler: [authenticate, requireAdminPermission(ADMIN_PERMISSIONS.SETTINGS_VIEW)] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const query = (request.query as { page?: string; limit?: string; search?: string }) || {};
+      const page = Math.max(1, Number(query.page || 1));
+      const limit = Math.min(200, Math.max(1, Number(query.limit || 20)));
+      const skip = (page - 1) * limit;
+
+      const where: Record<string, any> = { recordStatus: { $ne: 'inactive' } };
+      const searchText = String(query.search || '').trim();
+      if (searchText) {
+        const regex = new RegExp(searchText, 'i');
+        where.$or = [
+          { vehicleCategory: regex },
+          { brand: regex },
+          { vehicleModel: regex },
+          { fuelType: regex },
+          { transmission: regex },
+        ];
+      }
+
+      const [rows, total] = await Promise.all([
+        PricingVehicleMileage.find(where)
+          .sort({ updatedAt: -1 })
+          .skip(skip)
+          .limit(limit)
+          .lean(),
+        PricingVehicleMileage.countDocuments(where),
+      ]);
+      const normalizedRows = rows.map((row: any) => ({
+        ...row,
+        model: row.vehicleModel || row.model || '',
+      }));
+      return reply.status(200).send({
+        success: true,
+        message: 'Pricing mileage rows retrieved successfully',
+        data: {
+          items: normalizedRows,
+          pagination: {
+            page,
+            limit,
+            total,
+            pages: Math.max(1, Math.ceil(total / limit)),
+          },
+        },
+      });
+    }
+  );
+
+  fastify.post(
+    '/pricing/vehicles',
+    {
+      preHandler: [
+        authenticate,
+        requireAdminPermission(ADMIN_PERMISSIONS.SETTINGS_MANAGE),
+        validate(
+          z.object({
+            vehicleCategory: z.string().min(1),
+            brand: z.string().min(1),
+            model: z.string().min(1),
+            fuelType: z.string().min(1),
+            transmission: z.string().min(1),
+            launchYear: z.number().optional(),
+            vehicleAgeBucket: z.string().optional(),
+            realWorldMileageAvg: z.number().positive(),
+            mileageUnit: z.string().min(1),
+            estimatedCostPerKmInr: z.number().nonnegative().optional(),
+            cityTier: z.string().optional(),
+            trafficProfile: z.string().optional(),
+            confidenceScore: z.number().min(0).max(100).optional(),
+            pricingEligible: z.string().optional(),
+          })
+        ),
+      ],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const adminId = (request as any).user.userId;
+      const body = request.body as any;
+      const row = await PricingVehicleMileage.findOneAndUpdate(
+        {
+          vehicleCategory: body.vehicleCategory,
+          brand: body.brand,
+          vehicleModel: body.model,
+          fuelType: body.fuelType,
+          transmission: body.transmission,
+          vehicleAgeBucket: body.vehicleAgeBucket || '',
+        },
+        {
+          vehicleCategory: body.vehicleCategory,
+          brand: body.brand,
+          vehicleModel: body.model,
+          fuelType: body.fuelType,
+          transmission: body.transmission,
+          launchYear: body.launchYear,
+          vehicleAgeBucket: body.vehicleAgeBucket || '',
+          realWorldMileageAvg: body.realWorldMileageAvg,
+          mileageUnit: body.mileageUnit,
+          estimatedCostPerKmInr: body.estimatedCostPerKmInr,
+          cityTier: body.cityTier,
+          trafficProfile: body.trafficProfile,
+          confidenceScore: body.confidenceScore,
+          pricingEligible: body.pricingEligible || 'Y',
+          fallbackLevel: 'model_exact',
+          recordStatus: 'active',
+          source: 'manual',
+          updatedBy: adminId,
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+      await pricingDataService.refreshFromDatabase();
+      return reply.status(200).send({
+        success: true,
+        message: 'Pricing mileage row saved successfully',
+        data: row,
+      });
+    }
+  );
+
+  fastify.get(
+    '/vehicle-catalog-requests',
+    { preHandler: [authenticate, requireAdminPermission(ADMIN_PERMISSIONS.SETTINGS_VIEW)] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const { status = 'pending' } = (request.query as { status?: string }) || {};
+      const query: Record<string, any> = {};
+      if (status && status !== 'all') query.status = status;
+      const rows = await VehicleCatalogRequest.find(query).sort({ createdAt: -1 }).lean();
+      const normalizedRows = rows.map((row: any) => ({
+        ...row,
+        model: row.vehicleModel || row.model || '',
+      }));
+      return reply.status(200).send({
+        success: true,
+        message: 'Vehicle catalog requests retrieved successfully',
+        data: normalizedRows,
+      });
+    }
+  );
+
+  fastify.post(
+    '/vehicle-catalog-requests/:requestId/review',
+    {
+      preHandler: [
+        authenticate,
+        requireAdminPermission(ADMIN_PERMISSIONS.SETTINGS_MANAGE),
+        validate(
+          z.object({
+            action: z.enum(['approve', 'reject']),
+            reviewNote: z.string().max(1000).optional(),
+            confidenceScore: z.number().min(0).max(100).optional(),
+            cityTier: z.string().optional(),
+          })
+        ),
+      ],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const adminId = (request as any).user.userId;
+      const { requestId } = request.params as { requestId: string };
+      const body = request.body as any;
+
+      const pendingRequest = await VehicleCatalogRequest.findOne({ requestId });
+      if (!pendingRequest) {
+        return reply.status(404).send({
+          success: false,
+          message: 'Vehicle request not found',
+        });
+      }
+      if (pendingRequest.status !== 'pending') {
+        return reply.status(400).send({
+          success: false,
+          message: `Vehicle request already reviewed (${pendingRequest.status})`,
+        });
+      }
+
+      if (body.action === 'approve') {
+        const brandLabel = toTitleLabel(pendingRequest.brand);
+        const modelLabel = String(pendingRequest.vehicleModel || '').trim();
+        const fuelLabel = toTitleLabel(pendingRequest.fuelType);
+        const vehicleCategory = pendingRequest.vehicleType === 'car' ? '4-wheeler' : '2-wheeler';
+        const brandKey = normalizeMasterKey(brandLabel);
+        const modelKey = normalizeMasterKey(`${brandLabel}_${modelLabel}`);
+        const fuelKey = normalizeMasterKey(fuelLabel);
+        const ageBucket = getAgeBucketFromLaunchYear(pendingRequest.launchYear);
+        const transmission = toTitleLabel(pendingRequest.transmission || 'Manual') || 'Manual';
+
+        await Promise.all([
+          MasterDataItem.findOneAndUpdate(
+            { type: 'vehicle_brand', key: brandKey },
+            {
+              type: 'vehicle_brand',
+              key: brandKey,
+              label: brandLabel,
+              value: brandKey,
+              metadata: { vehicleType: pendingRequest.vehicleType },
+              isActive: true,
+              sortOrder: 0,
+              updatedBy: adminId,
+              createdBy: adminId,
+            },
+            { upsert: true, new: true, setDefaultsOnInsert: true }
+          ),
+          MasterDataItem.findOneAndUpdate(
+            { type: 'vehicle_model', key: modelKey },
+            {
+              type: 'vehicle_model',
+              key: modelKey,
+              label: modelLabel,
+              value: normalizeMasterKey(modelLabel),
+              metadata: {
+                vehicleType: pendingRequest.vehicleType,
+                brandKey,
+                brand: brandLabel,
+              },
+              isActive: true,
+              sortOrder: 0,
+              updatedBy: adminId,
+              createdBy: adminId,
+            },
+            { upsert: true, new: true, setDefaultsOnInsert: true }
+          ),
+          MasterDataItem.findOneAndUpdate(
+            { type: 'fuel_type', key: fuelKey },
+            {
+              type: 'fuel_type',
+              key: fuelKey,
+              label: fuelLabel,
+              value: fuelKey,
+              metadata: { source: 'vehicle_request' },
+              isActive: true,
+              sortOrder: 0,
+              updatedBy: adminId,
+              createdBy: adminId,
+            },
+            { upsert: true, new: true, setDefaultsOnInsert: true }
+          ),
+          PricingVehicleMileage.findOneAndUpdate(
+            {
+              vehicleCategory,
+              brand: brandLabel,
+              vehicleModel: modelLabel,
+              fuelType: fuelLabel,
+              transmission,
+              vehicleAgeBucket: ageBucket,
+            },
+            {
+              vehicleCategory,
+              brand: brandLabel,
+              vehicleModel: modelLabel,
+              fuelType: fuelLabel,
+              transmission,
+              launchYear: pendingRequest.launchYear,
+              vehicleAgeBucket: ageBucket,
+              realWorldMileageAvg: pendingRequest.realWorldMileageAvg,
+              mileageUnit: pendingRequest.mileageUnit || 'kmpl',
+              estimatedCostPerKmInr: pendingRequest.estimatedCostPerKmInr,
+              cityTier: body.cityTier || pendingRequest.cityTier || 'mixed',
+              confidenceScore: body.confidenceScore ?? 70,
+              pricingEligible: 'Y',
+              fallbackLevel: 'model_exact',
+              recordStatus: 'active',
+              source: 'manual',
+              updatedBy: adminId,
+            },
+            { upsert: true, new: true, setDefaultsOnInsert: true }
+          ),
+        ]);
+      }
+
+      const reviewed = await VehicleCatalogRequest.findOneAndUpdate(
+        { requestId },
+        {
+          status: body.action === 'approve' ? 'approved' : 'rejected',
+          adminReviewNote: body.reviewNote || '',
+          reviewedBy: adminId,
+          reviewedAt: new Date(),
+        },
+        { new: true }
+      );
+
+      if (body.action === 'approve') {
+        await pricingDataService.refreshFromDatabase();
+      }
+
+      return reply.status(200).send({
+        success: true,
+        message: body.action === 'approve' ? 'Vehicle request approved successfully' : 'Vehicle request rejected',
+        data: reviewed,
+      });
+    }
+  );
+
+  fastify.put(
+    '/pricing/fuel/draft/cities/:cityKey',
+    {
+      preHandler: [
+        authenticate,
+        requireAdminPermission(ADMIN_PERMISSIONS.SETTINGS_MANAGE),
+        validate(
+          z.object({
+            city: z.string().optional(),
+            state: z.string().optional(),
+            cityTier: z.string().optional(),
+            petrol: z.number().min(0).optional(),
+            diesel: z.number().min(0).optional(),
+            cng: z.number().min(0).optional(),
+            electricity: z.number().min(0).optional(),
+            trafficProfile: z.string().optional(),
+            isActive: z.boolean().optional(),
+            effectiveFrom: z.string().optional(),
+          })
+        ),
+      ],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const adminId = (request as any).user.userId;
+      const { cityKey } = request.params as { cityKey: string };
+      const key = normalizeCityKey(cityKey);
+      if (!key) {
+        return reply.status(400).send({ success: false, message: 'Invalid city key' });
+      }
+
+      const body = request.body as Partial<FuelCityRow>;
+      const setting = await AdminSetting.findOne({ key: FUEL_SETTINGS_KEY });
+      if (!setting) {
+        return reply.status(404).send({ success: false, message: 'Fuel pricing config not initialized' });
+      }
+
+      const value = (setting.value || {}) as FuelPricingConfig;
+      const draft = value.draft || { cities: {}, pendingBulkApproval: false };
+      const prev = draft.cities?.[key];
+      const next = sanitizeFuelCityRow({ ...prev, ...body }, key);
+      if (key === 'DEFAULT' && next.isActive === false) {
+        return reply.status(400).send({ success: false, message: 'DEFAULT city row must remain active' });
+      }
+
+      draft.cities = { ...(draft.cities || {}), [key]: next };
+      draft.updatedAt = new Date().toISOString();
+      draft.updatedBy = adminId;
+
+      value.draft = { ...draft };
+      setting.value = value as any;
+      setting.updatedBy = adminId;
+      await setting.save();
+      persistFuelCitiesToPricingJson(value.draft.cities || {});
+
+      return reply.status(200).send({
+        success: true,
+        message: 'Fuel city draft updated',
+        data: { cityKey: key, city: next, draft: value.draft },
+      });
+    }
+  );
+
+  fastify.delete(
+    '/pricing/fuel/draft/cities/:cityKey',
+    { preHandler: [authenticate, requireAdminPermission(ADMIN_PERMISSIONS.SETTINGS_MANAGE)] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const adminId = (request as any).user.userId;
+      const { cityKey } = request.params as { cityKey: string };
+      const key = normalizeCityKey(cityKey);
+      if (key === 'DEFAULT') {
+        return reply.status(400).send({ success: false, message: 'DEFAULT city row cannot be deleted' });
+      }
+
+      const setting = await AdminSetting.findOne({ key: FUEL_SETTINGS_KEY });
+      if (!setting) {
+        return reply.status(404).send({ success: false, message: 'Fuel pricing config not initialized' });
+      }
+
+      const value = (setting.value || {}) as FuelPricingConfig;
+      const draft = value.draft || { cities: {}, pendingBulkApproval: false };
+      const nextCities = { ...(draft.cities || {}) };
+      delete nextCities[key];
+      draft.cities = nextCities;
+      draft.updatedAt = new Date().toISOString();
+      draft.updatedBy = adminId;
+      value.draft = draft;
+      setting.value = value as any;
+      setting.updatedBy = adminId;
+      await setting.save();
+
+      return reply.status(200).send({ success: true, message: 'Fuel city row removed from draft' });
+    }
+  );
+
+  fastify.post(
+    '/pricing/fuel/draft/bulk',
+    {
+      preHandler: [
+        authenticate,
+        requireAdminPermission(ADMIN_PERMISSIONS.SETTINGS_MANAGE),
+        validate(
+          z.object({
+            rows: z.array(
+              z.object({
+                cityKey: z.string().optional(),
+                city: z.string().optional(),
+                state: z.string().optional(),
+                cityTier: z.string().optional(),
+                petrol: z.number().min(0).optional(),
+                diesel: z.number().min(0).optional(),
+                cng: z.number().min(0).optional(),
+                electricity: z.number().min(0).optional(),
+                trafficProfile: z.string().optional(),
+                isActive: z.boolean().optional(),
+                effectiveFrom: z.string().optional(),
+              })
+            ).min(1),
+            note: z.string().optional(),
+          })
+        ),
+      ],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const adminId = (request as any).user.userId;
+      const body = request.body as { rows: Array<Partial<FuelCityRow> & { cityKey?: string }> };
+      const setting = await AdminSetting.findOne({ key: FUEL_SETTINGS_KEY });
+      if (!setting) {
+        return reply.status(404).send({ success: false, message: 'Fuel pricing config not initialized' });
+      }
+
+      const value = (setting.value || {}) as FuelPricingConfig;
+      const draft = value.draft || { cities: {}, pendingBulkApproval: false };
+      const nextCities = { ...(draft.cities || {}) };
+      for (const row of body.rows) {
+        const key = normalizeCityKey(row.cityKey || row.city);
+        if (!key) continue;
+        const merged = sanitizeFuelCityRow({ ...(nextCities[key] || {}), ...row }, key);
+        if (key === 'DEFAULT' && merged.isActive === false) {
+          return reply.status(400).send({ success: false, message: 'DEFAULT city row must remain active' });
+        }
+        nextCities[key] = merged;
+      }
+      if (!nextCities.DEFAULT) {
+        return reply.status(400).send({ success: false, message: 'DEFAULT city row is required' });
+      }
+
+      value.draft = {
+        ...(value.draft || { pendingBulkApproval: false, cities: {} }),
+        cities: sortFuelCities(nextCities),
+        pendingBulkApproval: true,
+        pendingBulkCount: body.rows.length,
+        bulkApprovedAt: undefined,
+        bulkApprovedBy: undefined,
+        updatedAt: new Date().toISOString(),
+        updatedBy: adminId,
+      };
+      setting.value = value as any;
+      setting.updatedBy = adminId;
+      await setting.save();
+      persistFuelCitiesToPricingJson(value.draft.cities || {});
+
+      return reply.status(200).send({
+        success: true,
+        message: `Bulk draft saved (${body.rows.length} rows). Approval required before publish.`,
+        data: value.draft,
+      });
+    }
+  );
+
+  fastify.post(
+    '/pricing/fuel/draft/approve-bulk',
+    { preHandler: [authenticate, requireAdminPermission(ADMIN_PERMISSIONS.SETTINGS_MANAGE)] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const role = request.adminContext?.role;
+      if (role !== 'super_admin') {
+        return reply.status(403).send({ success: false, message: 'Bulk approval requires super-admin' });
+      }
+      const adminId = (request as any).user.userId;
+      const setting = await AdminSetting.findOne({ key: FUEL_SETTINGS_KEY });
+      if (!setting) {
+        return reply.status(404).send({ success: false, message: 'Fuel pricing config not initialized' });
+      }
+      const value = (setting.value || {}) as FuelPricingConfig;
+      const draft = value.draft || { cities: {}, pendingBulkApproval: false };
+      draft.pendingBulkApproval = false;
+      draft.bulkApprovedAt = new Date().toISOString();
+      draft.bulkApprovedBy = adminId;
+      value.draft = draft;
+      setting.value = value as any;
+      setting.updatedBy = adminId;
+      await setting.save();
+      return reply.status(200).send({ success: true, message: 'Bulk draft approved', data: draft });
+    }
+  );
+
+  fastify.post(
+    '/pricing/fuel/publish',
+    {
+      preHandler: [
+        authenticate,
+        requireAdminPermission(ADMIN_PERMISSIONS.SETTINGS_MANAGE),
+        validate(
+          z.object({
+            note: z.string().optional(),
+            overrideLimit: z.boolean().optional(),
+          })
+        ),
+      ],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const adminId = (request as any).user.userId;
+      const role = request.adminContext?.role;
+      const body = request.body as { note?: string; overrideLimit?: boolean };
+      const setting = await AdminSetting.findOne({ key: FUEL_SETTINGS_KEY });
+      if (!setting) {
+        return reply.status(404).send({ success: false, message: 'Fuel pricing config not initialized' });
+      }
+
+      const value = (setting.value || {}) as FuelPricingConfig;
+      const draft = value.draft || { cities: {}, pendingBulkApproval: false };
+      const draftCities = { ...(draft.cities || {}) };
+      if (!draftCities.DEFAULT || draftCities.DEFAULT.isActive === false) {
+        return reply.status(400).send({ success: false, message: 'DEFAULT city row must exist and remain active' });
+      }
+      if (draft.pendingBulkApproval) {
+        return reply.status(400).send({ success: false, message: 'Bulk update is pending approval' });
+      }
+
+      const activeVersion =
+        (value.versions || []).find((v) => v.versionId === value.activeVersionId) || value.versions?.[0];
+      const baselineCities = activeVersion?.cities || {};
+      const defaultBaseline = baselineCities.DEFAULT || draftCities.DEFAULT;
+
+      for (const [cityKey, row] of Object.entries(draftCities)) {
+        const baseline = baselineCities[cityKey] || defaultBaseline;
+        for (const field of FUEL_FIELDS) {
+          const nextVal = row[field];
+          const baseVal = baseline?.[field];
+          if (!isWithinTenPercent(nextVal, baseVal)) {
+            const canOverride = body.overrideLimit === true && role === 'super_admin';
+            if (!canOverride) {
+              return reply.status(400).send({
+                success: false,
+                message: `Update exceeds ±10% for ${cityKey} ${field}. Super-admin override required.`,
+                error: 'FUEL_UPDATE_LIMIT_EXCEEDED',
+              });
+            }
+          }
+        }
+      }
+
+      const versionId = `fuel_v_${Date.now()}`;
+      const newVersion: FuelVersion = {
+        versionId,
+        createdAt: new Date().toISOString(),
+        createdBy: adminId,
+        note: body.note || 'Fuel prices published',
+        cities: sortFuelCities(cloneCities(draftCities)),
+      };
+
+      const versions = [...(value.versions || []), newVersion];
+      value.versions = versions.slice(-50);
+      value.activeVersionId = versionId;
+      value.draft = {
+        ...draft,
+        cities: cloneCities(newVersion.cities),
+        pendingBulkApproval: false,
+        pendingBulkCount: undefined,
+        updatedAt: new Date().toISOString(),
+        updatedBy: adminId,
+      };
+
+      setting.value = value as any;
+      setting.updatedBy = adminId;
+      await setting.save();
+
+      return reply.status(200).send({
+        success: true,
+        message: 'Fuel pricing published successfully',
+        data: { activeVersionId: versionId, version: newVersion },
+      });
+    }
+  );
+
+  fastify.post(
+    '/pricing/fuel/rollback/:versionId',
+    {
+      preHandler: [
+        authenticate,
+        requireAdminPermission(ADMIN_PERMISSIONS.SETTINGS_MANAGE),
+        validate(z.object({ note: z.string().optional() })),
+      ],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const role = request.adminContext?.role;
+      if (role !== 'super_admin') {
+        return reply.status(403).send({ success: false, message: 'Rollback requires super-admin' });
+      }
+      const adminId = (request as any).user.userId;
+      const { versionId } = request.params as { versionId: string };
+      const body = request.body as { note?: string };
+      const setting = await AdminSetting.findOne({ key: FUEL_SETTINGS_KEY });
+      if (!setting) {
+        return reply.status(404).send({ success: false, message: 'Fuel pricing config not initialized' });
+      }
+      const value = (setting.value || {}) as FuelPricingConfig;
+      const target = (value.versions || []).find((v) => v.versionId === versionId);
+      if (!target) {
+        return reply.status(404).send({ success: false, message: 'Version not found' });
+      }
+
+      const newVersionId = `fuel_v_${Date.now()}`;
+      const rollbackVersion: FuelVersion = {
+        versionId: newVersionId,
+        createdAt: new Date().toISOString(),
+        createdBy: adminId,
+        note: body.note || `Rollback to ${versionId}`,
+        rollbackFromVersionId: versionId,
+        cities: sortFuelCities(cloneCities(target.cities)),
+      };
+
+      value.versions = [...(value.versions || []), rollbackVersion].slice(-50);
+      value.activeVersionId = newVersionId;
+      value.draft = {
+        cities: cloneCities(rollbackVersion.cities),
+        pendingBulkApproval: false,
+        updatedAt: new Date().toISOString(),
+        updatedBy: adminId,
+      };
+
+      setting.value = value as any;
+      setting.updatedBy = adminId;
+      await setting.save();
+
+      return reply.status(200).send({
+        success: true,
+        message: `Rolled back successfully using ${versionId}`,
+        data: { activeVersionId: newVersionId, version: rollbackVersion },
       });
     }
   );

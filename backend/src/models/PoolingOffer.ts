@@ -13,9 +13,14 @@ export interface IPoolingOffer extends Document {
   date: Date;
   time: string;
   vehicle: {
-    type: 'car' | 'bike';
+    type: 'car' | 'bike' | 'scooty';
     brand: string;
+    model?: string;
     number: string;
+    seats?: number;
+    fuelType?: string;
+    transmission?: string;
+    year?: number;
     photos: string[];
   };
   availableSeats: number;
@@ -131,9 +136,26 @@ const poolingOfferSchema = new Schema<IPoolingOffer>(
         type: String,
         required: true,
       },
+      model: {
+        type: String,
+      },
       number: {
         type: String,
         required: true,
+      },
+      seats: {
+        type: Number,
+      },
+      fuelType: {
+        type: String,
+        enum: ['Petrol', 'Diesel', 'Electric', 'CNG'],
+      },
+      transmission: {
+        type: String,
+        enum: ['Manual', 'Automatic'],
+      },
+      year: {
+        type: Number,
       },
       photos: [String],
     },

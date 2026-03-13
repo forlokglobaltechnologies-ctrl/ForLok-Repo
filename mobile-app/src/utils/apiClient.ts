@@ -375,6 +375,33 @@ export const vehicleApi = {
     }),
 };
 
+export const vehicleCatalogApi = {
+  getFuelTypes: () =>
+    apiCall(API_CONFIG.ENDPOINTS.VEHICLE.FUEL_TYPES, {
+      method: 'GET',
+      requiresAuth: true,
+    }),
+
+  submitRequest: (data: {
+    vehicleType: 'car' | 'bike' | 'scooty';
+    brand: string;
+    model: string;
+    fuelType: string;
+    transmission?: string;
+    launchYear?: number;
+    realWorldMileageAvg?: number;
+    mileageUnit?: string;
+    estimatedCostPerKmInr?: number;
+    cityTier?: string;
+    notes?: string;
+  }) =>
+    apiCall(API_CONFIG.ENDPOINTS.VEHICLE.CATALOG_REQUESTS, {
+      method: 'POST',
+      body: data,
+      requiresAuth: true,
+    }),
+};
+
 /**
  * Pooling API calls
  */

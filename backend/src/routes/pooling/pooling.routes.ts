@@ -500,12 +500,27 @@ export async function poolingRoutes(fastify: FastifyInstance) {
         });
       }
 
+      const offerVehicle = offer.vehicle as {
+        brand?: string;
+        model?: string;
+        fuelType?: string;
+        transmission?: string;
+        year?: number;
+      };
+
       const priceBreakdown = await priceCalculationService.calculatePrice({
         passengerRoute,
         offerId,
         vehicleType: offer.vehicle.type,
         offerDate: offer.date,
         offerTime: offer.time,
+        vehicleDetails: {
+          brand: offerVehicle.brand,
+          model: offerVehicle.model,
+          fuelType: offerVehicle.fuelType,
+          transmission: offerVehicle.transmission,
+          year: offerVehicle.year,
+        },
       });
 
       const response: ApiResponse = {

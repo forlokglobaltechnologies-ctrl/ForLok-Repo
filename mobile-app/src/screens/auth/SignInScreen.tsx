@@ -26,6 +26,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 const ACCENT = '#F9A825';
 const ORANGE_GRADIENT = ['#F99E3C', '#D47B1B'] as const;
 const DEBUG_ENDPOINT = 'http://127.0.0.1:7775/ingest/9bdd2fd3-ac77-45be-b342-a40ab02f34f7';
+const SIGNIN_LOGO = require('../../../assets/signin_arrow_orange_transparent.png');
 type SignInErrors = { username?: string; password?: string };
 
 const SignInScreen = () => {
@@ -115,7 +116,7 @@ const SignInScreen = () => {
         {/* Logo */}
         <View style={styles.logoWrap}>
           <Image
-            source={require('../../../assets/signin_ez_logo.png')}
+            source={SIGNIN_LOGO}
             style={styles.logo}
             resizeMode="contain"
           />
@@ -212,9 +213,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: hp(6),
+    paddingTop: hp(3.5),
     paddingHorizontal: SPACING.lg,
-    paddingBottom: SPACING.sm,
+    paddingBottom: SPACING.xs,
   },
   headerSpacer: {
     width: normalize(40),
@@ -238,12 +239,13 @@ const styles = StyleSheet.create({
   },
   logoWrap: {
     alignItems: 'center',
-    marginTop: SPACING.lg,
-    marginBottom: SPACING.lg,
+    marginTop: 0,
+    marginBottom: 0,
   },
   logo: {
-    width: wp(70),
-    height: hp(22),
+    width: wp(40),
+    maxWidth: 175,
+    aspectRatio: 309 / 275,
   },
   title: {
     fontFamily: FONTS.bold,

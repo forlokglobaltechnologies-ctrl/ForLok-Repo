@@ -1,0 +1,22 @@
+City,State,City_Tier,Petrol_INR_per_litre,Diesel_INR_per_litre,CNG_INR_per_kg,Electricity_INR_per_kWh,Traffic_Profile,Effective_From,Effective_To,Source,Confidence_Score,Record_Status,Notes
+Mumbai,Maharashtra,metro,108,96,79,12.5,high,2026-03-12,,synthetic_seed_for_pricing,80,active,Seed values for architecture rollout
+Delhi,Delhi,metro,96,89,75,9.5,high,2026-03-12,,synthetic_seed_for_pricing,80,active,Seed values for architecture rollout
+Bengaluru,Karnataka,metro,106,92,88,8.7,high,2026-03-12,,synthetic_seed_for_pricing,78,active,Seed values for architecture rollout
+Hyderabad,Telangana,metro,108,96,92,8.0,high,2026-03-12,,synthetic_seed_for_pricing,78,active,Seed values for architecture rollout
+Chennai,Tamil Nadu,metro,103,95,84,8.2,high,2026-03-12,,synthetic_seed_for_pricing,78,active,Seed values for architecture rollout
+Kolkata,West Bengal,metro,106,93,86,8.4,high,2026-03-12,,synthetic_seed_for_pricing,77,active,Seed values for architecture rollout
+Pune,Maharashtra,metro,106,94,81,11.5,high,2026-03-12,,synthetic_seed_for_pricing,77,active,Seed values for architecture rollout
+Ahmedabad,Gujarat,metro,95,91,79,7.5,medium,2026-03-12,,synthetic_seed_for_pricing,76,active,Seed values for architecture rollout
+Lucknow,Uttar Pradesh,urban,96,89,88,8.1,medium,2026-03-12,,synthetic_seed_for_pricing,74,active,Seed values for architecture rollout
+Jaipur,Rajasthan,urban,105,91,86,8.3,medium,2026-03-12,,synthetic_seed_for_pricing,74,active,Seed values for architecture rollout
+Patna,Bihar,urban,107,95,92,8.2,high,2026-03-12,,synthetic_seed_for_pricing,73,active,Seed values for architecture rollout
+Chandigarh,Chandigarh,urban,96,84,78,7.8,medium,2026-03-12,,synthetic_seed_for_pricing,73,active,Seed values for architecture rollout
+Indore,Madhya Pradesh,urban,108,94,86,8.0,medium,2026-03-12,,synthetic_seed_for_pricing,73,active,Seed values for architecture rollout
+Bhubaneswar,Odisha,urban,103,95,85,7.9,medium,2026-03-12,,synthetic_seed_for_pricing,72,active,Seed values for architecture rollout
+Nagpur,Maharashtra,urban,106,94,82,11.2,medium,2026-03-12,,synthetic_seed_for_pricing,72,active,Seed values for architecture rollout
+Coimbatore,Tamil Nadu,urban,102,94,82,8.1,medium,2026-03-12,,synthetic_seed_for_pricing,72,active,Seed values for architecture rollout
+Vijayawada,Andhra Pradesh,urban,109,96,90,8.4,medium,2026-03-12,,synthetic_seed_for_pricing,71,active,Seed values for architecture rollout
+Visakhapatnam,Andhra Pradesh,urban,110,97,91,8.4,medium,2026-03-12,,synthetic_seed_for_pricing,71,active,Seed values for architecture rollout
+Mysuru,Karnataka,rural,104,90,86,8.1,low,2026-03-12,,synthetic_seed_for_pricing,69,active,Seed values for architecture rollout
+Warangal,Telangana,rural,107,95,90,8.0,low,2026-03-12,,synthetic_seed_for_pricing,69,active,Seed values for architecture rollout
+DEFAULT,NA,mixed,105,92,85,12,medium,2026-03-12,,config_default,95,active,Must always exist as hard fallback

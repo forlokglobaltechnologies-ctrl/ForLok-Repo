@@ -20,7 +20,7 @@ class VehicleService {
     number: string;
     plateType?: 'white' | 'yellow' | 'green';
     seats: number;
-    fuelType: 'Petrol' | 'Diesel' | 'Electric' | 'CNG';
+    fuelType: string;
     transmission: 'Manual' | 'Automatic';
     insuranceExpiry?: Date;
   }): Promise<any> {
@@ -118,7 +118,7 @@ class VehicleService {
       year?: number;
       color?: string;
       seats?: number;
-      fuelType?: 'Petrol' | 'Diesel' | 'Electric' | 'CNG';
+      fuelType?: string;
       transmission?: 'Manual' | 'Automatic';
       status?: 'active' | 'inactive' | 'under_maintenance';
       insuranceExpiry?: Date;

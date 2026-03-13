@@ -157,7 +157,7 @@ export const BottomTabNavigator = ({ enabled = true }: BottomTabNavigatorProps) 
   const insets = useSafeAreaInsets();
   const routeName = currentRoute || '';
   const activeIndex = Math.max(0, tabs.findIndex((tab) => tab.screen === routeName));
-  const hideTabBarOnRoutes = new Set(['LocationPicker', 'Chat']);
+  const hideTabBarOnRoutes = new Set(['LocationPicker', 'Chat', 'Wallet']);
 
   if (!enabled || hideTabBarOnRoutes.has(routeName)) {
     return null;
