@@ -65,16 +65,16 @@ const normalColors: ThemeColors = {
   border: COLORS.border,
   transparent: COLORS.transparent,
   overlay: COLORS.overlay,
-  pinkGradient: ['#FFDEE7', '#FF87A8'],
+  pinkGradient: [COLORS.primaryLight, COLORS.primary],
 };
 
-// Pink theme colors
+// Keep alternate mode on the same dark-orange design system.
 const pinkColors: ThemeColors = {
-  primary: '#FF6B9D',
-  primaryDark: '#FF87A8',
-  primaryLight: '#FFDEE7',
-  secondary: '#FFB6C1',
-  accent: '#FF6B9D',
+  primary: COLORS.primary,
+  primaryDark: COLORS.primaryDark,
+  primaryLight: COLORS.primaryLight,
+  secondary: COLORS.secondary,
+  accent: COLORS.accent,
   success: COLORS.success,
   warning: COLORS.warning,
   error: COLORS.error,
@@ -83,14 +83,14 @@ const pinkColors: ThemeColors = {
   gray: COLORS.gray,
   lightGray: COLORS.lightGray,
   darkGray: COLORS.darkGray,
-  background: '#FFF5F8',
-  surface: COLORS.white,
+  background: COLORS.background,
+  surface: COLORS.surface,
   text: COLORS.text,
   textSecondary: COLORS.textSecondary,
-  border: '#FFDEE7',
+  border: COLORS.border,
   transparent: COLORS.transparent,
   overlay: COLORS.overlay,
-  pinkGradient: ['#FFDEE7', '#FF87A8'],
+  pinkGradient: [COLORS.primaryLight, COLORS.primary],
 };
 
 export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {

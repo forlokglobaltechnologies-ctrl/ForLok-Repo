@@ -155,7 +155,7 @@ const EarnCoinsScreen = () => {
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <View style={[styles.headerBar, { borderBottomColor: theme.colors.border, backgroundColor: theme.colors.background }]}>
+        <View style={[styles.headerBar, { borderBottomColor: theme.colors.border, backgroundColor: theme.colors.surface }]}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
             <ArrowLeft size={22} color={theme.colors.text} />
           </TouchableOpacity>
@@ -172,7 +172,7 @@ const EarnCoinsScreen = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <View style={[styles.headerBar, { borderBottomColor: theme.colors.border, backgroundColor: theme.colors.background }]}>
+      <View style={[styles.headerBar, { borderBottomColor: theme.colors.border, backgroundColor: theme.colors.surface }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <ArrowLeft size={22} color={theme.colors.text} />
         </TouchableOpacity>
@@ -924,7 +924,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F99E3C',
+    backgroundColor: '#191919',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
     paddingVertical: 10,
     borderRadius: BORDER_RADIUS.md,
     gap: SPACING.sm,

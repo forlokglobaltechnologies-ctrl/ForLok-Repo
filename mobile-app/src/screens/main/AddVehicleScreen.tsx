@@ -30,8 +30,8 @@ import * as DocumentPicker from 'expo-document-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const VEHICLE_ACCENT = '#F99E3C';
-const VEHICLE_ACCENT_DARK = '#D47B1B';
+const VEHICLE_ACCENT = '#FE8800';
+const VEHICLE_ACCENT_DARK = '#D97100';
 
 const VEHICLE_BRAND_MODELS: Record<'car' | 'bike' | 'scooty', Record<string, string[]>> = {
   car: {
@@ -1180,7 +1180,7 @@ const AddVehicleScreen = () => {
             style={[styles.saveButton, saving && styles.saveButtonDisabled]}
           >
             <LinearGradient
-              colors={[VEHICLE_ACCENT, VEHICLE_ACCENT_DARK]}
+              colors={['#232323', '#191919']}
               start={{ x: 0.5, y: 0 }}
               end={{ x: 0.5, y: 1 }}
               style={styles.saveButtonGradient}

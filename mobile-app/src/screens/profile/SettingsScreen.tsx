@@ -258,7 +258,7 @@ const SettingsScreen = () => {
       </View>
 
       <ScrollView
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(insets.bottom + normalize(96), SPACING.xl * 2) }]}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(insets.bottom + normalize(24), SPACING.xl) }]}
         showsVerticalScrollIndicator={false}
       >
         {settingsSections.map((section) => (

@@ -168,7 +168,6 @@ export function UsersPage() {
             <p className="mb-0 small text-body-secondary">Manage registered companies and user access</p>
           </div>
           <div className="d-flex gap-2 flex-wrap">
-            <button className="btn btn-sm btn-outline-secondary"><i className="bi bi-tag me-1"></i>Referral Management</button>
             <button className="btn btn-sm btn-primary"><i className="bi bi-person-plus me-1"></i>New User Request</button>
             <span className="pending-pill"><i className="bi bi-clock me-1"></i>{pendingCount} Pending</span>
           </div>

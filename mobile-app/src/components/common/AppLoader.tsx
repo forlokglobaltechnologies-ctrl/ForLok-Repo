@@ -34,7 +34,7 @@ export const AppLoader: React.FC<AppLoaderProps> = ({
 
   return (
     <View style={[styles.container, style]}>
-      <ActivityIndicator size={loaderSize} color={color || '#4A90D9'} />
+      <ActivityIndicator size={loaderSize} color={color || '#FE8800'} />
       {text ? <Text style={[styles.text, color ? { color } : null]}>{text}</Text> : null}
     </View>
   );

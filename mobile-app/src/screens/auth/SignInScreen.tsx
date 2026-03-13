@@ -23,8 +23,8 @@ import { getUserErrorMessage, mapFieldErrors } from '@utils/errorUtils';
 import { AppLoader } from '@components/common/AppLoader';
 import { LinearGradient } from 'expo-linear-gradient';
 
-const ACCENT = '#F9A825';
-const ORANGE_GRADIENT = ['#F99E3C', '#D47B1B'] as const;
+const ACCENT = '#FE8800';
+const BUTTON_GRADIENT = ['#232323', '#191919'] as const;
 const DEBUG_ENDPOINT = 'http://127.0.0.1:7775/ingest/9bdd2fd3-ac77-45be-b342-a40ab02f34f7';
 const SIGNIN_LOGO = require('../../../assets/signin_arrow_orange_transparent.png');
 type SignInErrors = { username?: string; password?: string };
@@ -93,20 +93,7 @@ const SignInScreen = () => {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerSpacer} />
-
-        <TouchableOpacity
-          style={styles.adminPill}
-          onPress={() => navigation.navigate('AdminLogin' as never)}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.adminPillText}>{t('signIn.adminLogin')}</Text>
-        </TouchableOpacity>
-      </View>
+      <StatusBar barStyle="light-content" backgroundColor="#191919" />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -138,7 +125,7 @@ const SignInScreen = () => {
             placeholder={t('signIn.enterUsernamePlaceholder')}
             autoCapitalize="none"
             containerStyle={styles.inputWrap}
-            leftIcon={<Mail size={18} color="#BBBBBB" />}
+            leftIcon={<Mail size={18} color={COLORS.primary} />}
             error={errors.username}
           />
 
@@ -153,7 +140,7 @@ const SignInScreen = () => {
             secureTextEntry={!showPassword}
             showPasswordToggle
             containerStyle={styles.inputWrap}
-            leftIcon={<Lock size={18} color="#BBBBBB" />}
+            leftIcon={<Lock size={18} color={COLORS.primary} />}
             error={errors.password}
           />
 
@@ -176,7 +163,7 @@ const SignInScreen = () => {
             disabled={!canSubmit}
           >
             <LinearGradient
-              colors={[ORANGE_GRADIENT[0], ORANGE_GRADIENT[1]]}
+              colors={[BUTTON_GRADIENT[0], BUTTON_GRADIENT[1]]}
               start={{ x: 0.5, y: 0 }}
               end={{ x: 0.5, y: 1 }}
               style={styles.signInBtnGradient}
@@ -207,34 +194,12 @@ const SignInScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: hp(3.5),
-    paddingHorizontal: SPACING.lg,
-    paddingBottom: SPACING.xs,
-  },
-  headerSpacer: {
-    width: normalize(40),
-    height: normalize(40),
-  },
-  adminPill: {
-    backgroundColor: '#F5F5F5',
-    paddingHorizontal: normalize(14),
-    paddingVertical: normalize(8),
-    borderRadius: normalize(20),
-  },
-  adminPillText: {
-    fontFamily: FONTS.semiBold,
-    fontSize: FONTS.sizes.xs,
-    color: '#555555',
+    backgroundColor: COLORS.background,
   },
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: SPACING.lg,
+    paddingTop: hp(8),
     paddingBottom: hp(4),
   },
   logoWrap: {
@@ -250,14 +215,14 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: FONTS.bold,
     fontSize: normalize(26),
-    color: '#1A1A1A',
+    color: COLORS.text,
     marginBottom: SPACING.xs,
     textAlign: 'center',
   },
   subtitle: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.sm,
-    color: '#888888',
+    color: COLORS.textSecondary,
     marginBottom: SPACING.xl,
     textAlign: 'center',
   },
@@ -281,6 +246,8 @@ const styles = StyleSheet.create({
     borderRadius: normalize(26),
     marginBottom: SPACING.lg,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   signInBtnGradient: {
     flex: 1,
@@ -304,7 +271,7 @@ const styles = StyleSheet.create({
   signUpText: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.sm,
-    color: '#999999',
+    color: COLORS.textSecondary,
   },
   signUpLink: {
     fontFamily: FONTS.semiBold,

@@ -17,7 +17,7 @@ export const Card: React.FC<CardProps> = ({
 }) => {
   const getCardStyle = (): ViewStyle => {
     const baseStyle: ViewStyle = {
-      backgroundColor: COLORS.white,
+      backgroundColor: COLORS.surface,
       borderRadius: BORDER_RADIUS.lg,
       padding,
     };

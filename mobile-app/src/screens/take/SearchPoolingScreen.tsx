@@ -23,12 +23,12 @@ import { normalize } from '@utils/responsive';
 import useMasterData from '../../hooks/useMasterData';
 
 const { width: SCREEN_W } = Dimensions.get('window');
-const MODAL_BLUE_GRADIENT: [string, string] = ['#F99E3C', '#E08E35'];
-const MODAL_ORANGE_GRADIENT: [string, string] = ['#F99E3C', '#E08E35'];
-const FILTER_ACCENT = '#F99E3C';
-const FILTER_ACCENT_DARK = '#D47B1B';
-const FILTER_ACCENT_BG = '#FFF4E6';
-const POOLING_FLAG_LOGO = require('../../../assets/splash_arrow_white_transparent.png');
+const MODAL_BLUE_GRADIENT: [string, string] = ['#232323', '#191919'];
+const MODAL_ORANGE_GRADIENT: [string, string] = ['#232323', '#191919'];
+const FILTER_ACCENT = '#FE8800';
+const FILTER_ACCENT_DARK = '#D97100';
+const FILTER_ACCENT_BG = '#2B2114';
+const POOLING_FLAG_LOGO = require('../../../assets/signin_arrow_orange_transparent.png');
 
 interface RouteParams {
   from?: LocationData;
@@ -299,9 +299,9 @@ const SearchPoolingScreen = () => {
   const activeFilterCount = Number(!anyDate) + Number(!!time) + Number(!!vehicleType) + Number(passengers > 1);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: '#FFFFFF' }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       {/* ── Top Route Card ── */}
-      <View style={[styles.topCard, { backgroundColor: '#FFFFFF' }]}>
+      <View style={[styles.topCard, { backgroundColor: theme.colors.surface }]}>
         <View style={styles.topRow}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} activeOpacity={0.7}>
             <ArrowLeft size={22} color={theme.colors.text} />
@@ -353,7 +353,7 @@ const SearchPoolingScreen = () => {
           activeOpacity={0.8}
         >
           <LinearGradient
-            colors={['#F99E3C', '#E08E35']}
+            colors={['#232323', '#191919']}
             start={{ x: 0.5, y: 0 }}
             end={{ x: 0.5, y: 1 }}
             style={styles.searchBtnGradient}
@@ -446,7 +446,7 @@ const SearchPoolingScreen = () => {
                           styles.seatMiniPill,
                           seatSelected
                             ? { backgroundColor: FILTER_ACCENT, borderColor: FILTER_ACCENT }
-                            : { backgroundColor: '#FFFFFF', borderColor: '#E5E7EB' },
+                            : { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
                         ]}
                         onPress={() => {
                           setPassengers(n);
@@ -486,7 +486,7 @@ const SearchPoolingScreen = () => {
                 onPress={() => setShowFiltersModal(false)}
               >
                 <LinearGradient
-                  colors={['#F99E3C', '#E08E35']}
+                  colors={['#232323', '#191919']}
                   start={{ x: 0.5, y: 0 }}
                   end={{ x: 0.5, y: 1 }}
                   style={styles.filterApplyGradient}

@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
   listContent: {
     paddingVertical: normalize(10),
     paddingHorizontal: normalize(12),
-    paddingBottom: normalize(110),
+    paddingBottom: normalize(24),
   },
   conversationItem: {
     flexDirection: 'row',

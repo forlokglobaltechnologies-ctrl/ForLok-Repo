@@ -5,7 +5,7 @@
  * Backend target is currently forced to development URL.
  */
 
-const DEV_API_URL = 'http://10.170.142.16:3000';
+const DEV_API_URL = 'http://10.254.10.16:3000';
 const PROD_API_URL = 'https://forlok-repo-1.onrender.com';
 
 const API_BASE_URL = DEV_API_URL;

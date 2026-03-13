@@ -20,10 +20,10 @@ npm run build
 Create `.env` in `admin-web/`:
 
 ```bash
-VITE_API_BASE_URL=http://10.170.142.16:3000
+VITE_API_BASE_URL=http://10.254.10.16:3000
 ```
 
-If omitted, this default is used: `http://10.170.142.16:3000`.
+If omitted, this default is used: `http://10.254.10.16:3000`.
 
 ## Implemented Modules
 

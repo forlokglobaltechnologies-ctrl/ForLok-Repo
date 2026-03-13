@@ -290,20 +290,20 @@ const WalletScreen = () => {
       {/* ── Tab Bar ── */}
       <View style={[styles.tabBar, { backgroundColor: theme.colors.surface }]}>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'wallet' && [styles.tabActive, { borderBottomColor: BLUE_ACCENT }]]}
+          style={[styles.tab, activeTab === 'wallet' && [styles.tabActive, { borderBottomColor: COLORS.primary }]]}
           onPress={() => setActiveTab('wallet')}
         >
-          <Wallet size={16} color={activeTab === 'wallet' ? BLUE_ACCENT : theme.colors.textSecondary} />
-          <Text style={[styles.tabText, { color: theme.colors.textSecondary }, activeTab === 'wallet' && { color: BLUE_ACCENT, fontWeight: '700' }]}>
+          <Wallet size={16} color={activeTab === 'wallet' ? COLORS.primary : theme.colors.textSecondary} />
+          <Text style={[styles.tabText, { color: theme.colors.textSecondary }, activeTab === 'wallet' && { color: COLORS.primary, fontWeight: '700' }]}>
             Wallet (₹)
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'coins' && [styles.tabActive, { borderBottomColor: '#F5A623' }]]}
+          style={[styles.tab, activeTab === 'coins' && [styles.tabActive, { borderBottomColor: COLORS.primary }]]}
           onPress={() => setActiveTab('coins')}
         >
-          <Coins size={16} color={activeTab === 'coins' ? '#F5A623' : theme.colors.textSecondary} />
-          <Text style={[styles.tabText, { color: theme.colors.textSecondary }, activeTab === 'coins' && { color: '#F5A623', fontWeight: '700' }]}>
+          <Coins size={16} color={activeTab === 'coins' ? COLORS.primary : theme.colors.textSecondary} />
+          <Text style={[styles.tabText, { color: theme.colors.textSecondary }, activeTab === 'coins' && { color: COLORS.primary, fontWeight: '700' }]}>
             Coins{coinBalance ? ` (${coinBalance.balance})` : ''}
           </Text>
         </TouchableOpacity>
@@ -346,9 +346,13 @@ const WalletScreen = () => {
               <Gift size={18} color="#FFF" />
               <Text style={styles.coinActionText}>Earn More</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.coinActionBtn, { backgroundColor: '#27AE60' }]} onPress={() => navigation.navigate('MainDashboard' as never)} activeOpacity={0.8}>
-              <Car size={18} color="#FFF" />
-              <Text style={styles.coinActionText}>Book a Ride</Text>
+            <TouchableOpacity
+              style={styles.coinActionBtnOutline}
+              onPress={() => navigation.navigate('MainDashboard' as never)}
+              activeOpacity={0.8}
+            >
+              <Car size={18} color={COLORS.black} />
+              <Text style={styles.coinActionTextOutline}>Book a Ride</Text>
             </TouchableOpacity>
           </View>
 
@@ -415,7 +419,7 @@ const WalletScreen = () => {
         >
           {/* Balance Card */}
           <LinearGradient
-            colors={['#0F172B', '#0F172B']}
+            colors={['#232323', '#191919']}
             start={{ x: 0.5, y: 0 }}
             end={{ x: 0.5, y: 1 }}
             style={styles.balanceCard}
@@ -423,17 +427,23 @@ const WalletScreen = () => {
             {/* Decorative overlays for richer card background */}
             <View style={styles.balanceOverlayCircleLg} />
             <View style={styles.balanceOverlayCircleSm} />
-            <View style={styles.balanceOverlayCurve} />
-            <View style={styles.balanceTop}>
+            <View style={styles.balanceTopRow}>
               <View style={styles.balanceIconWrap}>
-                <Wallet size={24} color="#51A7EA" />
+                <Wallet size={22} color="#FE8800" />
               </View>
-              <Text style={styles.balanceLabel}>Available Balance</Text>
+              <View style={styles.balanceLivePill}>
+                <Text style={styles.balanceLiveText}>LIVE</Text>
+              </View>
             </View>
+            <Text style={styles.balanceLabel}>Available Balance</Text>
             <Text style={styles.balanceAmount}>{formatCurrency(getBalance())}</Text>
+            <View style={styles.balanceMetaRow}>
+              <View style={styles.balanceMetaDot} />
+              <Text style={styles.balanceMetaText}>Updated from latest stats</Text>
+            </View>
             {walletSummary?.lockedAmount > 0 && (
               <View style={styles.lockedRow}>
-                <Info size={13} color="#51A7EA" />
+                <Info size={13} color="#FE8800" />
                 <Text style={styles.lockedText}>₹{walletSummary.lockedAmount.toLocaleString('en-IN')} locked for bookings</Text>
               </View>
             )}
@@ -475,7 +485,7 @@ const WalletScreen = () => {
               activeOpacity={0.85}
             >
               <LinearGradient
-                colors={[BLUE_TOP, BLUE_BOTTOM]}
+                colors={['#232323', '#191919']}
                 start={{ x: 0.5, y: 0 }}
                 end={{ x: 0.5, y: 1 }}
                 style={styles.walletActionBtnGradient}
@@ -715,7 +725,7 @@ const WalletScreen = () => {
               activeOpacity={0.8}
             >
               <LinearGradient
-                colors={[BLUE_TOP, BLUE_BOTTOM]}
+                colors={['#232323', '#191919']}
                 start={{ x: 0.5, y: 0 }}
                 end={{ x: 0.5, y: 1 }}
                 style={styles.confirmBtnGradient}
@@ -770,47 +780,98 @@ const styles = StyleSheet.create({
 
   // ── Balance Card (Wallet Tab) ──
   balanceCard: {
-    borderRadius: BORDER_RADIUS.lg, padding: SPACING.lg, marginBottom: SPACING.md, ...SHADOWS.md,
+    borderRadius: normalize(20),
+    padding: SPACING.lg,
+    marginBottom: SPACING.md,
+    borderWidth: 1,
+    borderColor: '#343434',
+    ...SHADOWS.md,
     overflow: 'hidden',
   },
   balanceOverlayCircleLg: {
     position: 'absolute',
-    width: normalize(170),
-    height: normalize(170),
-    borderRadius: normalize(85),
-    right: -normalize(55),
-    top: -normalize(35),
-    backgroundColor: 'rgba(255,255,255,0.10)',
+    width: normalize(150),
+    height: normalize(150),
+    borderRadius: normalize(75),
+    right: -normalize(44),
+    top: -normalize(34),
+    backgroundColor: 'rgba(254, 136, 0, 0.12)',
   },
   balanceOverlayCircleSm: {
     position: 'absolute',
-    width: normalize(90),
-    height: normalize(90),
-    borderRadius: normalize(45),
-    left: -normalize(20),
+    width: normalize(88),
+    height: normalize(88),
+    borderRadius: normalize(44),
+    left: -normalize(16),
     bottom: -normalize(20),
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(254, 136, 0, 0.1)',
   },
-  balanceOverlayCurve: {
-    position: 'absolute',
-    width: normalize(190),
-    height: normalize(80),
-    right: normalize(12),
-    bottom: normalize(42),
-    borderRadius: normalize(40),
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.16)',
+  balanceTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: normalize(18),
   },
-  balanceTop: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.xs },
   balanceIconWrap: {
-    width: normalize(44), height: normalize(44), borderRadius: normalize(22),
-    backgroundColor: 'rgba(81,167,234,0.15)', justifyContent: 'center', alignItems: 'center',
+    width: normalize(52),
+    height: normalize(52),
+    borderRadius: normalize(16),
+    backgroundColor: 'rgba(254, 136, 0, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(254, 136, 0, 0.26)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  balanceLabel: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: '#F5D067' },
-  balanceAmount: { fontFamily: FONTS.regular, fontSize: normalize(38), fontWeight: 'bold', color: '#F5D067', marginBottom: 4 },
-  lockedRow: { flexDirection: 'row', alignItems: 'center', gap: normalize(5), marginBottom: SPACING.sm },
-  lockedText: { fontFamily: FONTS.regular, fontSize: normalize(12), color: '#9BCBEE' },
-  bookingStatusRow: { marginBottom: SPACING.md },
+  balanceLivePill: {
+    paddingHorizontal: normalize(10),
+    paddingVertical: normalize(5),
+    borderRadius: BORDER_RADIUS.round,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+  },
+  balanceLiveText: {
+    fontFamily: FONTS.regular,
+    fontSize: normalize(10),
+    color: '#FFFFFF',
+    fontWeight: '700',
+    letterSpacing: 0.4,
+  },
+  balanceLabel: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.md,
+    color: '#D4D4D8',
+    marginBottom: normalize(6),
+    fontWeight: '600',
+  },
+  balanceAmount: {
+    fontFamily: FONTS.regular,
+    fontSize: normalize(40),
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: normalize(8),
+  },
+  balanceMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: normalize(7),
+    marginBottom: normalize(10),
+  },
+  balanceMetaDot: {
+    width: normalize(8),
+    height: normalize(8),
+    borderRadius: normalize(4),
+    backgroundColor: '#FE8800',
+  },
+  balanceMetaText: {
+    fontFamily: FONTS.regular,
+    fontSize: normalize(12),
+    color: '#A1A1AA',
+    fontWeight: '600',
+  },
+  lockedRow: { flexDirection: 'row', alignItems: 'center', gap: normalize(5), marginBottom: normalize(12) },
+  lockedText: { fontFamily: FONTS.regular, fontSize: normalize(12), color: '#D4D4D8' },
+  bookingStatusRow: { marginBottom: normalize(2) },
   bookingStatusPill: {
     flexDirection: 'row', alignItems: 'center', gap: normalize(5),
     paddingHorizontal: normalize(10), paddingVertical: normalize(5), borderRadius: BORDER_RADIUS.round, alignSelf: 'flex-start',
@@ -914,9 +975,27 @@ const styles = StyleSheet.create({
   actionRow: { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.md },
   coinActionBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    backgroundColor: '#F5A623', paddingVertical: normalize(11), borderRadius: BORDER_RADIUS.md, gap: normalize(6),
+    backgroundColor: COLORS.black, paddingVertical: normalize(11), borderRadius: BORDER_RADIUS.md, gap: normalize(6),
   },
   coinActionText: { fontFamily: FONTS.regular, fontSize: FONTS.sizes.sm, color: '#FFF', fontWeight: '700' },
+  coinActionBtnOutline: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.black,
+    paddingVertical: normalize(11),
+    borderRadius: BORDER_RADIUS.md,
+    gap: normalize(6),
+  },
+  coinActionTextOutline: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.sm,
+    color: COLORS.black,
+    fontWeight: '700',
+  },
 
   // ── How to Use ──
   howToCard: { borderRadius: BORDER_RADIUS.lg, padding: SPACING.md, marginBottom: SPACING.md, ...SHADOWS.sm },

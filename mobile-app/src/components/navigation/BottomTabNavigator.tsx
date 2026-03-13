@@ -39,7 +39,7 @@ const MOTION = {
 } as const;
 
 const TAB_ITEM_HEIGHT = 64;
-const NAV_ORANGE = '#F99E3C';
+const NAV_ORANGE = '#FE8800';
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
 type AnimatedTabItemProps = {
@@ -88,7 +88,7 @@ const AnimatedTabItem = React.memo(({
     color: interpolateColor(
       activeProgress.value,
       [0, 1],
-      ['#111111', NAV_ORANGE]
+      ['#8C8C8C', NAV_ORANGE]
     ),
   }));
 
@@ -96,12 +96,12 @@ const AnimatedTabItem = React.memo(({
     borderColor: interpolateColor(
       activeProgress.value,
       [0, 1],
-      [theme.colors.border + '70', NAV_ORANGE + 'CC']
+      [theme.colors.border + 'AA', NAV_ORANGE + 'CC']
     ),
     backgroundColor: interpolateColor(
       activeProgress.value,
       [0, 1],
-      ['rgba(249, 158, 60, 0.00)', 'rgba(249, 158, 60, 0.24)']
+      ['rgba(254, 136, 0, 0.00)', 'rgba(254, 136, 0, 0.22)']
     ),
   }));
 
@@ -131,7 +131,7 @@ const AnimatedTabItem = React.memo(({
     >
       <Animated.View style={[styles.iconWrap, iconAnimatedStyle, iconRingStyle]}>
         <Animated.View style={[styles.iconLayer, inactiveIconStyle]}>
-          <IconComponent size={20} color="#111111" strokeWidth={2.2} />
+          <IconComponent size={20} color="#F5F5F5" strokeWidth={2.2} />
         </Animated.View>
         <Animated.View style={[styles.iconLayer, activeIconStyle]}>
           <IconComponent size={20} color={NAV_ORANGE} strokeWidth={2.35} />
@@ -157,9 +157,9 @@ export const BottomTabNavigator = ({ enabled = true }: BottomTabNavigatorProps) 
   const insets = useSafeAreaInsets();
   const routeName = currentRoute || '';
   const activeIndex = Math.max(0, tabs.findIndex((tab) => tab.screen === routeName));
-  const hideTabBarOnRoutes = new Set(['LocationPicker', 'Chat', 'Wallet']);
+  const visibleTabBarRoutes = new Set(['', 'MainDashboard']);
 
-  if (!enabled || hideTabBarOnRoutes.has(routeName)) {
+  if (!enabled || !visibleTabBarRoutes.has(routeName)) {
     return null;
   }
 
@@ -173,8 +173,8 @@ export const BottomTabNavigator = ({ enabled = true }: BottomTabNavigatorProps) 
           style={[
             styles.container,
             {
-              backgroundColor: 'rgba(245, 247, 251, 0.94)',
-              borderColor: NAV_ORANGE + '70',
+              backgroundColor: 'rgba(25, 25, 25, 0.96)',
+              borderColor: '#343434',
             },
           ]}
         >

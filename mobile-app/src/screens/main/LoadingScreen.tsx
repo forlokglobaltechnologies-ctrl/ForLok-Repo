@@ -1,37 +1,32 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, FONTS, SPACING } from '@constants/theme';
 import { normalize, wp, hp } from '@utils/responsive';
 import { AppLoader } from '@components/common/AppLoader';
 
 const LoadingScreen = () => {
   return (
-    <LinearGradient
-      colors={[COLORS.primary, COLORS.primaryDark]}
-      style={styles.container}
-    >
+    <View style={styles.container}>
       <View style={styles.content}>
         <View style={styles.logoContainer}>
-          <View style={styles.logoCircle}>
-            <Image
-              source={require('../../../assets/flogo.png')}
-              style={styles.logoImage}
-              resizeMode="contain"
-            />
-          </View>
+          <Image
+            source={require('../../../assets/forlok_splash_arrow_sharp_dark.png')}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
         </View>
-        <AppLoader size="large" color={COLORS.white} style={styles.loader} />
+        <AppLoader size="large" color={COLORS.primary} style={styles.loader} />
         <Text style={styles.loadingText}>Loading...</Text>
         <Text style={styles.pleaseWaitText}>Please wait</Text>
       </View>
-    </LinearGradient>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#191919',
   },
   content: {
     flex: 1,
@@ -41,17 +36,9 @@ const styles = StyleSheet.create({
   logoContainer: {
     marginBottom: SPACING.xl,
   },
-  logoCircle: {
-    width: normalize(100),
-    height: normalize(100),
-    borderRadius: normalize(50),
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   logoImage: {
-    width: normalize(100),
-    height: normalize(100),
+    width: normalize(170),
+    height: normalize(170),
   },
   loader: {
     marginBottom: SPACING.md,
@@ -65,8 +52,7 @@ const styles = StyleSheet.create({
   pleaseWaitText: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.sm,
-    color: COLORS.white,
-    opacity: 0.8,
+    color: '#B8B8B8',
   },
 });
 

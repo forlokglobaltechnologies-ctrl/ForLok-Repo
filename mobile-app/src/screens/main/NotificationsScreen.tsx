@@ -928,7 +928,7 @@ const styles = StyleSheet.create({
     borderRadius: normalize(10),
   },
   actionBtnPrimary: {
-    backgroundColor: '#F99E3C',
+    backgroundColor: '#191919',
   },
   actionBtnPrimaryText: {
     fontFamily: FONTS.regular,
@@ -937,9 +937,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   actionBtnOutline: {
-    backgroundColor: '#F99E3C' + '10',
+    backgroundColor: '#232323',
     borderWidth: 1,
-    borderColor: '#F99E3C' + '30',
+    borderColor: '#343434',
   },
   actionBtnOutlineText: {
     fontFamily: FONTS.regular,

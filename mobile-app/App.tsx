@@ -125,8 +125,6 @@ import { websocketService } from './src/services/websocket.service';
 
 const Stack = createNativeStackNavigator();
 const DEBUG_ENDPOINT = 'http://127.0.0.1:7775/ingest/9bdd2fd3-ac77-45be-b342-a40ab02f34f7';
-const TAB_BAR_RESERVED_HEIGHT = 108;
-
 // StatusBar component — transparent so screens span the full height
 const ThemedStatusBar = () => {
   return <StatusBar style="light" translucent backgroundColor="transparent" />;
@@ -145,11 +143,6 @@ const AppNavigator = () => {
   const { setCurrentRoute, currentRoute } = useSOS();
   const { isAuthenticated, isLoading, user } = useAuth();
   const navigationRef = useRef<NavigationContainerRef<any>>(null);
-  const tabBarHiddenRoutes = new Set(['LocationPicker', 'Chat', 'Wallet']);
-  const shouldReserveTabSpace =
-    isAuthenticated &&
-    user?.userType !== 'admin' &&
-    !tabBarHiddenRoutes.has(currentRoute || '');
 
   const onNavigationStateChange = (state: any) => {
     const routeName = getActiveRouteName(state);
@@ -171,12 +164,7 @@ const AppNavigator = () => {
         onReady={onNavigationReady}
       >
         <ThemedStatusBar />
-        <View
-          style={[
-            styles.stackHost,
-            shouldReserveTabSpace && styles.stackHostWithTabBarSpace,
-          ]}
-        >
+        <View style={styles.stackHost}>
           <Stack.Navigator
             screenOptions={{
               headerShown: false,
@@ -419,9 +407,6 @@ export default function App() {
 const styles = StyleSheet.create({
   stackHost: {
     flex: 1,
-  },
-  stackHostWithTabBarSpace: {
-    paddingBottom: TAB_BAR_RESERVED_HEIGHT,
   },
   loadingContainer: {
     flex: 1,

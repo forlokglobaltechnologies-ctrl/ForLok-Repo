@@ -25,15 +25,15 @@ const KNOB_SIZE = normalize(40);
 const KNOB_PADDING = normalize(6);
 
 const SLIDE_ACCENT: Record<number, string> = {
-  0: '#F9A825',
-  1: '#B85E00',
-  2: '#2E7D32',
+  0: '#FE8800',
+  1: '#FE8800',
+  2: '#FE8800',
 };
 
 const SLIDE_BUTTON_GRADIENT: Record<number, readonly [string, string]> = {
-  0: ['#F99E3C', '#E08E35'],
-  1: ['#F99E3C', '#E08E35'],
-  2: ['#F99E3C', '#E08E35'],
+  0: ['#232323', '#191919'],
+  1: ['#232323', '#191919'],
+  2: ['#232323', '#191919'],
 };
 
 const OnboardingScreen = () => {
@@ -97,7 +97,7 @@ const OnboardingScreen = () => {
   };
 
   const accent = SLIDE_ACCENT[currentPage] ?? '#F9A825';
-  const buttonGradient = SLIDE_BUTTON_GRADIENT[currentPage] ?? ['#F99E3C', '#E08E35'];
+  const buttonGradient = SLIDE_BUTTON_GRADIENT[currentPage] ?? ['#232323', '#191919'];
   const maxDrag = Math.max(0, capsuleWidth - (KNOB_SIZE + KNOB_PADDING * 2));
   maxDragRef.current = maxDrag;
 
@@ -145,7 +145,7 @@ const OnboardingScreen = () => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle="light-content" backgroundColor="#191919" />
 
       {/* Top bar: brand + Next */}
       <View style={styles.topBar}>
@@ -192,7 +192,7 @@ const OnboardingScreen = () => {
           onLayout={(e) => setCapsuleWidth(e.nativeEvent.layout.width)}
         >
           <View style={styles.lockTarget}>
-            <Lock size={normalize(16)} color={accent} strokeWidth={2.5} />
+            <Lock size={normalize(16)} color="#191919" strokeWidth={2.5} />
           </View>
 
           <View style={styles.capsuleCenter}>
@@ -209,7 +209,7 @@ const OnboardingScreen = () => {
             ]}
             {...panResponder.panHandlers}
           >
-            <Lock size={normalize(16)} color={accent} strokeWidth={2.5} />
+            <Lock size={normalize(16)} color="#191919" strokeWidth={2.5} />
           </Animated.View>
         </LinearGradient>
       </View>
@@ -220,7 +220,7 @@ const OnboardingScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#191919',
   },
   topBar: {
     flexDirection: 'row',
@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
   slideTitle: {
     fontFamily: FONTS.bold,
     fontSize: normalize(30),
-    color: '#1A1A1A',
+    color: '#FFFFFF',
     lineHeight: normalize(40),
     marginTop: hp(4),
   },
@@ -282,13 +282,13 @@ const styles = StyleSheet.create({
     width: KNOB_SIZE,
     height: KNOB_SIZE,
     borderRadius: KNOB_SIZE / 2,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FE8800',
     justifyContent: 'center',
     alignItems: 'center',
     position: 'absolute',
     right: KNOB_PADDING,
     top: KNOB_PADDING,
-    opacity: 0.9,
+    opacity: 1,
   },
   capsuleCenter: {
     flexDirection: 'row',
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
     width: KNOB_SIZE,
     height: KNOB_SIZE,
     borderRadius: KNOB_SIZE / 2,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FE8800',
     justifyContent: 'center',
     alignItems: 'center',
     position: 'absolute',

@@ -19,7 +19,7 @@ import { useTheme } from '@context/ThemeContext';
 import { useAuth } from '@context/AuthContext';
 import { bookingApi } from '@utils/apiClient';
 
-const POOLING_FLAG_LOGO = require('../../../assets/splash_arrow_white_transparent.png');
+const POOLING_FLAG_LOGO = require('../../../assets/signin_arrow_orange_transparent.png');
 
 const shorten = (addr: string, maxLen = 30): string => {
   if (!addr || addr === 'N/A') return 'Unknown';
@@ -407,7 +407,7 @@ const s = StyleSheet.create({
   listContent: {
     paddingHorizontal: normalize(16),
     paddingTop: normalize(12),
-    paddingBottom: normalize(100),
+    paddingBottom: normalize(24),
   },
 
   card: {

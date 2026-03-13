@@ -65,10 +65,14 @@ export const Button: React.FC<ButtonProps> = ({
 
     switch (variant) {
       case 'primary':
-        baseStyle.backgroundColor = colors.primary;
+        baseStyle.backgroundColor = colors.black;
+        baseStyle.borderWidth = 1;
+        baseStyle.borderColor = colors.border;
         break;
       case 'secondary':
-        baseStyle.backgroundColor = colors.secondary;
+        baseStyle.backgroundColor = colors.black;
+        baseStyle.borderWidth = 1;
+        baseStyle.borderColor = colors.border;
         break;
       case 'outline':
         baseStyle.backgroundColor = 'transparent';
@@ -125,9 +129,9 @@ export const Button: React.FC<ButtonProps> = ({
       disabled={disabled || loading}
       activeOpacity={0.7}
     >
-      {variant === 'primary' ? (
+      {variant === 'primary' || variant === 'secondary' ? (
         <LinearGradient
-          colors={['#F99E3C', '#E08E35']}
+          colors={['#232323', '#191919']}
           start={{ x: 0.5, y: 0 }}
           end={{ x: 0.5, y: 1 }}
           style={[StyleSheet.absoluteFillObject, { borderRadius: BORDER_RADIUS.md }]}

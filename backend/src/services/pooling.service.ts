@@ -118,6 +118,20 @@ class PoolingService {
         throw new ConflictError('Vehicle does not belong to driver');
       }
 
+      const maxAvailableSeats = Math.max(1, Number(vehicle.seats) || 1);
+      if (data.availableSeats > maxAvailableSeats) {
+        throw new ValidationError(
+          `This vehicle supports only ${maxAvailableSeats} seat(s).`,
+          [
+            {
+              field: 'availableSeats',
+              message: `Choose up to ${maxAvailableSeats} seat(s) for the selected vehicle.`,
+              code: 'AVAILABLE_SEATS_EXCEEDS_VEHICLE_CAPACITY',
+            },
+          ]
+        );
+      }
+
       // Generate offer ID
       const offerId = generateUserId('PO');
 

@@ -47,7 +47,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   return (
     <div className={`admin-app ${open ? 'sidebar-open' : 'sidebar-collapsed'}`}>
       <aside className="sidebar sidebar-theme">
-        <div className="navbar-brand px-4 py-3 border-bottom border-secondary-subtle">
+        <div className="navbar-brand px-4 py-3">
           <img className="sidebar-brand-logo" src="/forlok_admin_sidebar_logo.png" alt="Forlok logo" />
         </div>
         <nav className="navbar-nav w-100">

@@ -402,6 +402,7 @@ const s = StyleSheet.create({
     fontSize: normalize(18),
     fontWeight: '800',
     textAlign: 'center',
+    marginTop: -normalize(4),
   },
 
   scrollContent: {

@@ -286,7 +286,7 @@ const ReportBugScreen = () => {
             activeOpacity={0.85}
           >
             <LinearGradient
-              colors={['#F99E3C', '#E08E35']}
+              colors={['#232323', '#191919']}
               start={{ x: 0.5, y: 0 }}
               end={{ x: 0.5, y: 1 }}
               style={styles.submitGradient}

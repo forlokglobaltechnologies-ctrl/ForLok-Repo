@@ -40,7 +40,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 const SCREEN_W = Dimensions.get('window').width;
 const STEP_CARD_W = SCREEN_W;
 const QUICK_ACTION_ACCENT = '#8D1F1F';
-const POOLING_FLAG_LOGO = require('../../../assets/splash_arrow_white_transparent.png');
+const POOLING_FLAG_LOGO = require('../../../assets/signin_arrow_orange_transparent.png');
 
 const bookingSteps = [
   { id: '1', step: 'Step 1', title: 'Search your\nroute', cta: 'Get started →', icon: Search },
@@ -659,7 +659,7 @@ const MainDashboardScreen = () => {
                 </View>
               ) : (
                 <LinearGradient
-                  colors={['#F99E3C', '#E08E35']}
+                  colors={['#232323', '#191919']}
                   start={{ x: 0.5, y: 0 }}
                   end={{ x: 0.5, y: 1 }}
                   style={styles.activeRideFill}
@@ -1003,7 +1003,7 @@ const MainDashboardScreen = () => {
                     >
                       {isActive ? (
                         <LinearGradient
-                          colors={['#F99E3C', '#E08E35']}
+                          colors={['#232323', '#191919']}
                           start={{ x: 0.5, y: 0 }}
                           end={{ x: 0.5, y: 1 }}
                           style={[styles.sidebarMenuItem, styles.sidebarMenuItemActive]}

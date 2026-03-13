@@ -183,6 +183,14 @@ const CreatePoolingOfferScreen = () => {
         return vType === vehicleType.toLowerCase();
       })
     : allVehicles;
+  const selectedVehicleSeatCount =
+    vehicleType === 'Car'
+      ? Math.max(0, Number(selectedVehicle?.seats) || 0)
+      : 1;
+  const availableSeatOptions =
+    vehicleType === 'Car' && selectedVehicleSeatCount > 0
+      ? Array.from({ length: selectedVehicleSeatCount }, (_, index) => index + 1)
+      : [];
 
   // ── Functions ──
   const loadVehicles = async () => {
@@ -531,10 +539,38 @@ const CreatePoolingOfferScreen = () => {
   ]);
 
   useEffect(() => {
-    if (vehicleType !== 'Car' && availableSeats !== 1) {
-      setAvailableSeats(1);
+    if (!selectedVehicle) return;
+    const selectedVehicleStillVisible = filteredVehicles.some((vehicle) => {
+      const vehicleKey = vehicle.vehicleId || vehicle._id || vehicle.number;
+      const selectedVehicleKey = selectedVehicle.vehicleId || selectedVehicle._id || selectedVehicle.number;
+      return vehicleKey === selectedVehicleKey;
+    });
+
+    if (!selectedVehicleStillVisible) {
+      setSelectedVehicle(null);
+      setShowVehicleDropdown(false);
     }
-  }, [vehicleType, availableSeats]);
+  }, [filteredVehicles, selectedVehicle]);
+
+  useEffect(() => {
+    if (vehicleType !== 'Car') {
+      if (availableSeats !== 1) {
+        setAvailableSeats(1);
+      }
+      return;
+    }
+
+    if (selectedVehicleSeatCount <= 0) {
+      if (availableSeats !== 1) {
+        setAvailableSeats(1);
+      }
+      return;
+    }
+
+    if (availableSeats > selectedVehicleSeatCount) {
+      setAvailableSeats(selectedVehicleSeatCount);
+    }
+  }, [vehicleType, availableSeats, selectedVehicleSeatCount]);
 
   const formatDate = (date: Date) => {
     const day = date.getDate();
@@ -824,7 +860,7 @@ const CreatePoolingOfferScreen = () => {
                 </View>
 
                 <TouchableOpacity style={styles.swapRouteBtn} onPress={handleSwapLocations}>
-                  <ArrowUpDown size={16} color="#334155" />
+                  <ArrowUpDown size={16} color="#FE8800" />
                 </TouchableOpacity>
               </View>
 
@@ -833,7 +869,7 @@ const CreatePoolingOfferScreen = () => {
                   style={[styles.modeIconBtn, vehicleType === 'Car' && styles.modeIconBtnSelected]}
                   onPress={() => setVehicleType('Car')}
                 >
-                  <Car size={16} color={vehicleType === 'Car' ? '#0F766E' : '#334155'} />
+                  <Car size={16} color="#FE8800" />
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.modeIconBtn, vehicleType === 'Bike' && styles.modeIconBtnSelected]}
@@ -842,7 +878,7 @@ const CreatePoolingOfferScreen = () => {
                     setAvailableSeats(1);
                   }}
                 >
-                  <Bike size={16} color={vehicleType === 'Bike' ? '#0F766E' : '#334155'} />
+                  <Bike size={16} color="#FE8800" />
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.modeIconBtn, vehicleType === 'Scooty' && styles.modeIconBtnSelected]}
@@ -851,7 +887,7 @@ const CreatePoolingOfferScreen = () => {
                     setAvailableSeats(1);
                   }}
                 >
-                  <MaterialCommunityIcons name="moped" size={17} color={vehicleType === 'Scooty' ? '#0F766E' : '#334155'} />
+                  <MaterialCommunityIcons name="moped" size={17} color="#FE8800" />
                 </TouchableOpacity>
               </View>
 
@@ -963,7 +999,7 @@ const CreatePoolingOfferScreen = () => {
                 <TouchableOpacity style={styles.scheduleCol} onPress={() => setShowDatePicker(true)}>
                   <Text style={styles.scheduleLabel}>{cleanFieldLabel(t('createPoolingOffer.date'))}</Text>
                   <View style={styles.scheduleSmallBox}>
-                    <Calendar size={16} color={COLORS.textSecondary} />
+                    <Calendar size={16} color="#FE8800" />
                     <Text style={styles.scheduleSmallText} numberOfLines={1}>{formatDate(date)}</Text>
                   </View>
                 </TouchableOpacity>
@@ -971,7 +1007,7 @@ const CreatePoolingOfferScreen = () => {
                 <TouchableOpacity style={styles.scheduleCol} onPress={() => setShowTimePicker(true)}>
                   <Text style={styles.scheduleLabel}>{cleanFieldLabel(t('createPoolingOffer.time'))}</Text>
                   <View style={styles.scheduleSmallBox}>
-                    <Clock size={16} color={COLORS.textSecondary} />
+                    <Clock size={16} color="#FE8800" />
                     <Text style={styles.scheduleSmallText} numberOfLines={1}>{formatTime(time)}</Text>
                   </View>
                 </TouchableOpacity>
@@ -1078,37 +1114,46 @@ const CreatePoolingOfferScreen = () => {
               <View style={styles.sectionCard}>
                 <View style={styles.seatsContainer}>
                   <Text style={styles.label}>{cleanFieldLabel(t('createPoolingOffer.availableSeats'))}</Text>
-                  <View style={styles.seatsRangeContainer}>
-                    <View style={styles.seatsRangeRow}>
-                      {[1, 2, 3, 4, 5, 6].map((num) => (
-                        <TouchableOpacity
-                          key={num}
-                          style={[
-                            styles.seatRangeButton,
-                            availableSeats === num && styles.seatRangeSelected,
-                          ]}
-                          onPress={() => {
-                            setAvailableSeats(num);
-                          }}
-                        >
-                          {availableSeats === num ? (
-                            <LinearGradient
-                              colors={['#F99E3C', '#E08E35']}
-                              start={{ x: 0.5, y: 0 }}
-                              end={{ x: 0.5, y: 1 }}
-                              style={styles.seatRangeGradient}
-                            >
-                              <Text style={[styles.seatRangeText, styles.seatRangeTextSelected]}>{num}</Text>
-                            </LinearGradient>
-                          ) : (
-                            <Text style={styles.seatRangeText}>
-                              {num}
-                            </Text>
-                          )}
-                        </TouchableOpacity>
-                      ))}
+                  {selectedVehicle ? (
+                    <View style={styles.seatsRangeContainer}>
+                      <View style={styles.seatsRangeRow}>
+                        {availableSeatOptions.map((num) => (
+                          <TouchableOpacity
+                            key={num}
+                            style={[
+                              styles.seatRangeButton,
+                              availableSeats === num && styles.seatRangeSelected,
+                            ]}
+                            onPress={() => {
+                              setAvailableSeats(num);
+                            }}
+                          >
+                            {availableSeats === num ? (
+                              <LinearGradient
+                                colors={['#F99E3C', '#E08E35']}
+                                start={{ x: 0.5, y: 0 }}
+                                end={{ x: 0.5, y: 1 }}
+                                style={styles.seatRangeGradient}
+                              >
+                                <Text style={[styles.seatRangeText, styles.seatRangeTextSelected]}>{num}</Text>
+                              </LinearGradient>
+                            ) : (
+                              <Text style={styles.seatRangeText}>
+                                {num}
+                              </Text>
+                            )}
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                      <Text style={styles.seatSelectorHint}>
+                        {selectedVehicleSeatCount} seat{selectedVehicleSeatCount === 1 ? '' : 's'} configured for this vehicle
+                      </Text>
                     </View>
-                  </View>
+                  ) : (
+                    <Text style={styles.seatSelectorHint}>
+                      Select a car first to load its configured seat count.
+                    </Text>
+                  )}
                 </View>
               </View>
             )}
@@ -1138,7 +1183,7 @@ const CreatePoolingOfferScreen = () => {
               style={[styles.createOfferBtn, creating && styles.createOfferBtnDisabled]}
             >
               <LinearGradient
-                colors={['#F99E3C', '#E08E35']}
+                colors={['#232323', '#191919']}
                 start={{ x: 0.5, y: 0 }}
                 end={{ x: 0.5, y: 1 }}
                 style={styles.createOfferGradient}
@@ -1197,7 +1242,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F7FB',
   },
   scrollContent: {
-    paddingBottom: normalize(120),
+    paddingBottom: normalize(56),
     backgroundColor: '#F5F7FB',
   },
   heroBackButton: {
@@ -1215,7 +1260,7 @@ const styles = StyleSheet.create({
   heroRightSpacer: { width: normalize(36), height: normalize(36) },
   formContainer: {
     padding: SPACING.md,
-    paddingTop: normalize(8),
+    paddingTop: normalize(14),
     gap: normalize(12),
     backgroundColor: '#F5F7FB',
   },
@@ -1228,7 +1273,7 @@ const styles = StyleSheet.create({
     ...SHADOWS.sm,
   },
   routeSectionPlain: {
-    paddingTop: normalize(2),
+    paddingTop: normalize(8),
   },
   sectionHeader: {
     marginBottom: normalize(6),
@@ -1260,6 +1305,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: normalize(8),
     marginBottom: normalize(10),
+    marginTop: normalize(16),
   },
   routeMarkersCol: {
     width: normalize(18),
@@ -1355,8 +1401,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   modeIconBtnSelected: {
-    backgroundColor: '#BFF4F0',
-    borderColor: '#8BE7DF',
+    backgroundColor: '#FE880018',
+    borderColor: '#FE8800',
   },
   topSectionDivider: {
     marginTop: normalize(6),
@@ -1561,6 +1607,12 @@ const styles = StyleSheet.create({
   seatRangeTextDisabled: {
     color: COLORS.textSecondary,
   },
+  seatSelectorHint: {
+    marginTop: normalize(8),
+    fontFamily: FONTS.regular,
+    fontSize: normalize(11.5),
+    color: COLORS.textSecondary,
+  },
   hint: {
     fontFamily: FONTS.regular,
     fontSize: FONTS.sizes.xs,
@@ -1588,7 +1640,7 @@ const styles = StyleSheet.create({
   },
   createOfferBtn: {
     marginTop: normalize(4),
-    marginBottom: SPACING.xl,
+    marginBottom: normalize(12),
     borderRadius: normalize(14),
     overflow: 'hidden',
   },
