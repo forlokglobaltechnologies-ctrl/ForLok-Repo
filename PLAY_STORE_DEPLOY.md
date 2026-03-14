@@ -9,7 +9,7 @@ This document describes the automated Play Store deployment for the **mobile app
 | Branch       | Trigger              | Play Store track | Use case                    |
 |-------------|----------------------|------------------|-----------------------------|
 | **`main`**  | Push to `main`       | **production**   | Live production releases    |
-| **`playstore`** | Push to `playstore` | **internal**     | Closed testing before prod  |
+| **`playstore`** | Push to `playstore` | **alpha** (Closed testing) | Closed testing before prod  |
 
 - **Code location:** All Play Store–related code lives under **`mobile-app/`**. The workflow runs only when files under `mobile-app/**` or `.github/workflows/play-store.yml` change.
 - **Recommended:** Make **`playstore`** a protected branch (e.g. no direct push; only merge from `main` or a release branch) so that only reviewed code is deployed to the internal track. Deploy to production by merging to **`main`**.
@@ -191,4 +191,73 @@ So the “current code” that gets deployed to the Play Store is whatever is on
 - [ ] Service account has the right permissions in Play Console.
 - [ ] Optional: Branch protection for **`playstore`** and **`main`** so only intended code is deployed.
 
-After that, pushing to **`playstore`** deploys to the internal track, and pushing to **`main`** deploys to production (after the workflow runs successfully).
+After that, pushing to **`playstore`** deploys to the closed testing track, and pushing to **`main`** deploys to production (after the workflow runs successfully).
+
+---
+
+## 7. Troubleshooting: "Package not found: com.forlok.mobile"
+
+This error means the Google Play API does not see your app. Fix it as follows:
+
+### A. App must exist in Play Console
+
+1. In **[Google Play Console](https://play.google.com/console)**, create an app if you haven’t already.
+2. Set the **package name** to exactly **`com.forlok.mobile`** (must match `applicationId` in your app).
+3. Complete the required **App content** and **Policy** steps so the app is no longer a bare “draft” (at least enough to create a release).
+
+### B. First release: upload one AAB manually (required if you’ve never added an AAB)
+
+Google often requires the **first** release on a track to be done **manually** in Play Console. Once that’s done, the API will accept uploads from the workflow.
+
+**Option 1 – Build the AAB on your machine**
+
+1. Open a terminal in the repo and go to the mobile app:
+   ```bash
+   cd mobile-app
+   npm ci
+   cd android
+   ```
+2. Sign the release build (use your release keystore; if you use the same as CI, you’ll need the `.jks` file in `mobile-app/android/app/` and the passwords):
+   ```bash
+   # From mobile-app folder (Windows PowerShell):
+   cd android
+   .\gradlew bundleRelease -PRELEASE_STORE_FILE=app/release-keystore.jks -PRELEASE_STORE_PASSWORD=YOUR_STORE_PASSWORD -PRELEASE_KEY_ALIAS=forlok-release -PRELEASE_KEY_PASSWORD=YOUR_KEY_PASSWORD
+   ```
+   On macOS/Linux (from `mobile-app`):
+   ```bash
+   cd android
+   chmod +x gradlew
+   ./gradlew bundleRelease -PRELEASE_STORE_FILE=app/release-keystore.jks -PRELEASE_STORE_PASSWORD=YOUR_STORE_PASSWORD -PRELEASE_KEY_ALIAS=forlok-release -PRELEASE_KEY_PASSWORD=YOUR_KEY_PASSWORD
+   ```
+   Replace `YOUR_STORE_PASSWORD`, `forlok-release`, and `YOUR_KEY_PASSWORD` with your real values. The keystore file must be at `mobile-app/android/app/release-keystore.jks`.
+3. The AAB is created at:
+   `mobile-app/android/app/build/outputs/bundle/release/app-release.aab`
+
+**Option 2 – Download the AAB from a GitHub Actions run**
+
+1. Push to **`playstore`** (or **`main`**) so the workflow runs. It will build the AAB and upload it as an artifact even if the “Upload AAB to Google Play” step fails.
+2. In GitHub go to **Actions** → open that **Play Store Deploy** run.
+3. At the bottom of the run **Summary**, in **Artifacts**, download **app-release-aab**. Unzip it; inside is **app-release.aab**.
+4. Use that file in Play Console as in “Then in Play Console” below.
+
+**Then in Play Console**
+
+1. Go to **Testing** → **Closed testing**.
+2. Click **Create new release** (or **Create closed testing release**).
+3. Under **App bundles**, click **Upload** and select the **app-release.aab** file.
+4. Add a **Release name** (e.g. `1.0.0 (1)`) and click **Save** → **Review release** → **Start rollout to Closed testing** (or **Save as draft** then rollout when ready).
+5. After this first manual release, the package is known to the API and the GitHub Action can upload to Closed testing on the next run.
+
+### C. Service account must have access to this app
+
+1. **Settings** → **Users and permissions** (or **API access**).
+2. Find your **service account** and open it.
+3. Under **App permissions**, ensure **`com.forlok.mobile`** (or “All apps”) is selected and has at least **“Release apps to testing tracks”** or **“Release to production…”**.
+4. Save. Permissions can take a few minutes (or up to 24–48 hours in rare cases) to apply.
+
+### D. Track name
+
+- **`playstore`** branch → workflow uses track **`alpha`** (= Closed testing in Play Console).
+- **`main`** branch → track **`production`**.
+
+If you use a different track in the workflow, ensure that track exists and the app has at least one release on it (or do the first release manually as in B).
