@@ -340,3 +340,14 @@ ForLok is built around role-based mobility workflows with strong lifecycle handl
 - Maintain platform quality through admin moderation and analytics
 
 This document represents current app behavior based on the present mobile and backend codebase.
+
+---
+
+## Play Store deployment (mobile app)
+
+Automated CI/CD for the Android app is set up so that:
+
+- **Push to `main`** → build and deploy to the Play Store **production** track.
+- **Push to `playstore`** branch → build and deploy to the Play Store **internal** track (closed testing).
+
+Setup steps, required GitHub secrets, and **production keystore / SHA keys** for Play Console are documented in **[PLAY_STORE_DEPLOY.md](./PLAY_STORE_DEPLOY.md)**.
