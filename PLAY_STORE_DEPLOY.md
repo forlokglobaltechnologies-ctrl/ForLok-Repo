@@ -18,7 +18,9 @@ This document describes the automated Play Store deployment for the **mobile app
 
 ## 2. Required GitHub secrets
 
-Configure these in **Settings → Secrets and variables → Actions** for the ForLok repo:
+Configure these in **Settings → Secrets and variables → Actions** for the ForLok repo.
+
+**Important:** Add them as **Secrets** (under the **Secrets** tab), not as **Repository variables**. The workflow reads `secrets.*`; variables are not used. Secrets are also encrypted and safer for keystores and passwords.
 
 | Secret | Description |
 |--------|-------------|
