@@ -8,7 +8,7 @@
 const DEV_API_URL = 'http://10.254.10.16:3000';
 const PROD_API_URL = 'https://forlok-repo-1.onrender.com';
 
-const API_BASE_URL = DEV_API_URL;
+const API_BASE_URL = PROD_API_URL;
 
 export const API_CONFIG = {
   BASE_URL: API_BASE_URL,
