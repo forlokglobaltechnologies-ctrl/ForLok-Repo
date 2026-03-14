@@ -145,7 +145,7 @@ const OnboardingScreen = () => {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#191919" />
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       {/* Top bar: brand + Next */}
       <View style={styles.topBar}>
@@ -220,7 +220,7 @@ const OnboardingScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#191919',
+    backgroundColor: '#FFFFFF',
   },
   topBar: {
     flexDirection: 'row',
@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
   slideTitle: {
     fontFamily: FONTS.bold,
     fontSize: normalize(30),
-    color: '#FFFFFF',
+    color: '#191919',
     lineHeight: normalize(40),
     marginTop: hp(4),
   },

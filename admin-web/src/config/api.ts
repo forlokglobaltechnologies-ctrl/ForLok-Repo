@@ -1,4 +1,4 @@
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://10.254.10.16:3000';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://forlok-repo-1.onrender.com';
 
 export const API_ENDPOINTS = {
   ADMIN_LOGIN: '/api/admin/auth/login',
