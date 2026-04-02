@@ -75,6 +75,7 @@ jobs:
           RELEASE_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           cd android
+          chmod +x gradlew
           ./gradlew bundleRelease \
             -PRELEASE_STORE_FILE=release-keystore.jks \
             -PRELEASE_STORE_PASSWORD="${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
