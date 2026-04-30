@@ -3,7 +3,7 @@ export const CONTENT_DEFAULTS = {
     logoUrl: '',
     brandName: 'eZway',
     tagline: 'Your everyday ride companion',
-    version: 'v1.0.0',
+    version: 'v1.1.0',
     footerLine1: '© 2026 Forlok Technologies Pvt. Ltd. All rights reserved.',
     footerLine2: 'Vizianagaram District, Andhra Pradesh, India.',
     whoWeAre:

@@ -11,6 +11,8 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   API_BASE_URL: z.string().url().optional().default('http://172.22.211.16:3000'),
   FRONTEND_URL: z.string().url().optional().default('http://172.22.211.16:19006'),
+  API_BASE_URL: z.string().url().optional().default('https://forlok-repo-1.onrender.com'),
+  FRONTEND_URL: z.string().url().optional().default('http://10.254.10.16:19006'),
 
   // Database
   MONGODB_URI: z.string().url().optional(),

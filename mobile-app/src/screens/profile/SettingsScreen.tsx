@@ -238,7 +238,7 @@ const SettingsScreen = () => {
           { id: 'terms', icon: FileText, label: t('settings.termsConditions'), type: 'link', onPress: () => navigation.navigate('TermsConditions') },
           { id: 'privacy', icon: FileText, label: t('settings.privacyPolicy'), type: 'link', onPress: () => navigation.navigate('PrivacyPolicy') },
           { id: 'ip', icon: Shield, label: 'Patents & Copyrights', type: 'link', onPress: () => navigation.navigate('IntellectualProperty') },
-          { id: 'app-version', icon: Info, label: t('settings.appVersion'), type: 'link', value: '1.0.0', onPress: () => Alert.alert('App Version', 'eZway v1.0.0') },
+          { id: 'app-version', icon: Info, label: t('settings.appVersion'), type: 'link', value: '1.1.0', onPress: () => Alert.alert('App Version', 'ForLok v1.1.0') },
         ],
       },
     ],
