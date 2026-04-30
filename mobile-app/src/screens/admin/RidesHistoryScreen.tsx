@@ -19,7 +19,7 @@ import {
   Clock,
   TrendingUp,
   DollarSign,
-  Car,
+  Bike,
   KeyRound,
   MapPin,
   ChevronRight,
@@ -46,7 +46,7 @@ const RidesHistoryScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(1);
   const { items: serviceCategoryItems } = useMasterData('service_category', [
-    { type: 'service_category', key: 'pooling', label: 'Pooling' },
+    { type: 'service_category', key: 'pooling', label: 'Ride-Sharing' },
     { type: 'service_category', key: 'rental', label: 'Rental' },
   ]);
 
@@ -144,7 +144,7 @@ const RidesHistoryScreen = () => {
 
   const getServiceConfig = (service: string) => {
     const s = (service || '').toLowerCase();
-    if (s.includes('pool') || s === 'pooling') return { color: '#00B894', bg: '#00B894' + '15', icon: Car };
+    if (s.includes('pool') || s === 'pooling') return { color: '#00B894', bg: '#00B894' + '15', icon: Bike };
     return { color: '#F39C12', bg: '#F39C12' + '15', icon: KeyRound };
   };
 
@@ -193,9 +193,9 @@ const RidesHistoryScreen = () => {
           <Text style={styles.statsLabel}>Revenue</Text>
         </View>
         <View style={styles.statsStripItem}>
-          <View style={[styles.statsIcon, { backgroundColor: '#7B61FF' + '15' }]}><Car size={16} color="#7B61FF" /></View>
+          <View style={[styles.statsIcon, { backgroundColor: '#7B61FF' + '15' }]}><Bike size={16} color="#7B61FF" /></View>
           <Text style={[styles.statsValue, { color: '#7B61FF' }]}>{formatNumber(summary.pooling.count)}</Text>
-          <Text style={styles.statsLabel}>Pooling</Text>
+          <Text style={styles.statsLabel}>Ride-Sharing</Text>
         </View>
         <View style={styles.statsStripItem}>
           <View style={[styles.statsIcon, { backgroundColor: '#F39C12' + '15' }]}><KeyRound size={16} color="#F39C12" /></View>
@@ -227,7 +227,7 @@ const RidesHistoryScreen = () => {
         <View style={styles.summaryRow}>
           <View style={styles.summaryCard}>
             <View style={styles.summaryCardHeader}>
-              <Text style={styles.summaryCardLabel}>Pooling Revenue</Text>
+              <Text style={styles.summaryCardLabel}>Ride-Sharing Revenue</Text>
             </View>
             <Text style={[styles.summaryCardValue, { color: '#00B894' }]}>{formatCurrency(summary.pooling.revenue)}</Text>
             <Text style={styles.summaryCardSub}>{summary.pooling.count.toLocaleString()} rides</Text>

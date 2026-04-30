@@ -33,7 +33,7 @@ import {
   TrendingDown,
   Users,
   DollarSign,
-  Car,
+  Bike,
   KeyRound,
   Clock,
   Star,
@@ -45,7 +45,6 @@ import {
   Zap,
   Target,
   MapPin,
-  Bike,
   RefreshCw,
 } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
@@ -193,9 +192,9 @@ const AnalyticsScreen = () => {
 
   // Pie chart data for service distribution
   const pieData = [
-    { label: 'Car Pooling', value: carPoolPct || 0, color: '#F99E3C' },
-    { label: 'Bike Pooling', value: bikePoolPct || 0, color: '#10B981' },
-    { label: 'Car Rentals', value: safeNum(poolingStats?.carRentals), color: '#F59E0B' },
+    { label: 'Ride-Sharing', value: carPoolPct || 0, color: '#F99E3C' },
+    { label: 'Bike Ride-Sharing', value: bikePoolPct || 0, color: '#10B981' },
+    { label: 'Rentals', value: safeNum(poolingStats?.carRentals), color: '#F59E0B' },
     { label: 'Bike Rentals', value: safeNum(poolingStats?.bikeRentals), color: '#EF4444' },
   ];
   const pieTotal = pieData.reduce((s, d) => s + d.value, 0) || 1;
@@ -483,7 +482,7 @@ const AnalyticsScreen = () => {
           {[
             { labelKey: 'admin.analytics.newUsers', value: formatNumber(newUsers), icon: Users, color: '#F99E3C' },
             { labelKey: 'admin.analytics.revenue', value: formatCurrency(todayRevenue), icon: DollarSign, color: '#00B894' },
-            { labelKey: 'admin.analytics.bookings', value: formatNumber(totalBookings), icon: Car, color: '#F39C12' },
+            { labelKey: 'admin.analytics.bookings', value: formatNumber(totalBookings), icon: Bike, color: '#F39C12' },
             { labelKey: 'admin.analytics.netProfit', value: formatCurrency(netProfit), icon: TrendingUp, color: '#7B61FF' },
           ].map((s, i) => (
             <View key={i} style={styles.statsItem}>
@@ -535,7 +534,7 @@ const AnalyticsScreen = () => {
               </View>
               <View style={styles.realtimeGrid}>
                 {[
-                  { labelKey: 'admin.analytics.activeTrips', value: activeTrips, icon: Car, color: '#F99E3C' },
+                  { labelKey: 'admin.analytics.activeTrips', value: activeTrips, icon: Bike, color: '#F99E3C' },
                   { labelKey: 'admin.analytics.onlineDrivers', value: onlineDrivers, icon: Users, color: '#10B981' },
                   { labelKey: 'admin.analytics.pendingBookings', value: pendingBookings, icon: Clock, color: '#F59E0B' },
                   { labelKey: 'admin.analytics.todayBookings', value: totalBookings, icon: Target, color: '#8B5CF6' },
@@ -688,13 +687,13 @@ const AnalyticsScreen = () => {
             <View style={styles.card}>
               <View style={styles.cardHeader}>
                 <View style={styles.cardTitleRow}>
-                  <Car size={18} color="#F59E0B" />
+                  <Bike size={18} color="#F59E0B" />
                   <Text style={styles.cardTitle}>{t('admin.analytics.poolingBreakdown')}</Text>
                 </View>
               </View>
               <View style={styles.poolingBreakdownList}>
                 {[
-                  { labelKey: 'admin.analytics.carPooling', pct: carPoolPct, icon: Car, color: '#F99E3C' },
+                  { labelKey: 'admin.analytics.carPooling', pct: carPoolPct, icon: Bike, color: '#F99E3C' },
                   { labelKey: 'admin.analytics.bikePooling', pct: bikePoolPct, icon: Bike, color: '#10B981' },
                 ].map((p, i) => (
                   <View key={i} style={styles.poolingRow}>

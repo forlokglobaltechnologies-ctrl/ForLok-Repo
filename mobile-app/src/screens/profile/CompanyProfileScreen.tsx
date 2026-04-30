@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Image, ActivityIndicator, Alert, Linking } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { ArrowLeft, Settings, CheckCircle, Car, Bike, Edit, Mail, Phone, MapPin, Building, FileText, Wallet, BarChart, DollarSign, LogOut, ChevronRight, Shield, Hash } from 'lucide-react-native';
+import { ArrowLeft, Settings, CheckCircle, Bike, Edit, Mail, Phone, MapPin, Building, FileText, Wallet, BarChart, DollarSign, LogOut, ChevronRight, Shield, Hash, LayoutList } from 'lucide-react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { normalize, wp, hp } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, SHADOWS, BORDER_RADIUS } from '@constants/theme';
 import { Card } from '@components/common/Card';
@@ -17,8 +18,8 @@ const CompanyProfileScreen = () => {
   const [documentsLoading, setDocumentsLoading] = useState(false);
   const [vehicleStats, setVehicleStats] = useState({
     total: 0,
-    cars: 0,
     bikes: 0,
+    scooties: 0,
   });
 
   useEffect(() => {
@@ -58,7 +59,7 @@ const CompanyProfileScreen = () => {
           documents: response.data.documents,
         });
         // Initialize vehicle stats with default values
-        setVehicleStats({ total: 0, cars: 0, bikes: 0 });
+        setVehicleStats({ total: 0, bikes: 0, scooties: 0 });
       } else {
         Alert.alert('Error', response.error || 'Failed to load company profile');
       }
@@ -83,23 +84,26 @@ const CompanyProfileScreen = () => {
       
       if (response.success && response.data) {
         const vehicles = Array.isArray(response.data) ? response.data : [];
-        const cars = vehicles.filter((v: any) => v.type === 'car').length;
-        const bikes = vehicles.filter((v: any) => v.type === 'bike').length;
-        
-        console.log('✅ Vehicle stats calculated:', { total: vehicles.length, cars, bikes });
+        const bikes = vehicles.filter((v: any) => (v.type || '').toLowerCase() === 'bike').length;
+        const scooties = vehicles.filter((v: any) => {
+          const t = (v.type || '').toLowerCase();
+          return t === 'scooty' || t === 'scooter';
+        }).length;
+
+        console.log('✅ Vehicle stats calculated:', { total: vehicles.length, bikes, scooties });
         setVehicleStats({
           total: vehicles.length,
-          cars,
           bikes,
+          scooties,
         });
       } else {
         console.warn('⚠️ No vehicle data in response');
-        setVehicleStats({ total: 0, cars: 0, bikes: 0 });
+        setVehicleStats({ total: 0, bikes: 0, scooties: 0 });
       }
     } catch (error: any) {
       console.error('❌ Error loading vehicle stats:', error);
       // Set default stats on error
-      setVehicleStats({ total: 0, cars: 0, bikes: 0 });
+      setVehicleStats({ total: 0, bikes: 0, scooties: 0 });
     }
   };
 
@@ -291,8 +295,22 @@ const CompanyProfileScreen = () => {
             <View style={styles.infoIconContainer}>
               <MapPin size={18} color={COLORS.primary} />
             </View>
-            <Text style={styles.infoLabel}>{t('companyProfile.address')}</Text>
-            <Text style={styles.infoValue}>{company.address || 'N/A'}</Text>
+            <View style={styles.addressRowText}>
+              <Text style={styles.addressBlockLabel}>{t('companyProfile.address')}</Text>
+              <Text style={styles.addressBlockValue}>{company.address || 'N/A'}</Text>
+              {company.city || company.state || company.pincode ? (
+                <Text style={styles.addressSubline}>
+                  {[company.city, company.state, company.pincode].filter(Boolean).join(', ')}
+                </Text>
+              ) : null}
+            </View>
+            <TouchableOpacity
+              style={styles.editAddressBtn}
+              onPress={() => navigation.navigate('EditCompanyAddress' as never)}
+              activeOpacity={0.7}
+            >
+              <Edit size={18} color={COLORS.primary} />
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -373,23 +391,23 @@ const CompanyProfileScreen = () => {
         {/* Vehicle Statistics Card */}
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeader}>
-            <Car size={20} color={COLORS.primary} />
+            <Bike size={20} color={COLORS.primary} />
             <Text style={styles.sectionTitle}>{t('companyProfile.vehicleInventory')}</Text>
           </View>
           <View style={styles.divider} />
           <View style={styles.vehicleStatsRow}>
-            <View style={styles.vehicleStatItem}>
-              <Car size={24} color={COLORS.primary} />
-              <Text style={styles.vehicleStatValue}>{vehicleStats.cars}</Text>
-              <Text style={styles.vehicleStatLabel}>{t('companyProfile.cars')}</Text>
-            </View>
             <View style={styles.vehicleStatItem}>
               <Bike size={24} color={COLORS.primary} />
               <Text style={styles.vehicleStatValue}>{vehicleStats.bikes}</Text>
               <Text style={styles.vehicleStatLabel}>{t('companyProfile.bikes')}</Text>
             </View>
             <View style={styles.vehicleStatItem}>
-              <Car size={24} color={COLORS.primary} />
+              <MaterialCommunityIcons name="moped" size={24} color={COLORS.primary} />
+              <Text style={styles.vehicleStatValue}>{vehicleStats.scooties}</Text>
+              <Text style={styles.vehicleStatLabel}>{t('companyProfile.scooties')}</Text>
+            </View>
+            <View style={styles.vehicleStatItem}>
+              <LayoutList size={24} color={COLORS.primary} />
               <Text style={styles.vehicleStatValue}>{vehicleStats.total}</Text>
               <Text style={styles.vehicleStatLabel}>{t('companyProfile.total')}</Text>
             </View>
@@ -429,7 +447,7 @@ const CompanyProfileScreen = () => {
           >
             <View style={styles.menuItemLeft}>
               <View style={styles.menuIconContainer}>
-                <Car size={20} color={COLORS.primary} />
+                <Bike size={20} color={COLORS.primary} />
               </View>
               <Text style={styles.menuText}>{t('companyProfile.viewAllVehicles')}</Text>
             </View>
@@ -651,6 +669,31 @@ const styles = StyleSheet.create({
     fontSize: FONTS.sizes.sm,
     color: COLORS.text,
     textAlign: 'right',
+  },
+  addressRowText: {
+    flex: 1,
+    minWidth: 0,
+  },
+  addressBlockLabel: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.sm,
+    color: COLORS.textSecondary,
+    marginBottom: normalize(4),
+  },
+  addressBlockValue: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.sm,
+    color: COLORS.text,
+  },
+  addressSubline: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.xs,
+    color: COLORS.textSecondary,
+    marginTop: normalize(4),
+  },
+  editAddressBtn: {
+    padding: normalize(8),
+    alignSelf: 'flex-start',
   },
   documentItem: {
     flexDirection: 'row',

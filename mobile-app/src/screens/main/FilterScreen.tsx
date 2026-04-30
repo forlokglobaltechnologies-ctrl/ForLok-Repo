@@ -21,12 +21,12 @@ const FilterScreen = () => {
   const navigation = useNavigation();
   const { t } = useLanguage();
   const { items: vehicleTypeMasterItems } = useMasterData('vehicle_type', [
-    { type: 'vehicle_type', key: 'car', label: 'Car' },
     { type: 'vehicle_type', key: 'bike', label: 'Bike' },
+    { type: 'vehicle_type', key: 'scooty', label: 'Scooty' },
   ]);
   const vehicleTypeOptions = vehicleTypeMasterItems
     .map((item: any) => ({ code: String(item.value || item.key || '').toLowerCase(), label: String(item.label || item.value || item.key || '') }))
-    .filter((item: any) => item.code && item.label);
+    .filter((item: any) => item.code && item.label && item.code !== 'car');
   const { items: ratingBucketItems } = useMasterData('rating_bucket', [
     { type: 'rating_bucket', key: '4_5', label: '4.5+' },
     { type: 'rating_bucket', key: '4_0', label: '4.0+' },
@@ -64,7 +64,7 @@ const FilterScreen = () => {
     .map((item: any) => ({ key: String(item.value || item.key || ''), label: String(item.label || item.value || item.key || '') }))
     .filter((item: any) => item.key && item.label);
 
-  const makeVehicleTypeState = (defaultCode = 'car') => {
+  const makeVehicleTypeState = (defaultCode = 'bike') => {
     const state: Record<string, boolean> = {};
     vehicleTypeOptions.forEach((opt: any) => {
       state[opt.code] = opt.code === defaultCode;
@@ -97,7 +97,7 @@ const FilterScreen = () => {
   const handleReset = () => {
     setMinPrice(500);
     setMaxPrice(2000);
-    setVehicleType(makeVehicleTypeState(vehicleTypeOptions[0]?.code || 'car'));
+    setVehicleType(makeVehicleTypeState(vehicleTypeOptions[0]?.code || 'bike'));
     setRating({ '4.5': true, '4.0': false, '3.5': false });
     setDepartureTime({ morning: false, afternoon: true, evening: false });
     setFeatures({ ac: true, music: false, luggage: true });

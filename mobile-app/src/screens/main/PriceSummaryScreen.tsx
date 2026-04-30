@@ -8,6 +8,7 @@ import { Button } from '@components/common/Button';
 import { Card } from '@components/common/Card';
 import { useLanguage } from '@context/LanguageContext';
 import { bookingApi, coinApi } from '@utils/apiClient';
+import { displayPlatformFeeRupees } from '@utils/platformFee';
 
 interface RouteParams {
   offerId: string;
@@ -231,7 +232,7 @@ const PriceSummaryScreen = () => {
         passengerRoute: params.passengerRoute,
         calculatedPrice: {
           finalPrice: params.priceBreakdown.finalPrice,
-          platformFee: params.priceBreakdown.platformFee,
+          platformFee: displayPlatformFeeRupees(params.priceBreakdown.platformFee),
           totalAmount: params.priceBreakdown.totalAmount,
         },
       });
@@ -450,7 +451,7 @@ const PriceSummaryScreen = () => {
 
             <View style={styles.breakdownRow}>
               <Text style={styles.breakdownLabel}>Platform Fee (Per Seat)</Text>
-              <Text style={styles.breakdownValuePill}>{formatCurrency(breakdown.platformFee)}</Text>
+              <Text style={styles.breakdownValuePill}>{formatCurrency(displayPlatformFeeRupees(breakdown.platformFee))}</Text>
             </View>
 
             <View style={styles.breakdownRowStrong}>

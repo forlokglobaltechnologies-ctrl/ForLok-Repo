@@ -131,7 +131,7 @@ async function geocodeWithOpenStreetMap(address: string): Promise<GeocodeResult 
 
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Forlok-App/1.0', // Required by Nominatim
+        'User-Agent': 'eZway-App/1.0', // Required by Nominatim
       },
     });
 
@@ -233,7 +233,7 @@ async function reverseGeocodeWithOpenStreetMap(lat: number, lng: number): Promis
 
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Forlok-App/1.0',
+        'User-Agent': 'eZway-App/1.0',
       },
     });
 
@@ -413,7 +413,7 @@ export async function getRoutePolyline(
 
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Forlok-App/1.0',
+        'User-Agent': 'eZway-App/1.0',
       },
     });
 
@@ -485,7 +485,7 @@ export async function getRouteAlternatives(
       try {
         const response = await fetch(url, {
           headers: {
-            'User-Agent': 'Forlok-App/1.0',
+            'User-Agent': 'eZway-App/1.0',
           },
         });
         if (!response.ok) {

@@ -259,7 +259,7 @@ const OffersPage = ({ rental = false }: { rental?: boolean }) => {
   return (
     <>
       <div className="requests-header mb-3">
-        <h5 className="mb-1">{rental ? 'Rental Management' : 'Pooling Management'}</h5>
+        <h5 className="mb-1">{rental ? 'Rental Management' : 'Ride-Sharing Management'}</h5>
       </div>
       <div className="row g-3 mb-3">
         <div className="col-md-3"><div className="details-kpi"><div className="details-kpi-label">Total</div><div className="details-kpi-value">{stats.total}</div></div></div>
@@ -369,11 +369,11 @@ export function BookingsPage() {
       <div className="row g-3 mb-3">
         <div className="col-md-3"><div className="details-kpi"><div className="details-kpi-label">Total Bookings</div><div className="details-kpi-value">{summary.total}</div></div></div>
         <div className="col-md-3"><div className="details-kpi"><div className="details-kpi-label">Total Revenue</div><div className="details-kpi-value">₹{summary.totalRevenue}</div></div></div>
-        <div className="col-md-3"><div className="details-kpi"><div className="details-kpi-label">Pooling Bookings</div><div className="details-kpi-value">{summary.poolingCount}</div></div></div>
+        <div className="col-md-3"><div className="details-kpi"><div className="details-kpi-label">Ride-Sharing Bookings</div><div className="details-kpi-value">{summary.poolingCount}</div></div></div>
         <div className="col-md-3"><div className="details-kpi"><div className="details-kpi-label">Rental Bookings</div><div className="details-kpi-value">{summary.rentalCount}</div></div></div>
       </div>
       <div className="row g-3 mb-3">
-        <div className="col-md-6"><div className="details-kpi"><div className="details-kpi-label">Pooling Revenue</div><div className="details-kpi-value">₹{summary.poolingRevenue}</div></div></div>
+        <div className="col-md-6"><div className="details-kpi"><div className="details-kpi-label">Ride-Sharing Revenue</div><div className="details-kpi-value">₹{summary.poolingRevenue}</div></div></div>
         <div className="col-md-6"><div className="details-kpi"><div className="details-kpi-label">Rental Revenue</div><div className="details-kpi-value">₹{summary.rentalRevenue}</div></div></div>
       </div>
       <PageCard>
@@ -386,7 +386,7 @@ export function BookingsPage() {
             <span className="small text-body-secondary mb-0 d-flex align-items-center"><i className="bi bi-funnel"></i></span>
             <select className="form-select form-select-sm table-filter-select" value={serviceType} onChange={(e) => { setServiceType(e.target.value); setPage(1); }}>
               <option value="all">All</option>
-              <option value="pooling">Pooling</option>
+              <option value="pooling">Ride-Sharing</option>
               <option value="rental">Rental</option>
             </select>
           </div>
@@ -881,7 +881,7 @@ export function AnalyticsPage() {
   };
 
   const revenueBreakdownBar = {
-    labels: ['Pooling', 'Rental'],
+    labels: ['Ride-Sharing', 'Rental'],
     datasets: [
       {
         label: 'Revenue',
@@ -993,7 +993,7 @@ export function AnalyticsPage() {
 
 export function SettingsPage() {
   const [form, setForm] = useState<Record<string, any>>({
-    platformFee: 10,
+    platformFee: 0,
     minBookingAmount: 100,
     maxBookingAmount: 50000,
     autoApproveHours: 24,
@@ -1019,7 +1019,7 @@ export function SettingsPage() {
 
   const resetToDefault = () => {
     setForm({
-      platformFee: 10,
+      platformFee: 0,
       minBookingAmount: 100,
       maxBookingAmount: 50000,
       autoApproveHours: 24,
@@ -1038,7 +1038,7 @@ export function SettingsPage() {
       <PageCard title="Admin Settings" actions={<button className="btn btn-primary" onClick={saveStructured}>Save Changes</button>}>
         <div className="row g-3">
           <div className="col-12"><h6 className="mb-1">Platform Configuration</h6></div>
-          <div className="col-md-4"><label className="form-label">Platform Fee (%)</label><input type="number" className="form-control" value={form.platformFee ?? 10} onChange={(e) => setForm((p) => ({ ...p, platformFee: Number(e.target.value) }))} /></div>
+          <div className="col-md-4"><label className="form-label">Platform Fee (%)</label><input type="number" className="form-control" value={form.platformFee ?? 0} onChange={(e) => setForm((p) => ({ ...p, platformFee: Number(e.target.value) }))} /></div>
           <div className="col-md-4"><label className="form-label">Min Booking Amount</label><input type="number" className="form-control" value={form.minBookingAmount ?? 100} onChange={(e) => setForm((p) => ({ ...p, minBookingAmount: Number(e.target.value) }))} /></div>
           <div className="col-md-4"><label className="form-label">Max Booking Amount</label><input type="number" className="form-control" value={form.maxBookingAmount ?? 50000} onChange={(e) => setForm((p) => ({ ...p, maxBookingAmount: Number(e.target.value) }))} /></div>
 

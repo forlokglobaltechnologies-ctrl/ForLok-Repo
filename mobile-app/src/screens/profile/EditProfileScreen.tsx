@@ -24,6 +24,31 @@ import { LinearGradient } from 'expo-linear-gradient';
 const GENDERS = ['Male', 'Female', 'Other'] as const;
 const ORANGE_GRADIENT = ['#F99E3C', '#D47B1B'] as const;
 
+/** Show DOB as DD-MM-YYYY (from API ISO / YYYY-MM-DD). */
+function toDdMmYyyy(raw: string | undefined | null): string {
+  if (raw == null || String(raw).trim() === '') return '';
+  const s = String(raw).trim();
+  const datePart = s.includes('T') ? s.split('T')[0] : s;
+  const ymd = datePart.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (ymd) return `${ymd[3]}-${ymd[2]}-${ymd[1]}`;
+  const dmy = s.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+  if (dmy) return s;
+  return '';
+}
+
+/** Parse DD-MM-YYYY → ISO datetime for API (Zod datetime). */
+function ddMmYyyyToIso(value: string): string | null {
+  const m = value.trim().match(/^(\d{2})-(\d{2})-(\d{4})$/);
+  if (!m) return null;
+  const dd = Number(m[1]);
+  const mm = Number(m[2]);
+  const yyyy = Number(m[3]);
+  if (yyyy < 1900 || yyyy > 2100 || mm < 1 || mm > 12 || dd < 1 || dd > 31) return null;
+  const d = new Date(Date.UTC(yyyy, mm - 1, dd));
+  if (d.getUTCFullYear() !== yyyy || d.getUTCMonth() !== mm - 1 || d.getUTCDate() !== dd) return null;
+  return `${yyyy}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}T00:00:00.000Z`;
+}
+
 const EditProfileScreen = () => {
   const navigation = useNavigation<any>();
   const { user, updateUser } = useAuth();
@@ -37,29 +62,31 @@ const EditProfileScreen = () => {
   useEffect(() => {
     if (!user) return;
     setName(user.name || '');
-    setGender(user.gender || '');
+    const g = user.gender;
+    setGender(g && (GENDERS as readonly string[]).includes(g) ? (g as (typeof GENDERS)[number]) : '');
     if (user.dateOfBirth) {
-      const raw = String(user.dateOfBirth);
-      setDateOfBirth(raw.includes('T') ? raw.split('T')[0] : raw);
+      setDateOfBirth(toDdMmYyyy(String(user.dateOfBirth)));
+    } else {
+      setDateOfBirth('');
     }
   }, [user]);
 
   const canSave = useMemo(() => name.trim().length >= 2 && !saving, [name, saving]);
 
-  const validateDate = (value: string) => {
-    if (!value.trim()) return true;
-    return /^\d{4}-\d{2}-\d{2}$/.test(value);
-  };
-
   const handleSave = async () => {
     if (!canSave) return;
-    if (!validateDate(dateOfBirth)) {
-      showSnackbar({ message: 'Use date format YYYY-MM-DD', type: 'error' });
-      return;
+    const trimmedDob = dateOfBirth.trim();
+    let dobIso: string | null = null;
+    if (trimmedDob) {
+      dobIso = ddMmYyyyToIso(trimmedDob);
+      if (!dobIso) {
+        showSnackbar({ message: 'Use date of birth as DD-MM-YYYY (e.g. 15-08-1999)', type: 'error' });
+        return;
+      }
     }
 
     const payload: any = { name: name.trim() };
-    if (dateOfBirth.trim()) payload.dateOfBirth = dateOfBirth.trim();
+    if (dobIso) payload.dateOfBirth = dobIso;
     if (gender) payload.gender = gender;
 
     setSaving(true);
@@ -95,7 +122,7 @@ const EditProfileScreen = () => {
       <KeyboardAvoidingView style={styles.keyboardWrap} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <View style={styles.heroStrip}>
-            <Text style={styles.heroTitle}>ForLok Profile</Text>
+            <Text style={styles.heroTitle}>eZway Profile</Text>
             <Text style={styles.heroText}>Keep your details up to date for faster bookings and verification.</Text>
           </View>
 
@@ -105,8 +132,9 @@ const EditProfileScreen = () => {
               label="Date of Birth"
               value={dateOfBirth}
               onChangeText={setDateOfBirth}
-              placeholder="YYYY-MM-DD"
+              placeholder="DD-MM-YYYY"
               autoCapitalize="none"
+              keyboardType="numbers-and-punctuation"
             />
 
             <Text style={styles.genderLabel}>Gender</Text>

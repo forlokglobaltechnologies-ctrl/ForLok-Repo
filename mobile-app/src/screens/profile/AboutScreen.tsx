@@ -19,7 +19,7 @@ import {
   ChevronRight,
   ExternalLink,
   Users,
-  Car,
+  Bike,
   Shield,
   Leaf,
   Sparkles,
@@ -83,7 +83,7 @@ const AboutScreen = () => {
 
   const features = contentData.features.map((item: any) => ({
     ...item,
-    icon: typeof item.icon === 'string' ? resolveContentIcon(item.icon, Car) : item.icon,
+    icon: typeof item.icon === 'string' ? resolveContentIcon(item.icon, Bike) : item.icon,
   }));
   const stats = contentData.stats.map((item: any) => ({
     ...item,
@@ -171,7 +171,7 @@ const AboutScreen = () => {
         {/* Features */}
         <View style={s.sectionTitleRow}>
           <Zap size={normalize(16)} color={theme.colors.primary} />
-          <Text style={[s.sectionTitle, { color: theme.colors.text }]}>Why Choose Forlok</Text>
+          <Text style={[s.sectionTitle, { color: theme.colors.text }]}>Why Choose eZway</Text>
         </View>
         <View style={[s.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border, padding: 0 }]}>
           {features.map((feature: any, index: number) => {

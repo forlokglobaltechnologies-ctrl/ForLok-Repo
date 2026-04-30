@@ -16,6 +16,7 @@ import { normalize, hp } from '@utils/responsive';
 import { FONTS } from '@constants/theme';
 import { ratingApi } from '@utils/apiClient';
 import { useTheme } from '@context/ThemeContext';
+import { useLanguage } from '@context/LanguageContext';
 import useMasterData from '../../hooks/useMasterData';
 
 interface Rating {
@@ -68,6 +69,7 @@ const ReviewsScreen = () => {
   const route = useRoute<RouteProp<RouteParams, 'ReviewsScreen'>>();
   const { userId, userName } = route.params;
   const { theme } = useTheme();
+  const { t } = useLanguage();
 
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -181,16 +183,24 @@ const ReviewsScreen = () => {
   const SummaryHeader = () => {
     if (!breakdown) return null;
     const avg = breakdown.averageRating;
+    const noRatingsYet = breakdown.totalRatings === 0;
     return (
       <View style={[s.summaryCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
         {/* Score + bars */}
         <View style={s.summaryRow}>
           <View style={s.scoreCol}>
-            <Text style={[s.scoreNum, { color: theme.colors.text }]}>{avg.toFixed(1)}</Text>
-            <Stars rating={Math.round(avg)} size={16} />
-            <Text style={[s.scoreWord, { color: ratingColor(avg) }]}>{ratingWord(avg)}</Text>
+            <Text style={[s.scoreNum, { color: theme.colors.text }]}>{noRatingsYet ? '—' : avg.toFixed(1)}</Text>
+            <Stars rating={noRatingsYet ? 0 : Math.round(avg)} size={16} />
+            <Text
+              style={[
+                s.scoreWord,
+                { color: noRatingsYet ? theme.colors.primary : ratingColor(avg) },
+              ]}
+            >
+              {noRatingsYet ? t('common.startYourRide') : ratingWord(avg)}
+            </Text>
             <Text style={[s.scoreCount, { color: theme.colors.textSecondary }]}>
-              {breakdown.totalRatings} ratings
+              {noRatingsYet ? t('common.reviewsAfterFirstTrip') : `${breakdown.totalRatings} ratings`}
             </Text>
           </View>
           <View style={[s.scoreDivider, { backgroundColor: theme.colors.border }]} />
@@ -276,7 +286,9 @@ const ReviewsScreen = () => {
       })}
       <View style={{ flex: 1 }} />
       <Text style={[s.resultCount, { color: theme.colors.textSecondary }]}>
-        {reviews.length} review{reviews.length !== 1 ? 's' : ''}
+        {reviews.length === 0
+          ? t('common.startYourRide')
+          : `${reviews.length} review${reviews.length !== 1 ? 's' : ''}`}
       </Text>
     </View>
   );
@@ -375,7 +387,9 @@ const ReviewsScreen = () => {
           </Text>
           {breakdown && (
             <Text style={[s.headerSub, { color: theme.colors.textSecondary }]}>
-              {breakdown.averageRating.toFixed(1)} avg · {breakdown.totalRatings} total
+              {breakdown.totalRatings === 0
+                ? t('common.startYourRide')
+                : `${breakdown.averageRating.toFixed(1)} avg · ${breakdown.totalRatings} total`}
             </Text>
           )}
         </View>
@@ -406,9 +420,9 @@ const ReviewsScreen = () => {
               <View style={[s.emptyCircle, { backgroundColor: theme.colors.border + '40' }]}>
                 <MessageSquare size={28} color={theme.colors.textSecondary} />
               </View>
-              <Text style={[s.emptyTitle, { color: theme.colors.text }]}>No reviews yet</Text>
+              <Text style={[s.emptyTitle, { color: theme.colors.text }]}>{t('common.startYourRide')}</Text>
               <Text style={[s.emptySub, { color: theme.colors.textSecondary }]}>
-                Reviews appear after trips are completed and rated
+                {t('common.reviewsAfterFirstTrip')}
               </Text>
             </View>
           )}

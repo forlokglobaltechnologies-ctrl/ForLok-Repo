@@ -19,7 +19,7 @@ export interface User {
 
 export interface Vehicle {
   id: string;
-  type: 'Car' | 'Bike';
+  type: 'Bike' | 'Scooty';
   brand: string;
   number: string;
   plateType?: 'white' | 'yellow';
@@ -61,7 +61,7 @@ export interface PoolingOffer {
   date: string;
   time: string;
   vehicle: {
-    type: 'Car' | 'Bike';
+    type: 'Bike' | 'Scooty';
     brand: string;
     number: string;
     photos: string[];
@@ -90,7 +90,7 @@ export interface RentalOffer {
   rating: number;
   totalReviews: number;
   vehicle: {
-    type: 'Car' | 'Bike';
+    type: 'Bike' | 'Scooty';
     brand: string;
     year: number;
     number: string;
@@ -138,7 +138,7 @@ export interface Booking {
     photo: string;
   };
   vehicle: {
-    type: 'Car' | 'Bike';
+    type: 'Bike' | 'Scooty';
     brand: string;
     number: string;
   };

@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { ArrowLeft, MapPin, Calendar, Clock, ChevronDown, ChevronRight, Car, Bike, ArrowUpDown } from 'lucide-react-native';
+import { ArrowLeft, MapPin, Calendar, Clock, ChevronDown, ChevronRight, Bike, ArrowUpDown } from 'lucide-react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { normalize } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
@@ -158,7 +158,7 @@ const CreatePoolingOfferScreen = () => {
   const [time, setTime] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
-  const [vehicleType, setVehicleType] = useState<'Car' | 'Bike' | 'Scooty' | null>(null);
+  const [vehicleType, setVehicleType] = useState<'Bike' | 'Scooty' | null>(null);
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState<any | null>(null);
   const [showVehicleDropdown, setShowVehicleDropdown] = useState(false);
@@ -183,15 +183,6 @@ const CreatePoolingOfferScreen = () => {
         return vType === vehicleType.toLowerCase();
       })
     : allVehicles;
-  const selectedVehicleSeatCount =
-    vehicleType === 'Car'
-      ? Math.max(0, Number(selectedVehicle?.seats) || 0)
-      : 1;
-  const availableSeatOptions =
-    vehicleType === 'Car' && selectedVehicleSeatCount > 0
-      ? Array.from({ length: selectedVehicleSeatCount }, (_, index) => index + 1)
-      : [];
-
   // ── Functions ──
   const loadVehicles = async () => {
     try {
@@ -280,7 +271,7 @@ const CreatePoolingOfferScreen = () => {
         return Math.ceil(selectedRoute.durationMin);
       }
       const distanceKm = selectedRoute?.distanceKm || routeDistanceKm || 0;
-      const speed = getVehicleAverageSpeedKmh(vehicleType || 'car');
+      const speed = getVehicleAverageSpeedKmh(vehicleType === 'Scooty' ? 'scooty' : 'bike');
       return Math.max(10, Math.ceil((Math.max(1, distanceKm) / speed) * 60));
     })();
     const candidateEnd = new Date(candidateStart.getTime() + (candidateDurationMin + 10) * 60 * 1000);
@@ -326,10 +317,9 @@ const CreatePoolingOfferScreen = () => {
   };
 
   const getVehicleAverageSpeedKmh = (type?: string | null) => {
-    const t = (type || '').toLowerCase();
-    if (t === 'bike') return 40;
+    const t = (type || 'bike').toLowerCase();
     if (t === 'scooty' || t === 'scooter') return 35;
-    return 45;
+    return 40;
   };
 
   const parseTimeLabelToMinutes = (label?: string | null): number | null => {
@@ -553,24 +543,8 @@ const CreatePoolingOfferScreen = () => {
   }, [filteredVehicles, selectedVehicle]);
 
   useEffect(() => {
-    if (vehicleType !== 'Car') {
-      if (availableSeats !== 1) {
-        setAvailableSeats(1);
-      }
-      return;
-    }
-
-    if (selectedVehicleSeatCount <= 0) {
-      if (availableSeats !== 1) {
-        setAvailableSeats(1);
-      }
-      return;
-    }
-
-    if (availableSeats > selectedVehicleSeatCount) {
-      setAvailableSeats(selectedVehicleSeatCount);
-    }
-  }, [vehicleType, availableSeats, selectedVehicleSeatCount]);
+    if (availableSeats !== 1) setAvailableSeats(1);
+  }, [vehicleType, availableSeats]);
 
   const formatDate = (date: Date) => {
     const day = date.getDate();
@@ -731,7 +705,7 @@ const CreatePoolingOfferScreen = () => {
       if (response.success) {
         Alert.alert(
           'Success',
-          'Pooling offer created successfully!',
+          'Ride-sharing offer created successfully!',
           [
             {
               text: 'View My Offers',
@@ -865,12 +839,6 @@ const CreatePoolingOfferScreen = () => {
               </View>
 
               <View style={styles.modeIconRow}>
-                <TouchableOpacity
-                  style={[styles.modeIconBtn, vehicleType === 'Car' && styles.modeIconBtnSelected]}
-                  onPress={() => setVehicleType('Car')}
-                >
-                  <Car size={16} color="#FE8800" />
-                </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.modeIconBtn, vehicleType === 'Bike' && styles.modeIconBtnSelected]}
                   onPress={() => {
@@ -1083,11 +1051,7 @@ const CreatePoolingOfferScreen = () => {
                             onPress={() => {
                               setSelectedVehicle(vehicle);
                               setShowVehicleDropdown(false);
-                              if (vehicleType !== 'Car') {
-                                setAvailableSeats(1);
-                              } else if (vehicle.seats && availableSeats > vehicle.seats) {
-                                setAvailableSeats(vehicle.seats);
-                              }
+                              setAvailableSeats(1);
                             }}
                           >
                             <Text style={[styles.vehicleDropdownItemText, isLocked && { color: '#999' }]}>
@@ -1105,54 +1069,6 @@ const CreatePoolingOfferScreen = () => {
                         );
                       })}
                     </View>
-                  )}
-                </View>
-              </View>
-            )}
-
-            {vehicleType === 'Car' && (
-              <View style={styles.sectionCard}>
-                <View style={styles.seatsContainer}>
-                  <Text style={styles.label}>{cleanFieldLabel(t('createPoolingOffer.availableSeats'))}</Text>
-                  {selectedVehicle ? (
-                    <View style={styles.seatsRangeContainer}>
-                      <View style={styles.seatsRangeRow}>
-                        {availableSeatOptions.map((num) => (
-                          <TouchableOpacity
-                            key={num}
-                            style={[
-                              styles.seatRangeButton,
-                              availableSeats === num && styles.seatRangeSelected,
-                            ]}
-                            onPress={() => {
-                              setAvailableSeats(num);
-                            }}
-                          >
-                            {availableSeats === num ? (
-                              <LinearGradient
-                                colors={['#F99E3C', '#E08E35']}
-                                start={{ x: 0.5, y: 0 }}
-                                end={{ x: 0.5, y: 1 }}
-                                style={styles.seatRangeGradient}
-                              >
-                                <Text style={[styles.seatRangeText, styles.seatRangeTextSelected]}>{num}</Text>
-                              </LinearGradient>
-                            ) : (
-                              <Text style={styles.seatRangeText}>
-                                {num}
-                              </Text>
-                            )}
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                      <Text style={styles.seatSelectorHint}>
-                        {selectedVehicleSeatCount} seat{selectedVehicleSeatCount === 1 ? '' : 's'} configured for this vehicle
-                      </Text>
-                    </View>
-                  ) : (
-                    <Text style={styles.seatSelectorHint}>
-                      Select a car first to load its configured seat count.
-                    </Text>
                   )}
                 </View>
               </View>

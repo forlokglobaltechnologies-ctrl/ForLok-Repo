@@ -14,6 +14,7 @@ import { normalize } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { Card } from '@components/common/Card';
 import { companyApi } from '@utils/apiClient';
+import { displayPlatformFeeRupees } from '@utils/platformFee';
 import useMasterData from '../../hooks/useMasterData';
 
 const CompanyEarningsScreen = () => {
@@ -106,7 +107,7 @@ const CompanyEarningsScreen = () => {
             <View style={styles.summaryItem}>
               <Text style={styles.summaryLabel}>Platform Fee</Text>
               <Text style={styles.summarySubValue}>
-                ₹{earnings.summary.totalPlatformFee.toLocaleString()}
+                ₹{displayPlatformFeeRupees(earnings.summary.totalPlatformFee).toLocaleString()}
               </Text>
             </View>
             <View style={styles.summaryItem}>
@@ -188,7 +189,7 @@ const CompanyEarningsScreen = () => {
                 <View style={styles.earningRow}>
                   <Text style={styles.earningLabel}>Platform Fee:</Text>
                   <Text style={styles.earningSubValue}>
-                    ₹{earning.platformFee?.toLocaleString() || 0}
+                    ₹{displayPlatformFeeRupees(earning.platformFee).toLocaleString()}
                   </Text>
                 </View>
                 <View style={[styles.earningRow, styles.earningTotal]}>

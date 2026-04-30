@@ -1,10 +1,10 @@
-# ForLok App - Features and Workflow Guide
+# eZway App - Features and Workflow Guide
 
 ## Overview
 
-ForLok is a mobility platform with multiple service modes and role-based experiences:
+eZway is a mobility platform with multiple service modes and role-based experiences:
 
-- Ride pooling (offer and take)
+- Ride-Sharing (offer and take)
 - Loads (parcel/cargo movement with OTP milestones)
 - Rental modules (present in app structure, currently marked as coming soon in major user flows)
 - Wallet and payment settlement
@@ -23,8 +23,8 @@ This README focuses on product behavior and user workflows only. It intentionall
 ## User Roles and Access
 
 ### Individual user
-- Can search and book pooling rides
-- Can create pooling offers
+- Can search and book Ride-Sharing trips
+- Can create ride-sharing offers
 - Can search and book loads (when loads feature is enabled)
 - Can access profile, documents, wallet, booking history, and chat
 
@@ -73,7 +73,7 @@ Additional flows open through stack navigation, including booking confirmation, 
 
 ## 2) Document Verification and Eligibility
 
-ForLok gates some services behind document readiness checks.
+eZway gates some services behind document readiness checks.
 
 - Document checks run when user attempts a gated action
 - Required document list changes by service type
@@ -89,18 +89,18 @@ ForLok gates some services behind document readiness checks.
 
 ---
 
-## 3) Pooling - Take a Ride
+## 3) Ride-Sharing - Take a Ride
 
 Users can search available rides, view details, and book.
 
-- Search and filter pooling options
+- Search and filter ride-sharing options
 - View route, timing, price, and provider details
 - Confirm booking and move into active trip journey
 - Post-booking communication is supported via conversation flow
 
 ### Workflow
 1. User enters `Take` flow
-2. User searches/selects a pooling option
+2. User searches/selects a ride-sharing option
 3. User reviews ride details
 4. User sees fare summary and confirms booking
 5. Booking confirmation screen appears
@@ -109,18 +109,18 @@ Users can search available rides, view details, and book.
 
 ---
 
-## 4) Pooling - Offer a Ride
+## 4) Ride-Sharing - Offer a Ride
 
-Users can publish pooling offers and manage them.
+Users can publish ride-sharing offers and manage them.
 
-- Create pooling offer with route/time/capacity/pricing details
-- Offer appears in discoverable pool
+- Create ride-sharing offer with route/time/capacity/pricing details
+- Offer appears in discoverable listings
 - Booking lifecycle updates seat and status automatically
 - Offer owners can monitor progress through app surfaces
 
 ### Workflow
 1. User enters `Offer` flow
-2. User fills pooling offer details
+2. User fills ride-sharing offer details
 3. Offer is submitted and stored
 4. Other users discover and book
 5. Offer state updates as bookings progress and trip completes
@@ -189,7 +189,7 @@ A common booking engine supports service-specific behavior.
 
 ## 8) Payments, Wallet, and Settlements
 
-ForLok supports both online and cash-aligned completion paths, with wallet integration.
+eZway supports both online and cash-aligned completion paths, with wallet integration.
 
 - Payment order creation and verification for online settlement
 - Cash completion path with validation in delivery/trip closeout
@@ -240,7 +240,7 @@ Chat is tied to service context so participants can coordinate.
 
 ## 11) Notifications
 
-ForLok includes in-app notification management for major platform events.
+eZway includes in-app notification management for major platform events.
 
 - User can view notification list
 - Read/read-all/delete flows are available
@@ -314,7 +314,7 @@ These notes are important for release planning and QA expectations.
 ### Journey B: Service provider to completed service
 1. Sign-in
 2. Document/vehicle readiness
-3. Create offer (pooling/load)
+3. Create offer (ride-sharing/load)
 4. Receive booking
 5. Execute trip/delivery milestones
 6. Complete payment and settlement
@@ -330,7 +330,7 @@ These notes are important for release planning and QA expectations.
 
 ## Summary
 
-ForLok is built around role-based mobility workflows with strong lifecycle handling:
+eZway is built around role-based mobility workflows with strong lifecycle handling:
 
 - Discover or create services
 - Validate user readiness through documents

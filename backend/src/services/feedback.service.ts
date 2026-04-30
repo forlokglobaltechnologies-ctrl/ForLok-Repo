@@ -250,7 +250,7 @@ class FeedbackService {
             resolved: {
               type: 'feedback_resolved',
               title: 'Feedback Resolved',
-              message: `Your ${feedback.type} "${feedback.subject}" has been resolved. Thank you for helping us improve Forlok!`,
+              message: `Your ${feedback.type} "${feedback.subject}" has been resolved. Thank you for helping us improve eZway!`,
             },
             archived: {
               type: 'feedback_archived',

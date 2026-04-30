@@ -14,8 +14,6 @@ import {
 import { useNavigation, useRoute } from '@react-navigation/native';
 import {
   ArrowLeft,
-  Car,
-  Bike,
   Tag,
   Fuel,
   Settings,
@@ -24,7 +22,10 @@ import {
   CheckCircle,
   X,
   Edit,
+  Users,
+  Camera,
 } from 'lucide-react-native';
+import { VehicleTypeIcon } from '@utils/vehicleDisplay';
 import { normalize, wp, hp } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, SHADOWS, BORDER_RADIUS } from '@constants/theme';
 import { Card } from '@components/common/Card';
@@ -126,8 +127,7 @@ const VehicleDetailsScreen = () => {
     );
   }
 
-  const vehicleType = vehicle.type?.toLowerCase() || 'car';
-  const isCar = vehicleType === 'car';
+  const vehicleType = vehicle.type?.toLowerCase() || 'bike';
 
   return (
     <SafeAreaView style={styles.container}>
@@ -154,14 +154,14 @@ const VehicleDetailsScreen = () => {
         {/* Basic Information */}
         <Card style={styles.card}>
           <View style={styles.sectionHeader}>
-            {isCar ? <Car size={20} color={COLORS.primary} /> : <Bike size={20} color={COLORS.primary} />}
+            <VehicleTypeIcon type={vehicleType} size={20} color={COLORS.primary} />
             <Text style={styles.sectionTitle}>Basic Information</Text>
           </View>
           <View style={styles.divider} />
 
           <View style={styles.detailRow}>
             <View style={styles.detailIconContainer}>
-              <Car size={18} color={COLORS.primary} />
+              <Tag size={18} color={COLORS.primary} />
             </View>
             <View style={styles.detailInfo}>
               <Text style={styles.detailLabel}>Brand & Model</Text>
@@ -216,7 +216,7 @@ const VehicleDetailsScreen = () => {
 
           <View style={styles.detailRow}>
             <View style={styles.detailIconContainer}>
-              <Car size={18} color={COLORS.primary} />
+              <VehicleTypeIcon type={vehicleType} size={18} color={COLORS.primary} />
             </View>
             <View style={styles.detailInfo}>
               <Text style={styles.detailLabel}>Type</Text>
@@ -229,7 +229,7 @@ const VehicleDetailsScreen = () => {
           {vehicle.seats && (
             <View style={styles.detailRow}>
               <View style={styles.detailIconContainer}>
-                <Car size={18} color={COLORS.primary} />
+                <Users size={18} color={COLORS.primary} />
               </View>
               <View style={styles.detailInfo}>
                 <Text style={styles.detailLabel}>Seats</Text>
@@ -369,7 +369,7 @@ const VehicleDetailsScreen = () => {
         {(vehicle.photos?.front || vehicle.photos?.back || vehicle.photos?.side || vehicle.photos?.interior) && (
           <Card style={styles.card}>
             <View style={styles.sectionHeader}>
-              <Car size={20} color={COLORS.primary} />
+              <Camera size={20} color={COLORS.primary} />
               <Text style={styles.sectionTitle}>Photos</Text>
             </View>
             <View style={styles.divider} />

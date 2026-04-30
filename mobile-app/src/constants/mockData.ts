@@ -16,7 +16,7 @@ export const mockUsers = {
     vehicles: [
       {
         id: 'v1',
-        type: 'Car',
+        type: 'Bike',
         brand: 'Honda City',
         number: 'KA-01-AB-1234',
         plateType: 'white',
@@ -56,7 +56,7 @@ export const mockPoolingOffers = [
     date: '2024-01-15',
     time: '09:00',
     vehicle: {
-      type: 'Car',
+      type: 'Bike',
       brand: 'Honda City',
       number: 'KA-01-AB-1234',
       photos: ['https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=400'],
@@ -91,7 +91,7 @@ export const mockPoolingOffers = [
     date: '2024-01-16',
     time: '10:30',
     vehicle: {
-      type: 'Car',
+      type: 'Bike',
       brand: 'Maruti Swift',
       number: 'DL-01-AB-5678',
       photos: ['https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=400'],
@@ -153,7 +153,7 @@ export const mockRentalOffers = [
     rating: 4.9,
     totalReviews: 89,
     vehicle: {
-      type: 'Car',
+      type: 'Bike',
       brand: 'Honda City',
       year: 2022,
       number: 'KA-02-CD-5678',
@@ -185,12 +185,12 @@ export const mockRentalOffers = [
   {
     id: 'rent2',
     ownerId: 'company1',
-    ownerName: 'ABC Car Rentals',
+    ownerName: 'ABC Fleet Rentals',
     ownerPhoto: 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=400',
     rating: 4.7,
     totalReviews: 234,
     vehicle: {
-      type: 'Car',
+      type: 'Bike',
       brand: 'Maruti Swift',
       year: 2021,
       number: 'KA-03-EF-9012',
@@ -237,7 +237,7 @@ export const mockBookings = [
       phone: '+91 98765 43210',
     },
     vehicle: {
-      type: 'Car',
+      type: 'Bike',
       brand: 'Honda City',
       number: 'KA-01-AB-1234',
     },
@@ -256,7 +256,7 @@ export const mockBookings = [
     bookingId: '#YA20240112001',
     type: 'rental',
     vehicle: {
-      type: 'Car',
+      type: 'Bike',
       brand: 'Honda City',
       number: 'KA-02-CD-5678',
     },

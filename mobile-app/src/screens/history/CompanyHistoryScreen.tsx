@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, ImageBackground } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { ArrowLeft, Calendar, Search, Car, Clock, User } from 'lucide-react-native';
+import { ArrowLeft, Calendar, Search, Bike, Clock, User } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import { normalize, wp, hp } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '@constants/theme';
@@ -105,7 +105,7 @@ const CompanyHistoryScreen = () => {
           <Card key={booking.id} style={styles.bookingCard}>
             <View style={styles.bookingHeader}>
               <View style={styles.vehicleInfo}>
-                <Car size={24} color={COLORS.primary} />
+                <Bike size={24} color={COLORS.primary} />
                 <View style={styles.vehicleDetails}>
                   <Text style={styles.vehicleName}>{booking.vehicle}</Text>
                   <Text style={styles.vehicleNumber}>{booking.vehicleNumber}</Text>

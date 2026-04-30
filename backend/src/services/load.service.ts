@@ -19,7 +19,7 @@ class LoadService {
     const weightCharge = Math.max(0, input.weightKg - 1) * 4;
     const fragileCharge = input.fragile ? 20 : 0;
     const amount = Math.round(base + distanceCharge + weightCharge + fragileCharge);
-    const platformFee = Math.max(5, Math.round(amount * 0.1));
+    const platformFee = 0;
     return {
       distanceKm: Number(distanceKm.toFixed(2)),
       amount,

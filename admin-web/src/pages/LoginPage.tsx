@@ -57,7 +57,7 @@ export default function LoginPage() {
               Admin Console
             </div>
             <h1 style={{ fontSize: '3rem', lineHeight: 1.1, fontWeight: 800, marginBottom: 16 }}>
-              Control ForLok operations in real time.
+              Control eZway operations in real time.
             </h1>
             <p style={{ color: '#B8B8B8', fontSize: '1.05rem', marginBottom: 0 }}>
               Secure admin access for users, bookings, analytics, and moderation workflows from one dashboard.
@@ -79,7 +79,7 @@ export default function LoginPage() {
               <div className="text-center mb-4">
                 <img
                   src="/forlok_admin_login_logo.png"
-                  alt="ForLok"
+                  alt="eZway"
                   style={{
                     width: 116,
                     height: 116,
@@ -89,7 +89,7 @@ export default function LoginPage() {
                   }}
                 />
                 <h2 className="mb-2" style={{ color: '#FFFFFF', fontWeight: 800 }}>
-                  ForLok Admin
+                  eZway Admin
                 </h2>
                 <p className="mb-0" style={{ color: '#B8B8B8' }}>
                   Sign in to continue

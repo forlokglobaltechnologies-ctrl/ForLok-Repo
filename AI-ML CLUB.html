@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI/ML Club — 30-Day Action Plan</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c10;
+    --surface: #111318;
+    --surface2: #181c23;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.13);
+    --text: #e8eaf0;
+    --muted: #6b7280;
+    --accent: #4ade80;
+    --accent2: #22d3ee;
+    --accent3: #a78bfa;
+    --accent4: #fb923c;
+    --accent5: #f472b6;
+    --red: #f87171;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    position: relative;
+    padding: 80px 40px 60px;
+    max-width: 1100px;
+    margin: 0 auto;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -100px; left: -200px;
+    width: 700px; height: 700px;
+    background: radial-gradient(circle, rgba(74,222,128,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero::after {
+    content: '';
+    position: absolute;
+    top: -60px; right: -150px;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(167,139,250,0.07) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .club-tag {
+    display: inline-flex; align-items: center; gap: 8px;
+    border: 1px solid rgba(74,222,128,0.3);
+    background: rgba(74,222,128,0.06);
+    color: var(--accent);
+    font-size: 12px; font-weight: 500; letter-spacing: 0.08em;
+    padding: 5px 14px; border-radius: 99px;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+  .club-tag span { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); display: inline-block; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2.4rem, 6vw, 4.2rem);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    margin-bottom: 20px;
+  }
+  h1 em { font-style: normal; color: var(--accent); }
+  .hero-sub {
+    font-size: 16px;
+    color: var(--muted);
+    max-width: 560px;
+    margin-bottom: 36px;
+    font-weight: 300;
+    line-height: 1.7;
+  }
+  .stats {
+    display: flex; gap: 32px; flex-wrap: wrap;
+    margin-bottom: 0;
+  }
+  .stat { display: flex; flex-direction: column; gap: 2px; }
+  .stat-num { font-family: 'Syne', sans-serif; font-size: 2rem; font-weight: 700; color: var(--text); line-height: 1; }
+  .stat-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+
+  /* ── NAV TABS ── */
+  .nav-wrap {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(10,12,16,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 40px;
+  }
+  .nav-inner {
+    max-width: 1100px; margin: 0 auto;
+    display: flex; gap: 0; overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .nav-inner::-webkit-scrollbar { display: none; }
+  .nav-tab {
+    padding: 16px 20px;
+    font-size: 13px; font-weight: 500;
+    color: var(--muted);
+    cursor: pointer;
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    background: none; border-left: none; border-right: none; border-top: none;
+  }
+  .nav-tab:hover { color: var(--text); }
+  .nav-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* ── MAIN LAYOUT ── */
+  .main { max-width: 1100px; margin: 0 auto; padding: 48px 40px 80px; }
+
+  /* ── WEEK SECTION ── */
+  .week-section { margin-bottom: 60px; }
+  .week-header {
+    display: flex; align-items: center; gap: 16px;
+    margin-bottom: 28px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .week-badge {
+    font-family: 'Syne', sans-serif;
+    font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    padding: 5px 12px; border-radius: 6px;
+  }
+  .w1 .week-badge { background: rgba(74,222,128,0.12); color: var(--accent); }
+  .w2 .week-badge { background: rgba(34,211,238,0.12); color: var(--accent2); }
+  .w3 .week-badge { background: rgba(167,139,250,0.12); color: var(--accent3); }
+  .w4 .week-badge { background: rgba(251,146,60,0.12); color: var(--accent4); }
+  .week-title { font-family: 'Syne', sans-serif; font-size: 1.35rem; font-weight: 700; }
+  .week-days { font-size: 12px; color: var(--muted); margin-left: auto; }
+
+  /* ── DAYS GRID ── */
+  .days-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+    gap: 14px;
+  }
+
+  /* ── DAY CARD ── */
+  .day-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .day-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+  .day-card-top {
+    padding: 16px 18px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: flex-start; gap: 12px;
+  }
+  .day-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 11px; font-weight: 700;
+    color: var(--muted); letter-spacing: 0.08em;
+    text-transform: uppercase;
+    min-width: 44px;
+    padding-top: 2px;
+  }
+  .day-right { flex: 1; }
+  .day-title { font-size: 14px; font-weight: 500; color: var(--text); line-height: 1.3; margin-bottom: 4px; }
+  .day-type {
+    display: inline-block;
+    font-size: 10px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase;
+    padding: 2px 8px; border-radius: 4px;
+  }
+  .type-learn { background: rgba(74,222,128,0.1); color: var(--accent); }
+  .type-build { background: rgba(34,211,238,0.1); color: var(--accent2); }
+  .type-club { background: rgba(167,139,250,0.1); color: var(--accent3); }
+  .type-project { background: rgba(251,146,60,0.1); color: var(--accent4); }
+  .type-event { background: rgba(244,114,182,0.1); color: var(--accent5); }
+  .type-review { background: rgba(248,113,113,0.1); color: var(--red); }
+
+  .day-card-body { padding: 14px 18px; }
+  .task-list { list-style: none; display: flex; flex-direction: column; gap: 7px; }
+  .task-list li {
+    font-size: 12.5px; color: #9ca3af;
+    display: flex; gap: 8px; align-items: flex-start; line-height: 1.4;
+  }
+  .task-list li::before {
+    content: '→';
+    color: var(--muted);
+    font-size: 11px;
+    margin-top: 1px;
+    flex-shrink: 0;
+  }
+  .highlight-task { color: var(--text) !important; font-weight: 500; }
+
+  /* ── ACTIVITY CARDS (club side) ── */
+  .activities-section { margin-bottom: 60px; }
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.6rem; font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .section-sub { font-size: 14px; color: var(--muted); margin-bottom: 28px; }
+  .act-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 14px;
+  }
+  .act-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+  .act-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+  .act-icon {
+    width: 38px; height: 38px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; margin-bottom: 14px;
+  }
+  .act-title { font-size: 14px; font-weight: 500; margin-bottom: 6px; }
+  .act-desc { font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+  .act-freq {
+    margin-top: 12px;
+    display: inline-block;
+    font-size: 10px; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase;
+    padding: 3px 9px; border-radius: 4px;
+    background: var(--surface2); color: var(--muted);
+    border: 1px solid var(--border);
+  }
+
+  /* ── TIMELINE BAR ── */
+  .timeline-section { margin-bottom: 60px; }
+  .timeline-bar {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px 28px;
+    overflow-x: auto;
+  }
+  .tl-track {
+    display: flex; gap: 3px;
+    min-width: 700px;
+    margin-bottom: 16px;
+  }
+  .tl-seg {
+    height: 28px; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 600; letter-spacing: 0.04em;
+    text-transform: uppercase; white-space: nowrap;
+    cursor: default;
+    transition: opacity 0.2s;
+  }
+  .tl-seg:hover { opacity: 0.8; }
+  .tl-legend { display: flex; gap: 20px; flex-wrap: wrap; }
+  .tl-legend-item { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--muted); }
+  .tl-dot { width: 10px; height: 10px; border-radius: 3px; }
+
+  /* ── OUTCOMES ── */
+  .outcomes { margin-bottom: 60px; }
+  .outcomes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 14px;
+  }
+  .outcome-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+  }
+  .outcome-num { font-family: 'Syne', sans-serif; font-size: 2.2rem; font-weight: 800; line-height: 1; margin-bottom: 6px; }
+  .outcome-label { font-size: 13px; color: var(--muted); line-height: 1.4; }
+
+  /* ── FOOTER ── */
+  footer {
+    text-align: center;
+    padding: 40px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  @media (max-width: 600px) {
+    .hero, .main, .nav-wrap { padding-left: 20px; padding-right: 20px; }
+    .days-grid { grid-template-columns: 1fr; }
+    .act-grid { grid-template-columns: 1fr; }
+    .outcomes-grid { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="club-tag"><span></span> AI/ML Club — RGUKT,Nuzvid</div>
+  <h1>30-Day <em>Launchpad</em><br>Action Plan</h1>
+  <p class="hero-sub">A structured zero-to-builder journey for every new member — from Python basics to a working AI project in 30 days.</p>
+  <div class="stats">
+    <div class="stat"><span class="stat-num">30</span><span class="stat-label">Days</span></div>
+    <div class="stat"><span class="stat-num">5</span><span class="stat-label">Phases</span></div>
+    <div class="stat"><span class="stat-num">12+</span><span class="stat-label">Club Activities</span></div>
+    <div class="stat"><span class="stat-num">1</span><span class="stat-label">Final Project</span></div>
+  </div>
+</section>
+
+<!-- NAV -->
+<div class="nav-wrap">
+  <div class="nav-inner">
+    <button class="nav-tab active" onclick="showSection('week1',this)">Week 1</button>
+    <button class="nav-tab" onclick="showSection('week2',this)">Week 2</button>
+    <button class="nav-tab" onclick="showSection('week3',this)">Week 3</button>
+    <button class="nav-tab" onclick="showSection('week4',this)">Week 4</button>
+    <button class="nav-tab" onclick="showSection('activities',this)">Club Activities</button>
+    <button class="nav-tab" onclick="showSection('timeline',this)">Timeline</button>
+    <button class="nav-tab" onclick="showSection('outcomes',this)">Outcomes</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- WEEK 1 -->
+  <div id="week1" class="week-section w1">
+    <div class="week-header">
+      <span class="week-badge">Week 1</span>
+      <span class="week-title">Python Foundations</span>
+      <span class="week-days">Days 1–7</span>
+    </div>
+    <div class="days-grid">
+
+      <div class="day-card">
+        <div class="day-card-top">
+          <span class="day-num">Day 1</span>
+          <div class="day-right">
+            <div class="day-title">Club Kick-off & Python Intro</div>
+            <span class="day-type type-club">Club Event</span>
+          </div>
+        </div>
+        <div class="day-card-body">
+          <ul class="task-list">
+            <li class="highlight-task">Official club launch ceremony — welcome all members</li>
+            <li>What is AI? What is ML? 10-minute visual intro</li>
+            <li>Install Python, VS Code, Anaconda</li>
+            <li>First Python program: Hello World + variables</li>
+            <li>Share club WhatsApp/Discord group</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="day-card">
+        <div class="day-card-top">
+          <span class="day-num">Day 2</span>
+          <div class="day-right">
+            <div class="day-title">Data Types & Variables</div>
+            <span class="day-type type-learn">Learn</span>
+          </div>
+        </div>
+        <div class="day-card-body">
+          <ul class="task-list">
+            <li>int, float, string, bool — types and casting</li>
+            <li>Variable naming conventions</li>
+            <li>Input/output functions: input(), print()</li>
+            <li>Mini exercise: simple calculator</li>
+            <li class="highlight-task">📣 Post Day 2 code snippet in group chat</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="day-card">
+        <div class="day-card-top">
+          <span class="day-num">Day 3</span>
+          <div class="day-right">
+            <div class="day-title">Loops & Control Flow</div>
+            <span class="day-type type-learn">Learn</span>
+          </div>
+        </div>
+        <div class="day-card-body">
+          <ul class="task-list">
+            <li>if / elif / else conditions</li>
+            <li>for loops and while loops</li>
+            <li>Nested loops — pattern printing</li>
+            <li class="highlight-task">Logic problems: palindrome, even/odd, Armstrong</li>
+            <li>Fibonacci series implementation</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="day-card">
+        <div class="day-card-top">
+          <span class="day-num">Day 4</span>
+          <div class="day-right">
+            <div class="day-title">Functions — Part 1</div>
+            <span class="day-type type-learn">Learn</span>
+          </div>
+        </div>
+        <div class="day-card-body">
+          <ul class="task-list">
+            <li>Defining functions, return statements</li>
+            <li>Arguments vs parameters</li>
+            <li>Default arguments, keyword args</li>
+            <li>Lambda functions introduction</li>
+            <li>Exercise: refactor Day 3 solutions using functions</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="day-card">
+        <div class="day-card-top">
+          <span class="day-num">Day 5</span>
+          <div class="day-right">
+            <div class="day-title">Recursion</div>
+            <span class="day-type type-learn">Learn</span>
+          </div>
+        </div>
+        <div class="day-card-body">
+          <ul class="task-list">
+            <li>What is recursion? Base condition writing</li>
+            <li>Recursive logic vs iterative logic</li>
+            <li class="highlight-task">Implement: factorial, Fibonacci using recursion</li>
+            <li>Visualise call stack with print statements</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="day-card">
+        <div class="day-card-top">
+          <span class="day-num">Day 6</span>
+          <div class="day-right">
+            <div class="day-title">Lists, Tuples & Strings</div>
+            <span class="day-type type-learn">Learn</span>
+          </div>
+        </div>
+        <div class="day-card-body">
+          <ul class="task-list">
+            <li>Lists — indexing, slicing, methods</li>
+            <li>Tuples — immutability and use cases</li>
+            <li>String methods and f-strings</li>
+            <li>List comprehensions introduction</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="day-card">
+        <div class="day-card-top">
+          <span class="day-num">Day 7</span>
+          <div class="day-right">
+            <div class="day-title">Week 1 Mini Challenge + Demo</div>
+            <span class="day-type type-event">Event</span>
+          </div>
+        </div>
+        <div class="day-card-body">
+          <ul class="task-list">
+            <li class="highlight-task">🏆 30-min timed coding challenge — 3 problems</li>
+            <li>Each member presents 1 solution to the group</li>
+            <li>Peer review — what could be improved?</li>
+            <li>Senior mentor Q&A session (30 min)</li>
+            <li>Celebrate top 3 solutions publicly</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </div><!-- /week1 -->
+
+  <!-- WEEK 2 -->
+  <div id="week2" class="week-section w2" style="display:none">
+    <div class="week-header">
+      <span class="week-badge">Week 2</span>
+      <span class="week-title">OOP & Problem Solving</span>
+      <span class="week-days">Days 8–14</span>
+    </div>
+    <div class="days-grid">
+
+      <div class="day-card">
+        <div class="day-card-top">
+          <span class="day-num">Day 8</span>
+          <div class="day-right">
+            <div class="day-title">Dictionaries & Sets</div>
+            <span class="day-type type-learn">Learn</span>
+          </div>
+        </div>
+        <div class="day-card-body">
+          <ul class="task-list">
+            <li>Dictionaries — key-value pairs, methods</li>
+            <li>Sets — uniqueness, set operations</li>
+            <li>When to use which data structure</li>
+            <li>Exercise: word frequency counter</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="day-card">
+        <div class="day-card-top">
+          <span class="day-num">Day 9</span>
+          <div class="day-right">
+            <div class="day-title">OOP — Classes & Objects</div>
+            <span class="day-type type-learn">Learn</span>
+          </div>
+        </div>
+        <div class="day-card-body">
+          <ul class="task-list">
+            <li>What is a class? Blueprint analogy</li>
+            <li>Creating objects, __init__ constructor</li>
+            <li>Instance variables vs class variables</li>
+            <li class="highlight-task">Build: Student class with name, grade, GPA</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="day-card">
+        <div class="day-card-top">
+          <span class="day-num">Day 10</span>
+          <div class="day-right">
+            <div class="day-title">Inheritance & Abstraction</div>
+            <span class="day-type type-learn">Learn</span>
+          </div>
+        </div>
+        <div class="day-card-body">
+          <ul class="task-list">
+            <li>Single and multilevel inheritance</li>
+            <li>super() keyword and method overriding</li>
+            <li>Abstract classes using ABC module</li>
+            <li>Exercise: Animal → Dog/Cat hierarchy</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="day-card">
+        <div class="day-card-top">
+          <span class="day-num">Day 11</span>
+          <div class="day-right">
+            <div class="day-title">Encapsulation & Polymorphism</div>
+            <span class="day-type type-learn">Learn</span>
+          </div>
+        </div>
+        <div class="day-card-body">
+          <ul class="task-list">
+            <li>Private and protected attributes</li>
+            <li>Getters and setters (properties)</li>
+            <li>Method overloading and overriding</li>
+            <li class="highlight-task">Build: Bank Account class with encapsulation</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="day-card">
+        <div class="day-card-top">
+          <span class="day-num">Day 12</span>
+          <div class="day-right">
+            <div class="day-title">File Handling & Error Handling</div>
+            <span class="day-type type-build">Build</span>
+          </div>
+        </div>
+        <div class="day-card-body">
+          <ul class="task-list">
+            <li>Reading and writing .txt and .csv files</li>
+            <li>try / except / finally blocks</li>
+            <li>Custom exceptions</li>
+            <li>Exercise: Save student records to file</li>
+            <li class="highlight-task">🗣 Guest talk: "Why Python in AI/ML?" (20 min)</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="day-card">
+        <div class="day-card-top">
+          <span class="day-num">Day 13</span>
+          <div class="day-right">
+            <div class="day-title">Problem Solving Session</div>
+            <span class="day-type type-build">Build</span>
+          </div>
+        </div>
+        <div class="day-card-body">
+          <ul class="task-list">
+            <li>Apply OOP to 3 real-world problems</li>
+            <li>Think in classes: Library system, ATM, Inventory</li>
+            <li>Code review pairs — 2 members swap code</li>
+            <li>Introduce GitHub basics: commit + push</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="day-card">
+        <div class="day-card-top">
+          <span class="day-num">Day 14</span>
+          <div class="day-right">
+            <div class="day-title">Week 2 Review + Show & Tell</div>
+            <span class="day-type type-event">Event</span>
+          </div>
+        </div>
+        <div class="day-card-body">
+          <ul class="task-list">
+            <li class="highlight-task">🎤 Show & Tell — each member demos their best OOP project</li>
+            <li>Group discussion: "What confused you most?"</li>
+            <li>Concept revision — quick 15-min recap</li>
+            <li>Announce Week 3 theme + project teams</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </div><!-- /week2 -->
+
+  <!-- WEEK 3 -->
+  <div id="week3" class="week-section w3" style="display:none">
+    <div class="week-header">
+      <span class="week-badge">Week 3</span>
+      <span class="week-title">Data Tools & Environment</span>
+      <span class="week-days">Days 15–21</span>
+    </div>
+    <div class="days-grid">
+
+      <div class="day-card">
+        <div class="day-card-top">
+          <span class="day-num">Day 15</span>
+          <div class="day-right">
+            <div class="day-title">Environment Setup</div>
+            <span class="day-type type-build">Build</span>
+          </div>
+        </div>
+        <div class="day-card-body">
+          <ul class="task-list">
+            <li class="highlight-task">Anaconda Navigator setup and walkthrough</li>
+            <li>Jupyter Notebook — cells, markdown, magic commands</li>
+            <li>VS Code Python extension setup</li>
+            <li>pip install: numpy, pandas, matplotlib, scikit-learn</li>
+            <li>Virtual environments explained</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="day-card">
+        <div class="day-card-top">
+          <span class="day-num">Day 16</span>
+          <div class="day-right">
+            <div class="day-title">NumPy — Arrays & Operations</div>
+            <span class="day-type type-learn">Learn</span>
+          </div>
+        </div>
+        <div class="day-card-body">
+          <ul class="task-list">
+            <li>Creating arrays — 1D, 2D, 3D</li>
+            <li>Array operations, broadcasting</li>
+            <li>Slicing and indexing in NumPy</li>
+            <li>Math functions: mean, std, sum, dot product</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="day-card">
+        <div class="day-card-top">
+          <span class="day-num">Day 17</span>
+          <div class="day-right">
+            <div class="day-title">Pandas — DataFrames</div>
+            <span class="day-type type-learn">Learn</span>
+          </div>
+        </div>
+        <div class="day-card-body">
+          <ul class="task-list">
+            <li>Series and DataFrame creation</li>
+            <li>Loading CSV files with pd.read_csv()</li>
+            <li>Selecting, filtering, sorting data</li>
+            <li class="highlight-task">Explore a real dataset: Titanic or Iris</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="day-card">
+        <div class="day-card-top">
+          <span class="day-num">Day 18</span>
+          <div class="day-right">
+            <div class="day-title">Pandas — Data Cleaning</div>
+            <span class="day-type type-learn">Learn</span>
+          </div>
+        </div>
+        <div class="day-card-body">
+          <ul class="task-list">
+            <li>Handling missing values (dropna, fillna)</li>
+            <li>Renaming columns, changing dtypes</li>
+            <li>GroupBy and aggregation</li>
+            <li>Merging and joining DataFrames</li>
+            <li>Exercise: clean a messy dataset from scratch</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="day-card">
+        <div class="day-card-top">
+          <span class="day-num">Day 19</span>
+          <div class="day-right">
+            <div class="day-title">Regex & Text Processing</div>
+            <span class="day-type type-learn">Learn</span>
+          </div>
+        </div>
+        <div class="day-card-body">
+          <ul class="task-list">
+            <li>re module — match, search, findall</li>
+            <li>Patterns: digits, words, emails, URLs</li>
+            <li>Text cleaning pipeline for NLP</li>
+            <li class="highlight-task">Exercise: extract emails and phone numbers from text</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="day-card">
+        <div class="day-card-top">
+          <span class="day-num">Day 20</span>
+          <div class="day-right">
+            <div class="day-title">Data Visualization</div>
+            <span class="day-type type-build">Build</span>
+          </div>
+        </div>
+        <div class="day-card-body">
+          <ul class="task-list">
+            <li>Matplotlib basics — line, bar, scatter plots</li>
+            <li>Seaborn — heatmaps, pairplots, distributions</li>
+            <li>Visualise the Titanic or Iris dataset</li>
+            <li class="highlight-task">📊 Data Storytelling: make 3 charts that tell a story</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="day-card">
+        <div class="day-card-top">
+          <span class="day-num">Day 21</span>
+          <div class="day-right">
+            <div class="day-title">Kaggle Introduction + Dataset Sprint</div>
+            <span class="day-type type-event">Event</span>
+          </div>
+        </div>
+        <div class="day-card-body">
+          <ul class="task-list">
+            <li class="highlight-task">🌐 Create Kaggle accounts as a group</li>
+            <li>Navigate Kaggle: datasets, kernels, competitions</li>
+            <li>Teams pick a dataset — 1-hour exploration sprint</li>
+            <li>Each team presents 3 insights from their data</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </div><!-- /week3 -->
+
+  <!-- WEEK 4 -->
+  <div id="week4" class="week-section w4" style="display:none">
+    <div class="week-header">
+      <span class="week-badge">Week 4</span>
+      <span class="week-title">AI/ML Intro + Final Project</span>
+      <span class="week-days">Days 22–30</span>
+    </div>
+    <div class="days-grid">
+
+      <div class="day-card">
+        <div class="day-card-top">
+          <span class="day-num">Day 22</span>
+          <div class="day-right">
+            <div class="day-title">Introduction to Machine Learning</div>
+            <span class="day-type type-learn">Learn</span>
+          </div>
+        </div>
+        <div class="day-card-body">
+          <ul class="task-list">
+            <li>What is ML? Supervised vs unsupervised</li>
+            <li>Training data, test data, validation</li>
+            <li>Overfitting vs underfitting — intuition</li>
+            <li>Scikit-learn overview and pipeline</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="day-card">
+        <div class="day-card-top">
+          <span class="day-num">Day 23</span>
+          <div class="day-right">
+            <div class="day-title">Linear & Logistic Regression</div>
+            <span class="day-type type-learn">Learn</span>
+          </div>
+        </div>
+        <div class="day-card-body">
+          <ul class="task-list">
+            <li>Linear regression — concept and math intuition</li>
+            <li>Logistic regression for classification</li>
+            <li class="highlight-task">Build: predict house prices / pass-fail classifier</li>
+            <li>Evaluate: accuracy, MSE, confusion matrix</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="day-card">
+        <div class="day-card-top">
+          <span class="day-num">Day 24</span>
+          <div class="day-right">
+            <div class="day-title">Decision Trees & KNN</div>
+            <span class="day-type type-learn">Learn</span>
+          </div>
+        </div>
+        <div class="day-card-body">
+          <ul class="task-list">
+            <li>Decision tree — how splitting works</li>
+            <li>K-Nearest Neighbors — distance metrics</li>
+            <li>Compare both on Iris dataset</li>
+            <li>Tune hyperparameters: depth, K value</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="day-card">
+        <div class="day-card-top">
+          <span class="day-num">Day 25</span>
+          <div class="day-right">
+            <div class="day-title">Project Kickoff + Team Formation</div>
+            <span class="day-type type-project">Project</span>
+          </div>
+        </div>
+        <div class="day-card-body">
+          <ul class="task-list">
+            <li class="highlight-task">🚀 Final project announced — teams of 2–3</li>
+            <li>Project options: spam detector, price predictor, sentiment analyzer</li>
+            <li>Teams submit project topic + dataset plan</li>
+            <li>Mentors assigned to each team</li>
+            <li>GitHub repo created per team</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="day-card">
+        <div class="day-card-top">
+          <span class="day-num">Day 26–27</span>
+          <div class="day-right">
+            <div class="day-title">Project Building Days</div>
+            <span class="day-type type-project">Project</span>
+          </div>
+        </div>
+        <div class="day-card-body">
+          <ul class="task-list">
+            <li>Teams work on data collection and cleaning</li>
+            <li>Model training and evaluation</li>
+            <li>Daily 10-min standups: blockers + progress</li>
+            <li class="highlight-task">Mentor drop-in hours (1 hr per day)</li>
+            <li>Push code to GitHub daily</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="day-card">
+        <div class="day-card-top">
+          <span class="day-num">Day 28</span>
+          <div class="day-right">
+            <div class="day-title">Project Polish + Presentation Prep</div>
+            <span class="day-type type-project">Project</span>
+          </div>
+        </div>
+        <div class="day-card-body">
+          <ul class="task-list">
+            <li>Code cleanup and documentation</li>
+            <li>README writing on GitHub</li>
+            <li>Prepare demo slides (max 5 slides)</li>
+            <li class="highlight-task">Workshop: "How to present technical work" (20 min)</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="day-card">
+        <div class="day-card-top">
+          <span class="day-num">Day 29</span>
+          <div class="day-right">
+            <div class="day-title">Dry Run + Feedback</div>
+            <span class="day-type type-review">Review</span>
+          </div>
+        </div>
+        <div class="day-card-body">
+          <ul class="task-list">
+            <li>Each team presents in front of peers (5 min)</li>
+            <li>Structured peer feedback form filled</li>
+            <li>Mentors give final improvement tips</li>
+            <li>Last round of code fixes</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="day-card">
+        <div class="day-card-top">
+          <span class="day-num">Day 30</span>
+          <div class="day-right">
+            <div class="day-title">🎉 Final Showcase Day</div>
+            <span class="day-type type-event">Grand Event</span>
+          </div>
+        </div>
+        <div class="day-card-body">
+          <ul class="task-list">
+            <li class="highlight-task">🏆 All teams present final projects (10 min each)</li>
+            <li>Judged on: clarity, code quality, creativity, results</li>
+            <li>Awards: Best Project, Best Code, Best Presentation</li>
+            <li>Club certificates distributed</li>
+            <li>Plan announced for Month 2 roadmap</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </div><!-- /week4 -->
+
+  <!-- CLUB ACTIVITIES -->
+  <div id="activities" class="activities-section" style="display:none">
+    <p class="section-title">Ongoing Club Activities</p>
+    <p class="section-sub">These run throughout the 30 days — they build community, consistency, and confidence alongside the technical content.</p>
+    <div class="act-grid">
+
+      <div class="act-card">
+        <div class="act-icon" style="background:rgba(74,222,128,0.1);">📣</div>
+        <div class="act-title">Daily Code Drop</div>
+        <div class="act-desc">Every member shares one thing they wrote or learned today — a function, a bug fix, a visualization — in the group chat. No judgment, just progress.</div>
+        <span class="act-freq">Daily</span>
+      </div>
+
+      <div class="act-card">
+        <div class="act-icon" style="background:rgba(34,211,238,0.1);">🎤</div>
+        <div class="act-title">Demo Friday</div>
+        <div class="act-desc">Every Friday, 2–3 members demo their work to the club for 5 minutes. Builds presentation skills and keeps everyone accountable.</div>
+        <span class="act-freq">Weekly — Fridays</span>
+      </div>
+
+      <div class="act-card">
+        <div class="act-icon" style="background:rgba(167,139,250,0.1);">🤝</div>
+        <div class="act-title">Peer Pair Sessions</div>
+        <div class="act-desc">Randomly pair two members every week. They spend 30 min helping each other with doubts. Juniors + seniors mixed intentionally.</div>
+        <span class="act-freq">Weekly</span>
+      </div>
+
+      <div class="act-card">
+        <div class="act-icon" style="background:rgba(251,146,60,0.1);">🧠</div>
+        <div class="act-title">Concept Corner</div>
+        <div class="act-desc">One member explains a concept to the group each week — in their own words, no slides required. Teaching is the best way to learn.</div>
+        <span class="act-freq">Weekly</span>
+      </div>
+
+      <div class="act-card">
+        <div class="act-icon" style="background:rgba(244,114,182,0.1);">⚡</div>
+        <div class="act-title">Speed Challenge</div>
+        <div class="act-desc">Every Thursday: one problem, 20 minutes, fastest correct solution wins. Leaderboard maintained for the month. Prizes at end of month.</div>
+        <span class="act-freq">Weekly — Thursdays</span>
+      </div>
+
+      <div class="act-card">
+        <div class="act-icon" style="background:rgba(248,113,113,0.1);">🌐</div>
+        <div class="act-title">Guest Talk Series</div>
+        <div class="act-desc">Invite alumni or working professionals for a 20-min talk on "My AI journey." Exposes students to career paths and real-world applications.</div>
+        <span class="act-freq">Bi-weekly</span>
+      </div>
+
+      <div class="act-card">
+        <div class="act-icon" style="background:rgba(74,222,128,0.1);">📚</div>
+        <div class="act-title">Resource Drops</div>
+        <div class="act-desc">Curated cheat sheets, YouTube videos, and notebook templates shared every Monday. One link per topic — no overwhelming lists.</div>
+        <span class="act-freq">Weekly — Mondays</span>
+      </div>
+
+      <div class="act-card">
+        <div class="act-icon" style="background:rgba(34,211,238,0.1);">🏅</div>
+        <div class="act-title">Streak Tracker</div>
+        <div class="act-desc">Members track their daily coding streaks on a shared board. 30-day streak = special recognition on showcase day. Keeps motivation high.</div>
+        <span class="act-freq">Daily tracking</span>
+      </div>
+
+      <div class="act-card">
+        <div class="act-icon" style="background:rgba(167,139,250,0.1);">🐙</div>
+        <div class="act-title">GitHub Profile Sprint</div>
+        <div class="act-desc">Week 3 activity — every member sets up a GitHub profile, pins 3 repos, and writes a README. Builds a public portfolio from day one.</div>
+        <span class="act-freq">Week 3 — once</span>
+      </div>
+
+      <div class="act-card">
+        <div class="act-icon" style="background:rgba(251,146,60,0.1);">💬</div>
+        <div class="act-title">Weekly Discussion Prompt</div>
+        <div class="act-desc">Every Sunday: one open question posted — "What AI application surprised you this week?" or "Where would you use ML in college life?" Gets students thinking beyond code.</div>
+        <span class="act-freq">Weekly — Sundays</span>
+      </div>
+
+      <div class="act-card">
+        <div class="act-icon" style="background:rgba(244,114,182,0.1);">🔍</div>
+        <div class="act-title">AI News Roundup</div>
+        <div class="act-desc">One member volunteers each week to share 2–3 recent AI/ML news items with the group. Builds awareness of the field beyond academics.</div>
+        <span class="act-freq">Weekly</span>
+      </div>
+
+      <div class="act-card">
+        <div class="act-icon" style="background:rgba(74,222,128,0.1);">🎯</div>
+        <div class="act-title">End-of-Month Showcase</div>
+        <div class="act-desc">Day 30 grand event — all project teams present, certificates given, awards announced. Invite faculty and seniors. Sets the tone for Month 2.</div>
+        <span class="act-freq">Day 30 — once</span>
+      </div>
+
+    </div>
+  </div><!-- /activities -->
+
+  <!-- TIMELINE -->
+  <div id="timeline" class="timeline-section" style="display:none">
+    <p class="section-title">30-Day Visual Timeline</p>
+    <p class="section-sub">Hover over each segment to see the phase details.</p>
+    <div class="timeline-bar">
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px;letter-spacing:0.06em;text-transform:uppercase;">Days 1 → 30</div>
+      <div class="tl-track">
+        <div class="tl-seg" style="flex:7;background:#1a3a2a;color:#4ade80;" title="Python Basics (Days 1–7)">Python Basics</div>
+        <div class="tl-seg" style="flex:7;background:#0f2a33;color:#22d3ee;" title="OOP & Problem Solving (Days 8–14)">OOP</div>
+        <div class="tl-seg" style="flex:7;background:#201a3a;color:#a78bfa;" title="Data Tools (Days 15–21)">Data Tools</div>
+        <div class="tl-seg" style="flex:4;background:#2d1a0a;color:#fb923c;" title="ML Intro (Days 22–25)">ML Intro</div>
+        <div class="tl-seg" style="flex:5;background:#1a1010;color:#f87171;" title="Final Project (Days 26–30)">Final Project</div>
+      </div>
+      <div class="tl-legend">
+        <div class="tl-legend-item"><div class="tl-dot" style="background:#4ade80;"></div>Python basics (days 1–7)</div>
+        <div class="tl-legend-item"><div class="tl-dot" style="background:#22d3ee;"></div>OOP & problem solving (days 8–14)</div>
+        <div class="tl-legend-item"><div class="tl-dot" style="background:#a78bfa;"></div>Data tools (days 15–21)</div>
+        <div class="tl-legend-item"><div class="tl-dot" style="background:#fb923c;"></div>ML introduction (days 22–25)</div>
+        <div class="tl-legend-item"><div class="tl-dot" style="background:#f87171;"></div>Final project (days 26–30)</div>
+      </div>
+    </div>
+
+    <!-- Weekly events strip -->
+    <div style="margin-top:20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;">
+        <div style="font-size:11px;color:var(--accent);font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Every Monday</div>
+        <div style="font-size:13px;color:var(--muted);">Resource drops + weekly goals set</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;">
+        <div style="font-size:11px;color:var(--accent2);font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Every Thursday</div>
+        <div style="font-size:13px;color:var(--muted);">Speed challenge (20 min timed coding)</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;">
+        <div style="font-size:11px;color:var(--accent3);font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Every Friday</div>
+        <div style="font-size:13px;color:var(--muted);">Demo Friday — 2–3 members present</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;">
+        <div style="font-size:11px;color:var(--accent4);font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Every Sunday</div>
+        <div style="font-size:13px;color:var(--muted);">Weekly discussion prompt + week recap</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;">
+        <div style="font-size:11px;color:var(--accent5);font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Days 7, 14, 21, 30</div>
+        <div style="font-size:13px;color:var(--muted);">Weekly milestone events + challenges</div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;">
+        <div style="font-size:11px;color:var(--red);font-weight:600;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Day 30</div>
+        <div style="font-size:13px;color:var(--muted);">Grand Showcase — projects, awards, certs</div>
+      </div>
+    </div>
+  </div><!-- /timeline -->
+
+  <!-- OUTCOMES -->
+  <div id="outcomes" class="outcomes" style="display:none">
+    <p class="section-title">What Members Gain in 30 Days</p>
+    <p class="section-sub">Concrete skills and experiences every member walks away with by Day 30.</p>
+    <div class="outcomes-grid">
+      <div class="outcome-card">
+        <div class="outcome-num" style="color:var(--accent);">5+</div>
+        <div class="outcome-label">Python topics mastered — from basics to OOP to data libraries</div>
+      </div>
+      <div class="outcome-card">
+        <div class="outcome-num" style="color:var(--accent2);">3</div>
+        <div class="outcome-label">Real datasets explored and analysed using Pandas & NumPy</div>
+      </div>
+      <div class="outcome-card">
+        <div class="outcome-num" style="color:var(--accent3);">1</div>
+        <div class="outcome-label">End-to-end ML project built, deployed on GitHub, and presented</div>
+      </div>
+      <div class="outcome-card">
+        <div class="outcome-num" style="color:var(--accent4);">4</div>
+        <div class="outcome-label">Public presentations made — builds confidence for hackathons</div>
+      </div>
+      <div class="outcome-card">
+        <div class="outcome-num" style="color:var(--accent5);">12+</div>
+        <div class="outcome-label">Club activities participated in — community + accountability</div>
+      </div>
+      <div class="outcome-card">
+        <div class="outcome-num" style="color:var(--red);">1</div>
+        <div class="outcome-label">GitHub portfolio started with at least 3 public repositories</div>
+      </div>
+      <div class="outcome-card">
+        <div class="outcome-num" style="color:var(--accent);">30</div>
+        <div class="outcome-label">Consecutive days of coding — the habit that compounds forever</div>
+      </div>
+      <div class="outcome-card">
+        <div class="outcome-num" style="color:var(--accent2);">∞</div>
+        <div class="outcome-label">Foundation set for Month 2 — advanced ML, deep learning, NLP</div>
+      </div>
+    </div>
+
+    <div style="margin-top:32px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px 28px;">
+      <div style="font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:700;margin-bottom:12px;">Month 2 Preview</div>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;">
+        <span style="background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.2);color:var(--accent);padding:5px 14px;border-radius:99px;font-size:12px;font-weight:500;">Deep Learning with TensorFlow</span>
+        <span style="background:rgba(34,211,238,0.08);border:1px solid rgba(34,211,238,0.2);color:var(--accent2);padding:5px 14px;border-radius:99px;font-size:12px;font-weight:500;">Natural Language Processing</span>
+        <span style="background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.2);color:var(--accent3);padding:5px 14px;border-radius:99px;font-size:12px;font-weight:500;">Computer Vision Basics</span>
+        <span style="background:rgba(251,146,60,0.08);border:1px solid rgba(251,146,60,0.2);color:var(--accent4);padding:5px 14px;border-radius:99px;font-size:12px;font-weight:500;">First Kaggle Competition</span>
+        <span style="background:rgba(244,114,182,0.08);border:1px solid rgba(244,114,182,0.2);color:var(--accent5);padding:5px 14px;border-radius:99px;font-size:12px;font-weight:500;">Mini Hackathon</span>
+      </div>
+    </div>
+  </div><!-- /outcomes -->
+
+</div><!-- /main -->
+
+<footer>
+  AI/ML Club — Batch E-1 &nbsp;·&nbsp; 30-Day Action Plan &nbsp;·&nbsp; Built with intention
+</footer>
+
+<script>
+  function showSection(id, tab) {
+    const sections = ['week1','week2','week3','week4','activities','timeline','outcomes'];
+    sections.forEach(s => {
+      const el = document.getElementById(s);
+      if (el) el.style.display = s === id ? 'block' : 'none';
+    });
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    if (tab) tab.classList.add('active');
+  }
+  // Show week1 by default
+  document.getElementById('week1').style.display = 'block';
+</script>
+</body>
+</html>

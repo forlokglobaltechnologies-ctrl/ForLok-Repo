@@ -12,7 +12,8 @@ import {
   Alert,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { ArrowLeft, Plus, Car, Bike, Edit, Eye } from 'lucide-react-native';
+import { ArrowLeft, Plus, Bike, Edit, Eye } from 'lucide-react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { COLORS, FONTS, SPACING, SHADOWS, BORDER_RADIUS } from '@constants/theme';
 import { normalize, wp, hp } from '@utils/responsive';
@@ -31,7 +32,7 @@ const VehicleInformationScreen = () => {
   const [userType, setUserType] = useState<string | null>(null);
   const [companyId, setCompanyId] = useState<string | null>(null);
 
-  const tabs = ['All', 'Cars', 'Bikes', 'Available'];
+  const tabs = ['All', 'Bikes', 'Scooties', 'Available'];
 
   useEffect(() => {
     loadUserInfo();
@@ -100,20 +101,24 @@ const VehicleInformationScreen = () => {
         console.log('✅ Loaded', vehiclesData.length, 'vehicles');
         
         // Map backend format to UI format
-        const mappedVehicles = vehiclesData.map((vehicle: any) => ({
-          id: vehicle.vehicleId || vehicle._id,
-          vehicleId: vehicle.vehicleId || vehicle._id,
-          type: vehicle.type === 'car' ? 'Car' : 'Bike',
-          brand: `${vehicle.brand || ''} ${vehicle.vehicleModel || vehicle.model || ''}`.trim(),
-          number: vehicle.number || 'N/A',
-          status: vehicle.status === 'active' ? 'available' : vehicle.status || 'available',
-          image: vehicle.photos?.front || vehicle.photos?.side || 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=400',
-          seats: vehicle.seats,
-          fuelType: vehicle.fuelType,
-          transmission: vehicle.transmission,
-          isVerified: vehicle.isVerified,
-          ...vehicle,
-        }));
+        const mappedVehicles = vehiclesData.map((vehicle: any) => {
+          const raw = String(vehicle.type || '').toLowerCase();
+          const displayType = raw === 'scooty' || raw === 'scooter' ? 'Scooty' : 'Bike';
+          return {
+            ...vehicle,
+            id: vehicle.vehicleId || vehicle._id,
+            vehicleId: vehicle.vehicleId || vehicle._id,
+            type: displayType,
+            brand: `${vehicle.brand || ''} ${vehicle.vehicleModel || vehicle.model || ''}`.trim(),
+            number: vehicle.number || 'N/A',
+            status: vehicle.status === 'active' ? 'available' : vehicle.status || 'available',
+            image: vehicle.photos?.front || vehicle.photos?.side || 'https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=400',
+            seats: vehicle.seats,
+            fuelType: vehicle.fuelType,
+            transmission: vehicle.transmission,
+            isVerified: vehicle.isVerified,
+          };
+        });
 
         setVehicles(mappedVehicles);
       } else {
@@ -131,15 +136,15 @@ const VehicleInformationScreen = () => {
 
   const filteredVehicles = vehicles.filter((vehicle) => {
     if (activeTab === 'All') return true;
-    if (activeTab === 'Cars') return vehicle.type === 'Car';
     if (activeTab === 'Bikes') return vehicle.type === 'Bike';
+    if (activeTab === 'Scooties') return vehicle.type === 'Scooty';
     if (activeTab === 'Available') return vehicle.status === 'available';
     return true;
   });
 
   const totalVehicles = vehicles.length;
-  const carsCount = vehicles.filter((v) => v.type === 'Car').length;
   const bikesCount = vehicles.filter((v) => v.type === 'Bike').length;
+  const scootiesCount = vehicles.filter((v) => v.type === 'Scooty').length;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -175,15 +180,15 @@ const VehicleInformationScreen = () => {
           </Text>
           <View style={styles.summaryRow}>
             <View style={styles.summaryItem}>
-              <Car size={20} color={COLORS.primary} />
-              <Text style={styles.summaryItemText}>
-                {t('vehicleInventory.cars')}: {carsCount}
-              </Text>
-            </View>
-            <View style={styles.summaryItem}>
               <Bike size={20} color={COLORS.primary} />
               <Text style={styles.summaryItemText}>
                 {t('vehicleInventory.bikes')}: {bikesCount}
+              </Text>
+            </View>
+            <View style={styles.summaryItem}>
+              <MaterialCommunityIcons name="moped" size={20} color={COLORS.primary} />
+              <Text style={styles.summaryItemText}>
+                {t('vehicleInventory.scooties')}: {scootiesCount}
               </Text>
             </View>
           </View>
@@ -217,8 +222,8 @@ const VehicleInformationScreen = () => {
                 <Image source={{ uri: vehicle.image }} style={styles.vehicleImage} />
                 <View style={styles.vehicleInfo}>
                   <View style={styles.vehicleHeader}>
-                    {vehicle.type === 'Car' ? (
-                      <Car size={24} color={COLORS.primary} />
+                    {vehicle.type === 'Scooty' ? (
+                      <MaterialCommunityIcons name="moped" size={24} color={COLORS.primary} />
                     ) : (
                       <Bike size={24} color={COLORS.primary} />
                     )}

@@ -15,7 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import { BlurView } from 'expo-blur';
 import {
   ArrowLeft,
-  Car,
+  Bike,
   CheckCircle,
   Clock,
   Shield,
@@ -133,7 +133,7 @@ const PoolingManagementScreen = () => {
   };
 
   const statItems = [
-    { label: 'Total', value: stats.total, color: '#F99E3C', icon: Car },
+    { label: 'Total', value: stats.total, color: '#F99E3C', icon: Bike },
     { label: 'Active', value: stats.active, color: '#00B894', icon: CheckCircle },
     { label: 'Pending', value: stats.pending, color: '#F39C12', icon: Clock },
     { label: 'Suspended', value: stats.suspended, color: '#E74C3C', icon: Shield },
@@ -152,7 +152,7 @@ const PoolingManagementScreen = () => {
               <ArrowLeft size={20} color="#fff" />
             </TouchableOpacity>
             <View style={styles.heroTitleWrap}>
-              <Text style={styles.heroTitle}>Pooling Management</Text>
+              <Text style={styles.heroTitle}>Ride-Sharing Management</Text>
               <Text style={styles.heroSubtitle}>
                 {totalOffers > 0 ? `${totalOffers.toLocaleString()} total offers` : 'Manage pooling offers'}
               </Text>
@@ -238,7 +238,7 @@ const PoolingManagementScreen = () => {
               <View key={offerId} style={styles.offerCard}>
                 <View style={styles.cardHeaderRow}>
                   <View style={[styles.cardServiceIcon, { backgroundColor: '#F99E3C' + '15' }]}>
-                    <Car size={20} color="#F99E3C" />
+                    <Bike size={20} color="#F99E3C" />
                   </View>
                   <View style={styles.cardHeaderInfo}>
                     <Text style={styles.cardDriverName}>{driverName}</Text>
@@ -259,7 +259,7 @@ const PoolingManagementScreen = () => {
                     <Text style={styles.detailText} numberOfLines={1}>{formatDate(date)}</Text>
                   </View>
                   <View style={styles.detailItem}>
-                    <Car size={14} color="#64748B" />
+                    <Bike size={14} color="#64748B" />
                     <Text style={styles.detailText} numberOfLines={1}>{vehicle}</Text>
                   </View>
                   <View style={styles.detailMeta}>

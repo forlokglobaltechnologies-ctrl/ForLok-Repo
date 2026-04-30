@@ -14,7 +14,7 @@ import {
   Modal,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { ArrowLeft, Camera, X, FileText, Calendar, Shield, Fuel, Settings2, ChevronDown } from 'lucide-react-native';
+import { ArrowLeft, Camera, X, FileText, Calendar, Shield, Fuel, Settings2, ChevronDown, CheckCircle } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '@constants/theme';
 import { normalize, wp, hp } from '@utils/responsive';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -22,7 +22,7 @@ import { Input } from '@components/common/Input';
 
 import { useLanguage } from '@context/LanguageContext';
 import { useSnackbar } from '@context/SnackbarContext';
-import { vehicleApi, rentalApi, uploadFile, companyApi, masterDataApi, vehicleCatalogApi } from '@utils/apiClient';
+import { vehicleApi, uploadFile, companyApi, masterDataApi, vehicleCatalogApi } from '@utils/apiClient';
 import { API_CONFIG } from '../../config/api';
 import { getUserErrorMessage } from '@utils/errorUtils';
 import * as ImagePicker from 'expo-image-picker';
@@ -33,18 +33,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const VEHICLE_ACCENT = '#FE8800';
 const VEHICLE_ACCENT_DARK = '#D97100';
 
-const VEHICLE_BRAND_MODELS: Record<'car' | 'bike' | 'scooty', Record<string, string[]>> = {
-  car: {
-    'Maruti Suzuki': ['Alto K10', 'Swift', 'Baleno', 'WagonR', 'WagonR CNG', 'Dzire', 'Brezza'],
-    Hyundai: ['i10', 'i20', 'Venue', 'Creta', 'Verna', 'Verna Facelift'],
-    Tata: ['Tiago', 'Altroz', 'Tigor', 'Nexon', 'Punch', 'Harrier'],
-    'Tata Motors': ['Tiago', 'Altroz', 'Tigor', 'Nexon', 'Punch', 'Harrier'],
-    Mahindra: ['XUV300', 'XUV700', 'Scorpio', 'Scorpio-N', 'Bolero', 'Thar'],
-    Kia: ['Sonet', 'Seltos', 'Carens'],
-    Toyota: ['Glanza', 'Innova', 'Innova Hycross', 'Fortuner'],
-    Renault: ['Kwid', 'Kiger'],
-    Nissan: ['Magnite'],
-  },
+const VEHICLE_BRAND_MODELS: Record<'bike' | 'scooty', Record<string, string[]>> = {
   bike: {
     Honda: ['Shine', 'Shine 125', 'Unicorn', 'Hornet', 'CB350'],
     Hero: ['Splendor', 'Splendor Plus', 'HF Deluxe', 'Glamour', 'Xtreme'],
@@ -52,7 +41,6 @@ const VEHICLE_BRAND_MODELS: Record<'car' | 'bike' | 'scooty', Record<string, str
     Bajaj: ['Pulsar', 'Pulsar 150', 'Platina', 'Dominar', 'Avenger', 'Freedom 125'],
     Yamaha: ['FZ', 'R15', 'MT-15', 'RayZR'],
     TVS: ['Apache', 'Apache RTR 200 4V', 'Raider', 'Sport', 'Ronin'],
-    RoyalEnfield: ['Classic 350', 'Hunter 350', 'Bullet', 'Meteor', 'Himalayan 411'],
     'Royal Enfield': ['Classic 350', 'Hunter 350', 'Bullet', 'Meteor', 'Himalayan 411'],
     KTM: ['Duke 200'],
   },
@@ -71,6 +59,45 @@ const VEHICLE_BRAND_MODELS: Record<'car' | 'bike' | 'scooty', Record<string, str
 const normalizeKey = (value: string) =>
   value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
 
+/** Petrol first, then electric / electrical, then other fuels. */
+function sortFuelTypesByPriority(labels: string[]): string[] {
+  const uniq = Array.from(new Set(labels.filter(Boolean)));
+  const rank = (raw: string) => {
+    const s = raw.toLowerCase();
+    if (s.includes('petrol')) return 0;
+    if (s.includes('electric') || s.includes('electrical')) return 1;
+    if (s.includes('diesel')) return 2;
+    if (s.includes('cng')) return 3;
+    if (s.includes('hybrid')) return 4;
+    return 20;
+  };
+  return uniq.sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
+}
+
+function transmissionStorageValue(label: string): string {
+  const l = label.trim().toLowerCase();
+  if (l === 'manual' || l === 'manual (gear)') return 'Manual';
+  return label.trim();
+}
+
+function transmissionDisplayLabel(stored: string): string {
+  if (!stored) return '';
+  if (stored.toLowerCase() === 'manual') return 'Manual (Gear)';
+  return stored;
+}
+
+function buildTransmissionModalRows(options: string[]): { key: string; label: string }[] {
+  const seen = new Set<string>();
+  const out: { key: string; label: string }[] = [];
+  for (const opt of options) {
+    const key = transmissionStorageValue(String(opt));
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ key, label: transmissionDisplayLabel(key) });
+  }
+  return out;
+}
+
 const AddVehicleScreen = () => {
   const navigation = useNavigation();
   const route = useRoute<any>();
@@ -81,7 +108,7 @@ const AddVehicleScreen = () => {
   const editingVehicleId = editingVehicle?.vehicleId || editingVehicle?._id;
   
   // Basic Info
-  const [vehicleType, setVehicleType] = useState<'car' | 'bike' | 'scooty' | null>(null);
+  const [vehicleType, setVehicleType] = useState<'bike' | 'scooty' | null>(null);
   const [vehicleNumber, setVehicleNumber] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [brand, setBrand] = useState('');
@@ -92,7 +119,7 @@ const AddVehicleScreen = () => {
   const [color, setColor] = useState('');
   
   // Vehicle Specs
-  const [seats, setSeats] = useState<number>(5);
+  const [seats, setSeats] = useState<number>(2);
   const [fuelType, setFuelType] = useState<string>('');
   const [transmission, setTransmission] = useState<'Manual' | 'Automatic' | ''>('');
   const [insuranceExpiry, setInsuranceExpiry] = useState<Date | null>(null);
@@ -116,10 +143,6 @@ const AddVehicleScreen = () => {
   const [saving, setSaving] = useState(false);
   const [userType, setUserType] = useState<'individual' | 'company'>('individual');
   
-  // Suggested price
-  const [suggestedPrice, setSuggestedPrice] = useState<number | null>(null);
-  const [priceBreakdown, setPriceBreakdown] = useState<any>(null);
-  const [calculatingPrice, setCalculatingPrice] = useState(false);
   const [masterBrands, setMasterBrands] = useState<any[]>([]);
   const [masterModels, setMasterModels] = useState<any[]>([]);
   const [masterFuelTypes, setMasterFuelTypes] = useState<any[]>([]);
@@ -157,19 +180,20 @@ const AddVehicleScreen = () => {
     if (!editingVehicle) return;
 
     const normalizedType = (editingVehicle.type || '').toLowerCase();
-    const parsedType: 'car' | 'bike' | 'scooty' | null =
-      normalizedType === 'car'
-        ? 'car'
+    const parsedType: 'bike' | 'scooty' | null =
+      normalizedType === 'scooty' || normalizedType === 'scooter'
+        ? 'scooty'
         : normalizedType === 'bike'
           ? 'bike'
-          : normalizedType === 'scooty'
-            ? 'scooty'
-            : null;
+          : null;
 
     setVehicleType(parsedType);
     setVehicleNumber(editingVehicle.number || '');
     setCompanyName(editingVehicle.companyName || '');
-    const incomingBrand = editingVehicle.brand || '';
+    let incomingBrand = editingVehicle.brand || '';
+    if (parsedType === 'bike' && incomingBrand.replace(/\s+/g, '').toLowerCase() === 'royalenfield') {
+      incomingBrand = 'Royal Enfield';
+    }
     const incomingModel = editingVehicle.vehicleModel || editingVehicle.model || '';
     const knownBrands = parsedType ? Object.keys(VEHICLE_BRAND_MODELS[parsedType] || {}) : [];
     const knownModels = parsedType && knownBrands.includes(incomingBrand)
@@ -180,7 +204,7 @@ const AddVehicleScreen = () => {
     setModel(incomingModel);
     setYear(editingVehicle.year || null);
     setColor(editingVehicle.color || '');
-    setSeats(editingVehicle.seats || (parsedType === 'car' ? 5 : 2));
+    setSeats(editingVehicle.seats || 2);
     setFuelType(editingVehicle.fuelType || '');
     setTransmission(editingVehicle.transmission || '');
     setInsuranceExpiry(editingVehicle.insuranceExpiry ? new Date(editingVehicle.insuranceExpiry) : null);
@@ -249,16 +273,6 @@ const AddVehicleScreen = () => {
     }
   }, [vehicleType, brand, model, masterModels]);
 
-  // Calculate suggested price when vehicle details change
-  useEffect(() => {
-    if (vehicleType && brand && seats && fuelType && transmission && year) {
-      calculateSuggestedPrice();
-    } else {
-      setSuggestedPrice(null);
-      setPriceBreakdown(null);
-    }
-  }, [vehicleType, brand, model, year, seats, fuelType, transmission]);
-
   const loadUserType = async () => {
     try {
       const userData = await AsyncStorage.getItem('@user_data');
@@ -271,32 +285,6 @@ const AddVehicleScreen = () => {
       }
     } catch (error) {
       console.error('Error loading user type:', error);
-    }
-  };
-
-  const calculateSuggestedPrice = async () => {
-    if (!vehicleType || !brand || !seats || !fuelType || !transmission) return;
-    
-    try {
-      setCalculatingPrice(true);
-      const response = await rentalApi.calculatePrice({
-        vehicleType: (vehicleType === 'scooty' ? 'bike' : vehicleType) as 'car' | 'bike',
-        brand,
-        model: model || undefined,
-        year: year || undefined,
-        seats,
-        fuelType: fuelType as 'Petrol' | 'Diesel' | 'Electric' | 'CNG',
-        transmission: transmission as 'Manual' | 'Automatic',
-      });
-
-      if (response.success && response.data) {
-        setSuggestedPrice(response.data.suggestedPrice);
-        setPriceBreakdown(response.data.breakdown);
-      }
-    } catch (error: any) {
-      console.error('Error calculating price:', error);
-    } finally {
-      setCalculatingPrice(false);
     }
   };
 
@@ -809,6 +797,7 @@ const AddVehicleScreen = () => {
       ...fallbackFuelOptions,
     ])
   );
+  const sortedFuelOptions = sortFuelTypesByPriority(fuelOptions);
   const transmissionOptions = Array.from(
     new Set([
       ...masterTransmissions
@@ -821,6 +810,7 @@ const AddVehicleScreen = () => {
       ...['Manual', 'Automatic'],
     ])
   );
+  const transmissionModalRows = buildTransmissionModalRows(transmissionOptions);
 
   const openSelectionModal = (type: 'vehicleType' | 'brand' | 'model' | 'fuelType' | 'transmission' | 'year') => {
     setSelectionType(type);
@@ -829,9 +819,9 @@ const AddVehicleScreen = () => {
 
   const handleSelectDropdownValue = (value: string) => {
     if (selectionType === 'vehicleType') {
-      const nextType = value as 'car' | 'bike' | 'scooty';
+      const nextType = value as 'bike' | 'scooty';
       setVehicleType(nextType);
-      setSeats(nextType === 'car' ? 5 : 2);
+      setSeats(2);
       setBrand('');
       setModel('');
       setFuelType('');
@@ -1042,7 +1032,7 @@ const AddVehicleScreen = () => {
             <View style={styles.input}>
               <View style={styles.labelRow}>
                 <Settings2 size={14} color={COLORS.textSecondary} />
-                <Text style={styles.label}>Transmission *</Text>
+                <Text style={styles.label}>Manual (Gear) / Automatic *</Text>
               </View>
               <TouchableOpacity
                 style={styles.dropdownField}
@@ -1050,7 +1040,7 @@ const AddVehicleScreen = () => {
                 activeOpacity={0.8}
               >
                 <Text style={[styles.dropdownValue, !transmission && styles.dropdownPlaceholder]}>
-                  {transmission || 'Select transmission'}
+                  {transmission ? transmissionDisplayLabel(transmission) : 'Select Manual (Gear) or Automatic'}
                 </Text>
                 <ChevronDown size={16} color="#7A7A7A" />
               </TouchableOpacity>
@@ -1085,22 +1075,6 @@ const AddVehicleScreen = () => {
               />
             )}
           </View>
-
-          {/* Suggested Price Card */}
-          {suggestedPrice && priceBreakdown && (
-            <View style={styles.priceCard}>
-              <Text style={styles.priceTitle}>Suggested Rental Price</Text>
-              <Text style={styles.priceAmount}>₹{suggestedPrice}<Text style={styles.priceUnit}>/hour</Text></Text>
-              <View style={styles.priceBreakdown}>
-                <Text style={styles.breakdownTitle}>Price Breakdown</Text>
-                {priceBreakdown && (
-                  <Text style={styles.breakdownText}>
-                    Base ₹{priceBreakdown.basePrice} × {priceBreakdown.ageMultiplier.toFixed(2)} (age) × {priceBreakdown.transmissionMultiplier.toFixed(2)} (trans) × {priceBreakdown.fuelMultiplier.toFixed(2)} (fuel) × {priceBreakdown.seatsMultiplier.toFixed(2)} (seats) = ₹{suggestedPrice}/hr
-                  </Text>
-                )}
-              </View>
-            </View>
-          )}
 
           {/* Vehicle Photos */}
           <View style={styles.sectionCard}>
@@ -1217,7 +1191,7 @@ const AddVehicleScreen = () => {
                   : selectionType === 'fuelType'
                     ? 'Select Fuel Type'
                     : selectionType === 'transmission'
-                      ? 'Select Transmission'
+                      ? 'Select Manual (Gear) or Automatic'
                       : selectionType === 'year'
                         ? 'Select Year'
                       : 'Select Model'}
@@ -1225,30 +1199,38 @@ const AddVehicleScreen = () => {
             <ScrollView style={styles.modalList} showsVerticalScrollIndicator={false}>
               {(
                 selectionType === 'vehicleType'
-                  ? ['car', 'bike', 'scooty']
+                  ? ['bike', 'scooty']
                   : selectionType === 'brand'
                     ? brandOptions
                     : selectionType === 'fuelType'
-                      ? fuelOptions
+                      ? sortedFuelOptions
                       : selectionType === 'transmission'
-                        ? transmissionOptions
+                        ? transmissionModalRows.map((r) => r.key)
                         : selectionType === 'year'
                           ? yearOptions.map((y) => String(y))
                         : modelOptions
               ).length === 0 ? (
                 <Text style={styles.modalEmptyText}>No options available yet. Please report to admin.</Text>
+              ) : selectionType === 'transmission' ? (
+                transmissionModalRows.map((row) => (
+                  <TouchableOpacity
+                    key={row.key}
+                    style={styles.modalOption}
+                    onPress={() => handleSelectDropdownValue(row.key)}
+                  >
+                    <Text style={styles.modalOptionText}>{row.label}</Text>
+                  </TouchableOpacity>
+                ))
               ) : (
                 (
                   selectionType === 'vehicleType'
-                    ? ['car', 'bike', 'scooty']
+                    ? ['bike', 'scooty']
                     : selectionType === 'brand'
                       ? brandOptions
                       : selectionType === 'fuelType'
-                        ? fuelOptions
-                        : selectionType === 'transmission'
-                          ? transmissionOptions
-                          : selectionType === 'year'
-                            ? yearOptions.map((y) => String(y))
+                        ? sortedFuelOptions
+                        : selectionType === 'year'
+                          ? yearOptions.map((y) => String(y))
                           : modelOptions
                 ).map((option) => (
                   <TouchableOpacity
@@ -1546,54 +1528,6 @@ const styles = StyleSheet.create({
   },
   datePlaceholder: {
     color: '#999',
-  },
-  priceCard: {
-    padding: normalize(16),
-    marginBottom: normalize(12),
-    backgroundColor: '#F0FFF4',
-    borderWidth: 1,
-    borderColor: '#C6F6D5',
-    borderRadius: normalize(16),
-  },
-  priceTitle: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(12),
-    color: '#38A169',
-    marginBottom: normalize(4),
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  priceAmount: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(28),
-    color: '#22543D',
-    fontWeight: 'bold',
-    marginBottom: normalize(8),
-  },
-  priceUnit: {
-    fontSize: normalize(14),
-    fontWeight: '500',
-    color: '#666',
-  },
-  priceBreakdown: {
-    marginTop: normalize(6),
-    paddingTop: normalize(8),
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#C6F6D5',
-  },
-  breakdownTitle: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(11),
-    color: '#666',
-    marginBottom: normalize(4),
-    fontWeight: '600',
-  },
-  breakdownText: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(11),
-    color: '#888',
-    lineHeight: normalize(16),
   },
   documentsCard: {
     padding: normalize(16),

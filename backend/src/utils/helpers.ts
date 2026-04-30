@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { PRICING_CONFIG } from '../config/pricing.config';
 
 /**
  * Generate random OTP
@@ -154,16 +155,21 @@ function toRad(degrees: number): number {
 }
 
 /**
- * Calculate platform fee
+ * Calculate platform fee (uses PRICING_CONFIG.PLATFORM_FEE_PERCENTAGE when feePercentage omitted)
  */
-export function calculatePlatformFee(amount: number, feePercentage: number = 5): number {
-  return Math.round((amount * feePercentage) / 100);
+export function calculatePlatformFee(amount: number, feePercentage?: number): number {
+  const pct =
+    feePercentage !== undefined && feePercentage !== null
+      ? feePercentage
+      : PRICING_CONFIG.PLATFORM_FEE_PERCENTAGE;
+  if (!Number.isFinite(amount) || amount <= 0 || !Number.isFinite(pct) || pct <= 0) return 0;
+  return Math.round((amount * pct) / 100);
 }
 
 /**
  * Calculate total amount with platform fee
  */
-export function calculateTotalAmount(amount: number, feePercentage: number = 5): number {
+export function calculateTotalAmount(amount: number, feePercentage?: number): number {
   const fee = calculatePlatformFee(amount, feePercentage);
   return amount + fee;
 }

@@ -18,7 +18,7 @@ import {
   Search,
   ChevronDown,
   ChevronUp,
-  Car,
+  Bike,
   MapPin,
   CreditCard,
   Shield,
@@ -70,8 +70,8 @@ const FAQScreen = () => {
       color: '#4CAF50',
       items: [
         {
-          question: 'How do I create an account on Forlok?',
-          answer: 'Download the Forlok app from Google Play Store or Apple App Store. Tap "Sign Up", enter your mobile number, verify with OTP, and complete your profile with name, email, and a profile photo. You can register as an Individual or a Company.',
+          question: 'How do I create an account on eZway?',
+          answer: 'Download the eZway app from Google Play Store or Apple App Store. Tap "Sign Up", enter your mobile number, verify with OTP, and complete your profile with name, email, and a profile photo. You can register as an Individual or a Company.',
         },
         {
           question: 'What documents do I need for verification?',
@@ -92,32 +92,32 @@ const FAQScreen = () => {
       ],
     },
     {
-      icon: Car,
-      title: 'Pooling Services',
+      icon: Bike,
+      title: 'Ride-Sharing Services',
       color: '#F99E3C',
       items: [
         {
-          question: 'What is Forlok Pooling?',
-          answer: 'Forlok Pooling connects drivers with passengers heading in the same direction. Drivers offer available seats on their regular routes, and passengers can book seats at affordable prices. It\'s cost-effective, eco-friendly, and a great way to commute.',
+          question: 'What is eZway Ride-Sharing?',
+          answer: 'eZway Ride-Sharing connects drivers with passengers heading in the same direction. Drivers offer available seats on their regular routes, and passengers can book seats at affordable prices. It\'s cost-effective, eco-friendly, and a great way to commute.',
         },
         {
-          question: 'How do I create a pooling offer as a driver?',
-          answer: 'Go to "Offer Services" > "Create Pooling Offer". Enter your from/to locations, date, time, available seats, and price per seat. Review the details and publish your offer. Passengers can then search and book seats on your route.',
+          question: 'How do I create a ride-sharing offer as a driver?',
+          answer: 'Go to "Offer Services" > "Create Ride-Sharing Offer". Enter your from/to locations, date, time, available seats, and price per seat. Review the details and publish your offer. Passengers can then search and book seats on your route.',
         },
         {
-          question: 'How do I book a pooling ride as a passenger?',
-          answer: 'Go to "Take Services" > "Search Pooling". Enter your pickup and drop locations, select your travel date, and browse available offers. Choose a ride that matches your route, review driver details and ratings, then confirm your booking.',
+          question: 'How do I book a ride-sharing trip as a passenger?',
+          answer: 'Go to "Take Services" > "Take Ride". Enter your pickup and drop locations, select your travel date, and browse available offers. Choose a ride that matches your route, review driver details and ratings, then confirm your booking.',
         },
         {
           question: 'Can I set stopping points along my route?',
-          answer: 'Yes, when creating a pooling offer, you can add multiple stopping locations along your route. This helps passengers find rides that match their specific pickup/drop points and makes route planning more flexible.',
+          answer: 'Yes, when creating a ride-sharing offer, you can add multiple stopping locations along your route. This helps passengers find rides that match their specific pickup/drop points and makes route planning more flexible.',
         },
         {
           question: 'What happens if the driver cancels my ride?',
           answer: 'If a driver cancels your confirmed booking, the trip is cancelled in-app and you are notified immediately so you can find an alternative ride.',
         },
         {
-          question: 'How is the pooling fare calculated?',
+          question: 'How is the ride-sharing fare calculated?',
           answer: 'The fare is calculated using route distance, timing, and ride parameters. You see the final fare in the trip summary before confirming your booking.',
         },
       ],
@@ -128,12 +128,12 @@ const FAQScreen = () => {
       color: '#9C27B0',
       items: [
         {
-          question: 'How does vehicle rental work on Forlok?',
+          question: 'How does vehicle rental work on eZway?',
           answer: 'Vehicle owners list their vehicles for rent with pricing, availability, and pickup location. Renters browse available vehicles, select dates, and book. After verification and confirmation, the vehicle is handed over at the agreed location.',
         },
         {
           question: 'What types of vehicles are available for rent?',
-          answer: 'Forlok offers a variety of vehicles including bikes, scooters, cars (hatchback, sedan, SUV), and commercial vehicles. Availability varies by location. Each listing includes vehicle details, photos, ratings, and pricing.',
+          answer: 'eZway focuses on two-wheelers: bikes and scooters (scooties). Availability varies by location. Each listing includes vehicle details, photos, ratings, and pricing.',
         },
         {
           question: 'Is insurance included with rental vehicles?',
@@ -151,12 +151,12 @@ const FAQScreen = () => {
       color: '#FF9800',
       items: [
         {
-          question: 'How does manual settlement work in Forlok?',
-          answer: 'For pooling rides, settlement is done manually between passenger and driver after trip completion. The app handles booking, fare visibility, trip tracking, and completion confirmation.',
+          question: 'How does manual settlement work in eZway?',
+          answer: 'For ride-sharing trips, settlement is done manually between passenger and driver after trip completion. The app handles booking, fare visibility, trip tracking, and completion confirmation.',
         },
         {
-          question: 'How does Forlok Wallet work?',
-          answer: 'Forlok Wallet is used to track app-side credits and coin-related adjustments. It remains available alongside the Coins system.',
+          question: 'How does eZway Wallet work?',
+          answer: 'eZway Wallet is used to track app-side credits and coin-related adjustments. It remains available alongside the Coins system.',
         },
         {
           question: 'How do I get a refund?',
@@ -167,8 +167,8 @@ const FAQScreen = () => {
           answer: 'For manual settlement rides, drivers collect fare directly from passengers. If coins reduced passenger payable fare, eligible compensation is handled through the app wallet logic.',
         },
         {
-          question: 'What are Forlok Coins?',
-          answer: 'Forlok Coins are reward points you earn by completing rides, referring friends, and maintaining good ratings. You can redeem coins for ride discounts, wallet credits, and exclusive offers. Check the Earn Coins section for current promotions.',
+          question: 'What are eZway Coins?',
+          answer: 'eZway Coins are reward points you earn by completing rides, referring friends, and maintaining good ratings. You can redeem coins for ride discounts, wallet credits, and exclusive offers. Check the eZway Coins section for current promotions.',
         },
       ],
     },
@@ -178,8 +178,8 @@ const FAQScreen = () => {
       color: '#F44336',
       items: [
         {
-          question: 'How does Forlok ensure ride safety?',
-          answer: 'Forlok implements multiple safety features: all users are verified with government IDs, real-time GPS tracking during rides, in-app SOS emergency button, ride sharing with trusted contacts, driver rating system, and 24/7 safety support line.',
+          question: 'How does eZway ensure ride safety?',
+          answer: 'eZway implements multiple safety features: all users are verified with government IDs, real-time GPS tracking during rides, in-app SOS emergency button, ride sharing with trusted contacts, driver rating system, and 24/7 safety support line.',
         },
         {
           question: 'What is the SOS feature?',
@@ -191,7 +191,7 @@ const FAQScreen = () => {
         },
         {
           question: 'Is my personal information safe?',
-          answer: 'Yes. Forlok uses industry-standard encryption (AES-256, TLS 1.3) to protect your data. We never share your personal information with other users beyond what\'s necessary for ride coordination. Read our Privacy Policy for complete details.',
+          answer: 'Yes. eZway uses industry-standard encryption (AES-256, TLS 1.3) to protect your data. We never share your personal information with other users beyond what\'s necessary for ride coordination. Read our Privacy Policy for complete details.',
         },
       ],
     },
@@ -221,11 +221,11 @@ const FAQScreen = () => {
         },
         {
           question: 'What happens if the driver takes a different route?',
-          answer: 'Forlok\'s system monitors route deviations. If a significant deviation is detected, both the driver and passenger are notified. Drivers are encouraged to follow the optimal route. You can contact support if you feel the deviation was unjustified.',
+          answer: 'eZway\'s system monitors route deviations. If a significant deviation is detected, both the driver and passenger are notified. Drivers are encouraged to follow the optimal route. You can contact support if you feel the deviation was unjustified.',
         },
         {
           question: 'How do I view my ride history?',
-          answer: 'Go to the History tab in the app. You can view all past pooling rides and rental bookings, filter by date and status, and see ride details including route and completion info.',
+          answer: 'Go to the History tab in the app. You can view all past ride-sharing trips and rental bookings, filter by date and status, and see ride details including route and completion info.',
         },
       ],
     },

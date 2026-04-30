@@ -16,7 +16,9 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import LottieView from 'lottie-react-native';
 import { Video, ResizeMode } from 'expo-av';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { ArrowLeft, MapPin, Calendar, Clock, Car, IndianRupee, FileText, Minus, Plus, ChevronDown } from 'lucide-react-native';
+import { ArrowLeft, MapPin, Calendar, Clock, IndianRupee, FileText, Minus, Plus, ChevronDown } from 'lucide-react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { VehicleTypeIcon } from '@utils/vehicleDisplay';
 import { normalize, wp, hp } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { Button } from '@components/common/Button';
@@ -66,7 +68,7 @@ const CreateRentalOfferScreen = () => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showFromTimePicker, setShowFromTimePicker] = useState(false);
   const [showUntilTimePicker, setShowUntilTimePicker] = useState(false);
-  const [vehicleType, setVehicleType] = useState<'Car' | 'Bike' | null>(null);
+  const [vehicleType, setVehicleType] = useState<'Bike' | 'Scooty' | null>(null);
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState<any | null>(null);
   const [showVehicleDropdown, setShowVehicleDropdown] = useState(false);
@@ -114,10 +116,13 @@ const CreateRentalOfferScreen = () => {
       setLoadingVehicles(true);
       const response = await vehicleApi.getVehicles();
       if (response.success && response.data) {
-        // Filter vehicles by selected type (Car -> car, Bike -> bike)
-        const selectedType = vehicleType === 'Car' ? 'car' : vehicleType === 'Bike' ? 'bike' : null;
-        const filteredVehicles = selectedType 
-          ? response.data.filter((v: any) => v.type?.toLowerCase() === selectedType)
+        const selectedType = vehicleType === 'Scooty' ? 'scooty' : vehicleType === 'Bike' ? 'bike' : null;
+        const filteredVehicles = selectedType
+          ? response.data.filter((v: any) => {
+              const t = (v.type || '').toLowerCase();
+              if (selectedType === 'scooty') return t === 'scooty' || t === 'scooter';
+              return t === 'bike';
+            })
           : response.data;
         setVehicles(filteredVehicles);
         console.log(`✅ Loaded ${filteredVehicles.length} vehicles of type ${selectedType || 'all'}`);
@@ -150,9 +155,13 @@ const CreateRentalOfferScreen = () => {
   // Auto-select vehicle when vehicles are loaded and match the selected type
   useEffect(() => {
     if (vehicles.length > 0 && vehicleType && !selectedVehicle) {
-      const selectedType = vehicleType === 'Car' ? 'car' : vehicleType === 'Bike' ? 'bike' : null;
+      const selectedType = vehicleType === 'Scooty' ? 'scooty' : vehicleType === 'Bike' ? 'bike' : null;
       const matchingVehicles = selectedType
-        ? vehicles.filter((v: any) => v.type?.toLowerCase() === selectedType)
+        ? vehicles.filter((v: any) => {
+            const t = (v.type || '').toLowerCase();
+            if (selectedType === 'scooty') return t === 'scooty' || t === 'scooter';
+            return t === 'bike';
+          })
         : vehicles;
       if (matchingVehicles.length === 1) {
         // Auto-select if only one vehicle of this type
@@ -216,7 +225,7 @@ const CreateRentalOfferScreen = () => {
       // PLUS additional factors: location, date, time (for day/night and supply/demand)
       const priceData: any = {
         // Vehicle details (same as AddVehicleScreen) - required for base price calculation
-        vehicleType: selectedVehicle.type?.toLowerCase() || (vehicleType === 'Car' ? 'car' : 'bike'),
+        vehicleType: selectedVehicle.type?.toLowerCase() || (vehicleType === 'Scooty' ? 'scooty' : 'bike'),
         brand: selectedVehicle.brand,
         model: selectedVehicle.vehicleModel || selectedVehicle.model || undefined,
         year: selectedVehicle.year || undefined,
@@ -721,22 +730,6 @@ const CreateRentalOfferScreen = () => {
                 <TouchableOpacity
                   style={[
                     styles.vehicleTypeButton,
-                    vehicleType === 'Car' && styles.vehicleTypeSelected,
-                  ]}
-                  onPress={() => {
-                    setVehicleType('Car');
-                    setSelectedVehicle(null);
-                  }}
-                >
-                  <Image
-                    source={require('../../../assets/car.jpg')}
-                    style={styles.vehicleImage}
-                    resizeMode="cover"
-                  />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.vehicleTypeButton,
                     vehicleType === 'Bike' && styles.vehicleTypeSelected,
                   ]}
                   onPress={() => {
@@ -749,6 +742,20 @@ const CreateRentalOfferScreen = () => {
                     style={styles.vehicleImage}
                     resizeMode="cover"
                   />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.vehicleTypeButton,
+                    vehicleType === 'Scooty' && styles.vehicleTypeSelected,
+                  ]}
+                  onPress={() => {
+                    setVehicleType('Scooty');
+                    setSelectedVehicle(null);
+                  }}
+                >
+                  <View style={styles.scootyTypeInner}>
+                    <MaterialCommunityIcons name="moped" size={normalize(40)} color={COLORS.primary} />
+                  </View>
                 </TouchableOpacity>
               </View>
             </View>
@@ -775,7 +782,7 @@ const CreateRentalOfferScreen = () => {
                       style={styles.dropdownButton}
                       onPress={() => setShowVehicleDropdown(!showVehicleDropdown)}
                     >
-                      <Car size={20} color={COLORS.textSecondary} />
+                      <VehicleTypeIcon type={selectedVehicle?.type} size={20} color={COLORS.textSecondary} />
                       <Text style={[styles.dropdownText, selectedVehicle && styles.dropdownTextSelected]}>
                         {selectedVehicle 
                           ? `${selectedVehicle.brand || 'Vehicle'} - ${selectedVehicle.number}`
@@ -788,8 +795,11 @@ const CreateRentalOfferScreen = () => {
                         {vehicles
                           .filter((vehicle: any) => {
                             // Double-check filter: only show vehicles matching selected type
-                            const selectedType = vehicleType === 'Car' ? 'car' : vehicleType === 'Bike' ? 'bike' : null;
-                            return selectedType ? vehicle.type?.toLowerCase() === selectedType : true;
+                            const selectedType = vehicleType === 'Scooty' ? 'scooty' : vehicleType === 'Bike' ? 'bike' : null;
+                            if (!selectedType) return true;
+                            const t = (vehicle.type || '').toLowerCase();
+                            if (selectedType === 'scooty') return t === 'scooty' || t === 'scooter';
+                            return t === 'bike';
                           })
                           .map((vehicle) => (
                           <TouchableOpacity
@@ -1064,6 +1074,13 @@ const styles = StyleSheet.create({
   vehicleImage: {
     width: '100%',
     height: hp(17),
+  },
+  scootyTypeInner: {
+    width: '100%',
+    height: hp(17),
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.white,
   },
   vehicleSelectContainer: {
     marginBottom: SPACING.md,

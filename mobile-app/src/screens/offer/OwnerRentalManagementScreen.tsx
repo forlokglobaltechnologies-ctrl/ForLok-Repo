@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import LottieView from 'lottie-react-native';
-import { ArrowLeft, Clock, User, Car, MapPin, IndianRupee, CheckCircle, XCircle, Play, Square } from 'lucide-react-native';
+import { ArrowLeft, Clock, User, MapPin, IndianRupee, CheckCircle, XCircle, Play, Square } from 'lucide-react-native';
 import { normalize, wp, hp } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { Card } from '@components/common/Card';

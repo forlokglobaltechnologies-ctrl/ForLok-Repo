@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,11 +9,13 @@ import {
   Platform,
   Image,
   StatusBar,
+  Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Lock, Mail } from 'lucide-react-native';
+import { Phone } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '@constants/theme';
 import { Input } from '@components/common/Input';
+import { PhoneInput } from '@components/common/PhoneInput';
 import { useLanguage } from '@context/LanguageContext';
 import { authApi } from '@utils/apiClient';
 import { normalize, wp, hp } from '@utils/responsive';
@@ -22,58 +24,77 @@ import { useSnackbar } from '@context/SnackbarContext';
 import { getUserErrorMessage, mapFieldErrors } from '@utils/errorUtils';
 import { AppLoader } from '@components/common/AppLoader';
 import { LinearGradient } from 'expo-linear-gradient';
+import i18n from '@utils/i18n';
 
 const ACCENT = '#FE8800';
 const BUTTON_GRADIENT = ['#232323', '#191919'] as const;
-const DEBUG_ENDPOINT = 'http://127.0.0.1:7775/ingest/9bdd2fd3-ac77-45be-b342-a40ab02f34f7';
 const SIGNIN_LOGO = require('../../../assets/signin_arrow_orange_transparent.png');
-type SignInErrors = { username?: string; password?: string };
+
+type SignInErrors = { phone?: string; otp?: string };
 
 const SignInScreen = () => {
   const navigation = useNavigation();
   const { t } = useLanguage();
   const { login } = useAuth();
   const { showSnackbar } = useSnackbar();
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<SignInErrors>({});
 
-  React.useEffect(() => {
-    // #region agent log
-    fetch(DEBUG_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'9d349f'},body:JSON.stringify({sessionId:'9d349f',runId:'startup',hypothesisId:'H11',location:'SignInScreen.tsx:mount',message:'SignIn screen mounted',data:{},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
+  const [phone, setPhone] = useState('');
+  const [otp, setOtp] = useState('');
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpTimer, setOtpTimer] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [errors, setErrors] = useState<SignInErrors>({});
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
   }, []);
 
-  const handleSignIn = async () => {
-    const nextErrors: SignInErrors = {};
-    if (!username.trim()) {
-      nextErrors.username = t('signIn.enterUsernameError');
-    }
-    if (!password) {
-      nextErrors.password = t('signIn.enterPasswordError');
-    }
+  const formattedPhone = phone.length >= 10 ? `+91${phone}` : '';
 
-    if (Object.keys(nextErrors).length > 0) {
-      setErrors(nextErrors);
-      showSnackbar({ message: t('signIn.errorTitle'), type: 'error' });
+  const startOtpTimer = () => {
+    setOtpTimer(45);
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      setOtpTimer((prev) => {
+        if (prev <= 1) {
+          if (timerRef.current) clearInterval(timerRef.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const handleSendOtp = async () => {
+    if (!phone || phone.length < 10) {
+      setErrors((prev) => ({ ...prev, phone: t('signIn.enterPhoneError') }));
+      showSnackbar({ message: t('signIn.enterPhoneError'), type: 'error' });
       return;
     }
-
-    setErrors({});
+    setErrors((prev) => ({ ...prev, phone: '', otp: '' }));
     setLoading(true);
     try {
-      const response = await authApi.signin(username.trim(), password);
+      const response = await authApi.sendOTP(formattedPhone, 'login');
       if (response.success) {
-        const userData = response.data?.user || {};
-        const tokens = response.data?.tokens;
-        if (tokens) {
-          await login(userData, tokens);
+        setOtpSent(true);
+        setOtp('');
+        startOtpTimer();
+        if (response.data?.otp) {
+          Alert.alert(
+            t('individualRegistration.sendOtp'),
+            `${response.data.otp}\n\n(${t('signIn.devOtpHint')})`,
+            [{ text: t('common.ok') }],
+          );
+        } else {
+          showSnackbar({ message: t('signIn.otpSent'), type: 'success' });
         }
       } else {
-        const mapped = mapFieldErrors(response as any, { username: 'username', password: 'password' });
-        setErrors((prev: SignInErrors) => ({ ...prev, ...mapped }));
+        const fieldErrors = mapFieldErrors(response as any, { phone: 'phone' });
+        setErrors((prev) => ({ ...prev, ...fieldErrors }));
         showSnackbar({
           message: getUserErrorMessage(response as any, t('signIn.loginFailed')),
           type: 'error',
@@ -86,7 +107,86 @@ const SignInScreen = () => {
     }
   };
 
-  const canSubmit = username.trim().length > 0 && password.length > 0 && !loading;
+  const handleResendOtp = async () => {
+    if (otpTimer > 0) {
+      showSnackbar({
+        message: i18n.t('signIn.waitBeforeResend', { seconds: otpTimer }),
+        type: 'warning',
+      });
+      return;
+    }
+    setLoading(true);
+    try {
+      const response = await authApi.sendOTP(formattedPhone, 'login');
+      if (response.success) {
+        setOtp('');
+        startOtpTimer();
+        if (response.data?.otp) {
+          Alert.alert(
+            t('individualRegistration.resendOtp'),
+            `${response.data.otp}\n\n(${t('signIn.devOtpHint')})`,
+            [{ text: t('common.ok') }],
+          );
+        } else {
+          showSnackbar({ message: t('signIn.otpSent'), type: 'success' });
+        }
+      } else {
+        showSnackbar({
+          message: getUserErrorMessage(response as any, t('signIn.loginFailed')),
+          type: 'error',
+        });
+      }
+    } catch (error: any) {
+      showSnackbar({ message: error.message || t('signIn.signInFailed'), type: 'error' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyAndSignIn = async () => {
+    if (!otp || otp.length !== 6) {
+      setErrors((prev) => ({ ...prev, otp: t('signIn.invalidOtpError') }));
+      showSnackbar({ message: t('signIn.invalidOtpError'), type: 'error' });
+      return;
+    }
+    setErrors((prev) => ({ ...prev, otp: '' }));
+    setVerifying(true);
+    try {
+      const response = await authApi.verifyOTP(formattedPhone, otp, 'login');
+      if (response.success && response.data?.tokens?.accessToken && response.data?.tokens?.refreshToken) {
+        const userData = response.data?.user || {};
+        await login(userData, response.data.tokens);
+      } else if (response.success) {
+        showSnackbar({ message: t('signIn.loginFailed'), type: 'error' });
+      } else {
+        const fieldErrors = mapFieldErrors(response as any, { otp: 'otp' });
+        setErrors((prev) => ({ ...prev, ...fieldErrors }));
+        showSnackbar({
+          message: getUserErrorMessage(response as any, t('signIn.loginFailed')),
+          type: 'error',
+        });
+      }
+    } catch (error: any) {
+      showSnackbar({ message: error.message || t('signIn.signInFailed'), type: 'error' });
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const onPrimaryPress = () => {
+    if (!otpSent) handleSendOtp();
+    else handleVerifyAndSignIn();
+  };
+
+  const canSubmit = otpSent
+    ? otp.length === 6 && !loading && !verifying
+    : phone.length >= 10 && !loading;
+
+  const primaryLabel = loading || verifying
+    ? t('signIn.signingIn')
+    : otpSent
+      ? t('individualRegistration.verifyContinue')
+      : t('individualRegistration.sendOtp');
 
   return (
     <KeyboardAvoidingView
@@ -100,49 +200,66 @@ const SignInScreen = () => {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Logo */}
         <View style={styles.logoWrap}>
-          <Image
-            source={SIGNIN_LOGO}
-            style={styles.logo}
-            resizeMode="contain"
-          />
+          <Image source={SIGNIN_LOGO} style={styles.logo} resizeMode="contain" />
         </View>
 
-        {/* Title */}
         <Text style={styles.title}>{t('signIn.title')}</Text>
-        <Text style={styles.subtitle}>Sign in to continue your journey</Text>
+        <Text style={styles.subtitle}>{t('signIn.subtitleOtp')}</Text>
 
-        {/* Form */}
         <View style={styles.form}>
-          <Input
-            label={t('signIn.username') || 'Username/Email/Phone'}
-            value={username}
-            onChangeText={(text: string) => {
-              setUsername(text);
-              if (errors.username) setErrors((prev: SignInErrors) => ({ ...prev, username: undefined }));
+          <PhoneInput
+            label={t('individualRegistration.phoneNumber')}
+            value={phone}
+            onChangeText={(text) => {
+              setPhone(text);
+              if (errors.phone) setErrors((prev) => ({ ...prev, phone: undefined }));
             }}
-            placeholder={t('signIn.enterUsernamePlaceholder')}
-            autoCapitalize="none"
+            editable={!otpSent}
+            error={errors.phone}
             containerStyle={styles.inputWrap}
-            leftIcon={<Mail size={18} color={COLORS.primary} />}
-            error={errors.username}
           />
 
-          <Input
-            label={t('signIn.password')}
-            value={password}
-            onChangeText={(text: string) => {
-              setPassword(text);
-              if (errors.password) setErrors((prev: SignInErrors) => ({ ...prev, password: undefined }));
-            }}
-            placeholder={t('signIn.enterPassword')}
-            secureTextEntry={!showPassword}
-            showPasswordToggle
-            containerStyle={styles.inputWrap}
-            leftIcon={<Lock size={18} color={COLORS.primary} />}
-            error={errors.password}
-          />
+          {otpSent && (
+            <>
+              <Input
+                label={t('individualRegistration.enterOtp')}
+                value={otp}
+                onChangeText={(text) => {
+                  const d = text.replace(/\D/g, '').slice(0, 6);
+                  setOtp(d);
+                  if (errors.otp) setErrors((prev) => ({ ...prev, otp: undefined }));
+                }}
+                placeholder="000000"
+                keyboardType="number-pad"
+                maxLength={6}
+                containerStyle={styles.inputWrap}
+                leftIcon={<Phone size={18} color={COLORS.primary} />}
+                error={errors.otp}
+              />
+              <View style={styles.resendRow}>
+                <TouchableOpacity onPress={handleResendOtp} disabled={loading || otpTimer > 0}>
+                  <Text style={[styles.resendText, (loading || otpTimer > 0) && { opacity: 0.4 }]}>
+                    {t('individualRegistration.resendOtp')}
+                  </Text>
+                </TouchableOpacity>
+                {otpTimer > 0 && (
+                  <Text style={styles.timerText}>(00:{String(otpTimer).padStart(2, '0')})</Text>
+                )}
+              </View>
+              <TouchableOpacity
+                style={styles.changeNumberBtn}
+                onPress={() => {
+                  setOtpSent(false);
+                  setOtp('');
+                  setOtpTimer(0);
+                  if (timerRef.current) clearInterval(timerRef.current);
+                }}
+              >
+                <Text style={styles.changeNumberText}>{t('signIn.changeNumber')}</Text>
+              </TouchableOpacity>
+            </>
+          )}
 
           <TouchableOpacity
             style={styles.forgotBtn}
@@ -152,13 +269,9 @@ const SignInScreen = () => {
             <Text style={styles.forgotText}>{t('signIn.forgotPassword')}</Text>
           </TouchableOpacity>
 
-          {/* Sign In Button */}
           <TouchableOpacity
-            style={[
-              styles.signInBtn,
-              !canSubmit && styles.signInBtnDisabled,
-            ]}
-            onPress={handleSignIn}
+            style={[styles.signInBtn, !canSubmit && styles.signInBtnDisabled]}
+            onPress={onPrimaryPress}
             activeOpacity={0.85}
             disabled={!canSubmit}
           >
@@ -168,17 +281,14 @@ const SignInScreen = () => {
               end={{ x: 0.5, y: 1 }}
               style={styles.signInBtnGradient}
             >
-              {loading ? (
+              {loading || verifying ? (
                 <AppLoader size="small" color="#FFFFFF" />
               ) : (
-                <Text style={styles.signInBtnText}>
-                  {t('signIn.signInButton')}
-                </Text>
+                <Text style={styles.signInBtnText}>{primaryLabel}</Text>
               )}
             </LinearGradient>
           </TouchableOpacity>
 
-          {/* Sign Up link */}
           <View style={styles.signUpRow}>
             <Text style={styles.signUpText}>{t('signIn.dontHaveAccount')} </Text>
             <TouchableOpacity onPress={() => navigation.navigate('SignUp' as never)}>
@@ -225,12 +335,38 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     marginBottom: SPACING.xl,
     textAlign: 'center',
+    paddingHorizontal: SPACING.sm,
   },
   form: {
     flex: 1,
   },
   inputWrap: {
     marginBottom: SPACING.md,
+  },
+  resendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    marginBottom: SPACING.sm,
+  },
+  resendText: {
+    fontFamily: FONTS.semiBold,
+    fontSize: FONTS.sizes.sm,
+    color: ACCENT,
+  },
+  timerText: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.xs,
+    color: COLORS.textSecondary,
+  },
+  changeNumberBtn: {
+    alignSelf: 'flex-start',
+    marginBottom: SPACING.md,
+  },
+  changeNumberText: {
+    fontFamily: FONTS.semiBold,
+    fontSize: FONTS.sizes.xs,
+    color: COLORS.textSecondary,
   },
   forgotBtn: {
     alignSelf: 'flex-end',

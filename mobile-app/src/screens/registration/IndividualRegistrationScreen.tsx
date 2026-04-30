@@ -26,11 +26,13 @@ import LottieView from 'lottie-react-native';
 import { useSnackbar } from '@context/SnackbarContext';
 import { getUserErrorMessage, mapFieldErrors } from '@utils/errorUtils';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const ACCENT = '#F9A825';
 const ORANGE_GRADIENT = ['#F99E3C', '#D47B1B'] as const;
 
 const IndividualRegistrationScreen = () => {
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { t } = useLanguage();
   const { login } = useAuth();
@@ -41,7 +43,7 @@ const IndividualRegistrationScreen = () => {
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
-  const [otpTimer, setOtpTimer] = useState(45);
+  const [otpTimer, setOtpTimer] = useState(0);
   const [loading, setLoading] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -108,7 +110,7 @@ const IndividualRegistrationScreen = () => {
           password,
           confirmPassword,
           gender,
-          ...(referralCode.trim() ? { referralCode: referralCode.trim().toUpperCase() } : {}),
+          ...(referralCode.trim() ? { referralCode: referralCode.trim() } : {}),
         });
 
         if (response.success) {
@@ -250,38 +252,49 @@ const IndividualRegistrationScreen = () => {
       ? otpSent ? t('individualRegistration.verifyContinue') : t('individualRegistration.sendOtp')
       : t('individualRegistration.continue');
 
+  const scrollRef = useRef<ScrollView>(null);
+  const phoneSectionY = useRef(0);
+
+  const scrollBottomPadding = SPACING.xl;
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top + normalize(88) : 0}
     >
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={handleBack} activeOpacity={0.7}>
-          <ArrowLeft size={22} color="#1A1A1A" />
-        </TouchableOpacity>
-      </View>
+      <View style={styles.mainColumn}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backBtn} onPress={handleBack} activeOpacity={0.7}>
+            <ArrowLeft size={22} color="#1A1A1A" />
+          </TouchableOpacity>
+        </View>
 
-      {/* Progress dashes */}
-      <View style={styles.progressRow}>
-        {Array.from({ length: totalSteps }, (_, i) => (
-          <View
-            key={i}
-            style={[
-              styles.progressDash,
-              currentStep >= i + 1 && styles.progressDashActive,
-            ]}
-          />
-        ))}
-      </View>
+        {/* Progress dashes */}
+        <View style={styles.progressRow}>
+          {Array.from({ length: totalSteps }, (_, i) => (
+            <View
+              key={i}
+              style={[
+                styles.progressDash,
+                currentStep >= i + 1 && styles.progressDashActive,
+              ]}
+            />
+          ))}
+        </View>
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
+        <ScrollView
+          ref={scrollRef}
+          style={styles.scrollView}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: scrollBottomPadding }]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+        >
         {/* Illustration */}
         <View style={styles.illustrationWrap}>
           <Image
@@ -293,7 +306,11 @@ const IndividualRegistrationScreen = () => {
 
         {/* Step 1 */}
         {currentStep === 1 && (
-          <View>
+          <View
+            onLayout={(e) => {
+              phoneSectionY.current = e.nativeEvent.layout.y;
+            }}
+          >
             <Text style={styles.stepTitle}>{t('individualRegistration.step1Title')}</Text>
             <Text style={styles.stepDesc}>{t('individualRegistration.step1Description')}</Text>
 
@@ -309,6 +326,14 @@ const IndividualRegistrationScreen = () => {
               containerStyle={styles.inputWrap}
               editable={!otpSent}
               error={errors.phone}
+              onFocus={() => {
+                requestAnimationFrame(() => {
+                  scrollRef.current?.scrollTo({
+                    y: Math.max(0, phoneSectionY.current - SPACING.md),
+                    animated: true,
+                  });
+                });
+              }}
             />
 
             {otpSent && (
@@ -325,10 +350,15 @@ const IndividualRegistrationScreen = () => {
                   maxLength={6}
                   containerStyle={styles.inputWrap}
                   error={errors.otp}
+                  onFocus={() => {
+                    requestAnimationFrame(() => {
+                      scrollRef.current?.scrollToEnd({ animated: true });
+                    });
+                  }}
                 />
                 <View style={styles.resendRow}>
-                  <TouchableOpacity onPress={handleResendOtp} disabled={otpTimer > 0}>
-                    <Text style={[styles.resendText, otpTimer > 0 && { opacity: 0.4 }]}>
+                  <TouchableOpacity onPress={handleResendOtp} disabled={loading || otpTimer > 0}>
+                    <Text style={[styles.resendText, (loading || otpTimer > 0) && { opacity: 0.4 }]}>
                       {t('individualRegistration.resendOtp')}
                     </Text>
                   </TouchableOpacity>
@@ -418,7 +448,7 @@ const IndividualRegistrationScreen = () => {
             {/* Referral */}
             <Text style={styles.fieldLabel}>Referral Code (Optional)</Text>
             <Input
-              placeholder="e.g. FORLOK-ABC123"
+              placeholder="e.g. eZway-A1B2C3"
               value={referralCode}
               onChangeText={setReferralCode}
               autoCapitalize="characters"
@@ -430,29 +460,30 @@ const IndividualRegistrationScreen = () => {
             </Text>
           </View>
         )}
-      </ScrollView>
+        </ScrollView>
 
-      {/* Bottom Button */}
-      <View style={styles.bottomBar}>
-        <TouchableOpacity
-          style={[styles.continueBtn, !canContinue && styles.continueBtnDisabled]}
-          onPress={currentStep === 1 && !otpSent ? handleSendOtp : handleNext}
-          activeOpacity={0.85}
-          disabled={!canContinue || loading || verifying}
-        >
-          <LinearGradient
-            colors={[ORANGE_GRADIENT[0], ORANGE_GRADIENT[1]]}
-            start={{ x: 0.5, y: 0 }}
-            end={{ x: 0.5, y: 1 }}
-            style={styles.continueBtnGradient}
+        {/* Bottom action */}
+        <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, hp(2)) + SPACING.sm }]}>
+          <TouchableOpacity
+            style={[styles.continueBtn, !canContinue && styles.continueBtnDisabled]}
+            onPress={currentStep === 1 && !otpSent ? handleSendOtp : handleNext}
+            activeOpacity={0.85}
+            disabled={!canContinue || loading || verifying}
           >
-            {loading || verifying ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Text style={styles.continueBtnText}>{buttonLabel}</Text>
-            )}
-          </LinearGradient>
-        </TouchableOpacity>
+            <LinearGradient
+              colors={[ORANGE_GRADIENT[0], ORANGE_GRADIENT[1]]}
+              start={{ x: 0.5, y: 0 }}
+              end={{ x: 0.5, y: 1 }}
+              style={styles.continueBtnGradient}
+            >
+              {loading || verifying ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text style={styles.continueBtnText}>{buttonLabel}</Text>
+              )}
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Coin celebration modal */}
@@ -482,7 +513,7 @@ const IndividualRegistrationScreen = () => {
             />
             <Text style={styles.celebrationTitle}>Welcome Bonus!</Text>
             <Text style={styles.celebrationText}>
-              You earned signup coins! Start your FORLOK journey with free coins.
+              You earned signup coins! Start your eZway journey with free coins.
             </Text>
             <Text style={styles.celebrationHint}>Tap anywhere to continue</Text>
           </View>
@@ -496,6 +527,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  mainColumn: {
+    flex: 1,
   },
   header: {
     paddingTop: hp(6),
@@ -524,9 +558,12 @@ const styles = StyleSheet.create({
   progressDashActive: {
     backgroundColor: ACCENT,
   },
+  scrollView: {
+    flex: 1,
+  },
   scrollContent: {
     paddingHorizontal: SPACING.lg,
-    paddingBottom: normalize(24),
+    flexGrow: 1,
   },
   illustrationWrap: {
     alignItems: 'center',
@@ -624,14 +661,9 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   bottomBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
     backgroundColor: '#FFFFFF',
     paddingHorizontal: SPACING.lg,
     paddingTop: SPACING.md,
-    paddingBottom: hp(3),
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: '#E0E0E0',
   },

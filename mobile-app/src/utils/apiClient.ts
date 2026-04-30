@@ -130,13 +130,6 @@ export const authApi = {
       requiresAuth: false,
     }),
 
-  signin: (username: string, password: string) =>
-    apiCall(API_CONFIG.ENDPOINTS.AUTH.SIGNIN, {
-      method: 'POST',
-      body: { username, password },
-      requiresAuth: false,
-    }),
-
   refreshToken: (refreshToken: string) =>
     apiCall(API_CONFIG.ENDPOINTS.AUTH.REFRESH_TOKEN, {
       method: 'POST',
@@ -333,6 +326,13 @@ export const documentApi = {
 
   uploadDocument: (type: string, file: { uri: string; type: string; name: string }) =>
     uploadFile(API_CONFIG.ENDPOINTS.DOCUMENT.UPLOAD, file, { type }),
+
+  deleteDocument: (documentId: string) =>
+    apiCall(API_CONFIG.ENDPOINTS.DOCUMENT.DELETE, {
+      method: 'DELETE',
+      params: { documentId },
+      requiresAuth: true,
+    }),
 };
 
 /**
@@ -383,7 +383,7 @@ export const vehicleCatalogApi = {
     }),
 
   submitRequest: (data: {
-    vehicleType: 'car' | 'bike' | 'scooty';
+    vehicleType: 'bike' | 'scooty';
     brand: string;
     model: string;
     fuelType: string;
@@ -646,7 +646,7 @@ export const rentalApi = {
 
   calculatePrice: (data: {
     vehicleId?: string;
-    vehicleType?: 'car' | 'bike';
+    vehicleType?: 'bike' | 'scooty';
     brand?: string;
     model?: string;
     year?: number;

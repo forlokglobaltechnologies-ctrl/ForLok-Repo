@@ -134,6 +134,24 @@ export async function authRoutes(fastify: FastifyInstance) {
         });
       }
 
+      // Login: issue session tokens after OTP verification (phone only)
+      if (type === 'login') {
+        if (!phone) {
+          return reply.status(400).send({
+            success: false,
+            message: 'Phone number is required for login',
+            error: 'MISSING_PHONE',
+          });
+        }
+        const result = await authService.loginWithOtpVerifiedPhone(phone);
+        const response: ApiResponse = {
+          success: true,
+          message: 'Login successful',
+          data: result,
+        };
+        return reply.status(200).send(response);
+      }
+
       const response: ApiResponse = {
         success: true,
         message: 'OTP verified successfully',
@@ -214,25 +232,19 @@ export async function authRoutes(fastify: FastifyInstance) {
 
   /**
    * POST /api/auth/signin
-   * Login user
+   * Password login disabled — use POST /api/auth/send-otp + /api/auth/verify-otp (type: login).
    */
   fastify.post(
     '/signin',
     {
       preHandler: [validate(loginSchema)],
     },
-    async (request: FastifyRequest, reply: FastifyReply) => {
-      const { username, password } = request.body as { username: string; password: string };
-
-      const result = await authService.loginUser(username, password);
-
-      const response: ApiResponse = {
-        success: true,
-        message: 'Login successful',
-        data: result,
-      };
-
-      return reply.status(200).send(response);
+    async (_request: FastifyRequest, reply: FastifyReply) => {
+      return reply.status(403).send({
+        success: false,
+        message: 'Password sign-in is disabled. Sign in with OTP on the app.',
+        error: 'OTP_LOGIN_REQUIRED',
+      });
     }
   );
 

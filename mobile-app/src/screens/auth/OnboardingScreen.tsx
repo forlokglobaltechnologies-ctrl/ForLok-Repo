@@ -149,7 +149,7 @@ const OnboardingScreen = () => {
 
       {/* Top bar: brand + Next */}
       <View style={styles.topBar}>
-        <Text style={[styles.brandText, { color: accent }]}>ForLok</Text>
+        <Text style={[styles.brandText, { color: accent }]}>eZway</Text>
         <TouchableOpacity onPress={handleNext} activeOpacity={0.7}>
           <Text style={[styles.nextText, { color: accent }]}>
             {currentPage === slides.length - 1 ? 'Start' : 'Next'}

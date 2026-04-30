@@ -1406,15 +1406,15 @@ class PoolingService {
           const totalDurationMinutes = leg2ArrivalMinutes - leg1DepartMinutes;
 
           const BASE_RATES: Record<string, number> = { car: 8, bike: 5, scooty: 4 };
-          const PLATFORM_FEE_RATE = 0.10;
+          const PLATFORM_FEE_RATE = 0; // platform fee waived for connected-leg estimates
           const leg1VType = (leg1.vehicle?.type || 'car').toLowerCase();
           const leg2VType = (leg2.vehicle?.type || 'car').toLowerCase();
           const leg1Dist = calculateDistance(leg1.route.from.lat, leg1.route.from.lng, leg1.route.to.lat, leg1.route.to.lng);
           const leg2Dist = calculateDistance(leg2.route.from.lat, leg2.route.from.lng, leg2.route.to.lat, leg2.route.to.lng);
           const leg1Base = Math.round(leg1Dist * (BASE_RATES[leg1VType] || 5));
           const leg2Base = Math.round(leg2Dist * (BASE_RATES[leg2VType] || 5));
-          const leg1Fee = Math.max(Math.round(leg1Base * PLATFORM_FEE_RATE), 5);
-          const leg2Fee = Math.max(Math.round(leg2Base * PLATFORM_FEE_RATE), 5);
+          const leg1Fee = Math.max(Math.round(leg1Base * PLATFORM_FEE_RATE), 0);
+          const leg2Fee = Math.max(Math.round(leg2Base * PLATFORM_FEE_RATE), 0);
           const leg1Price = leg1Base + leg1Fee;
           const leg2Price = leg2Base + leg2Fee;
           const totalPrice = leg1Price + leg2Price;

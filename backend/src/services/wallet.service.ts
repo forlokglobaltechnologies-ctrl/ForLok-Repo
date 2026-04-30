@@ -108,7 +108,7 @@ class WalletService {
 
   /**
    * Add money to wallet (top-up via Razorpay)
-   * Money goes to Forlok's Razorpay account, wallet is just a ledger
+   * Money goes to eZway's Razorpay account, wallet is just a ledger
    */
   async creditWallet(
     userId: string,

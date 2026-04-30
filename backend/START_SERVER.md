@@ -29,8 +29,8 @@ For the server to start, you need at minimum:
 # Server
 PORT=3000
 NODE_ENV=development
-API_BASE_URL=http://10.254.10.16:3000
-FRONTEND_URL=http://10.254.10.16:19006
+API_BASE_URL=http://172.22.211.16:3000
+FRONTEND_URL=http://172.22.211.16:19006
 
 # Database (REQUIRED)
 MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/yaaryatra
@@ -64,24 +64,24 @@ Once started, the server will:
 - ✅ Initialize Cloudinary (if configured)
 - ✅ Initialize Razorpay (if configured)
 - ✅ Load sample food data (development mode)
-- ✅ Start on http://10.254.10.16:3000
+- ✅ Start on http://172.22.211.16:3000
 
 ## Test the Server
 
 1. **Health Check:**
    ```
-   GET http://10.254.10.16:3000/health
+   GET http://172.22.211.16:3000/health
    ```
 
 2. **API Info:**
    ```
-   GET http://10.254.10.16:3000/
+   GET http://172.22.211.16:3000/
    ```
 
 ## Connect Mobile App
 
 ### For Emulator/Simulator:
-- Use: `http://10.254.10.16:3000`
+- Use: `http://172.22.211.16:3000`
 - Already configured in `mobile-app/src/config/api.ts`
 
 ### For Physical Device:
@@ -89,7 +89,7 @@ Once started, the server will:
    ```bash
    # Windows
    ipconfig
-   # Look for IPv4 Address (e.g., 10.254.10.16)
+   # Look for IPv4 Address (e.g., 172.22.211.16)
    
    # Mac/Linux
    ifconfig
@@ -99,7 +99,7 @@ Once started, the server will:
 2. Update `mobile-app/src/config/api.ts`:
    ```typescript
    const API_BASE_URL = __DEV__
-    ? 'http://10.254.10.16:3000' // Your IP address
+    ? 'http://172.22.211.16:3000' // Your IP address
      : 'https://api.yaaryatra.com';
    ```
 
@@ -127,7 +127,7 @@ Once started, the server will:
 
 ## Next Steps
 
-1. ✅ Server running on http://10.254.10.16:3000
+1. ✅ Server running on http://172.22.211.16:3000
 2. ✅ Mobile app configured to connect
 3. ✅ Test API endpoints from mobile app
 4. ✅ Start developing features!

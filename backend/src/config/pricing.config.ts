@@ -1,12 +1,12 @@
 /**
  * Pricing and Refund Policy Configuration
- * Forlok - Ride Sharing Platform
+ * eZway - Ride-Sharing Platform
  * 
  * PAYMENT MODEL:
  * - No upfront payment at booking time
  * - Payment is processed at trip end (Get Out + OTP verification)
  * - Two payment options at trip end:
- *   1. Online (UPI/Card/Net Banking) → Razorpay → Money to Forlok → Driver wallet credited
+ *   1. Online (UPI/Card/Net Banking) → Razorpay → Money to eZway → Driver wallet credited
  *   2. Offline Cash → Passenger pays driver directly → Platform fee deducted from driver wallet
  * - Driver requests withdrawal -> Admin approves
  * - Wallet ₹100 minimum required for passengers to book (cancellation security)
@@ -14,8 +14,8 @@
  */
 
 export const PRICING_CONFIG = {
-  // Platform fee percentage
-  PLATFORM_FEE_PERCENTAGE: 10, // 10%
+  // Platform fee percentage (0 = waived — no platform fee on rides)
+  PLATFORM_FEE_PERCENTAGE: 0,
 
   // Wallet requirements
   WALLET: {
@@ -94,7 +94,7 @@ export const PRICING_CONFIG = {
       { rides: 50, badge: 'Regular Traveler', coins: 200 },
       { rides: 100, badge: 'Petrol Saver', coins: 500 },
       { rides: 250, badge: 'Environment Hero', coins: 1000 },
-      { rides: 500, badge: 'Forlok Legend', coins: 2500 },
+      { rides: 500, badge: 'eZway Legend', coins: 2500 },
     ],
     EXPIRY_DAYS: 180, // Coins expire after 6 months
     MIN_RIDE_DISTANCE_KM: 2, // Minimum ride distance to earn coins

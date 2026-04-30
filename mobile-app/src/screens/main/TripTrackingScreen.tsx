@@ -22,6 +22,8 @@ import { AppLoader } from '@components/common/AppLoader';
 import { useLanguage } from '@context/LanguageContext';
 import { useSOS } from '@context/SOSContext';
 import { trackingApi, bookingApi, coinApi } from '@utils/apiClient';
+import { displayPlatformFeeRupees } from '@utils/platformFee';
+import { reviewsCountLong } from '@utils/reviewDisplay';
 import { WebView } from 'react-native-webview';
 import LottieView from 'lottie-react-native';
 
@@ -590,7 +592,12 @@ const TripTrackingScreen = () => {
             />
             <View style={styles.driverDetails}>
               <Text style={styles.driverName}>{booking?.driver?.name || booking?.owner?.name || 'Driver'}</Text>
-              <Text style={styles.driverRating}>⭐ {booking?.driver?.rating || 0} ({booking?.driver?.totalReviews || 0} {t('common.reviews')})</Text>
+              <Text style={styles.driverRating}>
+                {`⭐ ${booking?.driver?.rating || booking?.owner?.rating || 0} (${reviewsCountLong(
+                  booking?.driver?.totalReviews ?? booking?.owner?.totalReviews,
+                  t,
+                )})`}
+              </Text>
               <Text style={styles.driverMeta}>
                 {driverLocation
                   ? `Driver location: ${driverLocation.lat.toFixed(5)}, ${driverLocation.lng.toFixed(5)}`
@@ -630,9 +637,11 @@ const TripTrackingScreen = () => {
                 <Text style={[styles.amountValue, { color: '#27AE60' }]}>₹{getDisplayAmount()}</Text>
               </View>
             )}
-            {booking?.platformFee ? (
+            {displayPlatformFeeRupees(booking?.platformFee) > 0 ? (
               <View style={styles.feeRow}>
-                <Text style={styles.feeLabel}>Ride Fare: ₹{booking?.amount || 0} + Platform Fee: ₹{booking?.platformFee}</Text>
+                <Text style={styles.feeLabel}>
+                  Ride Fare: ₹{booking?.amount || 0} + Platform Fee: ₹{displayPlatformFeeRupees(booking?.platformFee)}
+                </Text>
               </View>
             ) : null}
 

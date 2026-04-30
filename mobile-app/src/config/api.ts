@@ -5,7 +5,7 @@
  * Backend target is currently forced to development URL.
  */
 
-const DEV_API_URL = 'http://10.254.10.16:3000';
+const DEV_API_URL = 'http://172.22.211.16:3000';
 const PROD_API_URL = 'https://forlok-repo-1.onrender.com';
 
 const API_BASE_URL = DEV_API_URL;
@@ -20,7 +20,6 @@ export const API_CONFIG = {
       VERIFY_OTP: '/api/auth/verify-otp',
       VERIFY_FIREBASE: '/api/auth/verify-firebase',
       SIGNUP: '/api/auth/signup',
-      SIGNIN: '/api/auth/signin',
       REFRESH_TOKEN: '/api/auth/refresh-token',
       RESET_PASSWORD: '/api/auth/reset-password',
     },

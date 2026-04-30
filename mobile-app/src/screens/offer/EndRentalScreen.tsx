@@ -17,7 +17,7 @@ import {
   Clock, 
   IndianRupee, 
   User, 
-  Car, 
+  Bike, 
   MapPin,
   CreditCard,
   Wallet,
@@ -32,6 +32,7 @@ import { Button } from '@components/common/Button';
 import { AppLoader } from '@components/common/AppLoader';
 import { useLanguage } from '@context/LanguageContext';
 import { bookingApi } from '@utils/apiClient';
+import { displayPlatformFeeRupees } from '@utils/platformFee';
 
 const RENTAL_COMING_SOON = true; // V2 feature — flip to false to re-enable
 
@@ -156,7 +157,7 @@ const EndRentalScreen = () => {
 
   const duration = calculateDuration(booking.startTime, booking.endTime, booking.duration);
   const rentalAmount = booking.amount || (offer?.pricePerHour || 0) * duration;
-  const platformFee = booking.platformFee || Math.round(rentalAmount * 0.05 * 100) / 100;
+  const platformFee = displayPlatformFeeRupees(booking.platformFee);
   const totalAmount = booking.totalAmount || rentalAmount + platformFee;
   const ownerSettlement = rentalAmount; // Owner gets rental amount, platform keeps fee
   const isPending = booking.paymentStatus === 'pending';
@@ -254,7 +255,7 @@ const EndRentalScreen = () => {
 
           <View style={styles.detailItem}>
             <View style={styles.detailLeft}>
-              <Car size={16} color={COLORS.textSecondary} />
+              <Bike size={16} color={COLORS.textSecondary} />
               <Text style={styles.detailLabel}>Vehicle</Text>
             </View>
             <Text style={styles.detailValue}>

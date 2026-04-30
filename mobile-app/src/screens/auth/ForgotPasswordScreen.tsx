@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -29,18 +29,35 @@ const ForgotPasswordScreen = () => {
   const [phone, setPhone] = useState('');
   const [formattedPhone, setFormattedPhone] = useState('');
   const [otp, setOtp] = useState('');
-  const [otpTimer, setOtpTimer] = useState(45);
+  const [otpTimer, setOtpTimer] = useState(0);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const otpTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  React.useEffect(() => {
-    if (step === 'otp' && otpTimer > 0) {
-      const timer = setInterval(() => {
-        setOtpTimer((prev) => prev - 1);
-      }, 1000);
-      return () => clearInterval(timer);
+  const clearOtpTimer = () => {
+    if (otpTimerRef.current) {
+      clearInterval(otpTimerRef.current);
+      otpTimerRef.current = null;
     }
-  }, [step, otpTimer]);
+  };
+
+  const startOtpTimer = () => {
+    clearOtpTimer();
+    setOtpTimer(45);
+    otpTimerRef.current = setInterval(() => {
+      setOtpTimer((prev) => {
+        if (prev <= 1) {
+          clearOtpTimer();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  useEffect(() => {
+    return () => clearOtpTimer();
+  }, []);
 
   const normalizeIndianPhone = (value: string): string => {
     const digits = value.replace(/\D/g, '');
@@ -63,7 +80,7 @@ const ForgotPasswordScreen = () => {
       if (response.success) {
         setFormattedPhone(normalizedPhone);
         setStep('otp');
-        setOtpTimer(45);
+        startOtpTimer();
         setOtp('');
         if (response.data?.otp) {
           showSnackbar({
@@ -123,7 +140,7 @@ const ForgotPasswordScreen = () => {
       const response = await authApi.sendOTP(formattedPhone, 'reset_password');
       
       if (response.success) {
-        setOtpTimer(45);
+        startOtpTimer();
         setOtp('');
         if (response.data?.otp) {
           showSnackbar({

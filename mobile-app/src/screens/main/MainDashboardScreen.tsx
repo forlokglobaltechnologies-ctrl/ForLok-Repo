@@ -22,8 +22,8 @@ import { normalize, wp, hp, SCREEN_WIDTH } from '@utils/responsive';
 import { useNavigation, useIsFocused, useNavigationState } from '@react-navigation/native';
 import {
   Bell, Clock, TrendingUp, IndianRupee, Heart, Coins, LogOut,
-  Search, CarFront, CreditCard, PartyPopper, Wallet, X, MapPin, Home as HomeIcon,
-  Briefcase, Leaf, Star, ChevronRight, Users, Gift, Car, UtensilsCrossed,
+  Search, CreditCard, PartyPopper, Wallet, X, MapPin, Home as HomeIcon,
+  Briefcase, Leaf, Star, ChevronRight, Users, Gift, Bike, UtensilsCrossed,
   Navigation, Share2, Shield, Menu, History, HelpCircle, MessageSquare, FileText,
   Settings, Info, Award,
 } from 'lucide-react-native';
@@ -31,6 +31,13 @@ import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme
 import { useLanguage } from '@context/LanguageContext';
 import { useTheme } from '@context/ThemeContext';
 import { dashboardApi, placesApi } from '@utils/apiClient';
+import {
+  getDeviceHomeWork,
+  upsertDeviceHomeWork,
+  reconcileDeviceWithApi,
+  buildSavedPlacesList,
+  type HomeWorkPlace,
+} from '@utils/savedPlacesCache';
 import { useNotifications } from '@context/NotificationContext';
 import { useAuth } from '@context/AuthContext';
 import { useSOS } from '@context/SOSContext';
@@ -44,7 +51,7 @@ const POOLING_FLAG_LOGO = require('../../../assets/signin_arrow_orange_transpare
 
 const bookingSteps = [
   { id: '1', step: 'Step 1', title: 'Search your\nroute', cta: 'Get started →', icon: Search },
-  { id: '2', step: 'Step 2', title: 'Pick a pooling\nride', cta: 'Browse rides →', icon: CarFront },
+  { id: '2', step: 'Step 2', title: 'Pick a Ride-\nSharing trip', cta: 'Browse rides →', icon: Bike },
   { id: '3', step: 'Step 3', title: 'Confirm &\npay securely', cta: 'Quick pay →', icon: CreditCard },
   { id: '4', step: 'Step 4', title: 'Enjoy your\njourney', cta: "Let's go →", icon: PartyPopper },
 ];
@@ -85,12 +92,12 @@ const coinsCarouselData = [
   },
   {
     id: 'pool',
-    tag: 'Pool & Earn',
-    title: 'Complete pools to\nearn bonus coins',
-    cta: 'Start Pooling',
+    tag: 'Ride-Share & Earn',
+    title: 'Complete ride-shares to\nearn bonus coins',
+    cta: 'Start Ride-Sharing',
     bg: '#002B36',
     accent: '#F99E3C',
-    icon: Car,
+    icon: Bike,
     deco1: '#F99E3C',
     deco2: '#63B3ED',
   },
@@ -108,8 +115,8 @@ const coinsCarouselData = [
 ];
 
 const quickActions = [
-  { id: 'pool', label: 'Pool Ride', icon: Search, screen: 'SearchPooling' },
-  { id: 'offer-ride', label: 'Offer Ride', icon: Car, screen: 'CreatePoolingOffer' },
+  { id: 'pool', label: 'Take Ride', icon: Search, screen: 'SearchPooling' },
+  { id: 'offer-ride', label: 'Offer Ride', icon: Bike, screen: 'CreatePoolingOffer' },
   { id: 'my-rides', label: 'My Rides', icon: History, screen: 'History' },
   { id: 'offers', label: 'My Offers', icon: Award, screen: 'MyOffers' },
   { id: 'messages', label: 'Messages', icon: MessageSquare, screen: 'ChatList' },
@@ -166,6 +173,9 @@ const MainDashboardScreen = () => {
   const [userLat, setUserLat] = useState<number | undefined>();
   const [userLng, setUserLng] = useState<number | undefined>();
 
+  /** Home / work persisted on device so chips survive app restarts if the API is slow or unreachable. */
+  const [deviceHomeWork, setDeviceHomeWork] = useState<{ home?: HomeWorkPlace; work?: HomeWorkPlace }>({});
+
   const getQuickActionScale = useCallback((id: string) => {
     if (!quickActionScaleMapRef.current[id]) {
       quickActionScaleMapRef.current[id] = new Animated.Value(1);
@@ -189,13 +199,12 @@ const MainDashboardScreen = () => {
   }, [authUser]);
 
   useEffect(() => {
-    loadHomeData();
-  }, [userLat, userLng]);
-
-  // Refresh when screen comes back into focus (e.g. returning from trip)
-  useEffect(() => {
-    if (isFocused) loadHomeData();
-  }, [isFocused]);
+    if (!authUser?.userId) {
+      setDeviceHomeWork({});
+      return;
+    }
+    getDeviceHomeWork(authUser.userId).then(setDeviceHomeWork);
+  }, [authUser?.userId]);
 
   const getUserLocation = async () => {
     try {
@@ -208,7 +217,12 @@ const MainDashboardScreen = () => {
     } catch (_) {}
   };
 
-  const loadHomeData = async () => {
+  const loadHomeData = useCallback(async () => {
+    const uid = authUser?.userId;
+    if (!uid) {
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       let resp = await dashboardApi.getHomeData(userLat, userLng);
@@ -222,13 +236,26 @@ const MainDashboardScreen = () => {
       if (resp.success && resp.data) {
         setHomeData(resp.data);
         setUserGender(resp.data.user?.gender || null);
+        if (Array.isArray(resp.data.savedPlaces)) {
+          const merged = await reconcileDeviceWithApi(uid, resp.data.savedPlaces);
+          setDeviceHomeWork(merged);
+        }
       }
     } catch (error) {
       console.error('Error loading home data:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [userLat, userLng, authUser?.userId]);
+
+  useEffect(() => {
+    loadHomeData();
+  }, [loadHomeData]);
+
+  // Refresh when screen comes back into focus (e.g. returning from trip)
+  useEffect(() => {
+    if (isFocused) loadHomeData();
+  }, [isFocused, loadHomeData]);
 
   // Debounced geocoding search
   useEffect(() => {
@@ -259,7 +286,7 @@ const MainDashboardScreen = () => {
       try {
         const fallback = await fetch(
           `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5&countrycodes=in&addressdetails=1`,
-          { headers: { 'User-Agent': 'Forlok-App/1.0' } },
+          { headers: { 'User-Agent': 'eZway-App/1.0' } },
         );
         if (fallback.ok) {
           const fData = await fallback.json();
@@ -298,8 +325,18 @@ const MainDashboardScreen = () => {
     (navigation.navigate as any)('LocationPicker', {
       title: label === 'home' ? 'Set Home Location' : 'Set Work Location',
       onLocationSelect: async (location: { address: string; lat: number; lng: number; city?: string; state?: string }) => {
+        const uid = authUser?.userId;
+        if (!uid) return;
         try {
-          await placesApi.save({
+          const merged = await upsertDeviceHomeWork(uid, label, {
+            address: location.address,
+            lat: location.lat,
+            lng: location.lng,
+            city: (location as any).city,
+            state: (location as any).state,
+          });
+          setDeviceHomeWork(merged);
+          const resp = await placesApi.save({
             label,
             address: location.address,
             lat: location.lat,
@@ -307,7 +344,9 @@ const MainDashboardScreen = () => {
             city: (location as any).city,
             state: (location as any).state,
           });
-          loadHomeData();
+          if (resp.success) {
+            await loadHomeData();
+          }
         } catch (err) {
           console.error('Error saving place:', err);
         }
@@ -320,7 +359,7 @@ const MainDashboardScreen = () => {
     if (!code) return;
     try {
       await Share.share({
-        message: `Join ForLok and get free coins! Use my referral code: ${code}\nDownload now: https://forlok.com/download`,
+        message: `Join eZway and get free coins! Use my referral code: ${code}\nGet the app: https://ezway.com/download`,
       });
     } catch (_) {}
   };
@@ -387,12 +426,12 @@ const MainDashboardScreen = () => {
 
   const sidebarMenuItems = [
     { icon: HomeIcon, label: 'Home', screen: 'MainDashboard' },
-    { icon: Search, label: 'Find a Ride', screen: 'SearchPooling' },
-    { icon: Car, label: 'Offer a Ride', screen: 'CreatePoolingOffer' },
-    { icon: CarFront, label: 'Rentals', screen: 'SearchRental' },
+    { icon: Search, label: t('searchPooling.title'), screen: 'SearchPooling' },
+    { icon: Bike, label: 'Offer a Ride', screen: 'CreatePoolingOffer' },
+    { icon: Bike, label: 'Rentals', screen: 'SearchRental' },
     { icon: History, label: 'My Rides', screen: 'History' },
     { icon: Wallet, label: 'Wallet', screen: 'Wallet' },
-    { icon: Coins, label: 'Earn Coins', screen: 'EarnCoins' },
+    { icon: Coins, label: 'eZway Coins', screen: 'EarnCoins' },
     { icon: Award, label: 'My Offers', screen: 'MyOffers' },
     { icon: MessageSquare, label: 'Messages', screen: 'ChatList' },
     { icon: Star, label: 'Reviews', screen: 'Reviews' },
@@ -401,9 +440,9 @@ const MainDashboardScreen = () => {
     { icon: Settings, label: 'Settings', screen: 'Settings' },
   ];
 
-  const savedPlaces = homeData?.savedPlaces || [];
-  const homeSaved = savedPlaces.find((p: any) => p.label === 'home');
-  const workSaved = savedPlaces.find((p: any) => p.label === 'work');
+  const savedPlaces = buildSavedPlacesList(homeData?.savedPlaces || [], deviceHomeWork);
+  const homeSaved = savedPlaces.find((p: any) => String(p?.label || '').toLowerCase() === 'home');
+  const workSaved = savedPlaces.find((p: any) => String(p?.label || '').toLowerCase() === 'work');
   const nearbyRides = homeData?.nearbyRides || [];
   const activeRide = homeData?.activeRide;
   const greenImpact = homeData?.greenImpact;
@@ -525,7 +564,38 @@ const MainDashboardScreen = () => {
 
           </View>
 
-          {/* ── Coins Rewards Carousel ── */}
+          {/* ── Quick Actions Grid (above rewards / referral slides) ── */}
+          <View style={styles.quickActionsSection}>
+            <Text style={styles.quickActionsHeading}>Quick actions</Text>
+            <View style={styles.quickActionsGrid}>
+              {quickActions.map((action) => {
+                const Icon = action.icon;
+                const scale = getQuickActionScale(action.id);
+                const actionLabel = action.id === 'pool' ? t('searchPooling.title') : action.label;
+                return (
+                  <Animated.View key={action.id} style={{ transform: [{ scale }] }}>
+                    <TouchableOpacity
+                      style={[
+                        styles.quickActionItem,
+                        styles.quickActionItemPlain,
+                      ]}
+                      activeOpacity={0.85}
+                      onPressIn={() => animateQuickAction(action.id, 0.96)}
+                      onPressOut={() => animateQuickAction(action.id, 1)}
+                      onPress={() => navigation.navigate(action.screen as never)}
+                    >
+                      <View style={styles.quickActionIcon}>
+                        <Icon size={19} color={QUICK_ACTION_ACCENT} />
+                      </View>
+                      <Text style={styles.quickActionLabel} numberOfLines={2}>{actionLabel}</Text>
+                    </TouchableOpacity>
+                  </Animated.View>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* ── Coins / Refer & earn slides ── */}
           <View style={styles.coinsCarouselWrap}>
             <ScrollView
               ref={coinsScrollRef}
@@ -595,36 +665,6 @@ const MainDashboardScreen = () => {
             </View>
           </View>
 
-          {/* ── Quick Actions Grid ── */}
-          <View style={styles.quickActionsSection}>
-            <Text style={styles.quickActionsHeading}>Quick actions</Text>
-            <View style={styles.quickActionsGrid}>
-              {quickActions.map((action) => {
-                const Icon = action.icon;
-                const scale = getQuickActionScale(action.id);
-                return (
-                  <Animated.View key={action.id} style={{ transform: [{ scale }] }}>
-                    <TouchableOpacity
-                      style={[
-                        styles.quickActionItem,
-                        styles.quickActionItemPlain,
-                      ]}
-                      activeOpacity={0.85}
-                      onPressIn={() => animateQuickAction(action.id, 0.96)}
-                      onPressOut={() => animateQuickAction(action.id, 1)}
-                      onPress={() => navigation.navigate(action.screen as never)}
-                    >
-                      <View style={styles.quickActionIcon}>
-                        <Icon size={19} color={QUICK_ACTION_ACCENT} />
-                      </View>
-                      <Text style={styles.quickActionLabel} numberOfLines={2}>{action.label}</Text>
-                    </TouchableOpacity>
-                  </Animated.View>
-                );
-              })}
-            </View>
-          </View>
-
           {/* ── Active Ride Card ── */}
           {activeRide && (
             <TouchableOpacity
@@ -689,7 +729,7 @@ const MainDashboardScreen = () => {
                   <Heart size={28} color="#FF6B9D" fill="#FF6B9D" />
                 </View>
                 <View style={styles.pinkPoolingTextContainer}>
-                  <Text style={styles.pinkPoolingTitle}>HerPooling</Text>
+                  <Text style={styles.pinkPoolingTitle}>Her Ride-Sharing</Text>
                   <Text style={[styles.pinkPoolingSubtitle, { color: theme.colors.textSecondary }]}>Safe rides for women & girls</Text>
                 </View>
                 <ChevronRight size={20} color="#FF6B9D" />
@@ -979,11 +1019,16 @@ const MainDashboardScreen = () => {
             </TouchableWithoutFeedback>
             <Animated.View style={[styles.sidebarContainer, { transform: [{ translateX: sidebarAnim }] }]}>
               <View style={styles.sidebarHeader}>
-                <Image
-                  source={require('../../../assets/sidebar_ezway_logo_transparent.png')}
-                  style={styles.sidebarLogo}
-                  resizeMode="contain"
-                />
+                <View style={styles.sidebarBrandRow}>
+                  <Image
+                    source={require('../../../assets/ezway_sidebar_brand_icon.png')}
+                    style={styles.sidebarBrandIcon}
+                    resizeMode="cover"
+                  />
+                  <Text style={styles.sidebarBrandText}>
+                    e<Text style={styles.sidebarBrandZ}>Z</Text>way
+                  </Text>
+                </View>
               </View>
 
               <ScrollView
@@ -1546,17 +1591,32 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   sidebarHeader: {
-    paddingTop: normalize(10),
-    paddingBottom: normalize(10),
-    paddingHorizontal: 0,
+    paddingTop: normalize(14),
+    paddingBottom: normalize(14),
+    paddingHorizontal: normalize(16),
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(0,0,0,0.06)',
   },
-  sidebarLogo: {
-    width: normalize(170),
-    height: normalize(60),
+  sidebarBrandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: normalize(12),
+  },
+  sidebarBrandIcon: {
+    width: normalize(48),
+    height: normalize(48),
+    borderRadius: normalize(12),
+  },
+  sidebarBrandText: {
+    fontFamily: FONTS.bold,
+    fontSize: normalize(22),
+    letterSpacing: normalize(-0.3),
+    color: '#0F172A',
+  },
+  sidebarBrandZ: {
+    color: COLORS.primary,
   },
   sidebarMenu: { flex: 1, paddingTop: SPACING.sm, paddingHorizontal: normalize(10) },
   sidebarMenuContent: { paddingBottom: normalize(96) },

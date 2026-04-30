@@ -10,7 +10,8 @@ import {
   Alert,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { ArrowLeft, Plus, Car, Bike, AlertCircle, Edit, Trash2 } from 'lucide-react-native';
+import { ArrowLeft, Plus, Bike, AlertCircle, Edit, Trash2 } from 'lucide-react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { Card } from '@components/common/Card';
 import { Button } from '@components/common/Button';
@@ -137,7 +138,7 @@ const CompanyVehicleManagementScreen = () => {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {vehicles.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Car size={64} color={COLORS.textSecondary} />
+            <Bike size={64} color={COLORS.textSecondary} />
             <Text style={styles.emptyText}>No vehicles found</Text>
             <Text style={styles.emptySubtext}>
               Add your first vehicle to start offering rentals
@@ -154,8 +155,8 @@ const CompanyVehicleManagementScreen = () => {
             <Card key={vehicle.vehicleId || vehicle._id} style={styles.vehicleCard}>
               <View style={styles.vehicleHeader}>
                 <View style={styles.vehicleTypeContainer}>
-                  {vehicle.type === 'car' ? (
-                    <Car size={24} color={COLORS.primary} />
+                  {['scooty', 'scooter'].includes(String(vehicle.type || '').toLowerCase()) ? (
+                    <MaterialCommunityIcons name="moped" size={24} color={COLORS.primary} />
                   ) : (
                     <Bike size={24} color={COLORS.primary} />
                   )}

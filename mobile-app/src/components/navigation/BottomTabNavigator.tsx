@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { View, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Home, Search, User, Car, Coins } from 'lucide-react-native';
+import { Home, Search, User, Bike, Coins } from 'lucide-react-native';
 import { FONTS, SPACING, SHADOWS } from '@constants/theme';
 import { useTheme } from '@context/ThemeContext';
 import { useSOS } from '@context/SOSContext';
@@ -24,7 +24,7 @@ interface TabItem {
 
 const tabs: TabItem[] = [
   { name: 'Take', label: 'Find Ride', icon: Search, screen: 'SearchPooling' },
-  { name: 'Offer', label: 'Give Ride', icon: Car, screen: 'CreatePoolingOffer' },
+  { name: 'Offer', label: 'Give Ride', icon: Bike, screen: 'CreatePoolingOffer' },
   { name: 'Home', label: 'Home', icon: Home, screen: 'MainDashboard' },
   { name: 'Coins', label: 'Coins', icon: Coins, screen: 'EarnCoins' },
   { name: 'Profile', label: 'Profile', icon: User, screen: 'Profile' },

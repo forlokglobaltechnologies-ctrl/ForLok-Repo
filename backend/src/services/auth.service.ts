@@ -371,7 +371,7 @@ class AuthService {
             userId: user.userId,
             type: 'coin_earned',
             title: 'Welcome Bonus!',
-            message: `You earned ${signupCoins} coins as a signup bonus! Start your FORLOK journey.`,
+            message: `You earned ${signupCoins} coins as a signup bonus! Start your eZway journey.`,
             data: { coins: signupCoins, reason: 'signup_bonus' },
           });
         } catch (notifErr) {
@@ -407,6 +407,45 @@ class AuthService {
       logger.error('Error registering user:', error);
       throw error;
     }
+  }
+
+  /**
+   * Complete login after phone OTP (type login) has been verified.
+   */
+  async loginWithOtpVerifiedPhone(phone: string): Promise<{
+    user: any;
+    tokens: { accessToken: string; refreshToken: string };
+  }> {
+    const formattedPhone = formatPhoneNumber(phone);
+    const user = await User.findOne({ phone: formattedPhone });
+    if (!user) {
+      throw new NotFoundError('User not found');
+    }
+    if (!user.isActive) {
+      throw new AuthenticationError('Account is inactive');
+    }
+
+    user.lastLogin = new Date();
+    await user.save();
+
+    const payload: JWTPayload = {
+      userId: user.userId,
+      userType: user.userType,
+      phone: user.phone,
+    };
+
+    const accessToken = this.generateAccessToken(payload);
+    const refreshToken = this.generateRefreshToken(payload);
+
+    logger.info(`User logged in via OTP: ${user.userId}`);
+
+    return {
+      user: user.toJSON(),
+      tokens: {
+        accessToken,
+        refreshToken,
+      },
+    };
   }
 
   /**

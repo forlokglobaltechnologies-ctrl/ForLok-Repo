@@ -49,10 +49,8 @@ const UserTypeSelectionScreen = () => {
             </TouchableOpacity>
 
             <View style={styles.headerContent}>
-              <Text style={styles.title}>Create Your Account</Text>
-              <Text style={styles.subtitle}>
-                Choose how you want to use YAARYATHRA
-              </Text>
+              <Text style={styles.title}>{t('signUp.title')}</Text>
+              <Text style={styles.subtitle}>{t('signUp.subtitle')}</Text>
             </View>
           </View>
         </ImageBackground>

@@ -11,7 +11,7 @@ import {
   Image,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { ArrowLeft, Plus, Car, AlertCircle, X, Clock, MessageCircle } from 'lucide-react-native';
+import { ArrowLeft, Plus, Bike, AlertCircle, X, Clock, MessageCircle } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS, SHADOWS } from '@constants/theme';
 import { Card } from '@components/common/Card';
 import { Button } from '@components/common/Button';
@@ -86,7 +86,7 @@ const CompanyMyOffersScreen = () => {
               vehicle: {
                 brand: offer.vehicle?.brand || 'Unknown',
                 vehicleModel: offer.vehicle?.vehicleModel || offer.vehicle?.model || '',
-                type: offer.vehicle?.type || 'car',
+                type: offer.vehicle?.type || 'bike',
                 photos: offer.vehicle?.photos || [],
                 displayName: `${offer.vehicle?.brand || 'Unknown'} ${offer.vehicle?.vehicleModel || offer.vehicle?.model || ''}`,
               },
@@ -235,7 +235,7 @@ const CompanyMyOffersScreen = () => {
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {filteredOffers.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Car size={64} color={COLORS.textSecondary} />
+            <Bike size={64} color={COLORS.textSecondary} />
             <Text style={styles.emptyText}>No offers found</Text>
             <Text style={styles.emptySubtext}>
               {activeTab === 'All' 
@@ -256,7 +256,7 @@ const CompanyMyOffersScreen = () => {
             <Card key={offer.id} style={styles.offerCard}>
               <View style={styles.offerHeader}>
                 <View style={styles.offerTypeContainer}>
-                  <Car size={20} color={COLORS.primary} />
+                  <Bike size={20} color={COLORS.primary} />
                   <Text style={styles.offerType}>Rental</Text>
                 </View>
                 <View style={[

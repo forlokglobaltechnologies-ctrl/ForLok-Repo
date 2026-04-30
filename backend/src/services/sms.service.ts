@@ -88,7 +88,7 @@ class SMSService {
       const client = twilio(accountSid, authToken);
 
       const message = await client.messages.create({
-        body: `Your Forlok verification code is: ${otp}. Valid for 5 minutes.`,
+        body: `Your eZway verification code is: ${otp}. Valid for 5 minutes.`,
         from: fromNumber,
         to: phoneNumber,
       });
@@ -137,7 +137,7 @@ class SMSService {
         body: JSON.stringify({
           authkey: authKey,
           mobile: formattedPhone,
-          message: `Your Forlok verification code is ${otp}. Valid for 5 minutes.`,
+          message: `Your eZway verification code is ${otp}. Valid for 5 minutes.`,
           sender: senderId,
           otp: otp,
           otp_expiry: 5, // minutes
@@ -193,7 +193,7 @@ class SMSService {
         body: JSON.stringify({
           apikey: apiKey,
           numbers: formattedPhone,
-          message: `Your Forlok verification code is: ${otp}. Valid for 5 minutes.`,
+          message: `Your eZway verification code is: ${otp}. Valid for 5 minutes.`,
           sender: sender,
         }),
       });

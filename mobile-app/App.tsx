@@ -52,6 +52,7 @@ import BookingDetailsScreen from './src/screens/history/BookingDetailsScreen';
 import ProfileScreen from './src/screens/profile/ProfileScreen';
 import EditProfileScreen from './src/screens/profile/EditProfileScreen';
 import CompanyProfileScreen from './src/screens/profile/CompanyProfileScreen';
+import EditCompanyAddressScreen from './src/screens/profile/EditCompanyAddressScreen';
 import SettingsScreen from './src/screens/profile/SettingsScreen';
 import LocationPickerScreen from './src/screens/main/LocationPickerScreen';
 import TripTrackingScreen from './src/screens/main/TripTrackingScreen';
@@ -78,6 +79,7 @@ import FilterScreen from './src/screens/main/FilterScreen';
 import ForgotPasswordScreen from './src/screens/auth/ForgotPasswordScreen';
 import ChangePasswordScreen from './src/screens/auth/ChangePasswordScreen';
 import HelpSupportScreen from './src/screens/main/HelpSupportScreen';
+import ContactUsScreen from './src/screens/main/ContactUsScreen';
 import FeedbackScreen from './src/screens/main/FeedbackScreen';
 import FAQScreen from './src/screens/main/FAQScreen';
 import ReportBugScreen from './src/screens/main/ReportBugScreen';
@@ -249,6 +251,7 @@ const AppNavigator = () => {
               <Stack.Screen name="Profile" component={ProfileScreen} />
               <Stack.Screen name="EditProfile" component={EditProfileScreen} />
               <Stack.Screen name="CompanyProfile" component={CompanyProfileScreen} />
+              <Stack.Screen name="EditCompanyAddress" component={EditCompanyAddressScreen} />
               <Stack.Screen name="Settings" component={SettingsScreen} />
               
               {/* Utility Screens */}
@@ -272,6 +275,7 @@ const AppNavigator = () => {
               <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
               <Stack.Screen name="Filter" component={FilterScreen} />
               <Stack.Screen name="HelpSupport" component={HelpSupportScreen} />
+              <Stack.Screen name="ContactUs" component={ContactUsScreen} />
               <Stack.Screen name="Feedback" component={FeedbackScreen} />
               <Stack.Screen name="FAQ" component={FAQScreen} />
               <Stack.Screen name="ReportBug" component={ReportBugScreen} />

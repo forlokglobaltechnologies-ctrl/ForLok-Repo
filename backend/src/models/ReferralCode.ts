@@ -34,7 +34,6 @@ const referralCodeSchema = new Schema<IReferralCode>(
       type: String,
       required: true,
       unique: true,
-      uppercase: true,
     },
     usedBy: [
       {

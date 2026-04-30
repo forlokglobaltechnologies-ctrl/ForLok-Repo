@@ -13,7 +13,7 @@ type NavItem = {
 const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', to: '/dashboard', icon: 'bi bi-speedometer2', permission: 'dashboard:view' },
   { label: 'Users', to: '/users', icon: 'bi bi-people', permission: 'users:view' },
-  { label: 'Pooling', to: '/pooling', icon: 'bi bi-car-front', permission: 'offers:view' },
+  { label: 'Ride-Sharing', to: '/pooling', icon: 'bi bi-car-front', permission: 'offers:view' },
   { label: 'Rental', to: '/rental', icon: 'bi bi-key', permission: 'offers:view' },
   { label: 'Bookings', to: '/bookings', icon: 'bi bi-clock-history', permission: 'bookings:view' },
   { label: 'Promos', to: '/promos', icon: 'bi bi-lightbulb', permission: 'promos:review' },
@@ -48,7 +48,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     <div className={`admin-app ${open ? 'sidebar-open' : 'sidebar-collapsed'}`}>
       <aside className="sidebar sidebar-theme">
         <div className="navbar-brand px-4 py-3">
-          <img className="sidebar-brand-logo" src="/forlok_admin_sidebar_logo.png" alt="Forlok logo" />
+          <img className="sidebar-brand-logo" src="/forlok_admin_sidebar_logo.png" alt="eZway" />
         </div>
         <nav className="navbar-nav w-100">
           {allowedItems.map((item) => (
@@ -86,9 +86,9 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         <div className="container-fluid pt-4 px-4">
           <div className="footer-panel rounded-top p-4 admin-footer-panel">
             <div className="admin-footer-left">
-              <img src="/forlok_admin_login_logo.png" alt="ForLok" className="admin-footer-logo" />
+              <img src="/forlok_admin_login_logo.png" alt="eZway" className="admin-footer-logo" />
               <div>
-                <p className="admin-footer-title mb-0">ForLok Admin Console</p>
+                <p className="admin-footer-title mb-0">eZway Admin Console</p>
                 <p className="admin-footer-sub mb-0">Realtime monitoring and moderation controls</p>
               </div>
             </div>

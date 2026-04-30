@@ -13,9 +13,6 @@ import { useNavigation } from '@react-navigation/native';
 import {
   ArrowLeft,
   Search,
-  MessageCircle,
-  Phone,
-  Mail,
   HelpCircle,
   Bug,
   MessageSquare,
@@ -23,13 +20,12 @@ import {
   BookOpen,
   Shield,
   CreditCard,
-  Car,
+  Bike,
   MapPin,
   Star,
   FileText,
-  Headphones,
-  ExternalLink,
   X,
+  Building2,
 } from 'lucide-react-native';
 import { FONTS } from '@constants/theme';
 import { normalize } from '@utils/responsive';
@@ -72,32 +68,32 @@ const HelpSupportScreen = () => {
 
   const defaultPopularTopics = [
     {
-      icon: Car,
-      title: 'How to create a pooling offer',
+      icon: Bike,
+      title: 'How to create a ride-sharing offer',
       color: '#FF9800',
-      category: 'Pooling',
-      explanation: 'Creating a pooling offer on Forlok is simple:\n\n1. Tap "Offer Services" from the dashboard\n2. Select "Create Pooling Offer"\n3. Enter your starting location (From) and destination (To)\n4. Set the date, departure time, and number of available seats\n5. Set your price per seat (Forlok shows a suggested range)\n6. Optionally add stopping points along your route\n7. Review and publish your offer\n\nOnce published, passengers searching for rides on your route will see your offer and can book seats. You\'ll receive a notification when someone books.',
+      category: 'Ride-Sharing',
+      explanation: 'Creating a ride-sharing offer on eZway is simple:\n\n1. Tap "Offer Services" from the dashboard\n2. Select "Create Ride-Sharing Offer"\n3. Enter your starting location (From) and destination (To)\n4. Set the date, departure time, and number of available seats\n5. Set your price per seat (eZway shows a suggested range)\n6. Optionally add stopping points along your route\n7. Review and publish your offer\n\nOnce published, passengers searching for rides on your route will see your offer and can book seats. You\'ll receive a notification when someone books.',
     },
     {
       icon: MapPin,
       title: 'How to book a rental vehicle',
       color: '#9C27B0',
       category: 'Rental',
-      explanation: 'To book a rental vehicle on Forlok:\n\n1. Go to "Take Services" > "Search Rental"\n2. Select your preferred vehicle type (bike, car, SUV, etc.)\n3. Choose your rental dates and location\n4. Browse available vehicles with photos, ratings, and pricing\n5. Tap on a vehicle to see full details and owner info\n6. Select your rental duration and review the price summary\n7. Confirm your booking in-app\n8. Pick up the vehicle at the agreed location with valid ID\n\nA security deposit may be required, which is refundable upon safe return of the vehicle.',
+      explanation: 'To book a rental two-wheeler on eZway:\n\n1. Go to "Take Services" > "Search Rental"\n2. Choose bike or scooty\n3. Choose your rental dates and location\n4. Browse available vehicles with photos, ratings, and pricing\n5. Tap on a vehicle to see full details and owner info\n6. Select your rental duration and review the price summary\n7. Confirm your booking in-app\n8. Pick up the vehicle at the agreed location with valid ID\n\nA security deposit may be required, which is refundable upon safe return of the vehicle.',
     },
     {
       icon: CreditCard,
       title: 'Trip completion & refunds',
       color: '#F99E3C',
       category: 'Trips',
-      explanation: 'Common trip-completion and refund guidance:\n\nTrip Completion:\n\u2022 Driver marks passenger as dropped\n\u2022 Passenger settles manually with driver\n\u2022 Passenger shares 4-digit completion code\n\u2022 Driver verifies code to close the trip\n\nRefund / Cancellation:\n\u2022 Eligible cancellations are handled per policy\n\u2022 Cancellation impact appears in booking details\n\u2022 Check Booking History for trip and cancellation status\n\nFor unresolved issues, contact support@forlok.com with your booking ID.',
+      explanation: 'Common trip-completion and refund guidance:\n\nTrip Completion:\n\u2022 Driver marks passenger as dropped\n\u2022 Passenger settles manually with driver\n\u2022 Passenger shares 4-digit completion code\n\u2022 Driver verifies code to close the trip\n\nRefund / Cancellation:\n\u2022 Eligible cancellations are handled per policy\n\u2022 Cancellation impact appears in booking details\n\u2022 Check Booking History for trip and cancellation status\n\nFor unresolved issues, contact ezwaymobility9@gmail.com with your booking ID.',
     },
     {
       icon: FileText,
       title: 'Cancellation policy',
       color: '#F44336',
       category: 'Policy',
-      explanation: 'Forlok\'s cancellation policies:\n\nPooling Rides:\n\u2022 Free cancellation up to 30 minutes before departure\n\u2022 Cancellation within 30 minutes: up to 20% fee\n\u2022 No-show: full fare charged\n\u2022 Driver cancellation: full refund to passenger\n\nRental Vehicles:\n\u2022 Free cancellation up to 24 hours before rental start\n\u2022 Cancellation within 24 hours: up to 25% fee\n\u2022 No-show: full amount charged\n\u2022 Early return: refund for unused days (minus processing fee)\n\nNote: Forlok reserves the right to waive cancellation fees in cases of emergency. Contact support with valid documentation.',
+      explanation: 'eZway\'s cancellation policies:\n\nRide-Sharing Trips:\n\u2022 Free cancellation up to 30 minutes before departure\n\u2022 Cancellation within 30 minutes: up to 20% fee\n\u2022 No-show: full fare charged\n\u2022 Driver cancellation: full refund to passenger\n\nRental Vehicles:\n\u2022 Free cancellation up to 24 hours before rental start\n\u2022 Cancellation within 24 hours: up to 25% fee\n\u2022 No-show: full amount charged\n\u2022 Early return: refund for unused days (minus processing fee)\n\nNote: eZway reserves the right to waive cancellation fees in cases of emergency. Contact support with valid documentation.',
     },
     {
       icon: Star,
@@ -115,46 +111,22 @@ const HelpSupportScreen = () => {
     },
     {
       icon: CreditCard,
-      title: 'Wallet & Forlok coins',
+      title: 'Wallet & eZway coins',
       color: '#00BCD4',
       category: 'Wallet',
-      explanation: 'Forlok Wallet & Coins system:\n\nForlok Wallet:\n\u2022 Available in-app for coin-related credits/adjustments\n\u2022 Used where applicable by platform rules\n\nForlok Coins:\n\u2022 Earn coins through activities like rides and referrals\n\u2022 Redeem coins for trip-fare discounts\n\u2022 Discount eligibility and limits are shown in-app during booking/trip summary\n\nCheck the Earn Coins section in-app for current offers.',
+      explanation: 'eZway Wallet & Coins system:\n\neZway Wallet:\n\u2022 Available in-app for coin-related credits/adjustments\n\u2022 Used where applicable by platform rules\n\neZway Coins:\n\u2022 Earn coins through activities like rides and referrals\n\u2022 Redeem coins for trip-fare discounts\n\u2022 Discount eligibility and limits are shown in-app during booking/trip summary\n\nCheck the eZway Coins section in-app for current offers.',
     },
     {
-      icon: Car,
+      icon: Bike,
       title: 'How driver tracking works',
       color: '#607D8B',
       category: 'Tracking',
-      explanation: 'Real-time driver tracking on Forlok:\n\nFor Passengers:\n\u2022 Once a ride starts, open the Trip Tracking screen\n\u2022 See the driver\'s live location on an interactive map\n\u2022 View real-time ETA, distance remaining, and route\n\u2022 Share your live trip with family/friends for safety\n\u2022 Get automatic notifications at key points (driver nearby, arriving, etc.)\n\nFor Drivers:\n\u2022 The Driver Trip screen shows your active route\n\u2022 See all passenger pickup/drop-off points\n\u2022 Distance, duration, and ETA metrics displayed live\n\u2022 Navigate to each stopping point in sequence\n\u2022 Mark passengers as picked up/dropped off\n\nTracking uses GPS and is active only during the trip. Location sharing stops automatically when the trip ends.',
+      explanation: 'Real-time driver tracking on eZway:\n\nFor Passengers:\n\u2022 Once a ride starts, open the Trip Tracking screen\n\u2022 See the driver\'s live location on an interactive map\n\u2022 View real-time ETA, distance remaining, and route\n\u2022 Share your live trip with family/friends for safety\n\u2022 Get automatic notifications at key points (driver nearby, arriving, etc.)\n\nFor Drivers:\n\u2022 The Driver Trip screen shows your active route\n\u2022 See all passenger pickup/drop-off points\n\u2022 Distance, duration, and ETA metrics displayed live\n\u2022 Navigate to each stopping point in sequence\n\u2022 Mark passengers as picked up/dropped off\n\nTracking uses GPS and is active only during the trip. Location sharing stops automatically when the trip ends.',
     },
   ];
 
-  const defaultContactOptions = [
-    {
-      icon: MessageCircle,
-      label: 'Live Chat',
-      desc: 'Chat with our support team',
-      color: '#4CAF50',
-      action: () => {},
-    },
-    {
-      icon: Phone,
-      label: 'Call Us',
-      desc: 'Toll-free: 1800-XXX-XXXX',
-      color: '#F99E3C',
-      action: () => Linking.openURL('tel:+911800XXXXXXX'),
-    },
-    {
-      icon: Mail,
-      label: 'Email Support',
-      desc: 'support@forlok.com',
-      color: '#FF9800',
-      action: () => Linking.openURL('mailto:support@forlok.com'),
-    },
-  ];
   void defaultQuickActions;
   void defaultPopularTopics;
-  void defaultContactOptions;
 
   const quickActions = contentData.quickActions.map((item: any) => ({
     ...item,
@@ -164,11 +136,6 @@ const HelpSupportScreen = () => {
     ...item,
     icon: typeof item.icon === 'string' ? resolveContentIcon(item.icon, HelpCircle) : item.icon,
   }));
-  const contactOptions = contentData.contactOptions.map((item: any) => ({
-    ...item,
-    icon: typeof item.icon === 'string' ? resolveContentIcon(item.icon, Headphones) : item.icon,
-  }));
-
   const handleQuickAction = (action: any) => {
     if (typeof action.onPress === 'function') {
       action.onPress();
@@ -180,16 +147,6 @@ const HelpSupportScreen = () => {
     }
     if (action.actionType === 'url' && action.actionValue) {
       void Linking.openURL(action.actionValue);
-    }
-  };
-
-  const handleContactAction = (contact: any) => {
-    if (typeof contact.action === 'function') {
-      contact.action();
-      return;
-    }
-    if (contact.actionType && contact.actionValue) {
-      void Linking.openURL(contact.actionValue);
     }
   };
 
@@ -279,36 +236,27 @@ const HelpSupportScreen = () => {
           )}
         </View>
 
-        {/* Contact Support */}
+        {/* Company contact — separate screen (registered office & details only) */}
         <View style={s.sectionTitleRow}>
-          <Headphones size={normalize(17)} color={theme.colors.primary} />
-          <Text style={[s.sectionTitle, { color: theme.colors.text }]}>Contact Support</Text>
+          <Building2 size={normalize(17)} color={theme.colors.primary} />
+          <Text style={[s.sectionTitle, { color: theme.colors.text }]}>Company contact</Text>
         </View>
-        <View style={[s.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
-          {contactOptions.map((contact: any, index: number) => (
-            <React.Fragment key={index}>
-              {index > 0 && <View style={[s.divider, { backgroundColor: theme.colors.border }]} />}
-              <TouchableOpacity style={s.contactRow} onPress={() => handleContactAction(contact)} activeOpacity={0.7}>
-                <View style={[s.contactIconWrap, { backgroundColor: contact.color + '14' }]}>
-                  {renderIcon(contact.icon, normalize(19), contact.color)}
-                </View>
-                <View style={s.contactInfo}>
-                  <Text style={[s.contactLabel, { color: theme.colors.text }]}>{contact.label}</Text>
-                  <Text style={[s.contactDesc, { color: theme.colors.textSecondary }]}>{contact.desc}</Text>
-                </View>
-                <ExternalLink size={normalize(15)} color={theme.colors.textSecondary} />
-              </TouchableOpacity>
-            </React.Fragment>
-          ))}
-        </View>
-
-        {/* Support Hours */}
-        <View style={[s.supportHoursCard, { backgroundColor: theme.colors.primary + '08', borderColor: theme.colors.primary + '20' }]}>
-          <Text style={[s.supportHoursTitle, { color: theme.colors.text }]}>Support Hours</Text>
-          <Text style={[s.supportHoursText, { color: theme.colors.textSecondary }]}>
-            {contentData.supportHoursText}
-          </Text>
-        </View>
+        <TouchableOpacity
+          style={[s.card, s.companyContactCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+          onPress={() => navigation.navigate('ContactUs')}
+          activeOpacity={0.7}
+        >
+          <View style={[s.contactIconWrap, { backgroundColor: theme.colors.primary + '14' }]}>
+            <Building2 size={normalize(19)} color={theme.colors.primary} />
+          </View>
+          <View style={s.contactInfo}>
+            <Text style={[s.contactLabel, { color: theme.colors.text }]}>Registered office & details</Text>
+            <Text style={[s.contactDesc, { color: theme.colors.textSecondary }]}>
+              Legal name, address, phone, email, and support hours
+            </Text>
+          </View>
+          <ChevronRight size={normalize(16)} color={theme.colors.textSecondary} />
+        </TouchableOpacity>
       </ScrollView>
 
       {/* Topic Detail Modal */}
@@ -539,24 +487,12 @@ const s = StyleSheet.create({
     fontSize: normalize(12),
     marginTop: normalize(1),
   },
-
-  supportHoursCard: {
-    borderRadius: normalize(12),
-    padding: normalize(16),
-    borderWidth: 1,
-    marginTop: normalize(4),
-    marginBottom: normalize(16),
-  },
-  supportHoursTitle: {
-    fontFamily: FONTS.semiBold,
-    fontSize: normalize(15),
-    fontWeight: '700',
-    marginBottom: normalize(8),
-  },
-  supportHoursText: {
-    fontFamily: FONTS.regular,
-    fontSize: normalize(13),
-    lineHeight: normalize(22),
+  companyContactCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: normalize(14),
+    paddingVertical: normalize(13),
+    gap: normalize(12),
   },
 
   modalOverlay: {

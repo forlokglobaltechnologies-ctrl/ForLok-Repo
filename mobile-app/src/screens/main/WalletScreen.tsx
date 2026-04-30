@@ -26,7 +26,7 @@ import {
   Coins,
   Gift,
   Star,
-  Car,
+  Bike,
   Zap,
   TrendingUp,
   TrendingDown,
@@ -351,7 +351,7 @@ const WalletScreen = () => {
               onPress={() => navigation.navigate('MainDashboard' as never)}
               activeOpacity={0.8}
             >
-              <Car size={18} color={COLORS.black} />
+              <Bike size={18} color={COLORS.black} />
               <Text style={styles.coinActionTextOutline}>Book a Ride</Text>
             </TouchableOpacity>
           </View>

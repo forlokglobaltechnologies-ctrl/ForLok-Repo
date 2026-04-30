@@ -69,10 +69,10 @@ const DocumentVerificationScreen = () => {
   const [vehicleNumber, setVehicleNumber] = useState('');
   const [vehicleBrand, setVehicleBrand] = useState('');
   const [vehicleModel, setVehicleModel] = useState('');
-  const [vehicleType, setVehicleType] = useState<'car' | 'bike' | null>(null);
+  const [vehicleType, setVehicleType] = useState<'bike' | 'scooty' | null>(null);
   const [vehicleYear, setVehicleYear] = useState<number | null>(null);
   const [vehicleColor, setVehicleColor] = useState('');
-  const [vehicleSeats, setVehicleSeats] = useState<number>(5);
+  const [vehicleSeats, setVehicleSeats] = useState<number>(2);
   const [vehicleFuelType, setVehicleFuelType] = useState<'Petrol' | 'Diesel' | 'Electric' | 'CNG' | ''>('');
   const [vehicleTransmission, setVehicleTransmission] = useState<'Manual' | 'Automatic' | ''>('');
   const [insuranceExpiry, setInsuranceExpiry] = useState<Date | null>(null);
@@ -91,9 +91,8 @@ const DocumentVerificationScreen = () => {
   const [uploadingDocument, setUploadingDocument] = useState<string | null>(null);
   const [uploadStatus, setUploadStatus] = useState<Record<string, 'success' | 'error' | null>>({});
   
-  // Auto-set seats for bikes
   useEffect(() => {
-    if (vehicleType === 'bike') {
+    if (vehicleType === 'bike' || vehicleType === 'scooty') {
       setVehicleSeats(2);
     }
   }, [vehicleType]);
@@ -102,6 +101,8 @@ const DocumentVerificationScreen = () => {
   const [requiredDocs, setRequiredDocs] = useState<ReturnType<typeof getRequiredDocuments> | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [aadhaarRepoIds, setAadhaarRepoIds] = useState<string[]>([]);
+  const [dlRepoIds, setDlRepoIds] = useState<string[]>([]);
   const { items: masterStates } = useMasterData('state', []);
   const stateOptions = masterStates.map((item: any) => item.label).filter(Boolean);
 
@@ -119,20 +120,33 @@ const DocumentVerificationScreen = () => {
           // Map backend documents to local format
           const docs: UserDocuments = {};
           
-          // Find Aadhaar documents
-          const aadhaarDoc = backendDocs.find((d: any) => 
-            d.type === 'aadhar_front' || d.type === 'aadhar_back'
+          // Find Aadhaar documents (collect all verified rows for replace/delete)
+          const aadhaarRows = backendDocs.filter(
+            (d: any) =>
+              (d.type === 'aadhar_front' || d.type === 'aadhar_back') &&
+              d.status === 'verified' &&
+              d.documentId
           );
-          if (aadhaarDoc && aadhaarDoc.status === 'verified') {
-            setAadhaarNumber(aadhaarDoc.documentNumber || '');
+          if (aadhaarRows.length > 0) {
+            const first = aadhaarRows[0];
+            setAadhaarNumber(first.documentNumber || '');
             setAadhaarVerified(true);
+            setAadhaarRepoIds(
+              [...new Set(aadhaarRows.map((d: any) => d.documentId).filter(Boolean))] as string[]
+            );
+          } else {
+            setAadhaarRepoIds([]);
           }
-          
+
           // Find Driving License documents
-          const dlDoc = backendDocs.find((d: any) => 
-            d.type === 'driving_license_front' || d.type === 'driving_license_back'
+          const dlRows = backendDocs.filter(
+            (d: any) =>
+              (d.type === 'driving_license_front' || d.type === 'driving_license_back') &&
+              d.status === 'verified' &&
+              d.documentId
           );
-          if (dlDoc && dlDoc.status === 'verified') {
+          if (dlRows.length > 0) {
+            const dlDoc = dlRows[0];
             setDlNumber(dlDoc.documentNumber || '');
             const savedDob = dlDoc.metadata?.dob || '';
             setDlDob(savedDob);
@@ -144,6 +158,9 @@ const DocumentVerificationScreen = () => {
             }
             setDlState(dlDoc.metadata?.state || '');
             setDlVerified(true);
+            setDlRepoIds([...new Set(dlRows.map((d: any) => d.documentId).filter(Boolean))] as string[]);
+          } else {
+            setDlRepoIds([]);
           }
           
           // Find user photo
@@ -181,7 +198,10 @@ const DocumentVerificationScreen = () => {
             setVehicleNumber(firstVehicle.number || '');
             setVehicleBrand(firstVehicle.brand || '');
             setVehicleModel(firstVehicle.vehicleModel || firstVehicle.model || '');
-            setVehicleType(firstVehicle.type || null);
+            {
+              const rawT = String(firstVehicle.type || '').toLowerCase();
+              setVehicleType(rawT === 'scooty' ? 'scooty' : rawT === 'bike' || rawT === 'car' ? 'bike' : null);
+            }
           }
         }
         
@@ -244,6 +264,11 @@ const DocumentVerificationScreen = () => {
       
       if (response.success) {
         setAadhaarVerified(true);
+        const docs = (response.data as any)?.documents;
+        if (Array.isArray(docs) && docs.length) {
+          const ids = [...new Set(docs.map((d: any) => d.documentId).filter(Boolean))] as string[];
+          if (ids.length) setAadhaarRepoIds(ids);
+        }
         Alert.alert('Success', 'Aadhaar verified successfully');
       } else {
         Alert.alert('Verification Failed', response.error || 'Failed to verify Aadhaar');
@@ -302,6 +327,11 @@ const DocumentVerificationScreen = () => {
       
       if (response.success) {
         setDlVerified(true);
+        const docs = (response.data as any)?.documents;
+        if (Array.isArray(docs) && docs.length) {
+          const ids = [...new Set(docs.map((d: any) => d.documentId).filter(Boolean))] as string[];
+          if (ids.length) setDlRepoIds(ids);
+        }
         Alert.alert('Success', 'Driving License verified successfully');
       } else {
         Alert.alert('Verification Failed', response.error || 'Failed to verify Driving License');
@@ -311,6 +341,85 @@ const DocumentVerificationScreen = () => {
     } finally {
       setIsVerifying(false);
     }
+  };
+
+  const deleteStoredDocumentsByIds = async (ids: string[]) => {
+    for (const id of ids) {
+      const res = await documentApi.deleteDocument(id);
+      if (!res.success) {
+        throw new Error((res as any).error || `Could not remove document`);
+      }
+    }
+  };
+
+  const handleChangeAadhaarNumber = () => {
+    Alert.alert(
+      'Change Aadhaar number?',
+      'Saved verified Aadhaar records will be removed. You can enter and verify a new number.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Change',
+          style: 'destructive',
+          onPress: async () => {
+            setIsVerifying(true);
+            try {
+              if (aadhaarRepoIds.length) await deleteStoredDocumentsByIds(aadhaarRepoIds);
+              setAadhaarRepoIds([]);
+              setAadhaarVerified(false);
+              setAadhaarNumber('');
+            } catch (e: any) {
+              Alert.alert('Error', e?.message || 'Could not reset Aadhaar. Try again.');
+            } finally {
+              setIsVerifying(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleChangePanNumber = () => {
+    Alert.alert('Change PAN?', 'You will need to verify the new PAN.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Change',
+        onPress: () => {
+          setPanVerified(false);
+          setPanNumber('');
+        },
+      },
+    ]);
+  };
+
+  const handleChangeDrivingLicense = () => {
+    Alert.alert(
+      'Change driving license?',
+      'Saved verified license records will be removed. You can enter details and verify again.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Change',
+          style: 'destructive',
+          onPress: async () => {
+            setIsVerifying(true);
+            try {
+              if (dlRepoIds.length) await deleteStoredDocumentsByIds(dlRepoIds);
+              setDlRepoIds([]);
+              setDlVerified(false);
+              setDlNumber('');
+              setDlDob('');
+              setDlDobDate(null);
+              setDlState('');
+            } catch (e: any) {
+              Alert.alert('Error', e?.message || 'Could not reset license. Try again.');
+            } finally {
+              setIsVerifying(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleImageUpload = async (type: string) => {
@@ -649,15 +758,10 @@ const DocumentVerificationScreen = () => {
         if (!vehicleAlreadyExists && vehicleNumber.trim() && vehicleFront && vehicleBack) {
           try {
             console.log('🚗 Saving vehicle to backend...');
-            // Determine vehicle type from documents or default to car
-            const vType = vehicleType || 'car'; // Default to car if not set
-            
-            // Get vehicle brand/model from state or use defaults
+            const vType = vehicleType || 'bike';
             const brand = vehicleBrand.trim() || 'Unknown';
             const model = vehicleModel.trim() || 'Unknown';
-            
-            // Determine seats based on type
-            const seats = vType === 'bike' ? 1 : 5; // Default seats
+            const seats = 2;
             
             const vehicleData = {
               type: vType,
@@ -963,9 +1067,19 @@ const DocumentVerificationScreen = () => {
                   editable={!aadhaarVerified}
                 />
                 {aadhaarVerified ? (
-                  <View style={styles.verifiedBadge}>
-                    <CheckCircle size={20} color={COLORS.success} />
-                    <Text style={styles.verifiedText}>{t('documentVerification.verified')}</Text>
+                  <View>
+                    <View style={styles.verifiedBadge}>
+                      <CheckCircle size={20} color={COLORS.success} />
+                      <Text style={styles.verifiedText}>{t('documentVerification.verified')}</Text>
+                    </View>
+                    <TouchableOpacity
+                      onPress={handleChangeAadhaarNumber}
+                      disabled={isVerifying}
+                      style={styles.changeDocBtn}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.changeDocLink}>Change Aadhaar number</Text>
+                    </TouchableOpacity>
                   </View>
                 ) : (
                   <Button
@@ -993,9 +1107,14 @@ const DocumentVerificationScreen = () => {
                   editable={!panVerified}
                 />
                 {panVerified ? (
-                  <View style={styles.verifiedBadge}>
-                    <CheckCircle size={20} color={COLORS.success} />
-                    <Text style={styles.verifiedText}>{t('documentVerification.verified')}</Text>
+                  <View>
+                    <View style={styles.verifiedBadge}>
+                      <CheckCircle size={20} color={COLORS.success} />
+                      <Text style={styles.verifiedText}>{t('documentVerification.verified')}</Text>
+                    </View>
+                    <TouchableOpacity onPress={handleChangePanNumber} style={styles.changeDocBtn} activeOpacity={0.7}>
+                      <Text style={styles.changeDocLink}>Change PAN</Text>
+                    </TouchableOpacity>
                   </View>
                 ) : (
                   <Button
@@ -1073,9 +1192,19 @@ const DocumentVerificationScreen = () => {
                   </TouchableOpacity>
                 </View>
                 {dlVerified ? (
-                  <View style={styles.verifiedBadge}>
-                    <CheckCircle size={20} color={COLORS.success} />
-                    <Text style={styles.verifiedText}>{t('documentVerification.verified')}</Text>
+                  <View>
+                    <View style={styles.verifiedBadge}>
+                      <CheckCircle size={20} color={COLORS.success} />
+                      <Text style={styles.verifiedText}>{t('documentVerification.verified')}</Text>
+                    </View>
+                    <TouchableOpacity
+                      onPress={handleChangeDrivingLicense}
+                      disabled={isVerifying}
+                      style={styles.changeDocBtn}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.changeDocLink}>Change license details</Text>
+                    </TouchableOpacity>
                   </View>
                 ) : (
                   <Button
@@ -1455,6 +1584,16 @@ const styles = StyleSheet.create({
     padding: SPACING.sm,
     backgroundColor: COLORS.success + '20',
     borderRadius: BORDER_RADIUS.sm,
+  },
+  changeDocBtn: {
+    marginTop: SPACING.sm,
+    alignSelf: 'flex-start',
+    paddingVertical: normalize(4),
+  },
+  changeDocLink: {
+    fontFamily: FONTS.semiBold,
+    fontSize: FONTS.sizes.sm,
+    color: ACCENT,
   },
   verifiedText: {
     fontFamily: FONTS.regular,

@@ -22,7 +22,7 @@ import {
   Users,
   DollarSign,
   MessageSquare,
-  Car,
+  Bike,
   KeyRound,
   FileText,
   Clock,
@@ -62,8 +62,8 @@ const CAROUSEL_IMAGES = [
 const QUICK_ACTIONS = [
   {
     key: 'pooling',
-    icon: Car,
-    label: 'Pooling',
+    icon: Bike,
+    label: 'Ride-Sharing',
     color: '#F99E3C',
     route: 'PoolingManagement',
     requiredPermissions: ['offers:view'],

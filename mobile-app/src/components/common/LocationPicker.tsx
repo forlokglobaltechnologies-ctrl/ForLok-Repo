@@ -137,7 +137,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
     try {
       const photonUrl = `https://photon.komoot.io/reverse?lat=${lat}&lon=${lng}&limit=1`;
       const photonResp = await fetch(photonUrl, {
-        headers: { 'User-Agent': 'Forlok-App/1.0' },
+        headers: { 'User-Agent': 'eZway-App/1.0' },
       });
       if (photonResp.ok) {
         const photonData = await photonResp.json();
@@ -162,7 +162,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
         `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}` +
         `&format=json&addressdetails=1&zoom=18`;
       const response = await fetch(url, {
-        headers: { 'User-Agent': 'Forlok-App/1.0' },
+        headers: { 'User-Agent': 'eZway-App/1.0' },
       });
 
       if (!response.ok) {
@@ -223,7 +223,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
           `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}` +
           `&format=json&limit=5&countrycodes=in&addressdetails=1`;
         const fallbackResp = await fetch(nominatimUrl, {
-          headers: { 'User-Agent': 'Forlok-App/1.0' },
+          headers: { 'User-Agent': 'eZway-App/1.0' },
         });
         if (fallbackResp.ok) {
           const fallbackData = await fallbackResp.json();
@@ -267,6 +267,7 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
   }, [moveMapTo]);
 
   const handleMapTap = useCallback(async (lat: number, lng: number) => {
+    Keyboard.dismiss();
     setSelectedLocation({ address: 'Fetching address...', lat, lng });
     const address = await reverseGeocode(lat, lng);
     if (address) {
@@ -280,12 +281,14 @@ const LocationPicker: React.FC<LocationPickerProps> = ({
   const confirmSelection = useCallback(() => {
     const loc = selectedLocationRef.current;
     if (loc && loc.address !== 'Fetching address...') {
+      Keyboard.dismiss();
       onLocationSelect(loc);
     }
   }, [onLocationSelect]);
 
   const useMyLocation = useCallback(() => {
     if (currentLocation) {
+      Keyboard.dismiss();
       setSelectedLocation(currentLocation);
       moveMapTo(currentLocation.lat, currentLocation.lng, 15);
     }

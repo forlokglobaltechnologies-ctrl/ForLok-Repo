@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import {
-  ArrowLeft, Heart, Share2, MapPin, Star, User, Calendar, Clock, Car, Tag,
+  ArrowLeft, Heart, Share2, MapPin, Star, User, Calendar, Clock, Bike, Tag,
   Users, IndianRupee, FileText, Shield, ChevronRight, Phone, MessageSquare,
   Zap, Leaf, CheckCircle,
 } from 'lucide-react-native';
@@ -16,6 +16,7 @@ import { useLanguage } from '@context/LanguageContext';
 import { useTheme } from '@context/ThemeContext';
 import { useAuth } from '@context/AuthContext';
 import { poolingApi } from '@utils/apiClient';
+import { reviewsCountShort } from '@utils/reviewDisplay';
 import LocationPicker, { LocationData } from '@components/common/LocationPicker';
 
 const SCREEN_W = Dimensions.get('window').width;
@@ -171,7 +172,7 @@ const PoolingDetailsScreen = () => {
   const handleShare = async () => {
     try {
       await Share.share({
-        message: `Check out this pooling ride from ${getRouteText(offer?.route?.from)} to ${getRouteText(offer?.route?.to)} on ForLok!`,
+        message: `Check out this Ride-Sharing trip from ${getRouteText(offer?.route?.from)} to ${getRouteText(offer?.route?.to)} on eZway!`,
       });
     } catch {}
   };
@@ -188,9 +189,10 @@ const PoolingDetailsScreen = () => {
 
   const getVehicleIcon = () => {
     const type = offer?.vehicle?.type?.toLowerCase();
-    if (type === 'scooty') return <MaterialCommunityIcons name="moped" size={18} color={theme.colors.primary} />;
-    if (type === 'bike') return <MaterialCommunityIcons name="motorbike" size={18} color={theme.colors.primary} />;
-    return <Car size={18} color={theme.colors.primary} />;
+    if (type === 'scooty' || type === 'scooter') {
+      return <MaterialCommunityIcons name="moped" size={18} color={theme.colors.primary} />;
+    }
+    return <Bike size={18} color={theme.colors.primary} />;
   };
 
   const formatOfferDate = (rawDate: any) => {
@@ -214,7 +216,7 @@ const PoolingDetailsScreen = () => {
       return;
     }
     if (offer.availableSeats <= 0) {
-      Alert.alert('No Seats Available', 'This pooling offer is full.');
+      Alert.alert('No Seats Available', 'This ride-sharing offer is full.');
       return;
     }
     if (selectedSeats > offer.availableSeats) {
@@ -327,7 +329,7 @@ const PoolingDetailsScreen = () => {
   const vehicleModel = offer.vehicle?.model || '';
   const vehicleNumber = offer.vehicle?.number || '';
   const vehicleColor = offer.vehicle?.color || '';
-  const vehicleType = offer.vehicle?.type || 'car';
+  const vehicleType = offer.vehicle?.type || 'bike';
   const seatsFilled = (offer.totalSeats || offer.availableSeats || 1) - (offer.availableSeats || 0);
   const totalSeats = offer.totalSeats || offer.availableSeats || 1;
   const formattedDate = formatOfferDate(offer.date);
@@ -374,7 +376,7 @@ const PoolingDetailsScreen = () => {
                 <View style={s.ratingPill}>
                   <Star size={12} color="#FFB800" fill="#FFB800" />
                   <Text style={s.ratingText}>{driverRating}</Text>
-                  <Text style={s.ratingCount}>({driverReviews})</Text>
+                  <Text style={s.ratingCount}>({reviewsCountShort(driverReviews, t)})</Text>
                 </View>
                 {(offer.driver?.totalTrips || 0) > 0 && (
                   <Text style={[s.tripCount, { color: theme.colors.textSecondary }]}>{offer.driver.totalTrips} trips</Text>

@@ -22,7 +22,6 @@ import {
   Settings,
   Star,
   CheckCircle,
-  Car,
   Bike,
   Edit,
   Eye,
@@ -46,6 +45,7 @@ import {
   MapPin,
   TrendingUp,
 } from 'lucide-react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { normalize, wp, hp } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, SHADOWS, BORDER_RADIUS } from '@constants/theme';
@@ -327,9 +327,9 @@ const ProfileScreen = () => {
 
   const menuItems = [
     { icon: Wallet, label: 'Wallet', screen: 'Wallet', color: PROFILE_ACCENT },
-    { icon: Coins, label: 'Earn Coins', screen: 'EarnCoins', color: '#F5A623' },
+    { icon: Coins, label: 'eZway Coins', screen: 'EarnCoins', color: '#F5A623' },
     { icon: MessageSquare, label: 'My Reviews', screen: 'Reviews', params: { userId: user?.userId, userName: user?.name }, color: PROFILE_ACCENT },
-    { icon: Car, label: 'My Offers', screen: 'MyOffers', color: PROFILE_ACCENT },
+    { icon: Bike, label: 'My Offers', screen: 'MyOffers', color: PROFILE_ACCENT },
     { icon: Shield, label: 'Help & Support', screen: 'HelpSupport', color: PROFILE_ACCENT },
     { icon: Info, label: 'About', screen: 'About', color: PROFILE_ACCENT },
   ];
@@ -612,7 +612,7 @@ const ProfileScreen = () => {
         {/* ── Vehicles ── */}
         <View style={[styles.sectionCard, { backgroundColor: theme.colors.surface }]}>
           <View style={styles.sectionHeader}>
-            <Car size={16} color={PROFILE_ACCENT} />
+            <Bike size={16} color={PROFILE_ACCENT} />
             <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>{t('profile.myVehicles')}</Text>
             <TouchableOpacity
               onPress={() => navigation.navigate('AddVehicle' as never)}
@@ -629,8 +629,8 @@ const ProfileScreen = () => {
             vehicles.map((vehicle: any, index: number) => (
               <View key={vehicle.vehicleId || vehicle._id || index} style={[styles.vehicleItem, { backgroundColor: theme.colors.background }]}>
                 <View style={[styles.vehicleIconWrap, { backgroundColor: PROFILE_ACCENT + '12' }]}>
-                  {vehicle.type?.toLowerCase() === 'car' ? (
-                    <Car size={22} color={PROFILE_ACCENT} />
+                  {vehicle.type?.toLowerCase() === 'scooty' || vehicle.type?.toLowerCase() === 'scooter' ? (
+                    <MaterialCommunityIcons name="moped" size={22} color={PROFILE_ACCENT} />
                   ) : (
                     <Bike size={22} color={PROFILE_ACCENT} />
                   )}
@@ -664,7 +664,7 @@ const ProfileScreen = () => {
             ))
           ) : (
             <View style={styles.emptyState}>
-              <Car size={36} color={theme.colors.textSecondary} />
+              <Bike size={36} color={theme.colors.textSecondary} />
               <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>No vehicles added yet</Text>
               <TouchableOpacity
                 style={[styles.addVehicleBtn, { backgroundColor: COLORS.black, borderColor: theme.colors.border }]}

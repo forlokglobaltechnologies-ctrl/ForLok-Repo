@@ -22,7 +22,7 @@ import { adminApi } from '@utils/apiClient';
 const AdminSettingsScreen = () => {
   const navigation = useNavigation();
   const { t } = useLanguage();
-  const [platformFee, setPlatformFee] = useState('10');
+  const [platformFee, setPlatformFee] = useState('0');
   const [minBookingAmount, setMinBookingAmount] = useState('100');
   const [maxBookingAmount, setMaxBookingAmount] = useState('50000');
   const [autoApproveHours, setAutoApproveHours] = useState('24');
@@ -36,7 +36,7 @@ const AdminSettingsScreen = () => {
       const res = await adminApi.getSettings();
       if (res.success && res.data) {
         const data = res.data as any;
-        setPlatformFee(String(data.platformFee ?? '10'));
+        setPlatformFee(String(data.platformFee ?? '0'));
         setMinBookingAmount(String(data.minBookingAmount ?? '100'));
         setMaxBookingAmount(String(data.maxBookingAmount ?? '50000'));
         setAutoApproveHours(String(data.autoApproveHours ?? '24'));
@@ -69,7 +69,7 @@ const AdminSettingsScreen = () => {
             <Input
               value={platformFee}
               onChangeText={setPlatformFee}
-              placeholder="10"
+              placeholder="0"
               keyboardType="numeric"
               containerStyle={styles.input}
             />
@@ -191,7 +191,7 @@ const AdminSettingsScreen = () => {
           <Button
             title={t('admin.settings.resetToDefault')}
             onPress={() => {
-              setPlatformFee('10');
+              setPlatformFee('0');
               setMinBookingAmount('100');
               setMaxBookingAmount('50000');
               setAutoApproveHours('24');

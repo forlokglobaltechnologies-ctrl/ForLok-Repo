@@ -10,7 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { ArrowLeft, User, Building2, Globe, ChevronDown, Check } from 'lucide-react-native';
+import { ArrowLeft, User, Globe, ChevronDown, Check } from 'lucide-react-native';
 import { COLORS, FONTS, SPACING, BORDER_RADIUS } from '@constants/theme';
 import { useLanguage, Language } from '@context/LanguageContext';
 import { normalize, wp, hp } from '@utils/responsive';
@@ -147,25 +147,6 @@ const SignUpScreen = () => {
           <View style={styles.optionContent}>
             <Text style={styles.optionTitle}>{t('signUp.individualTitle')}</Text>
             <Text style={styles.optionDesc}>{t('signUp.individualFeature1')}</Text>
-          </View>
-          <ChevronDown
-            size={20}
-            color="#BBBBBB"
-            style={{ transform: [{ rotate: '-90deg' }] }}
-          />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.optionCard}
-          onPress={() => navigation.navigate('CompanyRegistration' as never)}
-          activeOpacity={0.8}
-        >
-          <View style={[styles.iconCircle, { backgroundColor: '#FFF3E0' }]}>
-            <Building2 size={24} color="#E65100" />
-          </View>
-          <View style={styles.optionContent}>
-            <Text style={styles.optionTitle}>{t('signUp.companyTitle')}</Text>
-            <Text style={styles.optionDesc}>{t('signUp.companyFeature1')}</Text>
           </View>
           <ChevronDown
             size={20}

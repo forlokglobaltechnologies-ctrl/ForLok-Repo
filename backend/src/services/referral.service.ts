@@ -8,21 +8,48 @@ import crypto from 'crypto';
 
 class ReferralService {
   /**
+   * Case-insensitive lookup (supports eZway-xxx, legacy FORLOK-xxx, user typos).
+   */
+  private async findReferralByCodeInput(raw: string): Promise<InstanceType<typeof ReferralCode> | null> {
+    const trimmed = raw.trim();
+    if (!trimmed) return null;
+    return ReferralCode.findOne({
+      isActive: true,
+      $expr: {
+        $eq: [{ $toLower: '$code' }, trimmed.toLowerCase()],
+      },
+    });
+  }
+
+  /** Migrate legacy FORLOK-ABC123 → eZway-ABC123 when still unique. */
+  private async migrateLegacyCodeIfNeeded(referral: InstanceType<typeof ReferralCode>): Promise<void> {
+    if (!/^forlok-/i.test(referral.code)) return;
+    const suffix = referral.code.replace(/^FORLOK-/i, '');
+    const newCode = `eZway-${suffix}`;
+    const conflict = await ReferralCode.findOne({ code: newCode });
+    if (conflict) return;
+    await ReferralCode.updateOne({ _id: referral._id }, { $set: { code: newCode } });
+    await User.findOneAndUpdate({ userId: referral.userId }, { referralCode: newCode });
+    referral.code = newCode;
+  }
+
+  /**
    * Generate a unique referral code for a user
    */
   async generateReferralCode(userId: string): Promise<string> {
     // Check if user already has a referral code
     const existing = await ReferralCode.findOne({ userId });
     if (existing) {
+      await this.migrateLegacyCodeIfNeeded(existing);
       return existing.code;
     }
 
-    // Generate unique code: FORLOK-XXXXXX
+    // Generate unique code: eZway-XXXXXX (6 hex chars)
     let code: string;
     let attempts = 0;
     do {
       const random = crypto.randomBytes(3).toString('hex').toUpperCase();
-      code = `FORLOK-${random}`;
+      code = `eZway-${random}`;
       attempts++;
     } while ((await ReferralCode.findOne({ code })) && attempts < 10);
 
@@ -50,13 +77,12 @@ class ReferralService {
     referralCode: string,
     newUserId: string
   ): Promise<{ valid: boolean; coinsAwarded: number; referrerUserId?: string }> {
-    const code = referralCode.toUpperCase().trim();
-
-    const referral = await ReferralCode.findOne({ code, isActive: true });
+    const referral = await this.findReferralByCodeInput(referralCode);
     if (!referral) {
-      logger.warn(`🔗 Invalid referral code: ${code}`);
+      logger.warn(`🔗 Invalid referral code: ${referralCode.trim()}`);
       return { valid: false, coinsAwarded: 0 };
     }
+    const code = referral.code;
 
     // Prevent self-referral
     if (referral.userId === newUserId) {
@@ -125,6 +151,7 @@ class ReferralService {
       await this.generateReferralCode(userId);
       referral = await ReferralCode.findOne({ userId });
     }
+    if (referral) await this.migrateLegacyCodeIfNeeded(referral);
 
     return {
       code: referral!.code,
@@ -139,7 +166,10 @@ class ReferralService {
    */
   async getUserReferralCode(userId: string): Promise<string> {
     const referral = await ReferralCode.findOne({ userId });
-    if (referral) return referral.code;
+    if (referral) {
+      await this.migrateLegacyCodeIfNeeded(referral);
+      return referral.code;
+    }
     return await this.generateReferralCode(userId);
   }
 
@@ -147,17 +177,14 @@ class ReferralService {
    * Validate referral code (check if valid, without applying)
    */
   async validateCode(code: string): Promise<{ valid: boolean; referrerName?: string }> {
-    const referral = await ReferralCode.findOne({
-      code: code.toUpperCase().trim(),
-      isActive: true,
-    });
+    const referral = await this.findReferralByCodeInput(code);
 
     if (!referral) return { valid: false };
 
     const user = await User.findOne({ userId: referral.userId });
     return {
       valid: true,
-      referrerName: user?.name || 'Forlok User',
+      referrerName: user?.name || 'eZway user',
     };
   }
 }

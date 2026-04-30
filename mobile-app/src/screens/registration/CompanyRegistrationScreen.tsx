@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -63,6 +63,60 @@ const CompanyRegistrationScreen = () => {
   const [emailLoading, setEmailLoading] = useState(false);
   const [emailVerifying, setEmailVerifying] = useState(false);
 
+  const OTP_COOLDOWN_SEC = 45;
+  const [phoneOtpTimer, setPhoneOtpTimer] = useState(0);
+  const [emailOtpTimer, setEmailOtpTimer] = useState(0);
+  const phoneOtpIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const emailOtpIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const clearPhoneOtpTimer = () => {
+    if (phoneOtpIntervalRef.current) {
+      clearInterval(phoneOtpIntervalRef.current);
+      phoneOtpIntervalRef.current = null;
+    }
+  };
+  const clearEmailOtpTimer = () => {
+    if (emailOtpIntervalRef.current) {
+      clearInterval(emailOtpIntervalRef.current);
+      emailOtpIntervalRef.current = null;
+    }
+  };
+
+  const startPhoneOtpTimer = () => {
+    clearPhoneOtpTimer();
+    setPhoneOtpTimer(OTP_COOLDOWN_SEC);
+    phoneOtpIntervalRef.current = setInterval(() => {
+      setPhoneOtpTimer((prev) => {
+        if (prev <= 1) {
+          clearPhoneOtpTimer();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const startEmailOtpTimer = () => {
+    clearEmailOtpTimer();
+    setEmailOtpTimer(OTP_COOLDOWN_SEC);
+    emailOtpIntervalRef.current = setInterval(() => {
+      setEmailOtpTimer((prev) => {
+        if (prev <= 1) {
+          clearEmailOtpTimer();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  useEffect(() => {
+    return () => {
+      clearPhoneOtpTimer();
+      clearEmailOtpTimer();
+    };
+  }, []);
+
   // Document uploads (Step 2)
   const [registrationCertificate, setRegistrationCertificate] = useState<string | null>(null);
   const [gstCertificate, setGstCertificate] = useState<string | null>(null);
@@ -96,6 +150,7 @@ const CompanyRegistrationScreen = () => {
       if (response.success) {
         setPhoneOtpSent(true);
         setPhoneOtp('');
+        startPhoneOtpTimer();
         if (response.data?.otp) {
           Alert.alert(
             'OTP Sent',
@@ -143,6 +198,39 @@ const CompanyRegistrationScreen = () => {
     }
   };
 
+  const handleResendPhoneOtp = async () => {
+    if (phoneOtpTimer > 0) {
+      showSnackbar({ message: `Please wait ${phoneOtpTimer}s before resending OTP`, type: 'warning' });
+      return;
+    }
+    if (!contactNumber || contactNumber.length < 10) {
+      setErrors((prev) => ({ ...prev, contactNumber: 'Please enter a valid phone number' }));
+      showSnackbar({ message: 'Please enter a valid phone number', type: 'error' });
+      return;
+    }
+    setErrors((prev) => ({ ...prev, contactNumber: '', phoneOtp: '' }));
+    setPhoneLoading(true);
+    try {
+      const formattedPhone = `+91${contactNumber}`;
+      const response = await authApi.sendOTP(formattedPhone, 'verify_phone');
+      if (response.success) {
+        setPhoneOtp('');
+        startPhoneOtpTimer();
+        if (response.data?.otp) {
+          Alert.alert('OTP Resent', `Your OTP is: ${response.data.otp}\n\n(Development)`, [{ text: 'OK' }]);
+        } else {
+          showSnackbar({ message: 'OTP resent successfully', type: 'success' });
+        }
+      } else {
+        showSnackbar({ message: getUserErrorMessage(response as any, 'Failed to resend OTP'), type: 'error' });
+      }
+    } catch (error: any) {
+      showSnackbar({ message: error.message || 'Failed to resend OTP', type: 'error' });
+    } finally {
+      setPhoneLoading(false);
+    }
+  };
+
   const handleSendEmailOtp = async () => {
     if (!email || !email.includes('@')) {
       setErrors((prev) => ({ ...prev, email: 'Please enter a valid email address' }));
@@ -158,6 +246,7 @@ const CompanyRegistrationScreen = () => {
       if (response.success) {
         setEmailOtpSent(true);
         setEmailOtp('');
+        startEmailOtpTimer();
         if (response.data?.otp) {
           Alert.alert(
             'OTP Sent',
@@ -203,6 +292,38 @@ const CompanyRegistrationScreen = () => {
       showSnackbar({ message: error.message || 'Failed to verify OTP', type: 'error' });
     } finally {
       setEmailVerifying(false);
+    }
+  };
+
+  const handleResendEmailOtp = async () => {
+    if (emailOtpTimer > 0) {
+      showSnackbar({ message: `Please wait ${emailOtpTimer}s before resending OTP`, type: 'warning' });
+      return;
+    }
+    if (!email || !email.includes('@')) {
+      setErrors((prev) => ({ ...prev, email: 'Please enter a valid email address' }));
+      showSnackbar({ message: 'Please enter a valid email address', type: 'error' });
+      return;
+    }
+    setErrors((prev) => ({ ...prev, email: '', emailOtp: '' }));
+    setEmailLoading(true);
+    try {
+      const response = await authApi.sendEmailOTP(email, 'verify_email');
+      if (response.success) {
+        setEmailOtp('');
+        startEmailOtpTimer();
+        if (response.data?.otp) {
+          Alert.alert('OTP Resent', `Your OTP is: ${response.data.otp}\n\n(Development)`, [{ text: 'OK' }]);
+        } else {
+          showSnackbar({ message: 'OTP resent to your email', type: 'success' });
+        }
+      } else {
+        showSnackbar({ message: getUserErrorMessage(response as any, 'Failed to resend OTP'), type: 'error' });
+      }
+    } catch (error: any) {
+      showSnackbar({ message: error.message || 'Failed to resend OTP', type: 'error' });
+    } finally {
+      setEmailLoading(false);
     }
   };
 
@@ -715,6 +836,8 @@ const CompanyRegistrationScreen = () => {
             setContactNumber(text);
             setPhoneOtpSent(false);
             setPhoneVerified(false);
+            clearPhoneOtpTimer();
+            setPhoneOtpTimer(0);
             if (errors.contactNumber) setErrors((prev) => ({ ...prev, contactNumber: '' }));
           }}
           placeholder="Enter your phone number"
@@ -723,9 +846,35 @@ const CompanyRegistrationScreen = () => {
           error={errors.contactNumber}
         />
         {phoneVerified && (
-          <View style={styles.verifiedBadge}>
-            <Check size={16} color={COLORS.success} />
-            <Text style={styles.verifiedText}>Phone Verified</Text>
+          <View style={styles.verifiedRow}>
+            <View style={styles.verifiedBadge}>
+              <Check size={16} color={COLORS.success} />
+              <Text style={styles.verifiedText}>Phone Verified</Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => {
+                Alert.alert(
+                  'Change phone number?',
+                  'You will need to verify the new number with OTP again.',
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                      text: 'Change',
+                      onPress: () => {
+                        clearPhoneOtpTimer();
+                        setPhoneOtpTimer(0);
+                        setPhoneVerified(false);
+                        setPhoneOtpSent(false);
+                        setPhoneOtp('');
+                      },
+                    },
+                  ]
+                );
+              }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={styles.changeVerifiedLink}>Change</Text>
+            </TouchableOpacity>
           </View>
         )}
         {!phoneVerified && contactNumber.length >= 10 && (
@@ -754,6 +903,20 @@ const CompanyRegistrationScreen = () => {
                   containerStyle={styles.input}
                   error={errors.phoneOtp}
                 />
+                <View style={styles.resendRow}>
+                  <TouchableOpacity
+                    onPress={handleResendPhoneOtp}
+                    disabled={phoneLoading || phoneOtpTimer > 0}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.resendText, (phoneLoading || phoneOtpTimer > 0) && styles.resendTextDisabled]}>
+                      Resend OTP
+                    </Text>
+                  </TouchableOpacity>
+                  {phoneOtpTimer > 0 ? (
+                    <Text style={styles.otpTimerText}>(00:{String(phoneOtpTimer).padStart(2, '0')})</Text>
+                  ) : null}
+                </View>
                 <Button
                   title={phoneVerifying ? 'Verifying...' : 'Verify OTP'}
                   onPress={handleVerifyPhoneOtp}
@@ -776,6 +939,8 @@ const CompanyRegistrationScreen = () => {
             setEmail(text);
             setEmailOtpSent(false);
             setEmailVerified(false);
+            clearEmailOtpTimer();
+            setEmailOtpTimer(0);
             if (errors.email) setErrors((prev) => ({ ...prev, email: '' }));
           }}
           placeholder={t('common.enter') + ' ' + t('common.email').toLowerCase()}
@@ -785,9 +950,35 @@ const CompanyRegistrationScreen = () => {
           error={errors.email}
         />
         {emailVerified && (
-          <View style={styles.verifiedBadge}>
-            <Check size={16} color={COLORS.success} />
-            <Text style={styles.verifiedText}>Email Verified</Text>
+          <View style={styles.verifiedRow}>
+            <View style={styles.verifiedBadge}>
+              <Check size={16} color={COLORS.success} />
+              <Text style={styles.verifiedText}>Email Verified</Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => {
+                Alert.alert(
+                  'Change email?',
+                  'You will need to verify the new email with OTP again.',
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                      text: 'Change',
+                      onPress: () => {
+                        clearEmailOtpTimer();
+                        setEmailOtpTimer(0);
+                        setEmailVerified(false);
+                        setEmailOtpSent(false);
+                        setEmailOtp('');
+                      },
+                    },
+                  ]
+                );
+              }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={styles.changeVerifiedLink}>Change</Text>
+            </TouchableOpacity>
           </View>
         )}
         {!emailVerified && email.includes('@') && (
@@ -816,6 +1007,20 @@ const CompanyRegistrationScreen = () => {
                   containerStyle={styles.input}
                   error={errors.emailOtp}
                 />
+                <View style={styles.resendRow}>
+                  <TouchableOpacity
+                    onPress={handleResendEmailOtp}
+                    disabled={emailLoading || emailOtpTimer > 0}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.resendText, (emailLoading || emailOtpTimer > 0) && styles.resendTextDisabled]}>
+                      Resend OTP
+                    </Text>
+                  </TouchableOpacity>
+                  {emailOtpTimer > 0 ? (
+                    <Text style={styles.otpTimerText}>(00:{String(emailOtpTimer).padStart(2, '0')})</Text>
+                  ) : null}
+                </View>
                 <Button
                   title={emailVerifying ? 'Verifying...' : 'Verify Email OTP'}
                   onPress={handleVerifyEmailOtp}
@@ -1213,12 +1418,19 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     letterSpacing: 0.3,
   },
+  verifiedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: SPACING.xs,
+    marginBottom: SPACING.sm,
+    gap: SPACING.sm,
+  },
   verifiedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.xs,
-    marginTop: SPACING.xs,
-    marginBottom: SPACING.sm,
+    flex: 1,
     backgroundColor: '#E8F5E9',
     padding: SPACING.sm,
     borderRadius: BORDER_RADIUS.md,
@@ -1227,6 +1439,30 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.semiBold,
     fontSize: FONTS.sizes.sm,
     color: '#4CAF50',
+  },
+  changeVerifiedLink: {
+    fontFamily: FONTS.semiBold,
+    fontSize: FONTS.sizes.sm,
+    color: ACCENT,
+  },
+  resendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: SPACING.sm,
+  },
+  resendText: {
+    fontFamily: FONTS.semiBold,
+    fontSize: FONTS.sizes.sm,
+    color: ACCENT,
+  },
+  resendTextDisabled: {
+    opacity: 0.45,
+  },
+  otpTimerText: {
+    fontFamily: FONTS.regular,
+    fontSize: FONTS.sizes.sm,
+    color: '#999999',
   },
   otpButton: {
     marginTop: SPACING.xs,

@@ -146,7 +146,7 @@ export const TOKEN_EXPIRATION = {
 } as const;
 
 // Platform fee percentage
-export const PLATFORM_FEE_PERCENTAGE = 5; // 5%
+export const PLATFORM_FEE_PERCENTAGE = 0; // 0% — platform fee waived
 
 // Minimum booking amounts
 export const MINIMUM_BOOKING_AMOUNT = {

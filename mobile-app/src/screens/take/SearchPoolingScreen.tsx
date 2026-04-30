@@ -1,16 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView,
-  ActivityIndicator, Alert, Platform, Modal, Animated, Dimensions, Image,
+  ActivityIndicator, Alert, Platform, Modal, Animated, Dimensions, Image, Keyboard, FlatList,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import {
-  ArrowLeft, Search, Car, Bike, Star, MapPin, Calendar, Clock,
+  ArrowLeft, Search, Star, MapPin, Calendar, Clock,
   Users, ChevronRight, Crosshair, Edit3, SlidersHorizontal,
-  ArrowDownUp, Link2, Timer,
+  ArrowDownUp, Link2, Timer, Zap,
 } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Location from 'expo-location';
 import { COLORS, FONTS, SPACING, SHADOWS, BORDER_RADIUS } from '@constants/theme';
@@ -21,6 +20,9 @@ import { poolingApi, bookingApi } from '@utils/apiClient';
 import { LocationData } from '@components/common/LocationPicker';
 import { normalize } from '@utils/responsive';
 import useMasterData from '../../hooks/useMasterData';
+import { VehicleTypeIcon } from '@utils/vehicleDisplay';
+import { displayPlatformFeeRupees } from '@utils/platformFee';
+import { reviewsCountShort } from '@utils/reviewDisplay';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const MODAL_BLUE_GRADIENT: [string, string] = ['#232323', '#191919'];
@@ -29,6 +31,13 @@ const FILTER_ACCENT = '#FE8800';
 const FILTER_ACCENT_DARK = '#D97100';
 const FILTER_ACCENT_BG = '#2B2114';
 const POOLING_FLAG_LOGO = require('../../../assets/signin_arrow_orange_transparent.png');
+
+/** Placeholder sponsor tiles — replace with API / remote config when available */
+const SPONSOR_PLACEHOLDERS = [
+  { id: '1', title: 'Partner offer', subtitle: 'Exclusive deals for riders', colors: ['#1e3a5f', '#0d1b2a'] as [string, string] },
+  { id: '2', title: 'EV charging', subtitle: 'Find stations on your route', colors: ['#134e4a', '#0f766e'] as [string, string] },
+  { id: '3', title: 'Insurance', subtitle: 'Ride-ready coverage', colors: ['#4c1d95', '#5b21b6'] as [string, string] },
+];
 
 interface RouteParams {
   from?: LocationData;
@@ -71,22 +80,37 @@ const SearchPoolingScreen = () => {
     return new Date();
   };
   const [date, setDate] = useState<Date>(initDate);
-  const [anyDate, setAnyDate] = useState(false);
+  /** 'now' = leave ASAP (no fixed date/time filter); 'scheduled' = pick date + time */
+  const [tripTimingMode, setTripTimingMode] = useState<'now' | 'scheduled'>(() => (params.date ? 'scheduled' : 'now'));
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [time, setTime] = useState<Date | null>(null);
   const [showTimePicker, setShowTimePicker] = useState(false);
-  const [vehicleType, setVehicleType] = useState<string | null>(params.vehicleType || null);
+
+  useEffect(() => {
+    if (tripTimingMode !== 'scheduled' || time) return;
+    const t = new Date();
+    t.setSeconds(0, 0);
+    const m = t.getMinutes();
+    const rem = m % 15;
+    if (rem !== 0) t.setMinutes(m + (15 - rem));
+    setTime(t);
+  }, [tripTimingMode, time]);
+  const [vehicleType, setVehicleType] = useState<string | null>(
+    params.vehicleType && String(params.vehicleType).toLowerCase() !== 'car' ? params.vehicleType : null,
+  );
   const [passengers, setPassengers] = useState<number>(params.passengers || 1);
-  const [hasAutoSearched, setHasAutoSearched] = useState(false);
+  /** After user taps Search Rides — hides sponsor carousel and shows results area */
+  const [hasSearchedRides, setHasSearchedRides] = useState(false);
   const { items: vehicleTypeMasterItems } = useMasterData('vehicle_type', [
-    { type: 'vehicle_type', key: 'car', label: 'Car' },
     { type: 'vehicle_type', key: 'bike', label: 'Bike' },
     { type: 'vehicle_type', key: 'scooty', label: 'Scooty' },
   ]);
-  const vehicleTypeOptions = vehicleTypeMasterItems.map((item: any) => ({
-    code: String(item.value || item.key || '').toLowerCase(),
-    label: String(item.label || item.value || item.key || ''),
-  })).filter((item: any) => item.code && item.label);
+  const vehicleTypeOptions = vehicleTypeMasterItems
+    .map((item: any) => ({
+      code: String(item.value || item.key || '').toLowerCase(),
+      label: String(item.label || item.value || item.key || ''),
+    }))
+    .filter((item: any) => item.code && item.label && item.code !== 'car');
 
   const isSameRoutePoint = (a?: LocationData | null, b?: LocationData | null) => {
     if (!a || !b) return false;
@@ -116,12 +140,6 @@ const SearchPoolingScreen = () => {
     }
   }, []);
 
-  useEffect(() => {
-    if (vehicleType !== 'car' && passengers !== 1) {
-      setPassengers(1);
-    }
-  }, [vehicleType, passengers]);
-
   const openFromPopup = () => {
     setShowFromPopup(true);
     Animated.timing(popupAnim, { toValue: 1, duration: 250, useNativeDriver: true }).start();
@@ -142,7 +160,7 @@ const SearchPoolingScreen = () => {
       const { latitude, longitude } = loc.coords;
 
       const resp = await fetch(`https://photon.komoot.io/reverse?lat=${latitude}&lon=${longitude}&limit=1`, {
-        headers: { 'User-Agent': 'Forlok-App/1.0' },
+        headers: { 'User-Agent': 'eZway-App/1.0' },
       });
       let address = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
       let city = '';
@@ -160,6 +178,9 @@ const SearchPoolingScreen = () => {
       const candidate = { address, lat: latitude, lng: longitude, city, state };
       if (rejectIfSameFromTo(candidate, 'from')) return;
       setFromLocation(candidate);
+      setHasSearchedRides(false);
+      setOffers([]);
+      setConnectedRides([]);
       closeFromPopup();
     } catch (err) {
       console.error('Error getting location:', err);
@@ -177,7 +198,9 @@ const SearchPoolingScreen = () => {
         onLocationSelect: (location: LocationData) => {
           if (rejectIfSameFromTo(location, 'from')) return;
           setFromLocation(location);
+          setHasSearchedRides(false);
           setOffers([]);
+          setConnectedRides([]);
         },
       });
     }, 250);
@@ -202,7 +225,10 @@ const SearchPoolingScreen = () => {
 
   const onDateChange = (_event: any, selectedDate?: Date) => {
     setShowDatePicker(Platform.OS === 'ios');
-    if (selectedDate) { setDate(selectedDate); setAnyDate(false); setOffers([]); }
+    if (selectedDate) {
+      setDate(selectedDate);
+      setOffers([]);
+    }
   };
   const onTimeChange = (_event: any, selectedTime?: Date) => {
     setShowTimePicker(Platform.OS === 'ios');
@@ -222,19 +248,24 @@ const SearchPoolingScreen = () => {
       Alert.alert('Invalid Location', 'Please select valid locations with coordinates');
       return;
     }
+    if (tripTimingMode === 'scheduled' && !time) {
+      Alert.alert('Pick a time', 'Please choose a departure time for your scheduled ride.');
+      return;
+    }
+    const fromLat = typeof fromLocation.lat === 'number' ? fromLocation.lat : parseFloat(String(fromLocation.lat));
+    const fromLng = typeof fromLocation.lng === 'number' ? fromLocation.lng : parseFloat(String(fromLocation.lng));
+    const toLat = typeof toLocation.lat === 'number' ? toLocation.lat : parseFloat(String(toLocation.lat));
+    const toLng = typeof toLocation.lng === 'number' ? toLocation.lng : parseFloat(String(toLocation.lng));
+    if (isNaN(fromLat) || isNaN(fromLng) || isNaN(toLat) || isNaN(toLng)) {
+      Alert.alert('Invalid Coordinates', 'Location coordinates are invalid. Please reselect locations.');
+      return;
+    }
+    setHasSearchedRides(true);
     try {
       setLoading(true);
       setConnectedRides([]);
-      const fromLat = typeof fromLocation.lat === 'number' ? fromLocation.lat : parseFloat(String(fromLocation.lat));
-      const fromLng = typeof fromLocation.lng === 'number' ? fromLocation.lng : parseFloat(String(fromLocation.lng));
-      const toLat = typeof toLocation.lat === 'number' ? toLocation.lat : parseFloat(String(toLocation.lat));
-      const toLng = typeof toLocation.lng === 'number' ? toLocation.lng : parseFloat(String(toLocation.lng));
-      if (isNaN(fromLat) || isNaN(fromLng) || isNaN(toLat) || isNaN(toLng)) {
-        Alert.alert('Invalid Coordinates', 'Location coordinates are invalid. Please reselect locations.');
-        return;
-      }
-      const dateStr = anyDate ? undefined : date.toISOString().split('T')[0];
-      const timeStr = time ? formatTimeDisplay(time) : undefined;
+      const dateStr = tripTimingMode === 'now' ? undefined : date.toISOString().split('T')[0];
+      const timeStr = tripTimingMode === 'scheduled' && time ? formatTimeDisplay(time) : undefined;
       const searchParams: any = { fromLat, fromLng, toLat, toLng, date: dateStr, time: timeStr, pinkOnly: isPinkMode };
       if (vehicleType) searchParams.vehicleType = vehicleType.toLowerCase();
 
@@ -259,22 +290,17 @@ const SearchPoolingScreen = () => {
     }
   };
 
-  useEffect(() => {
-    if (!hasAutoSearched && fromLocation?.lat && fromLocation?.lng && toLocation?.lat && toLocation?.lng
-      && fromLocation.lat !== 0 && fromLocation.lng !== 0 && toLocation.lat !== 0 && toLocation.lng !== 0) {
-      setHasAutoSearched(true);
-      loadOffers();
-    }
-  }, [fromLocation, toLocation]);
-
   const handleSelectFromLocation = () => {
     (navigation.navigate as any)('LocationPicker', {
       title: 'Select Pickup Location',
       initialLocation: fromLocation || undefined,
       onLocationSelect: (location: LocationData) => {
+        Keyboard.dismiss();
         if (rejectIfSameFromTo(location, 'from')) return;
         setFromLocation(location);
+        setHasSearchedRides(false);
         setOffers([]);
+        setConnectedRides([]);
       },
     });
   };
@@ -283,9 +309,12 @@ const SearchPoolingScreen = () => {
       title: 'Select Destination',
       initialLocation: toLocation || undefined,
       onLocationSelect: (location: LocationData) => {
+        Keyboard.dismiss();
         if (rejectIfSameFromTo(location, 'to')) return;
         setToLocation(location);
+        setHasSearchedRides(false);
         setOffers([]);
+        setConnectedRides([]);
       },
     });
   };
@@ -294,9 +323,121 @@ const SearchPoolingScreen = () => {
     const temp = fromLocation;
     setFromLocation(toLocation);
     setToLocation(temp);
+    setHasSearchedRides(false);
     setOffers([]);
+    setConnectedRides([]);
   };
-  const activeFilterCount = Number(!anyDate) + Number(!!time) + Number(!!vehicleType) + Number(passengers > 1);
+  const activeFilterCount = Number(!!vehicleType) + Number(passengers > 1);
+
+  const renderTripTimingBlock = (opts?: { compact?: boolean }) => {
+    const compact = !!opts?.compact;
+    const zapSize = compact ? 14 : 15;
+    const calSize = compact ? 14 : 15;
+    const chipIcon = compact ? 13 : 14;
+    const pillFontSize = compact ? normalize(11) : normalize(12);
+
+    return (
+      <View style={compact ? styles.timingBlockCompact : styles.timingBlock}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.timingRowScrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Text
+            style={[
+              styles.timingInlineLabel,
+              { color: theme.colors.textSecondary },
+              compact && styles.timingInlineLabelCompact,
+            ]}
+            numberOfLines={1}
+          >
+            When
+          </Text>
+          <TouchableOpacity
+            style={[
+              styles.timingModePillInline,
+              { borderColor: theme.colors.border, backgroundColor: theme.colors.background },
+              tripTimingMode === 'now' && styles.timingModePillActive,
+            ]}
+            onPress={() => {
+              setTripTimingMode('now');
+              setOffers([]);
+            }}
+            activeOpacity={0.85}
+          >
+            <Zap size={zapSize} color={tripTimingMode === 'now' ? FILTER_ACCENT_DARK : theme.colors.textSecondary} />
+            <Text
+              style={[styles.timingModePillTextInline, { fontSize: pillFontSize, color: tripTimingMode === 'now' ? FILTER_ACCENT_DARK : theme.colors.text }]}
+              numberOfLines={1}
+            >
+              Now
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.timingModePillInline,
+              { borderColor: theme.colors.border, backgroundColor: theme.colors.background },
+              tripTimingMode === 'scheduled' && styles.timingModePillActive,
+            ]}
+            onPress={() => {
+              setTripTimingMode('scheduled');
+              setOffers([]);
+            }}
+            activeOpacity={0.85}
+          >
+            <Calendar size={calSize} color={tripTimingMode === 'scheduled' ? FILTER_ACCENT_DARK : theme.colors.textSecondary} />
+            <Text
+              style={[styles.timingModePillTextInline, { fontSize: pillFontSize, color: tripTimingMode === 'scheduled' ? FILTER_ACCENT_DARK : theme.colors.text }]}
+              numberOfLines={1}
+            >
+              Schedule
+            </Text>
+          </TouchableOpacity>
+          {tripTimingMode === 'scheduled' && (
+            <>
+              <TouchableOpacity
+                style={[
+                  styles.timingChipInline,
+                  { backgroundColor: FILTER_ACCENT_BG, borderColor: FILTER_ACCENT },
+                ]}
+                onPress={() => setShowDatePicker(true)}
+                activeOpacity={0.85}
+              >
+                <Calendar size={chipIcon} color={FILTER_ACCENT_DARK} />
+                <Text style={[styles.timingChipInlineText, { color: FILTER_ACCENT_DARK, fontSize: pillFontSize }]}>
+                  {formatDateDisplay(date)}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.timingChipInline,
+                  time
+                    ? { backgroundColor: FILTER_ACCENT_BG, borderColor: FILTER_ACCENT }
+                    : { borderColor: theme.colors.border, backgroundColor: theme.colors.background },
+                ]}
+                onPress={() => setShowTimePicker(true)}
+                activeOpacity={0.85}
+              >
+                <Clock size={chipIcon} color={time ? FILTER_ACCENT_DARK : theme.colors.textSecondary} />
+                <Text
+                  style={[
+                    styles.timingChipInlineText,
+                    {
+                      color: time ? FILTER_ACCENT_DARK : theme.colors.textSecondary,
+                      fontSize: pillFontSize,
+                    },
+                  ]}
+                >
+                  {time ? formatTimeDisplay(time) : 'Time'}
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </ScrollView>
+      </View>
+    );
+  };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -306,7 +447,7 @@ const SearchPoolingScreen = () => {
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} activeOpacity={0.7}>
             <ArrowLeft size={22} color={theme.colors.text} />
           </TouchableOpacity>
-          <Text style={[styles.topTitle, { color: theme.colors.text }]}>Find a Ride</Text>
+          <Text style={[styles.topTitle, { color: theme.colors.text }]}>{t('searchPooling.title')}</Text>
           <TouchableOpacity
             onPress={() => setShowFiltersModal(true)}
             style={[styles.filterHeaderBtn, { borderColor: theme.colors.border, backgroundColor: theme.colors.surface }]}
@@ -345,10 +486,12 @@ const SearchPoolingScreen = () => {
           </TouchableOpacity>
         </View>
 
+        {renderTripTimingBlock()}
+
         {/* Search button */}
         <TouchableOpacity
-          style={[styles.searchBtn, styles.searchBtnAligned, { opacity: (!fromLocation || !toLocation || loading) ? 0.5 : 1 }]}
-          onPress={loadOffers}
+          style={[styles.searchBtn, { opacity: (!fromLocation || !toLocation || loading) ? 0.5 : 1 }]}
+          onPress={() => void loadOffers()}
           disabled={!fromLocation || !toLocation || loading}
           activeOpacity={0.8}
         >
@@ -377,33 +520,7 @@ const SearchPoolingScreen = () => {
             <View style={styles.modalHandle} />
             <Text style={[styles.modalTitle, { color: theme.colors.text }]}>Filters</Text>
 
-            <View style={styles.filterActionsRow}>
-              <TouchableOpacity
-                style={[
-                  styles.filterActionChip,
-                  !anyDate ? { backgroundColor: FILTER_ACCENT_BG, borderColor: FILTER_ACCENT } : { borderColor: theme.colors.border },
-                ]}
-                onPress={() => setShowDatePicker(true)}
-              >
-                <Calendar size={14} color={!anyDate ? FILTER_ACCENT_DARK : theme.colors.textSecondary} />
-                <Text style={[styles.filterActionText, { color: !anyDate ? FILTER_ACCENT_DARK : theme.colors.textSecondary }]}>
-                  {anyDate ? 'Any date' : formatDateDisplay(date)}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.filterActionChip,
-                  time ? { backgroundColor: FILTER_ACCENT_BG, borderColor: FILTER_ACCENT } : { borderColor: theme.colors.border },
-                ]}
-                onPress={() => setShowTimePicker(true)}
-              >
-                <Clock size={14} color={time ? FILTER_ACCENT_DARK : theme.colors.textSecondary} />
-                <Text style={[styles.filterActionText, { color: time ? FILTER_ACCENT_DARK : theme.colors.textSecondary }]}>
-                  {time ? formatTimeDisplay(time) : 'Any time'}
-                </Text>
-              </TouchableOpacity>
-            </View>
+            {renderTripTimingBlock({ compact: true })}
 
             <Text style={[styles.filterLabel, { color: theme.colors.text }]}>Vehicle</Text>
             <View style={styles.vehicleMiniRow}>
@@ -417,14 +534,13 @@ const SearchPoolingScreen = () => {
                   onPress={() => {
                     const nextType = vehicleType === vt.code ? null : vt.code;
                     setVehicleType(nextType);
-                    if (nextType !== 'car') setPassengers(1);
+                    setPassengers(1);
                     setOffers([]);
                   }}
                 >
-                  {vt.code === 'car' && <Car size={16} color={vehicleType === vt.code ? '#0F766E' : '#334155'} />}
-                  {vt.code === 'bike' && <Bike size={16} color={vehicleType === vt.code ? '#0F766E' : '#334155'} />}
-                  {vt.code === 'scooty' && <MaterialCommunityIcons name="moped" size={17} color={vehicleType === vt.code ? '#0F766E' : '#334155'} />}
-                  {!['car', 'bike', 'scooty'].includes(vt.code) && (
+                  {['bike', 'scooty'].includes(vt.code) ? (
+                    <VehicleTypeIcon type={vt.code} size={vt.code === 'scooty' ? 17 : 16} color={vehicleType === vt.code ? '#0F766E' : '#334155'} />
+                  ) : (
                     <Text style={[styles.filterPillText, { color: vehicleType === vt.code ? '#0F766E' : '#334155' }]}>
                       {vt.label}
                     </Text>
@@ -433,46 +549,11 @@ const SearchPoolingScreen = () => {
               ))}
             </View>
 
-            {vehicleType === 'car' && (
-              <>
-                <Text style={[styles.filterLabel, { color: theme.colors.text, marginTop: normalize(10) }]}>Seats</Text>
-                <View style={styles.seatMiniRow}>
-                  {[1, 2, 3, 4].map((n) => {
-                    const seatSelected = passengers === n;
-                    return (
-                      <TouchableOpacity
-                        key={n}
-                        style={[
-                          styles.seatMiniPill,
-                          seatSelected
-                            ? { backgroundColor: FILTER_ACCENT, borderColor: FILTER_ACCENT }
-                            : { backgroundColor: theme.colors.surface, borderColor: theme.colors.border },
-                        ]}
-                        onPress={() => {
-                          setPassengers(n);
-                          setOffers([]);
-                        }}
-                      >
-                        <Text
-                          style={[
-                            styles.filterPillText,
-                            { color: seatSelected ? '#FFF' : theme.colors.text },
-                          ]}
-                        >
-                          {n}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </>
-            )}
-
             <View style={styles.filterFooterRow}>
               <TouchableOpacity
                 style={[styles.filterFooterBtn, { borderColor: theme.colors.border }]}
                 onPress={() => {
-                  setAnyDate(true);
+                  setTripTimingMode('now');
                   setTime(null);
                   setVehicleType(null);
                   setPassengers(1);
@@ -499,9 +580,33 @@ const SearchPoolingScreen = () => {
         </View>
       </Modal>
 
-      {/* ── Results ── */}
+      {!hasSearchedRides && !loading && (
+        <View style={[styles.sponsorSection, { borderTopColor: theme.colors.border, backgroundColor: theme.colors.background }]}>
+          <Text style={[styles.sponsorSectionTitle, { color: theme.colors.textSecondary }]}>Partners</Text>
+          <FlatList
+            horizontal
+            data={SPONSOR_PLACEHOLDERS}
+            keyExtractor={(item) => item.id}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.sponsorListContent}
+            renderItem={({ item }) => (
+              <TouchableOpacity activeOpacity={0.88} style={styles.sponsorCardWrap}>
+                <LinearGradient colors={item.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.sponsorCard}>
+                  <Text style={styles.sponsorCardTitle}>{item.title}</Text>
+                  <Text style={styles.sponsorCardSub}>{item.subtitle}</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            )}
+          />
+          <Text style={[styles.preSearchFootnote, { color: theme.colors.textSecondary }]}>
+            Set pickup & destination, then tap Search Rides.
+          </Text>
+        </View>
+      )}
+
+      {/* ── Results (after first successful search tap) ── */}
       <ScrollView style={styles.results} contentContainerStyle={styles.resultsContent} showsVerticalScrollIndicator={false}>
-        {fromLocation && toLocation && !loading && (
+        {hasSearchedRides && fromLocation && toLocation && !loading && (
           <View style={styles.resultsHeader}>
             <Text style={[styles.resultsTitle, { color: theme.colors.text }]}>
               {offers.length > 0 ? `${offers.length} ride${offers.length > 1 ? 's' : ''} available` : 'No rides found'}
@@ -514,22 +619,21 @@ const SearchPoolingScreen = () => {
           </View>
         )}
 
-        {loading && (
+        {hasSearchedRides && loading && (
           <View style={styles.loadingWrap}>
             <ActivityIndicator size="large" color={theme.colors.primary} />
             <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>Finding the best rides...</Text>
           </View>
         )}
 
-        {isPinkMode && offers.length > 0 && (
+        {hasSearchedRides && isPinkMode && offers.length > 0 && (
           <View style={[styles.pinkBanner, { backgroundColor: `${theme.colors.primary}15` }]}>
-            <Text style={[styles.pinkBannerText, { color: theme.colors.primary }]}>HerPooling — Showing female drivers only</Text>
+            <Text style={[styles.pinkBannerText, { color: theme.colors.primary }]}>Her Ride-Sharing — showing female drivers only</Text>
           </View>
         )}
 
-        {offers.map((offer: any) => {
+        {hasSearchedRides && offers.map((offer: any) => {
           const vType = (offer.vehicle?.type || '').toLowerCase();
-          const isCarType = vType === 'car';
           const isScootyType = vType === 'scooty' || vType === 'scooter';
           return (
             <TouchableOpacity
@@ -547,15 +651,15 @@ const SearchPoolingScreen = () => {
                 <Image source={POOLING_FLAG_LOGO} style={styles.poolingFlagImage} resizeMode="contain" />
               </View>
               <View style={styles.rideTop}>
-                <View style={[styles.rideAvatar, { backgroundColor: isCarType ? '#FFF4E6' : isScootyType ? '#F3E5F5' : '#FFF3E0' }]}>
-                  {isCarType ? <Car size={20} color="#B85E00" /> : isScootyType ? <MaterialCommunityIcons name="moped" size={20} color="#6A1B9A" /> : <Bike size={20} color="#E65100" />}
+                <View style={[styles.rideAvatar, { backgroundColor: isScootyType ? '#F3E5F5' : '#FFF3E0' }]}>
+                  <VehicleTypeIcon type={vType} size={20} color={isScootyType ? '#6A1B9A' : '#E65100'} />
                 </View>
                 <View style={styles.rideInfo}>
                   <Text style={[styles.rideDriver, { color: theme.colors.text }]}>{offer.driver?.name || 'Driver'}</Text>
                   <View style={styles.rideRating}>
                     <Star size={13} color="#F5A623" fill="#F5A623" />
                     <Text style={[styles.rideRatingText, { color: theme.colors.textSecondary }]}>
-                      {Number(offer.driver?.rating || 0).toFixed(1)} ({offer.driver?.totalReviews || 0})
+                      {Number(offer.driver?.rating || 0).toFixed(1)} ({reviewsCountShort(offer.driver?.totalReviews, t)})
                     </Text>
                   </View>
                 </View>
@@ -610,7 +714,7 @@ const SearchPoolingScreen = () => {
         })}
 
         {/* ── Connected Rides ── */}
-        {connectedRides.length > 0 && (
+        {hasSearchedRides && connectedRides.length > 0 && (
           <View style={styles.connectedSection}>
             <View style={styles.connectedHeader}>
               <Link2 size={16} color={theme.colors.primary} />
@@ -659,10 +763,8 @@ const SearchPoolingScreen = () => {
                           {leg1.from?.city || leg1.from?.address?.split(',')[0] || 'Pickup'}
                         </Text>
                         <View style={styles.timelineLeg}>
-                          <View style={[styles.timelineLegIcon, { backgroundColor: leg1VType === 'car' ? '#FFF4E6' : '#FFF3E0' }]}>
-                            {leg1VType === 'car'
-                              ? <Car size={14} color="#B85E00" />
-                              : <Bike size={14} color="#E65100" />}
+                          <View style={[styles.timelineLegIcon, { backgroundColor: leg1VType === 'scooty' || leg1VType === 'scooter' ? '#F3E5F5' : '#FFF3E0' }]}>
+                            <VehicleTypeIcon type={leg1VType} size={14} color={leg1VType === 'scooty' || leg1VType === 'scooter' ? '#6A1B9A' : '#E65100'} />
                           </View>
                           <View style={{ flex: 1 }}>
                             <Text style={[styles.timelineLegDriver, { color: theme.colors.text }]}>
@@ -706,10 +808,8 @@ const SearchPoolingScreen = () => {
                           {leg2.from?.city || leg2.from?.address?.split(',')[0] || 'Pickup'}
                         </Text>
                         <View style={styles.timelineLeg}>
-                          <View style={[styles.timelineLegIcon, { backgroundColor: leg2VType === 'car' ? '#FFF4E6' : '#FFF3E0' }]}>
-                            {leg2VType === 'car'
-                              ? <Car size={14} color="#B85E00" />
-                              : <Bike size={14} color="#E65100" />}
+                          <View style={[styles.timelineLegIcon, { backgroundColor: leg2VType === 'scooty' || leg2VType === 'scooter' ? '#F3E5F5' : '#FFF3E0' }]}>
+                            <VehicleTypeIcon type={leg2VType} size={14} color={leg2VType === 'scooty' || leg2VType === 'scooter' ? '#6A1B9A' : '#E65100'} />
                           </View>
                           <View style={{ flex: 1 }}>
                             <Text style={[styles.timelineLegDriver, { color: theme.colors.text }]}>
@@ -795,11 +895,13 @@ const SearchPoolingScreen = () => {
           </View>
         )}
 
-        {!loading && fromLocation && toLocation && offers.length === 0 && connectedRides.length === 0 && (
+        {hasSearchedRides && !loading && fromLocation && toLocation && offers.length === 0 && connectedRides.length === 0 && (
           <View style={styles.emptyWrap}>
             <Search size={48} color={theme.colors.border} />
             <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>No rides found</Text>
-            <Text style={[styles.emptySub, { color: theme.colors.textSecondary }]}>Try different dates, times, or locations</Text>
+            <Text style={[styles.emptySub, { color: theme.colors.textSecondary }]}>
+              Try &quot;Now&quot; for nearby departures, adjust schedule, or change locations
+            </Text>
           </View>
         )}
 
@@ -838,7 +940,7 @@ const SearchPoolingScreen = () => {
                       {leg1PriceBreakdown.baseDistance?.toFixed(1)}km × ₹{leg1PriceBreakdown.baseRatePerKm}/km
                     </Text>
                     <Text style={[styles.modalBreakdownLabel, { color: theme.colors.textSecondary }]}>
-                      Fee: ₹{Math.round(leg1PriceBreakdown.platformFee)}
+                      Fee: ₹{Math.round(displayPlatformFeeRupees(leg1PriceBreakdown.platformFee))}
                     </Text>
                   </View>
                 </View>
@@ -874,7 +976,7 @@ const SearchPoolingScreen = () => {
                       {leg2PriceBreakdown.baseDistance?.toFixed(1)}km × ₹{leg2PriceBreakdown.baseRatePerKm}/km
                     </Text>
                     <Text style={[styles.modalBreakdownLabel, { color: theme.colors.textSecondary }]}>
-                      Fee: ₹{Math.round(leg2PriceBreakdown.platformFee)}
+                      Fee: ₹{Math.round(displayPlatformFeeRupees(leg2PriceBreakdown.platformFee))}
                     </Text>
                   </View>
                 </View>
@@ -936,12 +1038,12 @@ const SearchPoolingScreen = () => {
                           connectionPoint: selectedConnectedRide.transferPoint,
                           leg1Price: {
                             finalPrice: leg1PriceBreakdown.finalPrice,
-                            platformFee: leg1PriceBreakdown.platformFee,
+                            platformFee: displayPlatformFeeRupees(leg1PriceBreakdown.platformFee),
                             totalAmount: leg1PriceBreakdown.totalAmount,
                           },
                           leg2Price: {
                             finalPrice: leg2PriceBreakdown.finalPrice,
-                            platformFee: leg2PriceBreakdown.platformFee,
+                            platformFee: displayPlatformFeeRupees(leg2PriceBreakdown.platformFee),
                             totalAmount: leg2PriceBreakdown.totalAmount,
                           },
                         });
@@ -1117,6 +1219,110 @@ const styles = StyleSheet.create({
     borderWidth: 1, marginLeft: normalize(10),
   },
 
+  timingBlock: {
+    marginTop: normalize(8),
+    marginBottom: normalize(4),
+  },
+  timingBlockCompact: {
+    marginTop: normalize(2),
+    marginBottom: normalize(14),
+  },
+  timingRowScrollContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: normalize(8),
+    paddingVertical: normalize(2),
+    paddingRight: normalize(4),
+  },
+  timingInlineLabel: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(12),
+    marginRight: normalize(2),
+    alignSelf: 'center',
+  },
+  timingInlineLabelCompact: {
+    fontSize: normalize(11),
+  },
+  timingModePillInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: normalize(5),
+    paddingVertical: normalize(9),
+    paddingHorizontal: normalize(12),
+    borderRadius: normalize(12),
+    borderWidth: 1,
+  },
+  timingModePillActive: {
+    backgroundColor: FILTER_ACCENT_BG,
+    borderColor: FILTER_ACCENT,
+  },
+  timingModePillTextInline: {
+    fontFamily: FONTS.medium,
+    fontWeight: '600',
+  },
+  timingChipInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: normalize(5),
+    paddingVertical: normalize(9),
+    paddingHorizontal: normalize(12),
+    borderRadius: normalize(12),
+    borderWidth: 1,
+  },
+  timingChipInlineText: {
+    fontFamily: FONTS.medium,
+    fontWeight: '600',
+  },
+
+  sponsorSection: {
+    paddingTop: normalize(12),
+    paddingBottom: normalize(10),
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  sponsorSectionTitle: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(11),
+    fontWeight: '700',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    marginBottom: normalize(10),
+    paddingHorizontal: SPACING.md,
+  },
+  sponsorListContent: {
+    paddingHorizontal: SPACING.md,
+    gap: normalize(10),
+  },
+  sponsorCardWrap: {
+    width: SCREEN_W * 0.68,
+    maxWidth: normalize(280),
+    marginRight: normalize(10),
+  },
+  sponsorCard: {
+    borderRadius: normalize(14),
+    padding: normalize(16),
+    minHeight: normalize(88),
+    justifyContent: 'flex-end',
+  },
+  sponsorCardTitle: {
+    fontFamily: FONTS.medium,
+    fontSize: normalize(15),
+    fontWeight: '700',
+    color: '#FFF',
+  },
+  sponsorCardSub: {
+    fontFamily: FONTS.regular,
+    fontSize: normalize(12),
+    color: 'rgba(255,255,255,0.85)',
+    marginTop: normalize(4),
+  },
+  preSearchFootnote: {
+    fontFamily: FONTS.regular,
+    fontSize: normalize(12),
+    marginTop: normalize(12),
+    paddingHorizontal: SPACING.md,
+    textAlign: 'center',
+  },
+
   // ── Filter Dropdown ──
   filterLabel: { fontFamily: FONTS.medium, fontSize: normalize(13), fontWeight: '700', marginBottom: normalize(7) },
   filterRow: { flexDirection: 'row', gap: normalize(8), marginBottom: normalize(4) },
@@ -1194,7 +1400,9 @@ const styles = StyleSheet.create({
 
   // ── Search Button ──
   searchBtn: {
-    borderRadius: normalize(14), marginTop: normalize(4), overflow: 'hidden',
+    borderRadius: normalize(14),
+    marginTop: normalize(10),
+    overflow: 'hidden',
   },
   searchBtnGradient: {
     flexDirection: 'row',
@@ -1202,10 +1410,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: normalize(8),
     paddingVertical: normalize(13),
-  },
-  searchBtnAligned: {
-    marginLeft: normalize(22),
-    marginRight: normalize(44),
   },
   searchBtnText: { fontFamily: FONTS.medium, fontSize: normalize(15), fontWeight: '600', color: '#FFF' },
 

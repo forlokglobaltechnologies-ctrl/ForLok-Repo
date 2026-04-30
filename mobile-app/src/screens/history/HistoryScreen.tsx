@@ -11,13 +11,14 @@ import {
   Image,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import { ArrowLeft, Car, Bike, Key, ChevronRight, Star, Link2, Navigation } from 'lucide-react-native';
+import { ArrowLeft, Bike, Key, ChevronRight, Star, Link2, Navigation } from 'lucide-react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { normalize, wp, hp } from '@utils/responsive';
 import { FONTS } from '@constants/theme';
 import { useTheme } from '@context/ThemeContext';
 import { useAuth } from '@context/AuthContext';
 import { bookingApi } from '@utils/apiClient';
+import { displayPlatformFeeRupees } from '@utils/platformFee';
 
 const POOLING_FLAG_LOGO = require('../../../assets/signin_arrow_orange_transparent.png');
 
@@ -65,10 +66,10 @@ const HistoryScreen = () => {
             to: typeof b.route?.to === 'string' ? b.route.to : b.route?.to?.address || 'N/A',
             vehicleBrand: b.vehicle?.brand || '',
             vehicleNumber: b.vehicle?.number || '',
-            vehicleType: b.vehicle?.type || 'car',
+            vehicleType: b.vehicle?.type || 'bike',
             amount: b.totalAmount || b.amount || 0,
             totalAmount: b.totalAmount || b.amount || 0,
-            platformFee: b.platformFee || 0,
+            platformFee: displayPlatformFeeRupees(b.platformFee),
             connectedGroupId: b.connectedGroupId || null,
             legOrder: b.legOrder || null,
             connectionPoint: b.connectionPoint || null,
@@ -157,9 +158,11 @@ const HistoryScreen = () => {
   };
 
   const VehicleIcon = ({ type, size = 18 }: { type: string; size?: number }) => {
-    if (type === 'bike') return <Bike size={size} color={theme.colors.textSecondary} />;
-    if (type === 'scooty') return <MaterialCommunityIcons name="moped" size={size} color={theme.colors.textSecondary} />;
-    return <Car size={size} color={theme.colors.textSecondary} />;
+    const t = (type || 'bike').toLowerCase();
+    if (t === 'scooty' || t === 'scooter') {
+      return <MaterialCommunityIcons name="moped" size={size} color={theme.colors.textSecondary} />;
+    }
+    return <Bike size={size} color={theme.colors.textSecondary} />;
   };
 
   const renderCard = ({ item: b }: { item: any }) => {
@@ -225,7 +228,7 @@ const HistoryScreen = () => {
 
             <View style={s.metaRow}>
               <Text style={[s.metaText, { color: theme.colors.textSecondary }]}>
-                {isConnected ? 'Connected' : isPooling ? 'Pooling' : 'Rental'}
+                {isConnected ? 'Connected' : isPooling ? 'Ride-Sharing' : 'Rental'}
               </Text>
               <View style={s.metaDot} />
               <Text style={[s.metaText, { color: theme.colors.textSecondary }]}>
@@ -322,7 +325,7 @@ const HistoryScreen = () => {
       ) : filteredBookings.length === 0 ? (
         <View style={s.center}>
           <View style={[s.emptyCircle, { backgroundColor: theme.colors.border + '40' }]}>
-            <Car size={28} color={theme.colors.textSecondary} />
+            <Bike size={28} color={theme.colors.textSecondary} />
           </View>
           <Text style={[s.emptyTitle, { color: theme.colors.text }]}>No {activeTab.toLowerCase()} rides</Text>
           <Text style={[s.emptySubtitle, { color: theme.colors.textSecondary }]}>

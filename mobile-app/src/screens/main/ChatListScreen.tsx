@@ -126,7 +126,7 @@ const ChatListScreen = () => {
       if (conversation.participantCount > 2) {
         return `Group (${conversation.participantCount})`;
       }
-      return conversation.otherParticipants[0]?.name || 'Pooling Trip';
+      return conversation.otherParticipants[0]?.name || 'Ride-Sharing Trip';
     }
   };
 

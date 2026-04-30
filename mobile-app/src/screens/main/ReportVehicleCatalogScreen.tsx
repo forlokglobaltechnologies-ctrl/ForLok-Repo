@@ -18,7 +18,7 @@ import { COLORS, FONTS } from '@constants/theme';
 import { normalize } from '@utils/responsive';
 import { vehicleCatalogApi } from '@utils/apiClient';
 
-type VehicleType = 'car' | 'bike' | 'scooty';
+type VehicleType = 'bike' | 'scooty';
 
 const ReportVehicleCatalogScreen = () => {
   const navigation = useNavigation<any>();
@@ -26,7 +26,10 @@ const ReportVehicleCatalogScreen = () => {
   const initial = route.params || {};
 
   const [submitting, setSubmitting] = useState(false);
-  const [vehicleType, setVehicleType] = useState<VehicleType>(initial.vehicleType || 'car');
+  const [vehicleType, setVehicleType] = useState<VehicleType>(() => {
+    const v = String(initial.vehicleType || 'bike').toLowerCase();
+    return v === 'scooty' ? 'scooty' : 'bike';
+  });
   const [brand, setBrand] = useState(String(initial.brand || ''));
   const [model, setModel] = useState(String(initial.model || ''));
   const [fuelType, setFuelType] = useState(String(initial.fuelType || 'Petrol'));
@@ -42,7 +45,6 @@ const ReportVehicleCatalogScreen = () => {
 
   const vehicleTypes = useMemo(
     () => [
-      { key: 'car' as const, label: 'Car' },
       { key: 'bike' as const, label: 'Bike' },
       { key: 'scooty' as const, label: 'Scooty' },
     ],

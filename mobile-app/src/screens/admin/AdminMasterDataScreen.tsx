@@ -39,7 +39,7 @@ const MASTER_TYPES: Array<{ key: string; label: string }> = [
   { key: 'ride_feature', label: 'Ride Feature' },
   { key: 'sort_option', label: 'Sort Option' },
   { key: 'booking_status', label: 'Booking Status' },
-  { key: 'pooling_offer_status', label: 'Pooling Offer Status' },
+  { key: 'pooling_offer_status', label: 'Ride-Sharing Offer Status' },
   { key: 'rental_offer_status', label: 'Rental Offer Status' },
   { key: 'payment_method', label: 'Payment Method' },
   { key: 'user_type', label: 'User Type' },
@@ -48,7 +48,6 @@ const MASTER_TYPES: Array<{ key: string; label: string }> = [
 
 const MASTER_DEFAULT_OPTIONS: Record<string, Array<{ key: string; label: string; value?: string; sortOrder?: number; isActive?: boolean }>> = {
   vehicle_type: [
-    { key: 'car', label: 'Car' },
     { key: 'bike', label: 'Bike' },
     { key: 'scooty', label: 'Scooty' },
   ],
@@ -103,13 +102,13 @@ const MASTER_DEFAULT_OPTIONS: Record<string, Array<{ key: string; label: string;
     { key: 'vijayawada', label: 'Vijayawada' },
   ],
   service_category: [
-    { key: 'pooling', label: 'Pooling' },
+    { key: 'pooling', label: 'Ride-Sharing' },
     { key: 'rental', label: 'Rental' },
     { key: 'food', label: 'Food' },
   ],
   faq_category: [
     { key: 'account_registration', label: 'Account & Registration' },
-    { key: 'pooling_services', label: 'Pooling Services' },
+    { key: 'pooling_services', label: 'Ride-Sharing Services' },
     { key: 'rental_services', label: 'Rental Services' },
     { key: 'wallet_coins', label: 'Wallet & Coins' },
     { key: 'safety_security', label: 'Safety & Security' },
@@ -117,7 +116,7 @@ const MASTER_DEFAULT_OPTIONS: Record<string, Array<{ key: string; label: string;
     { key: 'trip_management', label: 'Trip Management' },
   ],
   help_topic_category: [
-    { key: 'pooling', label: 'Pooling' },
+    { key: 'pooling', label: 'Ride-Sharing' },
     { key: 'rental', label: 'Rental' },
     { key: 'trips', label: 'Trips' },
     { key: 'policy', label: 'Policy' },

@@ -1,17 +1,17 @@
 export const CONTENT_DEFAULTS = {
   about: {
     logoUrl: '',
-    brandName: 'Forlok',
+    brandName: 'eZway',
     tagline: 'Your everyday ride companion',
     version: 'v1.0.0',
     footerLine1: '© 2026 Forlok Technologies Pvt. Ltd. All rights reserved.',
-    footerLine2: 'Registered in Hyderabad, Telangana, India.',
+    footerLine2: 'Vizianagaram District, Andhra Pradesh, India.',
     whoWeAre:
-      'Forlok is a community-driven mobility platform connecting riders and drivers for affordable, safe, and sustainable commutes across India.',
+      'eZway is a community-driven mobility platform connecting riders and drivers for affordable, safe, and sustainable commutes across India.',
     features: [
       {
         icon: 'users',
-        title: 'Ride Pooling',
+        title: 'Ride-Sharing',
         description: 'Share rides with verified commuters heading your way.',
         color: '#4CAF50',
       },
@@ -28,9 +28,9 @@ export const CONTENT_DEFAULTS = {
         color: '#66BB6A',
       },
       {
-        icon: 'car',
-        title: 'Vehicle Rental',
-        description: 'Rent vehicles from trusted owners near you.',
+        icon: 'bike',
+        title: 'Ride sharing',
+        description: 'Share rides with people going your way—affordable and convenient.',
         color: '#FF9800',
       },
     ],
@@ -40,10 +40,10 @@ export const CONTENT_DEFAULTS = {
       { value: '4.8', label: 'Rating', icon: 'star' },
     ],
     contactItems: [
-      { icon: 'mail', label: 'Email', value: 'support@forlok.com', action: 'mailto:support@forlok.com' },
-      { icon: 'phone', label: 'Phone', value: '+91 98765 43210', action: 'tel:+919876543210' },
-      { icon: 'globe', label: 'Website', value: 'www.forlok.com', action: 'https://forlok.com' },
-      { icon: 'map_pin', label: 'Address', value: 'Hyderabad, Telangana, India', action: null },
+      { icon: 'mail', label: 'Email', value: 'ezwaymobility9@gmail.com', action: 'mailto:ezwaymobility9@gmail.com' },
+      { icon: 'phone', label: 'Phone', value: '+91 93925 53121', action: 'tel:+919392553121' },
+      { icon: 'globe', label: 'Website', value: 'www.ezway.com', action: 'https://ezway.com' },
+      { icon: 'map_pin', label: 'Address', value: 'Vizianagaram District, Andhra Pradesh, India', action: null },
     ],
   },
   terms_conditions: {
@@ -51,20 +51,20 @@ export const CONTENT_DEFAULTS = {
     introSub: 'Please read these terms carefully before using eZway.',
     effectiveText: 'Effective Date: January 2024',
     introBody:
-      'Welcome to eZway, a mobility platform operated by Forlok Technologies Pvt. Ltd., a company registered in Hyderabad, Telangana, India. These Terms of Service govern your access to and use of the eZway mobile application, website, and related services. By downloading, installing, or using the Platform, you confirm that you have read, understood, and agreed to these Terms. If you do not agree, you must not use the Platform.',
-    contactEmail: 'legal@forlok.com',
+      'Welcome to eZway, a mobility platform operated by eZway Technologies Pvt. Ltd., a company registered in Hyderabad, Telangana, India. These Terms of Service govern your access to and use of the eZway mobile application, website, and related services. By downloading, installing, or using the Platform, you confirm that you have read, understood, and agreed to these Terms. If you do not agree, you must not use the Platform.',
+    contactEmail: 'ezwaytech9@gmail.com',
     footerLine1: '© 2026 Forlok Technologies Pvt. Ltd. All rights reserved.',
     footerLine2: 'Registered in Hyderabad, Telangana, India.',
     sections: [
       {
         title: '1. Introduction',
         content:
-          'Welcome to eZway, a mobility platform operated by Forlok Technologies Pvt. Ltd. These Terms of Service govern your access to and use of the eZway mobile application, website, and related services. By downloading, installing, or using the Platform, you confirm that you have read, understood, and agreed to these Terms. If you do not agree to these Terms, you must not use the Platform.',
+          'Welcome to eZway, a mobility platform operated by eZway Technologies Pvt. Ltd. These Terms of Service govern your access to and use of the eZway mobile application, website, and related services. By downloading, installing, or using the Platform, you confirm that you have read, understood, and agreed to these Terms. If you do not agree to these Terms, you must not use the Platform.',
       },
       {
         title: '2. Nature of the Platform',
         content:
-          'eZway is a technology platform that connects drivers and passengers who wish to share rides through car pooling or bike pooling along similar routes. The Company does not own, operate, or control the vehicles used for rides on the Platform. Drivers and passengers interact directly through the Platform to arrange shared rides. Drivers using the Platform act as independent individuals and not as employees, partners, or agents of Forlok Technologies Pvt. Ltd.',
+          'eZway is a technology platform that connects drivers and passengers who wish to share rides through car ride-sharing or bike ride-sharing along similar routes. The Company does not own, operate, or control the vehicles used for rides on the Platform. Drivers and passengers interact directly through the Platform to arrange shared rides. Drivers using the Platform act as independent individuals and not as employees, partners, or agents of eZway Technologies Pvt. Ltd.',
       },
       {
         title: '3. Eligibility',
@@ -74,12 +74,12 @@ export const CONTENT_DEFAULTS = {
       {
         title: '4. Driver Requirements',
         content:
-          'Users who wish to offer rides as drivers must additionally:\n\n- Possess a valid Indian driving license\n- Own or have authorization to operate the vehicle used for pooling\n- Provide valid vehicle registration documents\n- Provide valid vehicle insurance documents\n- Ensure that the vehicle is in safe and roadworthy condition\n\nDriver accounts may require verification before activation.',
+          'Users who wish to offer rides as drivers must additionally:\n\n- Possess a valid Indian driving license\n- Own or have authorization to operate the vehicle used for ride-sharing\n- Provide valid vehicle registration documents\n- Provide valid vehicle insurance documents\n- Ensure that the vehicle is in safe and roadworthy condition\n\nDriver accounts may require verification before activation.',
       },
       {
-        title: '5. Pooling Services',
+        title: '5. Ride-Sharing Services',
         content:
-          'The Platform allows drivers and passengers to share rides when traveling in similar directions. Features of the pooling service may include:\n\n- Ride matching based on routes\n- Trip scheduling\n- Trip cost visibility\n- Driver and passenger ratings\n- Real-time ride tracking\n\nDrivers may offer available seats in their vehicle, and passengers may request to join the ride.',
+          'The Platform allows drivers and passengers to share rides when traveling in similar directions. Features of the ride-sharing service may include:\n\n- Ride matching based on routes\n- Trip scheduling\n- Trip cost visibility\n- Driver and passenger ratings\n- Real-time ride tracking\n\nDrivers may offer available seats in their vehicle, and passengers may request to join the ride.',
       },
       {
         title: '6. Pricing and Payments',
@@ -104,7 +104,7 @@ export const CONTENT_DEFAULTS = {
       {
         title: '10. Limitation of Liability',
         content:
-          'To the maximum extent permitted by applicable law, Forlok Technologies Pvt. Ltd. provides a technology platform only and is not responsible for:\n\n- The behavior or actions of drivers or passengers\n- Accidents or incidents occurring during rides\n- Loss or damage of personal belongings\n- Vehicle condition or road safety compliance\n\nUsers participate in pooling rides at their own discretion and responsibility.',
+          'To the maximum extent permitted by applicable law, eZway Technologies Pvt. Ltd. provides a technology platform only and is not responsible for:\n\n- The behavior or actions of drivers or passengers\n- Accidents or incidents occurring during rides\n- Loss or damage of personal belongings\n- Vehicle condition or road safety compliance\n\nUsers participate in ride-sharing trips at their own discretion and responsibility.',
       },
       {
         title: '11. Account Suspension or Termination',
@@ -114,7 +114,7 @@ export const CONTENT_DEFAULTS = {
       {
         title: '12. Modifications to Terms',
         content:
-          'Forlok Technologies Pvt. Ltd. may update these Terms from time to time. Users will be notified of significant changes through:\n\n- In-app notifications\n- Email communications\n\nContinued use of the Platform after changes indicates acceptance of the updated Terms.',
+          'eZway Technologies Pvt. Ltd. may update these Terms from time to time. Users will be notified of significant changes through:\n\n- In-app notifications\n- Email communications\n\nContinued use of the Platform after changes indicates acceptance of the updated Terms.',
       },
       {
         title: '13. Governing Law and Disputes',
@@ -124,7 +124,7 @@ export const CONTENT_DEFAULTS = {
       {
         title: '14. Contact Information',
         content:
-          'For legal inquiries or questions regarding these Terms, please contact us at legal@forlok.com.',
+          'For legal inquiries or questions regarding these Terms, please contact us at ezwaytech9@gmail.com.',
       },
     ],
   },
@@ -133,15 +133,15 @@ export const CONTENT_DEFAULTS = {
     introSub: 'How eZway collects, uses, stores, and protects your information.',
     lastUpdatedText: 'Last Updated: January 2024',
     introBody:
-      'Forlok Technologies Pvt. Ltd. respects your privacy and is committed to protecting your personal information. This Privacy Policy explains how eZway collects, uses, stores, and protects the information you provide when using our mobile application and related services. By using the eZway application, you agree to the collection and use of information in accordance with this Privacy Policy.',
-    dpoEmail: 'privacy@forlok.com',
+      'eZway Technologies Pvt. Ltd. respects your privacy and is committed to protecting your personal information. This Privacy Policy explains how eZway collects, uses, stores, and protects the information you provide when using our mobile application and related services. By using the eZway application, you agree to the collection and use of information in accordance with this Privacy Policy.',
+    dpoEmail: 'ezwayprivacy9@gmail.com',
     footerLine1: '© 2026 Forlok Technologies Pvt. Ltd. All rights reserved.',
     footerLine2: 'This policy is governed by the laws of India.',
     sections: [
       {
         title: '1. Introduction',
         content:
-          'Forlok Technologies Pvt. Ltd. respects your privacy and is committed to protecting your personal information. This Privacy Policy explains how eZway collects, uses, stores, and protects the information you provide when using our mobile application and related services. By using the eZway application, you agree to the collection and use of information in accordance with this Privacy Policy.',
+          'eZway Technologies Pvt. Ltd. respects your privacy and is committed to protecting your personal information. This Privacy Policy explains how eZway collects, uses, stores, and protects the information you provide when using our mobile application and related services. By using the eZway application, you agree to the collection and use of information in accordance with this Privacy Policy.',
       },
       {
         title: '2. Information We Collect',
@@ -151,12 +151,12 @@ export const CONTENT_DEFAULTS = {
       {
         title: '3. Location Information',
         content:
-          'Location information is essential for ride pooling services. The eZway app may collect:\n\n- Real-time GPS location while using the app\n- Background location during active rides\n- Pickup and drop-off locations for ride matching\n\nLocation information helps us:\n- Match drivers and passengers traveling in similar directions\n- Provide navigation and live trip tracking\n- Improve route suggestions\n\nYou can disable location access through your device settings, but some app features may not function properly without it.',
+          'Location information is essential for ride-sharing services. The eZway app may collect:\n\n- Real-time GPS location while using the app\n- Background location during active rides\n- Pickup and drop-off locations for ride matching\n\nLocation information helps us:\n- Match drivers and passengers traveling in similar directions\n- Provide navigation and live trip tracking\n- Improve route suggestions\n\nYou can disable location access through your device settings, but some app features may not function properly without it.',
       },
       {
         title: '4. How We Use Your Information',
         content:
-          'We use the collected information for the following purposes:\n\n- Matching drivers and passengers for pooling rides\n- Processing ride bookings and transactions\n- Verifying user identity and driver credentials\n- Providing customer support\n- Sending ride confirmations, notifications, and updates\n- Improving ride matching algorithms and service performance\n- Detecting and preventing fraud or misuse of the platform\n- Complying with legal and regulatory requirements',
+          'We use the collected information for the following purposes:\n\n- Matching drivers and passengers for ride-sharing trips\n- Processing ride bookings and transactions\n- Verifying user identity and driver credentials\n- Providing customer support\n- Sending ride confirmations, notifications, and updates\n- Improving ride matching algorithms and service performance\n- Detecting and preventing fraud or misuse of the platform\n- Complying with legal and regulatory requirements',
       },
       {
         title: '5. Sharing of Information',
@@ -196,7 +196,7 @@ export const CONTENT_DEFAULTS = {
       {
         title: '12. Contact Us',
         content:
-          'If you have any questions regarding this Privacy Policy or your personal data, please contact us at privacy@forlok.com.',
+          'If you have any questions regarding this Privacy Policy or your personal data, please contact us at ezwayprivacy9@gmail.com.',
       },
     ],
     rights: [],
@@ -206,13 +206,13 @@ export const CONTENT_DEFAULTS = {
     introSub: 'Ownership, protection, and permitted use of the eZway platform, branding, software, and content.',
     lastUpdatedText: 'Last Updated: January 2024',
     introBody:
-      'Forlok Technologies Pvt. Ltd. is committed to protecting its intellectual property rights and respecting the intellectual property rights of others. This Intellectual Property Policy explains the ownership, protection, and permitted use of intellectual property associated with the eZway platform, including its software, branding, technology, and digital content. All intellectual property associated with the platform is owned by or licensed to Forlok Technologies Pvt. Ltd.',
+      'eZway Technologies Pvt. Ltd. is committed to protecting its intellectual property rights and respecting the intellectual property rights of others. This Intellectual Property Policy explains the ownership, protection, and permitted use of intellectual property associated with the eZway platform, including its software, branding, technology, and digital content. All intellectual property associated with the platform is owned by or licensed to eZway Technologies Pvt. Ltd.',
     warningTitle: 'Important Notice',
     warningText:
-      'Unauthorized use, imitation, modification, or reproduction of eZway or Forlok intellectual property without prior written consent is strictly prohibited and may result in legal action.',
+      'Unauthorized use, imitation, modification, or reproduction of eZway intellectual property without prior written consent is strictly prohibited and may result in legal action.',
     licensingTitle: 'Contact Information',
     licensingSub: 'For intellectual property inquiries, licensing requests, or partnership proposals, please contact:',
-    contactEmail1: 'legal@forlok.com',
+    contactEmail1: 'ezwaytech9@gmail.com',
     contactEmail2: '',
     footerLine1: '© 2026 Forlok Technologies Pvt. Ltd. All rights reserved.',
     footerLine2: 'All intellectual property associated with the platform is owned by or licensed to Forlok Technologies Pvt. Ltd.',
@@ -220,12 +220,12 @@ export const CONTENT_DEFAULTS = {
       {
         title: '1. Introduction',
         content:
-          'Forlok Technologies Pvt. Ltd. is committed to protecting its intellectual property rights and respecting the intellectual property rights of others. This Intellectual Property Policy explains the ownership, protection, and permitted use of intellectual property associated with the eZway platform, including its software, branding, technology, and digital content.',
+          'eZway Technologies Pvt. Ltd. is committed to protecting its intellectual property rights and respecting the intellectual property rights of others. This Intellectual Property Policy explains the ownership, protection, and permitted use of intellectual property associated with the eZway platform, including its software, branding, technology, and digital content.',
       },
       {
         title: '2. Trademarks',
         content:
-          'The following names, logos, and branding elements are trademarks or service marks of Forlok Technologies Pvt. Ltd.:\n\n- Forlok\n- eZway\n- Forlok logo and brand design\n- eZway application icon and visual identity\n- Company taglines and marketing slogans\n\nThese trademarks are protected under applicable trademark laws. Unauthorized use, imitation, modification, or reproduction of these trademarks without prior written consent from Forlok Technologies Pvt. Ltd. is strictly prohibited and may result in legal action.',
+          'The following names, logos, and branding elements are trademarks or service marks of eZway Technologies Pvt. Ltd.:\n\n- eZway\n- eZway logo and brand design\n- eZway application icon and visual identity\n- Company taglines and marketing slogans\n\nThese trademarks are protected under applicable trademark laws. Unauthorized use, imitation, modification, or reproduction of these trademarks without prior written consent from eZway Technologies Pvt. Ltd. is strictly prohibited and may result in legal action.',
       },
       {
         title: '3. Copyright',
@@ -235,17 +235,17 @@ export const CONTENT_DEFAULTS = {
       {
         title: '4. Proprietary Technology',
         content:
-          'Forlok Technologies Pvt. Ltd. develops and operates proprietary technologies used within the eZway platform. These technologies may include:\n\n- Ride-matching algorithms\n- Route optimization systems\n- Safety verification mechanisms\n- Data analysis and recommendation systems\n- Trip coordination and pooling systems\n\nThese technologies are the exclusive intellectual property of the Company and may be protected under applicable patent or intellectual property laws.',
+          'eZway Technologies Pvt. Ltd. develops and operates proprietary technologies used within the eZway platform. These technologies may include:\n\n- Ride-matching algorithms\n- Route optimization systems\n- Safety verification mechanisms\n- Data analysis and recommendation systems\n- Trip coordination and ride-sharing systems\n\nThese technologies are the exclusive intellectual property of the Company and may be protected under applicable patent or intellectual property laws.',
       },
       {
         title: '5. Trade Secrets',
         content:
-          'Certain internal technologies, processes, and operational strategies used by Forlok Technologies Pvt. Ltd. constitute confidential trade secrets. These may include:\n\n- Ride matching algorithms and scoring models\n- Demand prediction models\n- Fraud detection systems\n- Operational workflows and internal processes\n- Data analytics frameworks\n- User trust and safety scoring methods\n\nThese trade secrets are protected under applicable laws and through confidentiality agreements with employees, contractors, and partners. Unauthorized disclosure or use of these trade secrets is strictly prohibited.',
+          'Certain internal technologies, processes, and operational strategies used by eZway Technologies Pvt. Ltd. constitute confidential trade secrets. These may include:\n\n- Ride matching algorithms and scoring models\n- Demand prediction models\n- Fraud detection systems\n- Operational workflows and internal processes\n- Data analytics frameworks\n- User trust and safety scoring methods\n\nThese trade secrets are protected under applicable laws and through confidentiality agreements with employees, contractors, and partners. Unauthorized disclosure or use of these trade secrets is strictly prohibited.',
       },
       {
         title: '6. Design Rights',
         content:
-          'The visual identity of the eZway platform is the intellectual property of Forlok Technologies Pvt. Ltd. This includes:\n\n- Application interface design\n- Layout and screen structures\n- Color palette and typography\n- Icons and visual markers\n- Interaction patterns and animations\n- Branding and marketing designs\n\nAny imitation, copying, or reproduction of these designs without authorization is prohibited.',
+          'The visual identity of the eZway platform is the intellectual property of eZway Technologies Pvt. Ltd. This includes:\n\n- Application interface design\n- Layout and screen structures\n- Color palette and typography\n- Icons and visual markers\n- Interaction patterns and animations\n- Branding and marketing designs\n\nAny imitation, copying, or reproduction of these designs without authorization is prohibited.',
       },
       {
         title: '7. Open Source Software',
@@ -272,9 +272,9 @@ export const CONTENT_DEFAULTS = {
         color: '#4CAF50',
         items: [
           {
-            question: 'How do I create an account on Forlok?',
+            question: 'How do I create an account on eZway?',
             answer:
-              'Download the Forlok app from Google Play Store or Apple App Store. Tap "Sign Up", enter your mobile number, verify with OTP, and complete your profile with name, email, and a profile photo. You can register as an Individual or a Company.',
+              'Download the eZway app from Google Play Store or Apple App Store. Tap "Sign Up", enter your mobile number, verify with OTP, and complete your profile with name, email, and a profile photo. You can register as an Individual or a Company.',
           },
           {
             question: 'What documents do I need for verification?',
@@ -300,28 +300,28 @@ export const CONTENT_DEFAULTS = {
       },
       {
         icon: 'car',
-        title: 'Pooling Services',
+        title: 'Ride-Sharing Services',
         color: '#F99E3C',
         items: [
           {
-            question: 'What is Forlok Pooling?',
+            question: 'What is eZway Ride-Sharing?',
             answer:
-              "Forlok Pooling connects drivers with passengers heading in the same direction. Drivers offer available seats on their regular routes, and passengers can book seats at affordable prices. It's cost-effective, eco-friendly, and a great way to commute.",
+              "eZway Ride-Sharing connects drivers with passengers heading in the same direction. Drivers offer available seats on their regular routes, and passengers can book seats at affordable prices. It's cost-effective, eco-friendly, and a great way to commute.",
           },
           {
-            question: 'How do I create a pooling offer as a driver?',
+            question: 'How do I create a ride-sharing offer as a driver?',
             answer:
-              'Go to "Offer Services" > "Create Pooling Offer". Enter your from/to locations, date, time, available seats, and price per seat. Review the details and publish your offer. Passengers can then search and book seats on your route.',
+              'Go to "Offer Services" > "Create Ride-Sharing Offer". Enter your from/to locations, date, time, available seats, and price per seat. Review the details and publish your offer. Passengers can then search and book seats on your route.',
           },
           {
-            question: 'How do I book a pooling ride as a passenger?',
+            question: 'How do I book a ride-sharing trip as a passenger?',
             answer:
-              'Go to "Take Services" > "Search Pooling". Enter your pickup and drop locations, select your travel date, and browse available offers. Choose a ride that matches your route, review driver details and ratings, then confirm your booking.',
+              'Go to "Take Services" > "Take Ride". Enter your pickup and drop locations, select your travel date, and browse available offers. Choose a ride that matches your route, review driver details and ratings, then confirm your booking.',
           },
           {
             question: 'Can I set stopping points along my route?',
             answer:
-              'Yes, when creating a pooling offer, you can add multiple stopping locations along your route. This helps passengers find rides that match their specific pickup/drop points and makes route planning more flexible.',
+              'Yes, when creating a ride-sharing offer, you can add multiple stopping locations along your route. This helps passengers find rides that match their specific pickup/drop points and makes route planning more flexible.',
           },
           {
             question: 'What happens if the driver cancels my ride?',
@@ -329,7 +329,7 @@ export const CONTENT_DEFAULTS = {
               'If a driver cancels your confirmed booking, the trip is cancelled in-app and you are notified immediately so you can find an alternative ride.',
           },
           {
-            question: 'How is the pooling fare calculated?',
+            question: 'How is the ride-sharing fare calculated?',
             answer:
               'The fare is calculated using route distance, timing, and ride parameters. You see the final fare in the trip summary before confirming your booking.',
           },
@@ -341,14 +341,14 @@ export const CONTENT_DEFAULTS = {
         color: '#9C27B0',
         items: [
           {
-            question: 'How does vehicle rental work on Forlok?',
+            question: 'How does vehicle rental work on eZway?',
             answer:
               'Vehicle owners list their vehicles for rent with pricing, availability, and pickup location. Renters browse available vehicles, select dates, and book. After verification and confirmation, the vehicle is handed over at the agreed location.',
           },
           {
             question: 'What types of vehicles are available for rent?',
             answer:
-              'Forlok offers a variety of vehicles including bikes, scooters, cars (hatchback, sedan, SUV), and commercial vehicles. Availability varies by location. Each listing includes vehicle details, photos, ratings, and pricing.',
+              'eZway offers a variety of vehicles including bikes, scooters, cars (hatchback, sedan, SUV), and commercial vehicles. Availability varies by location. Each listing includes vehicle details, photos, ratings, and pricing.',
           },
           {
             question: 'Is insurance included with rental vehicles?',
@@ -368,14 +368,14 @@ export const CONTENT_DEFAULTS = {
         color: '#FF9800',
         items: [
           {
-            question: 'How does manual settlement work in Forlok?',
+            question: 'How does manual settlement work in eZway?',
             answer:
-              'For pooling rides, settlement is done manually between passenger and driver after trip completion. The app handles booking, fare visibility, trip tracking, and completion confirmation.',
+              'For ride-sharing trips, settlement is done manually between passenger and driver after trip completion. The app handles booking, fare visibility, trip tracking, and completion confirmation.',
           },
           {
-            question: 'How does Forlok Wallet work?',
+            question: 'How does eZway Wallet work?',
             answer:
-              'Forlok Wallet is used to track app-side credits and coin-related adjustments. It remains available alongside the Coins system.',
+              'eZway Wallet is used to track app-side credits and coin-related adjustments. It remains available alongside the Coins system.',
           },
           {
             question: 'How do I get a refund?',
@@ -388,9 +388,9 @@ export const CONTENT_DEFAULTS = {
               'For manual settlement rides, drivers collect fare directly from passengers. If coins reduced passenger payable fare, eligible compensation is handled through the app wallet logic.',
           },
           {
-            question: 'What are Forlok Coins?',
+            question: 'What are eZway Coins?',
             answer:
-              'Forlok Coins are reward points you earn by completing rides, referring friends, and maintaining good ratings. You can redeem coins for ride discounts, wallet credits, and exclusive offers. Check the Earn Coins section for current promotions.',
+              'eZway Coins are reward points you earn by completing rides, referring friends, and maintaining good ratings. You can redeem coins for ride discounts, wallet credits, and exclusive offers. Check the Earn Coins section for current promotions.',
           },
         ],
       },
@@ -400,9 +400,9 @@ export const CONTENT_DEFAULTS = {
         color: '#F44336',
         items: [
           {
-            question: 'How does Forlok ensure ride safety?',
+            question: 'How does eZway ensure ride safety?',
             answer:
-              'Forlok implements multiple safety features: all users are verified with government IDs, real-time GPS tracking during rides, in-app SOS emergency button, ride sharing with trusted contacts, driver rating system, and 24/7 safety support line.',
+              'eZway implements multiple safety features: all users are verified with government IDs, real-time GPS tracking during rides, in-app SOS emergency button, ride sharing with trusted contacts, driver rating system, and 24/7 safety support line.',
           },
           {
             question: 'What is the SOS feature?',
@@ -417,7 +417,7 @@ export const CONTENT_DEFAULTS = {
           {
             question: 'Is my personal information safe?',
             answer:
-              "Yes. Forlok uses industry-standard encryption (AES-256, TLS 1.3) to protect your data. We never share your personal information with other users beyond what's necessary for ride coordination. Read our Privacy Policy for complete details.",
+              "Yes. eZway uses industry-standard encryption (AES-256, TLS 1.3) to protect your data. We never share your personal information with other users beyond what's necessary for ride coordination. Read our Privacy Policy for complete details.",
           },
         ],
       },
@@ -451,12 +451,12 @@ export const CONTENT_DEFAULTS = {
           {
             question: 'What happens if the driver takes a different route?',
             answer:
-              "Forlok's system monitors route deviations. If a significant deviation is detected, both the driver and passenger are notified. Drivers are encouraged to follow the optimal route. You can contact support if you feel the deviation was unjustified.",
+              "eZway's system monitors route deviations. If a significant deviation is detected, both the driver and passenger are notified. Drivers are encouraged to follow the optimal route. You can contact support if you feel the deviation was unjustified.",
           },
           {
             question: 'How do I view my ride history?',
             answer:
-              'Go to the History tab in the app. You can view all past pooling rides and rental bookings, filter by date and status, and see ride details including route and completion info.',
+              'Go to the History tab in the app. You can view all past ride-sharing trips and rental bookings, filter by date and status, and see ride details including route and completion info.',
           },
         ],
       },
@@ -473,11 +473,11 @@ export const CONTENT_DEFAULTS = {
     popularTopics: [
       {
         icon: 'car',
-        title: 'How to create a pooling offer',
+        title: 'How to create a ride-sharing offer',
         color: '#FF9800',
-        category: 'Pooling',
+        category: 'Ride-Sharing',
         explanation:
-          'Go to Offer Services, choose pooling, set route, date, time, seats, and fare, then publish. Your listing becomes visible to matching passengers and updates automatically when seats are booked.',
+          'Go to Offer Services, choose ride-sharing, set route, date, time, seats, and fare, then publish. Your listing becomes visible to matching passengers and updates automatically when seats are booked.',
       },
       {
         icon: 'map_pin',
@@ -521,7 +521,7 @@ export const CONTENT_DEFAULTS = {
       },
       {
         icon: 'credit_card',
-        title: 'Wallet & Forlok coins',
+        title: 'Wallet & eZway coins',
         color: '#00BCD4',
         category: 'Wallet',
         explanation:
@@ -538,8 +538,8 @@ export const CONTENT_DEFAULTS = {
     ],
     contactOptions: [
       { icon: 'message_circle', label: 'Live Chat', desc: 'Chat with our support team', color: '#4CAF50', actionType: 'url', actionValue: '' },
-      { icon: 'phone', label: 'Call Us', desc: 'Toll-free: 1800-XXX-XXXX', color: '#F99E3C', actionType: 'tel', actionValue: 'tel:+911800XXXXXXX' },
-      { icon: 'mail', label: 'Email Support', desc: 'support@forlok.com', color: '#FF9800', actionType: 'mailto', actionValue: 'mailto:support@forlok.com' },
+      { icon: 'phone', label: 'Call Us', desc: '+91 93925 53121', color: '#F99E3C', actionType: 'tel', actionValue: 'tel:+919392553121' },
+      { icon: 'mail', label: 'Email Support', desc: 'ezwaymobility9@gmail.com', color: '#FF9800', actionType: 'mailto', actionValue: 'mailto:ezwaymobility9@gmail.com' },
     ],
   },
 } as const;

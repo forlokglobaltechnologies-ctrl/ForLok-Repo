@@ -10,6 +10,7 @@ import { Card } from '@components/common/Card';
 import { Button } from '@components/common/Button';
 import { useLanguage } from '@context/LanguageContext';
 import { rentalApi } from '@utils/apiClient';
+import { reviewsCountLong } from '@utils/reviewDisplay';
 
 interface RouteParams {
   location?: { address: string; lat: number; lng: number };
@@ -172,11 +173,11 @@ const SearchRentalScreen = () => {
                 }
               }
               // Fallback to internet images based on vehicle type
-              const vehicleType = rental.vehicle?.type?.toLowerCase() || 'car';
-              if (vehicleType === 'bike') {
-                return 'https://images.unsplash.com/photo-1558980664-769d59546b3b?w=400&h=300&fit=crop';
+              const vehicleType = rental.vehicle?.type?.toLowerCase() || 'bike';
+              if (vehicleType === 'scooty' || vehicleType === 'scooter') {
+                return 'https://images.unsplash.com/photo-1609630875171-b1321377ee65?w=400&h=300&fit=crop';
               }
-              return 'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=400&h=300&fit=crop';
+              return 'https://images.unsplash.com/photo-1558980664-769d59546b3b?w=400&h=300&fit=crop';
             };
 
             // Format time from HH:mm to 12-hour format
@@ -228,7 +229,7 @@ const SearchRentalScreen = () => {
               <View style={styles.ratingContainer}>
                 <Star size={16} color={COLORS.warning} fill={COLORS.warning} />
                 <Text style={styles.ratingText}>
-                  {rental.owner?.rating || rental.rating || 0} ({rental.owner?.totalReviews || rental.totalReviews || 0} {t('common.reviews')})
+                  {rental.owner?.rating || rental.rating || 0} ({reviewsCountLong(rental.owner?.totalReviews ?? rental.totalReviews, t)})
                 </Text>
               </View>
               <Text style={styles.priceText}>₹{rental.pricePerHour || rental.price || 0}/{t('searchRental.perHour')}</Text>

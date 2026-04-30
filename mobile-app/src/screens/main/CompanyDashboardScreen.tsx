@@ -10,7 +10,8 @@ import {
 } from 'react-native';
 import { normalize, wp, hp, SCREEN_WIDTH } from '@utils/responsive';
 import { useNavigation } from '@react-navigation/native';
-import { Menu, Bell, User, Car, Bike, Clock, ChevronLeft, ChevronRight, DollarSign, BarChart } from 'lucide-react-native';
+import { Menu, Bell, User, Bike, Clock, ChevronLeft, ChevronRight, DollarSign, BarChart, LayoutList } from 'lucide-react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { COLORS, FONTS, SPACING, SHADOWS, BORDER_RADIUS } from '@constants/theme';
 import { Card } from '@components/common/Card';
@@ -23,7 +24,7 @@ const CompanyDashboardScreen = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [stats, setStats] = useState({
     totalVehicles: 0,
-    carsCount: 0,
+    scootiesCount: 0,
     bikesCount: 0,
     activeOffers: 0,
     totalBookings: 0,
@@ -64,18 +65,21 @@ const CompanyDashboardScreen = () => {
 
       if (statsResponse.success && statsResponse.data) {
         // Calculate vehicle breakdown from vehicles data
-        let carsCount = 0;
+        let scootiesCount = 0;
         let bikesCount = 0;
-        
+
         if (vehiclesResponse.success && vehiclesResponse.data) {
           const vehicles = Array.isArray(vehiclesResponse.data) ? vehiclesResponse.data : [];
-          carsCount = vehicles.filter((v: any) => v.type === 'car').length;
-          bikesCount = vehicles.filter((v: any) => v.type === 'bike').length;
+          scootiesCount = vehicles.filter((v: any) => {
+            const t = (v.type || '').toLowerCase();
+            return t === 'scooty' || t === 'scooter';
+          }).length;
+          bikesCount = vehicles.filter((v: any) => (v.type || '').toLowerCase() === 'bike').length;
         }
 
         setStats({
           totalVehicles: statsResponse.data.totalVehicles || 0,
-          carsCount,
+          scootiesCount,
           bikesCount,
           activeOffers: statsResponse.data.activeOffers || 0,
           totalBookings: statsResponse.data.totalBookings || 0,
@@ -119,7 +123,7 @@ const CompanyDashboardScreen = () => {
         <TouchableOpacity style={styles.menuButton}>
           <Menu size={24} color={COLORS.white} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>ABC Car Rentals</Text>
+        <Text style={styles.headerTitle}>Fleet dashboard</Text>
         <View style={styles.headerRight}>
           <TouchableOpacity
             onPress={() => navigation.navigate('Notifications' as never)}
@@ -175,13 +179,6 @@ const CompanyDashboardScreen = () => {
         <View style={styles.statsContainer}>
           <Card style={styles.statBox}>
             <View style={styles.statIconContainer}>
-              <Car size={32} color={COLORS.primary} />
-            </View>
-            <Text style={styles.statValue}>{stats.carsCount}</Text>
-            <Text style={styles.statLabel}>Cars</Text>
-          </Card>
-          <Card style={styles.statBox}>
-            <View style={styles.statIconContainer}>
               <Bike size={32} color={COLORS.primary} />
             </View>
             <Text style={styles.statValue}>{stats.bikesCount}</Text>
@@ -189,7 +186,14 @@ const CompanyDashboardScreen = () => {
           </Card>
           <Card style={styles.statBox}>
             <View style={styles.statIconContainer}>
-              <Car size={32} color={COLORS.primary} />
+              <MaterialCommunityIcons name="moped" size={32} color={COLORS.primary} />
+            </View>
+            <Text style={styles.statValue}>{stats.scootiesCount}</Text>
+            <Text style={styles.statLabel}>Scooties</Text>
+          </Card>
+          <Card style={styles.statBox}>
+            <View style={styles.statIconContainer}>
+              <LayoutList size={32} color={COLORS.primary} />
             </View>
             <Text style={styles.statValue}>{stats.totalVehicles}</Text>
             <Text style={styles.statLabel}>Total Vehicles</Text>
@@ -247,7 +251,7 @@ const CompanyDashboardScreen = () => {
         {recentBookings.map((booking) => (
           <Card key={booking.id} style={styles.bookingCard}>
             <View style={styles.bookingHeader}>
-              <Car size={24} color={COLORS.primary} />
+              <Bike size={24} color={COLORS.primary} />
               <Text style={styles.bookingVehicle}>{booking.vehicle}</Text>
             </View>
             <Text style={styles.bookingText}>{t('companyDashboard.bookedBy')}: {booking.bookedBy}</Text>
@@ -279,7 +283,7 @@ const CompanyDashboardScreen = () => {
           style={styles.navItem}
           onPress={() => navigation.navigate('VehicleInformation' as never)}
         >
-          <Car size={24} color={COLORS.textSecondary} />
+          <Bike size={24} color={COLORS.textSecondary} />
           <Text style={styles.navLabel}>{t('companyDashboard.vehicles')}</Text>
         </TouchableOpacity>
         <TouchableOpacity 

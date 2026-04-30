@@ -21,6 +21,7 @@ import {
   Globe,
   CreditCard,
   HelpCircle,
+  Mail,
   FileText,
   Info,
   Check,
@@ -210,7 +211,7 @@ const SettingsScreen = () => {
             onPress: () => setShowLanguageModal(true),
           },
           ...(isFemaleUser
-            ? [{ id: 'theme', icon: Palette, label: 'HerPooling Theme', type: 'toggle' as const, value: isPinkMode, onToggle: (v: boolean) => setPinkMode(v) }]
+            ? [{ id: 'theme', icon: Palette, label: 'Her Ride-Sharing Theme', type: 'toggle' as const, value: isPinkMode, onToggle: (v: boolean) => setPinkMode(v) }]
             : []),
         ],
       },
@@ -225,7 +226,7 @@ const SettingsScreen = () => {
         title: t('settings.support'),
         items: [
           { id: 'help-center', icon: HelpCircle, label: t('settings.helpCenter'), type: 'link', onPress: () => navigation.navigate('HelpSupport') },
-          { id: 'contact-us', icon: HelpCircle, label: t('settings.contactUs'), type: 'link', onPress: () => navigation.navigate('HelpSupport') },
+          { id: 'contact-us', icon: Mail, label: t('settings.contactUs'), type: 'link', onPress: () => navigation.navigate('ContactUs') },
           { id: 'report-issue', icon: HelpCircle, label: t('settings.reportIssue'), type: 'link', onPress: () => navigation.navigate('ReportBug') },
           { id: 'my-reports', icon: HelpCircle, label: 'My Reports', type: 'link', onPress: () => navigation.navigate('MyReports') },
         ],
@@ -237,7 +238,7 @@ const SettingsScreen = () => {
           { id: 'terms', icon: FileText, label: t('settings.termsConditions'), type: 'link', onPress: () => navigation.navigate('TermsConditions') },
           { id: 'privacy', icon: FileText, label: t('settings.privacyPolicy'), type: 'link', onPress: () => navigation.navigate('PrivacyPolicy') },
           { id: 'ip', icon: Shield, label: 'Patents & Copyrights', type: 'link', onPress: () => navigation.navigate('IntellectualProperty') },
-          { id: 'app-version', icon: Info, label: t('settings.appVersion'), type: 'link', value: '1.0.0', onPress: () => Alert.alert('App Version', 'ForLok v1.0.0') },
+          { id: 'app-version', icon: Info, label: t('settings.appVersion'), type: 'link', value: '1.0.0', onPress: () => Alert.alert('App Version', 'eZway v1.0.0') },
         ],
       },
     ],

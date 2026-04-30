@@ -12,7 +12,7 @@ import {
   Image,
 } from 'react-native';
 import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
-import { ArrowLeft, Plus, Car, AlertCircle, X, Clock, MessageCircle, MapPin, ArrowRight, Calendar, Users, Bike, ChevronRight, Play, Eye, Navigation } from 'lucide-react-native';
+import { ArrowLeft, Plus, AlertCircle, X, Clock, MessageCircle, MapPin, ArrowRight, Calendar, Users, Bike, ChevronRight, Play, Eye, Navigation } from 'lucide-react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { normalize, wp, hp } from '@utils/responsive';
@@ -95,7 +95,7 @@ const MyOffersScreen = () => {
             vehicle: {
               brand: offer.vehicle?.brand || 'Unknown',
               vehicleModel: offer.vehicle?.vehicleModel || offer.vehicle?.model || '',
-              type: offer.vehicle?.type || 'car',
+              type: offer.vehicle?.type || 'bike',
               photos: offer.vehicle?.photos || [],
               displayName: `${offer.vehicle?.brand || 'Unknown'} ${offer.vehicle?.vehicleModel || offer.vehicle?.model || ''}`,
             },
@@ -162,7 +162,7 @@ const MyOffersScreen = () => {
         const res = await poolingApi.deleteOffer(selectedOffer.offerId);
         if (res.success) {
           setMyOffers((prev) => prev.filter((o) => o.offerId !== selectedOffer.offerId));
-          Alert.alert('Deleted', 'Pooling offer deleted successfully.', [{ text: 'OK' }]);
+          Alert.alert('Deleted', 'Ride-sharing offer deleted successfully.', [{ text: 'OK' }]);
         } else {
           Alert.alert('Error', res.error || res.message || 'Failed to delete offer.');
         }
@@ -199,9 +199,10 @@ const MyOffersScreen = () => {
 
   const getVehicleIcon = (offer: any) => {
     const vType = offer.vehicle?.type?.toLowerCase();
-    if (vType === 'bike') return <Bike size={18} color={OFFER_ACCENT} />;
-    if (vType === 'scooty') return <MaterialCommunityIcons name="moped" size={18} color={OFFER_ACCENT} />;
-    return <Car size={18} color={OFFER_ACCENT} />;
+    if (vType === 'scooty' || vType === 'scooter') {
+      return <MaterialCommunityIcons name="moped" size={18} color={OFFER_ACCENT} />;
+    }
+    return <Bike size={18} color={OFFER_ACCENT} />;
   };
 
   const parseOfferDateTime = (offer: any): Date | null => {
@@ -261,7 +262,7 @@ const MyOffersScreen = () => {
           </View>
           <View style={styles.typeInfo}>
             <Text style={[styles.typeLabel, { color: theme.colors.text }]}>
-              {isPooling ? 'Pooling Ride' : 'Rental'}
+              {isPooling ? 'Ride-Sharing' : 'Rental'}
             </Text>
             {isPooling && (
               <Text style={[styles.dateTimeInline, { color: theme.colors.textSecondary }]}>
@@ -485,7 +486,7 @@ const MyOffersScreen = () => {
         ) : filteredOffers.length === 0 ? (
           <View style={styles.centerWrap}>
             <View style={[styles.emptyIcon, { backgroundColor: OFFER_ACCENT + '12' }]}>
-              <Car size={32} color={OFFER_ACCENT} />
+              <Bike size={32} color={OFFER_ACCENT} />
             </View>
             <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
               {activeTab === 'Completed' ? 'No completed offers' : 'No offers yet'}

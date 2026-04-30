@@ -22,7 +22,7 @@ import {
   Users,
   Instagram,
   Video,
-  Car,
+  Bike,
   Trophy,
   Copy,
   Share2,
@@ -100,7 +100,7 @@ const EarnCoinsScreen = () => {
   const handleShareCode = async () => {
     try {
       await Share.share({
-        message: `Join Forlok and get bonus coins! Use my referral code: ${referralCode}\n\nDownload Forlok now!`,
+        message: `Join eZway and get bonus coins! Use my referral code: ${referralCode}\n\nGet the eZway app!`,
       });
     } catch (error) {
       console.error('Error sharing:', error);
@@ -159,7 +159,7 @@ const EarnCoinsScreen = () => {
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
             <ArrowLeft size={22} color={theme.colors.text} />
           </TouchableOpacity>
-          <Text style={[styles.headerBarTitle, { color: theme.colors.text }]}>Earn Coins</Text>
+          <Text style={[styles.headerBarTitle, { color: theme.colors.text }]}>eZway Coins</Text>
           <View style={styles.headerPlaceholder} />
         </View>
         <View style={styles.loadingContainer}>
@@ -177,8 +177,8 @@ const EarnCoinsScreen = () => {
           <ArrowLeft size={22} color={theme.colors.text} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={[styles.headerBarTitle, { color: theme.colors.text }]}>Earn Coins</Text>
-          <Text style={[styles.headerBarSubtitle, { color: theme.colors.textSecondary }]}>Referrals, milestones, rewards</Text>
+          <Text style={[styles.headerBarTitle, { color: theme.colors.text }]}>eZway Coins</Text>
+          <Text style={[styles.headerBarSubtitle, { color: theme.colors.textSecondary }]}>eZway referrals, milestones & rewards</Text>
         </View>
         <View style={styles.headerPlaceholder} />
       </View>
@@ -210,7 +210,7 @@ const EarnCoinsScreen = () => {
               </View>
               <Text style={styles.heroTitle}>Turn every ride into coins</Text>
               <Text style={styles.heroSubtitle}>
-                Invite friends, complete rides, and submit promo proofs to earn up to 1000 coins.
+                Invite friends to eZway, complete rides, and submit promo proofs to earn up to 1000 eZway coins.
               </Text>
             </View>
           </LinearGradient>
@@ -222,12 +222,12 @@ const EarnCoinsScreen = () => {
             <Coins size={32} color="#51A7EA" />
           </View>
           <View style={styles.balanceInfo}>
-            <Text style={styles.balanceLabel}>Your Balance</Text>
+            <Text style={styles.balanceLabel}>Your eZway balance</Text>
             <View style={styles.balanceRow}>
               <Text style={styles.balanceAmount}>
                 {coinBalance?.balance || 0}
               </Text>
-              <Text style={styles.balanceCoinLabel}>coins</Text>
+              <Text style={styles.balanceCoinLabel}>eZway coins</Text>
             </View>
           </View>
           <View style={styles.worthBadge}>
@@ -244,7 +244,7 @@ const EarnCoinsScreen = () => {
               <Users size={22} color="#F99E3C" />
             </View>
             <View style={styles.earnCardTitleWrap}>
-              <Text style={[styles.earnCardTitle, { color: theme.colors.text }]}>Invite Friends</Text>
+              <Text style={[styles.earnCardTitle, { color: theme.colors.text }]}>Invite friends · eZway referral</Text>
               <View style={[styles.coinBadge, { backgroundColor: COIN_BG }]}>
                 <Coins size={12} color={COIN_COLOR} />
                 <Text style={styles.coinBadgeText}>20-150</Text>
@@ -253,7 +253,7 @@ const EarnCoinsScreen = () => {
           </View>
 
           <View style={[styles.referralCodeBox, { backgroundColor: theme.colors.background, borderColor: theme.colors.border }]}>
-            <Text style={[styles.referralCodeLabel, { color: theme.colors.textSecondary }]}>Your Referral Code</Text>
+            <Text style={[styles.referralCodeLabel, { color: theme.colors.textSecondary }]}>Your eZway referral code</Text>
             <View style={styles.referralCodeRow}>
               <Text style={styles.referralCodeText}>{referralCode || '---'}</Text>
               <TouchableOpacity onPress={handleCopyCode} style={[styles.copyBtn, { backgroundColor: '#F99E3C' + '15' }]}>
@@ -269,7 +269,7 @@ const EarnCoinsScreen = () => {
             </View>
             <View style={[styles.statItem, { backgroundColor: theme.colors.background }]}>
               <Text style={[styles.statNumber, { color: COIN_COLOR }]}>{referralStats?.totalCoinsEarned || 0}</Text>
-              <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>Coins Earned</Text>
+              <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>eZway coins earned</Text>
             </View>
           </View>
 
@@ -294,7 +294,7 @@ const EarnCoinsScreen = () => {
             </View>
           </View>
           <Text style={[styles.earnDescription, { color: theme.colors.textSecondary }]}>
-            Post a story mentioning @forlok and submit the link as proof. Admin will review.
+            Post a story mentioning @ezway and submit the link as proof. Admin will review.
           </Text>
           <View style={[styles.limitBadge, { backgroundColor: '#E4405F' + '10' }]}>
             <Clock size={12} color="#E4405F" />
@@ -325,7 +325,7 @@ const EarnCoinsScreen = () => {
             </View>
           </View>
           <Text style={[styles.earnDescription, { color: theme.colors.textSecondary }]}>
-            Create a reel or YouTube Short about Forlok and submit the link. Higher reward!
+            Create a reel or YouTube Short about eZway and submit the link. Higher reward!
           </Text>
           <View style={[styles.limitBadge, { backgroundColor: '#FF0000' + '10' }]}>
             <Clock size={12} color="#FF0000" />
@@ -355,7 +355,7 @@ const EarnCoinsScreen = () => {
         <View style={[styles.earnCard, { backgroundColor: theme.colors.surface }]}>
           <View style={styles.earnCardHeader}>
             <View style={[styles.earnIconWrap, { backgroundColor: '#27AE60' + '15' }]}>
-              <Car size={22} color="#27AE60" />
+              <Bike size={22} color="#27AE60" />
             </View>
             <View style={styles.earnCardTitleWrap}>
               <Text style={[styles.earnCardTitle, { color: theme.colors.text }]}>Ride & Earn</Text>

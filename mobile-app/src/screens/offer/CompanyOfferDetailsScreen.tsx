@@ -10,12 +10,13 @@ import {
   Alert,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { ArrowLeft, Car, MapPin, Calendar, Clock, MessageCircle, User, IndianRupee, Star } from 'lucide-react-native';
+import { ArrowLeft, Bike, MapPin, Calendar, Clock, MessageCircle, User, IndianRupee, Star } from 'lucide-react-native';
 import { normalize, wp, hp } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, SHADOWS, BORDER_RADIUS } from '@constants/theme';
 import { Card } from '@components/common/Card';
 import { Button } from '@components/common/Button';
 import { rentalApi } from '@utils/apiClient';
+import { displayPlatformFeeRupees } from '@utils/platformFee';
 
 const CompanyOfferDetailsScreen = () => {
   const navigation = useNavigation();
@@ -154,7 +155,7 @@ const CompanyOfferDetailsScreen = () => {
         {/* Offer Details Card */}
         <Card style={styles.sectionCard}>
           <View style={styles.sectionHeader}>
-            <Car size={20} color={COLORS.primary} />
+            <Bike size={20} color={COLORS.primary} />
             <Text style={styles.sectionTitle}>Vehicle Details</Text>
           </View>
           <View style={styles.divider} />
@@ -284,7 +285,7 @@ const CompanyOfferDetailsScreen = () => {
                   <View style={styles.detailRow}>
                     <IndianRupee size={14} color={COLORS.textSecondary} />
                     <Text style={styles.detailText}>
-                      {booking.amount || 0} (Platform fee: {booking.platformFee || 0})
+                      {booking.amount || 0} (Platform fee: {displayPlatformFeeRupees(booking.platformFee)})
                     </Text>
                   </View>
                 </View>

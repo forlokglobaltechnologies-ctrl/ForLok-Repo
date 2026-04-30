@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import {
-  ArrowLeft, Share2, MapPin, Calendar, Clock, Phone, MessageSquare, Car, Tag,
+  ArrowLeft, Share2, MapPin, Calendar, Clock, Phone, MessageSquare, Bike, Tag,
   User, CreditCard, IndianRupee, Star, CheckCircle, Shield, ChevronRight,
   Navigation, X, AlertTriangle, Copy, Link2,
 } from 'lucide-react-native';
@@ -15,6 +15,8 @@ import { normalize, wp } from '@utils/responsive';
 import { useLanguage } from '@context/LanguageContext';
 import { useTheme } from '@context/ThemeContext';
 import { bookingApi } from '@utils/apiClient';
+import { displayPlatformFeeRupees } from '@utils/platformFee';
+import { reviewsCountShort } from '@utils/reviewDisplay';
 import { useAuth } from '@context/AuthContext';
 
 const BookingDetailsScreen = () => {
@@ -64,7 +66,7 @@ const BookingDetailsScreen = () => {
           vehicle: d.vehicle ? {
             brand: d.vehicle.brand || 'N/A',
             number: d.vehicle.number || 'N/A',
-            type: d.vehicle.type || 'car',
+            type: d.vehicle.type || 'bike',
             model: d.vehicle.vehicleModel || d.vehicle.model || null,
             color: d.vehicle.color || null,
           } : null,
@@ -75,7 +77,7 @@ const BookingDetailsScreen = () => {
           duration: d.duration || null,
           amount: d.amount || 0,
           totalAmount: d.totalAmount || d.amount || 0,
-          platformFee: d.platformFee || 0,
+          platformFee: displayPlatformFeeRupees(d.platformFee),
           paymentMethod: d.paymentMethod || 'N/A',
           paymentStatus: d.paymentStatus || 'pending',
           seatsBooked: d.seatsBooked || 1,
@@ -177,7 +179,7 @@ const BookingDetailsScreen = () => {
     try {
       const fromText = typeof booking?.route?.from === 'string' ? booking.route.from : booking?.route?.from?.address || 'origin';
       const toText = typeof booking?.route?.to === 'string' ? booking.route.to : booking?.route?.to?.address || 'destination';
-      await Share.share({ message: `Booking #${booking?.bookingId} on ForLok - Ride from ${fromText} to ${toText}` });
+      await Share.share({ message: `Booking #${booking?.bookingId} on eZway — trip from ${fromText} to ${toText}` });
     } catch {}
   };
 
@@ -227,11 +229,12 @@ const BookingDetailsScreen = () => {
     ? (isOwner ? 'Renter' : 'Owner')
     : (isPoolingDriver ? 'Passengers' : 'Driver');
 
-  const vehicleType = booking.vehicle?.type?.toLowerCase() || 'car';
+  const vehicleType = booking.vehicle?.type?.toLowerCase() || 'bike';
   const getVehicleIcon = () => {
-    if (vehicleType === 'scooty') return <MaterialCommunityIcons name="moped" size={18} color={theme.colors.primary} />;
-    if (vehicleType === 'bike') return <MaterialCommunityIcons name="motorbike" size={18} color={theme.colors.primary} />;
-    return <Car size={18} color={theme.colors.primary} />;
+    if (vehicleType === 'scooty' || vehicleType === 'scooter') {
+      return <MaterialCommunityIcons name="moped" size={18} color={theme.colors.primary} />;
+    }
+    return <Bike size={18} color={theme.colors.primary} />;
   };
 
   const formatTime = (timeStr?: string) => {
@@ -269,7 +272,7 @@ const BookingDetailsScreen = () => {
           </View>
           <View style={[st.typePill, { backgroundColor: theme.colors.primary + '15' }]}>
             <Text style={[st.typePillText, { color: theme.colors.primary }]}>
-              {isRental ? 'Rental' : 'Pooling'}
+              {isRental ? 'Rental' : 'Ride-Sharing'}
             </Text>
           </View>
         </View>
@@ -417,7 +420,9 @@ const BookingDetailsScreen = () => {
                 {otherPerson.rating != null && (
                   <View style={st.personRating}>
                     <Star size={12} color="#FFB800" fill="#FFB800" />
-                    <Text style={st.personRatingText}>{Number(otherPerson.rating || 0).toFixed(1)} ({otherPerson.totalReviews || 0})</Text>
+                    <Text style={st.personRatingText}>
+                      {Number(otherPerson.rating || 0).toFixed(1)} ({reviewsCountShort(otherPerson.totalReviews, t)})
+                    </Text>
                   </View>
                 )}
               </View>
@@ -518,12 +523,12 @@ const BookingDetailsScreen = () => {
               <Text style={[st.payValue, { color: theme.colors.text }]}>{booking.amount || 0}</Text>
             </View>
           </View>
-          {booking.platformFee > 0 && (
+          {displayPlatformFeeRupees(booking.platformFee) > 0 && (
             <View style={st.payRow}>
               <Text style={[st.payLabel, { color: theme.colors.textSecondary }]}>Platform Fee</Text>
               <View style={st.payValueRow}>
                 <IndianRupee size={14} color={theme.colors.textSecondary} />
-                <Text style={[st.payValue, { color: theme.colors.textSecondary, fontSize: normalize(14) }]}>{booking.platformFee}</Text>
+                <Text style={[st.payValue, { color: theme.colors.textSecondary, fontSize: normalize(14) }]}>{displayPlatformFeeRupees(booking.platformFee)}</Text>
               </View>
             </View>
           )}
@@ -534,7 +539,7 @@ const BookingDetailsScreen = () => {
             <View style={st.payValueRow}>
               <IndianRupee size={20} color={isPoolingDriver || isOwner ? '#2E7D32' : theme.colors.primary} />
               <Text style={[st.payTotalValue, { color: isPoolingDriver || isOwner ? '#2E7D32' : theme.colors.primary }]}>
-                {isPoolingDriver || isOwner ? (booking.amount - (booking.platformFee || 0)) : (booking.totalAmount || booking.amount || 0)}
+                {isPoolingDriver || isOwner ? (booking.amount - displayPlatformFeeRupees(booking.platformFee)) : (booking.totalAmount || booking.amount || 0)}
               </Text>
             </View>
           </View>
@@ -587,7 +592,7 @@ const BookingDetailsScreen = () => {
                   onPress={() => (navigation.navigate as any)('OwnerRentalManagement', { offerId: booking.rentalOfferId })}
                   activeOpacity={0.8}
                 >
-                  <Car size={18} color="#FFF" />
+                  <Bike size={18} color="#FFF" />
                   <Text style={st.actionBtnText}>Manage Rental</Text>
                 </TouchableOpacity>
               )}

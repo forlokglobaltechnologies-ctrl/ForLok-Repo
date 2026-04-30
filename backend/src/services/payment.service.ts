@@ -232,7 +232,7 @@ class PaymentService {
         if (payment.driverId) {
           await walletService.creditDriverEarnings(
             payment.driverId,
-            payment.amount, // Driver gets ride amount (platform fee stays with Forlok)
+            payment.amount, // Driver gets ride amount (platform fee stays with eZway)
             payment.bookingId!
           );
         }
@@ -296,7 +296,7 @@ class PaymentService {
    * Passenger pays driver directly in cash → No Razorpay involved
    * Driver already has the cash, so:
    * - Driver's wallet is NOT credited (they got cash in hand)
-   * - Platform fee is deducted from driver's wallet (Forlok's commission)
+   * - Platform fee is deducted from driver's wallet (eZway's commission)
    * - A payment record is created with paymentMethod = 'offline_cash' and status = 'paid'
    * - Booking is immediately marked as completed
    */
@@ -362,7 +362,7 @@ class PaymentService {
         data.bookingId
       );
 
-      // 2. Deduct platform fee from driver's wallet (Forlok's commission)
+      // 2. Deduct platform fee from driver's wallet (eZway's commission)
       if (data.platformFee > 0) {
         await walletService.debitWallet(
           data.driverId,

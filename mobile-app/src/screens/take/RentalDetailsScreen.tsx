@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Image, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import LottieView from 'lottie-react-native';
-import { ArrowLeft, Heart, Share2, Star, Minus, Plus, Tag, Car, Fuel, Settings, MapPin, IndianRupee, Clock, User } from 'lucide-react-native';
+import { ArrowLeft, Heart, Share2, Star, Minus, Plus, Tag, Fuel, Settings, MapPin, IndianRupee, Clock, User } from 'lucide-react-native';
+import { VehicleTypeIcon } from '@utils/vehicleDisplay';
 import { normalize, wp, hp } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, SHADOWS, BORDER_RADIUS } from '@constants/theme';
 import { Button } from '@components/common/Button';
@@ -10,6 +11,7 @@ import { Card } from '@components/common/Card';
 import TimeSlotSelector from '@components/common/TimeSlotSelector';
 import { useLanguage } from '@context/LanguageContext';
 import { rentalApi, bookingApi, walletApi } from '@utils/apiClient';
+import { reviewsCountLong } from '@utils/reviewDisplay';
 
 const RENTAL_COMING_SOON = true; // V2 feature — flip to false to re-enable
 
@@ -186,11 +188,11 @@ const RentalDetailsScreen = () => {
                 }
               }
               // Fallback to internet images based on vehicle type
-              const vehicleType = rental.vehicle?.type?.toLowerCase() || 'car';
-              if (vehicleType === 'bike') {
-                return 'https://images.unsplash.com/photo-1558980664-769d59546b3b?w=400&h=300&fit=crop';
+              const vehicleType = rental.vehicle?.type?.toLowerCase() || 'bike';
+              if (vehicleType === 'scooty' || vehicleType === 'scooter') {
+                return 'https://images.unsplash.com/photo-1609630875171-b1321377ee65?w=400&h=300&fit=crop';
               }
-              return 'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=400&h=300&fit=crop';
+              return 'https://images.unsplash.com/photo-1558980664-769d59546b3b?w=400&h=300&fit=crop';
             })()
           }} 
           style={styles.vehicleImage} 
@@ -214,7 +216,7 @@ const RentalDetailsScreen = () => {
               <View style={styles.ratingContainer}>
                 <Star size={18} color={COLORS.warning} fill={COLORS.warning} />
                 <Text style={styles.ratingText}>
-                  {rental.owner?.rating || rental.rating || 0} ({rental.owner?.totalReviews || rental.totalReviews || 0} {t('common.reviews')})
+                  {rental.owner?.rating || rental.rating || 0} ({reviewsCountLong(rental.owner?.totalReviews ?? rental.totalReviews, t)})
                 </Text>
               </View>
             </View>
@@ -225,7 +227,7 @@ const RentalDetailsScreen = () => {
         {/* Vehicle Details Card */}
         <View style={styles.detailsCard}>
           <View style={styles.sectionHeader}>
-            <Car size={20} color={COLORS.primary} />
+            <VehicleTypeIcon type={rental.vehicle?.type} size={20} color={COLORS.primary} />
             <Text style={styles.sectionTitle}>{t('rentalDetails.vehicleDetails')}</Text>
           </View>
           <View style={styles.divider} />
@@ -243,7 +245,7 @@ const RentalDetailsScreen = () => {
           </View>
           <View style={styles.detailRow}>
             <View style={styles.detailIconContainer}>
-              <Car size={18} color={COLORS.primary} />
+              <VehicleTypeIcon type={rental.vehicle?.type} size={18} color={COLORS.primary} />
             </View>
             <View style={styles.detailInfo}>
               <Text style={styles.detailLabel}>{t('rentalDetails.typeSeats')}</Text>

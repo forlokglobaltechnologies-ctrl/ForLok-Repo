@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, ActivityIndicator, Alert, Image } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { ArrowLeft, CheckCircle, Calendar, Clock, MapPin, User, IndianRupee, CreditCard, Share2, FileText, Check, Car, MessageCircle, XCircle } from 'lucide-react-native';
+import { ArrowLeft, CheckCircle, Calendar, Clock, MapPin, User, IndianRupee, CreditCard, Share2, FileText, Check, Bike, MessageCircle, XCircle } from 'lucide-react-native';
 import { normalize } from '@utils/responsive';
 import { COLORS, FONTS, SPACING, SHADOWS, BORDER_RADIUS } from '@constants/theme';
 import { Button } from '@components/common/Button';
 import { useLanguage } from '@context/LanguageContext';
 import { bookingApi } from '@utils/apiClient';
+import { displayPlatformFeeRupees } from '@utils/platformFee';
 
 const BookingConfirmationScreen = () => {
   const navigation = useNavigation();
@@ -190,7 +191,7 @@ const BookingConfirmationScreen = () => {
         {/* Trip/Rental Details Card */}
         <View style={styles.sectionCard}>
           <View style={styles.sectionHeader}>
-            {isRental ? <Car size={20} color={COLORS.primary} /> : <MapPin size={20} color={COLORS.primary} />}
+            {isRental ? <Bike size={20} color={COLORS.primary} /> : <MapPin size={20} color={COLORS.primary} />}
             <Text style={styles.sectionTitle}>
               {isRental ? 'Rental Details' : t('bookingConfirmation.tripDetails')}
             </Text>
@@ -288,13 +289,13 @@ const BookingConfirmationScreen = () => {
         {booking.vehicle && (
           <View style={styles.sectionCard}>
             <View style={styles.sectionHeader}>
-              <Car size={20} color={COLORS.primary} />
+              <Bike size={20} color={COLORS.primary} />
               <Text style={styles.sectionTitle}>Vehicle Details</Text>
             </View>
             <View style={styles.divider} />
             <View style={styles.detailRow}>
               <View style={styles.detailIconContainer}>
-                <Car size={18} color={COLORS.primary} />
+                <Bike size={18} color={COLORS.primary} />
               </View>
               <View style={styles.detailInfo}>
                 <Text style={styles.detailLabel}>Vehicle</Text>
@@ -305,7 +306,7 @@ const BookingConfirmationScreen = () => {
             </View>
             <View style={styles.detailRow}>
               <View style={styles.detailIconContainer}>
-                <Car size={18} color={COLORS.primary} />
+                <Bike size={18} color={COLORS.primary} />
               </View>
               <View style={styles.detailInfo}>
                 <Text style={styles.detailLabel}>Vehicle Number</Text>
@@ -357,10 +358,10 @@ const BookingConfirmationScreen = () => {
             <Text style={styles.paymentLabel}>{isRental ? 'Rental Fare' : 'Ride Fare'}</Text>
             <Text style={styles.paymentValue}>₹{booking.amount || 0}</Text>
           </View>
-          {booking.platformFee > 0 && (
+          {displayPlatformFeeRupees(booking.platformFee) > 0 && (
             <View style={styles.paymentRow}>
               <Text style={styles.paymentLabel}>Platform Fee</Text>
-              <Text style={styles.paymentValue}>₹{booking.platformFee || 0}</Text>
+              <Text style={styles.paymentValue}>₹{displayPlatformFeeRupees(booking.platformFee)}</Text>
             </View>
           )}
           {booking.totalAmount && (
